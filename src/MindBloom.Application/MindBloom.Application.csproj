@@ -2,6 +2,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore" Version="2.3.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.3.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Core" Version="2.3.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
@@ -16,13 +19,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="DTOs\" />
-    <Folder Include="Features\" />
-    <Folder Include="Interfaces\" />
-    <Folder Include="Mappings\" />
-    <Folder Include="Services\" />
-    <Folder Include="StateMachines\" />
-    <Folder Include="Validators\" />
+    <Folder Include="Common\Helpers\" />
+    <Folder Include="Common\Models\" />
+    <Folder Include="Features\Appointments\" />
+    <Folder Include="Features\Recommendations\" />
+    <Folder Include="Features\Reviews\" />
+    <Folder Include="Features\Notifications\" />
+    <Folder Include="Features\Payments\" />
+    <Folder Include="Features\Therapists\" />
+    <Folder Include="Features\Users\" />
+    <Folder Include="Features\Auth\Services\" />
+    <Folder Include="Features\Auth\Validators\" />
   </ItemGroup>
 
   <PropertyGroup>

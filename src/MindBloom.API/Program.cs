@@ -1,8 +1,11 @@
 using DotNetEnv;
 using MindBloom.API.Middlewares;
-using MindBloom.Infrastructure.Configurations;
+using Microsoft.AspNetCore.Identity;
+using MindBloom.Domain.Entities;
+using MindBloom.Infrastructure.DependencyInjection;
+using MindBloom.Infrastructure.Persistence.Seed;
 
-Env.Load();
+Env.Load("../../.env");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,8 +38,25 @@ app.UseSwaggerUI();
 
 app.UseCors("AllowAll");
 
+app.UseAuthentication();
+
 app.UseAuthorization();
 
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var userManager =
+        scope.ServiceProvider
+            .GetRequiredService<UserManager<ApplicationUser>>();
+
+    var roleManager =
+        scope.ServiceProvider
+            .GetRequiredService<RoleManager<IdentityRole<int>>>();
+
+    await ApplicationDbSeeder.SeedAsync(
+        userManager,
+        roleManager);
+}
 
 app.Run();

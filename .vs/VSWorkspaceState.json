@@ -1,0 +1,12 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\src",
+    "\\src\\MindBloom.API",
+    "\\src\\MindBloom.Infrastructure",
+    "\\src\\MindBloom.Infrastructure\\Migrations",
+    "\\src\\MindBloom.Infrastructure\\Persistence"
+  ],
+  "SelectedNode": "\\src\\MindBloom.Infrastructure\\Persistence\\ApplicationDbSeeder.cs",
+  "PreviewInSolutionExplorer": false
+}

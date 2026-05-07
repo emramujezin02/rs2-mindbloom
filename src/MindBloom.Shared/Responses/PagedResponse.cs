@@ -1,4 +1,4 @@
-﻿namespace MindBloom.Shared.Pagination;
+﻿namespace MindBloom.Shared.Responses;
 
 public class PagedResponse<T>
 {

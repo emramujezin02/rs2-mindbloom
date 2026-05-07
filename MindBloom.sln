@@ -15,7 +15,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MindBloom.Infrastructure", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MindBloom.Shared", "src\MindBloom.Shared\MindBloom.Shared.csproj", "{154A49CF-5AC8-46F9-B349-C5EE20DC297C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MindBloom.NotificationsWorker", "src\MindBloom.NotificationsWorker\MindBloom.NotificationsWorker.csproj", "{D5544BDA-E3FB-4630-94E0-AEA63C845349}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MindBloom.Worker", "src\MindBloom.NotificationsWorker\MindBloom.Worker.csproj", "{D5544BDA-E3FB-4630-94E0-AEA63C845349}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -110,5 +110,8 @@ Global
 		{03B20F31-0554-43B3-B41B-A2041F821753} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{154A49CF-5AC8-46F9-B349-C5EE20DC297C} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{D5544BDA-E3FB-4630-94E0-AEA63C845349} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {74E14A28-6C51-42F9-8FD4-D9D892C47C6E}
 	EndGlobalSection
 EndGlobal

@@ -5,7 +5,7 @@ using MindBloom.Domain.Entities;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 
-namespace MindBloom.Infrastructure.Persistence;
+namespace MindBloom.Infrastructure.Persistence.Context;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
 {
