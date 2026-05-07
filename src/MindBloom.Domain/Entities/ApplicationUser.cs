@@ -4,15 +4,24 @@ namespace MindBloom.Domain.Entities;
 
 public class ApplicationUser : IdentityUser<int>
 {
-    public string FirstName { get; set; } = string.Empty;
+    public string FirstName { get; set; } = null!;
 
-    public string LastName { get; set; } = string.Empty;
+    public string LastName { get; set; } = null!;
 
-    public string? ProfileImagePath { get; set; }
+    public DateTime DateOfBirth { get; set; }
+
+    public string? ProfileImageUrl { get; set; }
 
     public bool IsActive { get; set; } = true;
 
-    public virtual Therapist? TherapistProfile { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
 
-    public virtual Client? ClientProfile { get; set; }
+    public ICollection<Appointment> ClientAppointments { get; set; }
+        = new List<Appointment>();
+
+    public ICollection<Appointment> TherapistAppointments { get; set; }
+        = new List<Appointment>();
+
+    public ICollection<Review> Reviews { get; set; }
+        = new List<Review>();
 }

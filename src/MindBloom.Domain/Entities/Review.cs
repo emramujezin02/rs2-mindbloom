@@ -2,15 +2,15 @@
 
 public class Review : BaseEntity
 {
+    public int UserId { get; set; }
+
+    public ApplicationUser User { get; set; } = null!;
+
     public int TherapistId { get; set; }
 
     public Therapist Therapist { get; set; } = null!;
 
-    public int ClientId { get; set; }
-
-    public Client Client { get; set; } = null!;
-
     public int Rating { get; set; }
 
-    public string Comment { get; set; } = string.Empty;
+    public string Comment { get; set; } = null!;
 }

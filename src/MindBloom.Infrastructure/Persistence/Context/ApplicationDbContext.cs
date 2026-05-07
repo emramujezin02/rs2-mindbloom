@@ -5,6 +5,7 @@ using MindBloom.Domain.Entities;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 
+
 namespace MindBloom.Infrastructure.Persistence.Context;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
@@ -14,12 +15,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     {
     }
 
-    public DbSet<Therapist> Therapists => Set<Therapist>();
     public DbSet<Client> Clients => Set<Client>();
+    public DbSet<MoodEntry> MoodEntries => Set<MoodEntry>();
+    public DbSet<Therapist> Therapists => Set<Therapist>();
+
+    public DbSet<TherapistAvailability> TherapistAvailabilities => Set<TherapistAvailability>();
 
     public DbSet<Appointment> Appointments => Set<Appointment>();
+
+    public DbSet<Payment> Payments => Set<Payment>();
+
     public DbSet<Review> Reviews => Set<Review>();
-    public DbSet<MoodEntry> MoodEntries => Set<MoodEntry>();
+
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -27,14 +35,68 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
         builder.Entity<Therapist>()
             .HasOne(x => x.User)
-            .WithOne(x => x.TherapistProfile)
-            .HasForeignKey<Therapist>(x => x.UserId)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.Entity<Client>()
             .HasOne(x => x.User)
-            .WithOne(x => x.ClientProfile)
-            .HasForeignKey<Client>(x => x.UserId)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Appointment>()
+            .HasOne(x => x.Client)
+            .WithMany(x => x.TherapistAppointments)
+            .HasForeignKey(x => x.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Appointment>()
+            .HasOne(x => x.Therapist)
+            .WithMany(x => x.Appointments)
+            .HasForeignKey(x => x.TherapistId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Payment>()
+            .HasOne(x => x.Appointment)
+            .WithOne(x => x.Payment)
+            .HasForeignKey<Payment>(x => x.AppointmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<TherapistAvailability>()
+            .HasOne(x => x.Therapist)
+            .WithMany(x => x.Availabilities)
+            .HasForeignKey(x => x.TherapistId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Notification>()
+            .HasOne(x => x.User)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    public override async Task<int> SaveChangesAsync(
+    CancellationToken cancellationToken = default)
+    {
+        var entries = ChangeTracker
+            .Entries<BaseEntity>();
+
+        foreach (var entry in entries)
+        {
+            if (entry.State == EntityState.Added)
+            {
+                entry.Entity.CreatedAtUtc =
+                    DateTime.UtcNow;
+            }
+
+            if (entry.State == EntityState.Modified)
+            {
+                entry.Entity.UpdatedAtUtc =
+                    DateTime.UtcNow;
+            }
+        }
+
+        return await base.SaveChangesAsync(cancellationToken);
     }
 }

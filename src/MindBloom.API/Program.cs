@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Identity;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.DependencyInjection;
 using MindBloom.Infrastructure.Persistence.Seed;
+using MindBloom.Infrastructure.Persistence.Context;
+
 
 Env.Load("../../.env");
 
@@ -46,15 +48,19 @@ app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {
+    var services = scope.ServiceProvider;
+
+    var context =
+        services.GetRequiredService<ApplicationDbContext>();
+
     var userManager =
-        scope.ServiceProvider
-            .GetRequiredService<UserManager<ApplicationUser>>();
+        services.GetRequiredService<UserManager<ApplicationUser>>();
 
     var roleManager =
-        scope.ServiceProvider
-            .GetRequiredService<RoleManager<IdentityRole<int>>>();
+        services.GetRequiredService<RoleManager<IdentityRole<int>>>();
 
     await ApplicationDbSeeder.SeedAsync(
+        context,
         userManager,
         roleManager);
 }

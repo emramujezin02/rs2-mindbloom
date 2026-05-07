@@ -6,17 +6,17 @@ public class Therapist : BaseEntity
 
     public ApplicationUser User { get; set; } = null!;
 
-    public string Biography { get; set; } = string.Empty;
+    public string Biography { get; set; } = null!;
 
-    public int YearsOfExperience { get; set; }
+    public string Specialization { get; set; } = null!;
 
-    public decimal SessionPrice { get; set; }
+    public decimal PricePerSession { get; set; }
 
-    public bool OffersOnlineSessions { get; set; }
+    public bool IsVerified { get; set; }
 
-    public double AverageRating { get; set; }
+    public ICollection<TherapistAvailability> Availabilities { get; set; }
+        = new List<TherapistAvailability>();
 
-    public ICollection<Review> Reviews { get; set; } = new List<Review>();
-
-    public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+    public ICollection<Appointment> Appointments { get; set; }
+        = new List<Appointment>();
 }
