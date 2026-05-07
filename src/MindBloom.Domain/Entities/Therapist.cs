@@ -14,6 +14,10 @@ public class Therapist : BaseEntity
 
     public bool IsVerified { get; set; }
 
+    public decimal HourlyRate { get; set; }
+
+    public int ExperienceYears { get; set; }
+
     public ICollection<TherapistAvailability> Availabilities { get; set; }
         = new List<TherapistAvailability>();
 

@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Features.Auth.Interfaces;
+using MindBloom.Application.Features.Therapists.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Security;
@@ -88,6 +89,8 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         services.AddScoped<IAuthService, AuthService>();
+
+        services.AddScoped<ITherapistService, TherapistService>();
 
         return services;
     }
