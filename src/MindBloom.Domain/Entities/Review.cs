@@ -1,0 +1,16 @@
+﻿namespace MindBloom.Domain.Entities;
+
+public class Review : BaseEntity
+{
+    public int TherapistId { get; set; }
+
+    public Therapist Therapist { get; set; } = null!;
+
+    public int ClientId { get; set; }
+
+    public Client Client { get; set; } = null!;
+
+    public int Rating { get; set; }
+
+    public string Comment { get; set; } = string.Empty;
+}

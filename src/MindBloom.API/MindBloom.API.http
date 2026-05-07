@@ -1,0 +1,6 @@
+@MindBloom.API_HostAddress = http://localhost:5110
+
+GET {{MindBloom.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
