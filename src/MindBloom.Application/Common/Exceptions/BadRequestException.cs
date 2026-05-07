@@ -1,8 +1,8 @@
 ﻿namespace MindBloom.Application.Common.Exceptions;
 
-public class NotFoundException : Exception
+public class BadRequestException : Exception
 {
-    public NotFoundException(string message)
+    public BadRequestException(string message)
         : base(message)
     {
     }

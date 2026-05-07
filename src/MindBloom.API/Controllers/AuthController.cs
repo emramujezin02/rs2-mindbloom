@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Auth.DTOs;
 using MindBloom.Application.Features.Auth.Interfaces;
+using System.Security.Claims;
 
 namespace MindBloom.API.Controllers;
 
@@ -19,17 +21,39 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register(
         RegisterRequest request)
     {
-        var result = await _authService.RegisterAsync(request);
+        var response =
+            await _authService.RegisterAsync(request);
 
-        return Ok(result);
+        return Ok(response);
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login(
         LoginRequest request)
     {
-        var result = await _authService.LoginAsync(request);
+        var response =
+            await _authService.LoginAsync(request);
 
-        return Ok(result);
+        return Ok(response);
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    public IActionResult Me()
+    {
+        return Ok(new
+        {
+            UserId =
+                User.FindFirstValue(ClaimTypes.NameIdentifier),
+
+            Email =
+                User.FindFirstValue(ClaimTypes.Email),
+
+            Username =
+                User.FindFirstValue(ClaimTypes.Name),
+
+            Role =
+                User.FindFirstValue(ClaimTypes.Role)
+        });
     }
 }

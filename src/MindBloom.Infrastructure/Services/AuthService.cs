@@ -1,17 +1,16 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Features.Auth.DTOs;
 using MindBloom.Application.Features.Auth.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Shared.Constants;
-using MindBloom.Shared.Exceptions;
 
 namespace MindBloom.Infrastructure.Services;
 
 public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
+
     private readonly IJwtTokenService _jwtTokenService;
 
     public AuthService(
@@ -22,15 +21,15 @@ public class AuthService : IAuthService
         _jwtTokenService = jwtTokenService;
     }
 
-    public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
+    public async Task<AuthResponse> RegisterAsync(
+        RegisterRequest request)
     {
-        var exists = await _userManager.Users
-            .AnyAsync(x => x.Email == request.Email);
+        var existingUser =
+            await _userManager.FindByEmailAsync(request.Email);
 
-        if (exists)
+        if (existingUser != null)
         {
-            throw new BusinessException(
-                "User with this email already exists.");
+            throw new Exception("User already exists.");
         }
 
         var user = new ApplicationUser
@@ -38,66 +37,71 @@ public class AuthService : IAuthService
             FirstName = request.FirstName,
             LastName = request.LastName,
             Email = request.Email,
-            UserName = request.Email
+            UserName = request.Username,
+            DateOfBirth = request.DateOfBirth,
+            CreatedAtUtc = DateTime.UtcNow,
+            EmailConfirmed = true
         };
 
-        var result = await _userManager.CreateAsync(
-            user,
-            request.Password);
+        var result =
+            await _userManager.CreateAsync(user, request.Password);
 
         if (!result.Succeeded)
         {
-            throw new BusinessException(
+            throw new Exception(
                 string.Join(", ", result.Errors.Select(x => x.Description)));
         }
 
-        await _userManager.AddToRoleAsync(
-            user,
-            RoleConstants.Client);
+        await _userManager.AddToRoleAsync(user, request.Role);
 
-        var roles = await _userManager.GetRolesAsync(user);
-
-        var token = await _jwtTokenService.GenerateTokenAsync(
-            user,
-            roles);
+        var token =
+            await _jwtTokenService.GenerateTokenAsync(user);
 
         return new AuthResponse
         {
-            Token = token,
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
             Email = user.Email!,
-            Role = roles.First()
+            Token = token,
+            Role = request.Role
         };
     }
 
-    public async Task<AuthResponse> LoginAsync(LoginRequest request)
+    public async Task<AuthResponse> LoginAsync(
+        LoginRequest request)
     {
-        var user = await _userManager.Users
-            .FirstOrDefaultAsync(x => x.Email == request.Email);
+        var user =
+            await _userManager.FindByEmailAsync(request.Email);
 
         if (user == null)
         {
-            throw new BusinessException("Invalid credentials.");
+            throw new Exception("Invalid credentials.");
         }
 
-        var validPassword = await _userManager.CheckPasswordAsync(
-            user,
-            request.Password);
+        var isPasswordValid =
+            await _userManager.CheckPasswordAsync(
+                user,
+                request.Password);
 
-        if (!validPassword)
+        if (!isPasswordValid)
         {
-            throw new BusinessException("Invalid credentials.");
+            throw new Exception("Invalid credentials.");
         }
 
-        var roles = await _userManager.GetRolesAsync(user);
+        var roles =
+            await _userManager.GetRolesAsync(user);
 
-        var token = await _jwtTokenService.GenerateTokenAsync(
-            user,
-            roles);
+        var token =
+            await _jwtTokenService.GenerateTokenAsync(user);
 
         return new AuthResponse
         {
-            Token = token,
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
             Email = user.Email!,
+            Token = token,
             Role = roles.First()
         };
     }

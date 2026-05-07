@@ -1,8 +1,8 @@
 ﻿namespace MindBloom.Application.Common.Exceptions;
 
-public class NotFoundException : Exception
+public class ForbiddenException : Exception
 {
-    public NotFoundException(string message)
+    public ForbiddenException(string message)
         : base(message)
     {
     }
