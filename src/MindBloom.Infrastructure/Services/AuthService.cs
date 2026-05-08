@@ -27,8 +27,8 @@ public class AuthService : IAuthService
         _context = context;
     }
 
-    public async Task<AuthResponse> RegisterAsync(
-        RegisterRequest request)
+    public async Task<AuthResponseDto> RegisterAsync(
+        RegisterRequestDto request)
     {
         var existingUser =
             await _userManager.FindByEmailAsync(request.Email);
@@ -76,7 +76,7 @@ public class AuthService : IAuthService
         var token =
             await _jwtTokenService.GenerateTokenAsync(user);
 
-        return new AuthResponse
+        return new AuthResponseDto
         {
             Id = user.Id,
             FirstName = user.FirstName,
@@ -87,8 +87,8 @@ public class AuthService : IAuthService
         };
     }
 
-    public async Task<AuthResponse> LoginAsync(
-        LoginRequest request)
+    public async Task<AuthResponseDto> LoginAsync(
+        LoginRequestDto request)
     {
         var user =
             await _userManager.FindByEmailAsync(request.Email);
@@ -114,7 +114,7 @@ public class AuthService : IAuthService
         var token =
             await _jwtTokenService.GenerateTokenAsync(user);
 
-        return new AuthResponse
+        return new AuthResponseDto
         {
             Id = user.Id,
             FirstName = user.FirstName,

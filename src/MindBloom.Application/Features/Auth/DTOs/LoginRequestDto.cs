@@ -1,6 +1,6 @@
 ﻿namespace MindBloom.Application.Features.Auth.DTOs;
 
-public class LoginRequest
+public class LoginRequestDto
 {
     public string Email { get; set; } = string.Empty;
 

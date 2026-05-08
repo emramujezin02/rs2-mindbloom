@@ -1,6 +1,6 @@
 ﻿namespace MindBloom.Application.Features.Auth.DTOs;
 
-public class RegisterRequest
+public class RegisterRequestDto
 {
     public string FirstName { get; set; } = string.Empty;
 

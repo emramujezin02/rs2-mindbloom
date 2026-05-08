@@ -1,6 +1,6 @@
 ﻿namespace MindBloom.Application.Features.Auth.DTOs;
 
-public class AuthResponse
+public class AuthResponseDto
 {
     public int Id { get; set; }
 

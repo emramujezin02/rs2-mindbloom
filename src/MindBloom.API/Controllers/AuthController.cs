@@ -19,7 +19,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("register")]
     public async Task<IActionResult> Register(
-        RegisterRequest request)
+        RegisterRequestDto request)
     {
         var response =
             await _authService.RegisterAsync(request);
@@ -29,7 +29,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     public async Task<IActionResult> Login(
-        LoginRequest request)
+        LoginRequestDto request)
     {
         var response =
             await _authService.LoginAsync(request);

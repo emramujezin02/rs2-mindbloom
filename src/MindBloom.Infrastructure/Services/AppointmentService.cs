@@ -4,6 +4,7 @@ using MindBloom.Application.Features.Appointments.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Domain.Enums;
+using MindBloom.Application.Features.Appointments.DTOs;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -119,12 +120,22 @@ public class AppointmentService : IAppointmentService
     }
 
     public async Task<List<AppointmentResponseDto>>
-        GetMyAppointmentsAsync(int userId)
+     GetMyAppointmentsAsync(int userId)
     {
+        var client =
+            await _context.Clients
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == userId);
+
+        if (client == null)
+        {
+            throw new Exception("Client profile not found.");
+        }
+
         return await _context.Appointments
             .Include(x => x.Therapist)
             .ThenInclude(x => x.User)
-            .Where(x => x.ClientId == userId)
+            .Where(x => x.ClientId == client.Id)
             .Select(x => new AppointmentResponseDto
             {
                 Id = x.Id,
@@ -138,5 +149,122 @@ public class AppointmentService : IAppointmentService
                 Status = x.Status.ToString()
             })
             .ToListAsync();
+    }
+
+    public async Task UpdateStatusAsync(
+    int therapistUserId,
+    int appointmentId,
+    UpdateAppointmentStatusDto request)
+    {
+        var therapist =
+            await _context.Therapists
+                .Include(x=>x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception("Therapist not found.");
+        }
+
+        var appointment =
+            await _context.Appointments
+                .Include(x => x.Client)
+                .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == appointmentId);
+
+        if (appointment == null)
+        {
+            throw new Exception("Appointment not found.");
+        }
+
+        if (appointment.TherapistId != therapist.Id)
+        {
+            throw new Exception(
+                "You cannot update this appointment.");
+        }
+
+        appointment.Status = request.Status;
+
+        var notification = new Notification
+        {
+            UserId = appointment.Client.UserId,
+            Title = "Appointment Updated",
+            Message =
+                $"Your appointment status is now {request.Status}.",
+            IsRead = false
+        };
+
+        _context.Notifications.Add(notification);
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<AppointmentResponseDto>>
+    GetTherapistAppointmentsAsync(int therapistUserId)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(
+                    x => x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception("Therapist not found.");
+        }
+
+        return await _context.Appointments
+            .Include(x => x.Client)
+            .ThenInclude(x => x.User)
+            .Where(x => x.TherapistId == therapist.Id)
+            .Select(x => new AppointmentResponseDto
+            {
+                Id = x.Id,
+
+                TherapistId = therapist.Id,
+
+                TherapistName =
+                    x.Therapist.User.FirstName
+                    + " "
+                    + x.Therapist.User.LastName,
+
+                StartUtc = x.StartUtc,
+
+                EndUtc = x.EndUtc,
+
+                Status = x.Status.ToString()
+            })
+            .ToListAsync();
+    }
+
+    public async Task UpdateStatusAsync(
+    int therapistUserId,
+    UpdateAppointmentStatusDto request)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(
+                    x => x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception("Therapist not found.");
+        }
+
+        var appointment =
+            await _context.Appointments
+                .FirstOrDefaultAsync(x =>
+                    x.Id == request.AppointmentId
+                    && x.TherapistId == therapist.Id);
+
+        if (appointment == null)
+        {
+            throw new Exception("Appointment not found.");
+        }
+
+        appointment.Status = request.Status;
+
+        await _context.SaveChangesAsync();
     }
 }

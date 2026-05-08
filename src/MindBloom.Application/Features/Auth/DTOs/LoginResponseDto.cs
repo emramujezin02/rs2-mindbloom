@@ -1,6 +1,6 @@
 ﻿namespace MindBloom.Application.Features.Auth.DTOs;
 
-public class LoginResponse
+public class LoginResponseDto
 {
     public string Token { get; set; } = string.Empty;
 

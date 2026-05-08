@@ -49,4 +49,39 @@ public class AppointmentsController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpGet("therapist")]
+    [Authorize(Roles = "Therapist")]
+    public async Task<IActionResult>
+    GetTherapistAppointments()
+    {
+        var therapistUserId =
+            int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        var result =
+            await _appointmentService
+                .GetTherapistAppointmentsAsync(
+                    therapistUserId);
+
+        return Ok(result);
+    }
+
+    [HttpPut("status")]
+    [Authorize(Roles = "Therapist")]
+    public async Task<IActionResult>
+    UpdateStatus(
+        UpdateAppointmentStatusDto request)
+    {
+        var therapistUserId =
+            int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        await _appointmentService
+            .UpdateStatusAsync(
+                therapistUserId,
+                request);
+
+        return Ok("Appointment updated.");
+    }
 }
