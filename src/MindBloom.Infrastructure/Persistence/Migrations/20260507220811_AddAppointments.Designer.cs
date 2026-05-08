@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MindBloom.Infrastructure.Persistence.Context;
 
@@ -11,9 +12,11 @@ using MindBloom.Infrastructure.Persistence.Context;
 namespace MindBloom.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260507220811_AddAppointments")]
+    partial class AddAppointments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -254,13 +257,13 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Property<int?>("ApplicationUserId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ApplicationUserId1")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("AppointmentDateUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ClientId1")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAtUtc")
@@ -297,9 +300,9 @@ namespace MindBloom.Infrastructure.Migrations
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.HasIndex("ApplicationUserId1");
-
                     b.HasIndex("ClientId");
+
+                    b.HasIndex("ClientId1");
 
                     b.HasIndex("TherapistId");
 
@@ -375,7 +378,7 @@ namespace MindBloom.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("AppointmentId")
+                    b.Property<int>("AppointmentId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAtUtc")
@@ -633,14 +636,16 @@ namespace MindBloom.Infrastructure.Migrations
                         .WithMany("ClientAppointments")
                         .HasForeignKey("ApplicationUserId");
 
-                    b.HasOne("MindBloom.Domain.Entities.ApplicationUser", null)
+                    b.HasOne("MindBloom.Domain.Entities.ApplicationUser", "Client")
                         .WithMany("TherapistAppointments")
-                        .HasForeignKey("ApplicationUserId1");
-
-                    b.HasOne("MindBloom.Domain.Entities.Client", "Client")
-                        .WithMany("Appointments")
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MindBloom.Domain.Entities.Client", null)
+                        .WithMany("Appointments")
+                        .HasForeignKey("ClientId1")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("MindBloom.Domain.Entities.Therapist", "Therapist")
@@ -680,7 +685,9 @@ namespace MindBloom.Infrastructure.Migrations
                 {
                     b.HasOne("MindBloom.Domain.Entities.Appointment", "Appointment")
                         .WithMany("Notifications")
-                        .HasForeignKey("AppointmentId");
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("MindBloom.Domain.Entities.ApplicationUser", "User")
                         .WithMany()

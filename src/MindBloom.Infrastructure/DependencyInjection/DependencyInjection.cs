@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using MindBloom.Application.Common.Interfaces;
+using MindBloom.Application.Features.Appointments.Interfaces;
 using MindBloom.Application.Features.Auth.Interfaces;
 using MindBloom.Application.Features.Therapists.Interfaces;
 using MindBloom.Domain.Entities;
@@ -91,6 +92,8 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
 
         services.AddScoped<ITherapistService, TherapistService>();
+
+        services.AddScoped<IAppointmentService, AppointmentService>();
 
         return services;
     }

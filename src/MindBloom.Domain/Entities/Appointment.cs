@@ -6,7 +6,7 @@ public class Appointment : BaseEntity
 {
     public int ClientId { get; set; }
 
-    public ApplicationUser Client { get; set; } = null!;
+    public Client Client { get; set; } = null!;
 
     public int TherapistId { get; set; }
 
@@ -23,6 +23,10 @@ public class Appointment : BaseEntity
     public bool IsPaid { get; set; }
 
     public Payment? Payment { get; set; }
+
+    public DateTime StartUtc { get; set; }
+
+    public DateTime EndUtc { get; set; }
 
     public ICollection<Notification> Notifications { get; set; }
         = new List<Notification>();

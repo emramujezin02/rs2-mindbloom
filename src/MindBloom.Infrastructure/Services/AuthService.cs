@@ -3,7 +3,9 @@ using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Features.Auth.DTOs;
 using MindBloom.Application.Features.Auth.Interfaces;
 using MindBloom.Domain.Entities;
+using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Shared.Constants;
+
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -13,12 +15,16 @@ public class AuthService : IAuthService
 
     private readonly IJwtTokenService _jwtTokenService;
 
+    private readonly ApplicationDbContext _context;
+
     public AuthService(
         UserManager<ApplicationUser> userManager,
-        IJwtTokenService jwtTokenService)
+        IJwtTokenService jwtTokenService,
+        ApplicationDbContext context)
     {
         _userManager = userManager;
         _jwtTokenService = jwtTokenService;
+        _context = context;
     }
 
     public async Task<AuthResponse> RegisterAsync(
@@ -51,6 +57,19 @@ public class AuthService : IAuthService
             throw new Exception(
                 string.Join(", ", result.Errors.Select(x => x.Description)));
         }
+
+        await _userManager.AddToRoleAsync(
+    user,
+    RoleConstants.Client);
+
+        var client = new Client
+        {
+            UserId = user.Id
+        };
+
+        _context.Clients.Add(client);
+
+        await _context.SaveChangesAsync();
 
         await _userManager.AddToRoleAsync(user, request.Role);
 

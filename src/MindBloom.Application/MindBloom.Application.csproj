@@ -21,7 +21,6 @@
   <ItemGroup>
     <Folder Include="Common\Helpers\" />
     <Folder Include="Common\Models\" />
-    <Folder Include="Features\Appointments\" />
     <Folder Include="Features\Recommendations\" />
     <Folder Include="Features\Reviews\" />
     <Folder Include="Features\Notifications\" />

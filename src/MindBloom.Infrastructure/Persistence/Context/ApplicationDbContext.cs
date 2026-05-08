@@ -47,7 +47,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
         builder.Entity<Appointment>()
             .HasOne(x => x.Client)
-            .WithMany(x => x.TherapistAppointments)
+            .WithMany(x => x.Appointments)
             .HasForeignKey(x => x.ClientId)
             .OnDelete(DeleteBehavior.Restrict);
 

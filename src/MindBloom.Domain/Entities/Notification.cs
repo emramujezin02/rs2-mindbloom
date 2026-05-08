@@ -6,9 +6,9 @@ public class Notification : BaseEntity
 
     public ApplicationUser User { get; set; } = null!;
 
-    public int AppointmentId { get; set; }
+    public int? AppointmentId { get; set; }
 
-    public Appointment Appointment { get; set; } = null!;
+    public Appointment? Appointment { get; set; } = null!;
 
     public string Title { get; set; } = null!;
 
