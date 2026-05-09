@@ -12,7 +12,7 @@ public class Payment : BaseEntity
 
     public PaymentStatus Status { get; set; }
 
-    public string PaymentIntentId { get; set; } = null!;
+    public string StripePaymentIntentId { get; set; } = null!;
 
     public DateTime? PaidAtUtc { get; set; }
 }

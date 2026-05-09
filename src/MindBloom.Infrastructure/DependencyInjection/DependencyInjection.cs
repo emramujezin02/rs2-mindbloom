@@ -15,6 +15,7 @@ using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Security;
 using MindBloom.Infrastructure.Services;
 using MindBloom.Application.Features.Reviews.Interfaces;
+using MindBloom.Application.Features.Payments.Interfaces;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -98,6 +99,8 @@ public static class DependencyInjection
         services.AddScoped<IAppointmentService, AppointmentService>();
 
         services.AddScoped<IReviewService, ReviewService>();
+
+        services.AddScoped<IPaymentService, PaymentService>();
 
         return services;
     }

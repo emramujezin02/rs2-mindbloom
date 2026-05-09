@@ -23,7 +23,6 @@
     <Folder Include="Common\Models\" />
     <Folder Include="Features\Recommendations\" />
     <Folder Include="Features\Notifications\" />
-    <Folder Include="Features\Payments\" />
     <Folder Include="Features\Users\" />
     <Folder Include="Features\Auth\Services\" />
     <Folder Include="Features\Auth\Validators\" />

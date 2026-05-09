@@ -1,0 +1,14 @@
+﻿using MindBloom.Application.Features.Payments.DTOs;
+
+namespace MindBloom.Application.Features.Payments.Interfaces;
+
+public interface IPaymentService
+{
+    Task<PaymentIntentResponseDto>
+        CreatePaymentIntentAsync(
+            int clientUserId,
+            CreatePaymentIntentDto request);
+
+    Task ConfirmPaymentAsync(
+        ConfirmPaymentDto request);
+}
