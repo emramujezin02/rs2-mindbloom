@@ -17,4 +17,5 @@ public class TherapistResponseDto
     public decimal HourlyRate { get; set; }
 
     public int ExperienceYears { get; set; }
+    public double AverageRating { get; set; }
 }

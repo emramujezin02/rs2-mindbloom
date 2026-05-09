@@ -23,4 +23,7 @@ public class Therapist : BaseEntity
 
     public ICollection<Appointment> Appointments { get; set; }
         = new List<Appointment>();
+
+    public ICollection<Review> Reviews { get; set; }
+    = new List<Review>();
 }

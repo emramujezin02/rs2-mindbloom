@@ -66,4 +66,16 @@ public class TherapistsController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpGet("search")]
+    public async Task<IActionResult>
+    Search(
+        [FromQuery] SearchTherapistsDto request)
+    {
+        var result =
+            await _therapistService
+                .SearchAsync(request);
+
+        return Ok(result);
+    }
 }

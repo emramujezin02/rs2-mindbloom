@@ -16,4 +16,7 @@ public interface ITherapistService
 
     Task<List<AvailabilityResponseDto>>
         GetAvailabilitiesAsync(int therapistId);
+
+    Task<List<TherapistResponseDto>>
+    SearchAsync(SearchTherapistsDto request);
 }

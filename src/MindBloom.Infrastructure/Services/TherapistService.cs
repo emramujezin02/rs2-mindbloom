@@ -106,4 +106,57 @@ public class TherapistService : ITherapistService
             })
             .ToListAsync();
     }
+
+    public async Task<List<TherapistResponseDto>>
+    SearchAsync(SearchTherapistsDto request)
+    {
+        var query =
+            _context.Therapists
+                .Include(x => x.User)
+                .Include(x => x.Reviews)
+                .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(request.Name))
+        {
+            query = query.Where(x =>
+                (x.User.FirstName + " " + x.User.LastName)
+                .ToLower()
+                .Contains(request.Name.ToLower()));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Specialization))
+        {
+            query = query.Where(x =>
+                x.Specialization.ToLower()
+                .Contains(
+                    request.Specialization.ToLower()));
+        }
+
+        return await query
+            .Select(x => new TherapistResponseDto
+            {
+                Id = x.Id,
+
+                FullName =
+                    x.User.FirstName
+                    + " "
+                    + x.User.LastName,
+
+                Email = x.User.Email!,
+
+                Specialization = x.Specialization,
+
+                Biography = x.Biography,
+
+                HourlyRate = x.HourlyRate,
+
+                ExperienceYears = x.ExperienceYears,
+
+                AverageRating =
+                    x.Reviews.Any()
+                        ? x.Reviews.Average(r => r.Rating)
+                        : 0
+            })
+            .ToListAsync();
+    }
 }
