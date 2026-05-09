@@ -16,6 +16,7 @@ using MindBloom.Infrastructure.Security;
 using MindBloom.Infrastructure.Services;
 using MindBloom.Application.Features.Reviews.Interfaces;
 using MindBloom.Application.Features.Payments.Interfaces;
+using MindBloom.Application.Features.Notifications.Interfaces;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -101,6 +102,8 @@ public static class DependencyInjection
         services.AddScoped<IReviewService, ReviewService>();
 
         services.AddScoped<IPaymentService, PaymentService>();
+
+        services.AddScoped<INotificationService,NotificationService>();
 
         return services;
     }

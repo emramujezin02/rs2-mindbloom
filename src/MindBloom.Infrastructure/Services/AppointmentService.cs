@@ -217,6 +217,26 @@ public class AppointmentService : IAppointmentService
 
         appointment.Status = request.Status;
 
+        var client =
+    await _context.Clients
+        .Include(x => x.User)
+        .FirstOrDefaultAsync(x =>
+            x.Id == appointment.ClientId);
+
+        if (client != null)
+        {
+            var notification = new Notification
+            {
+                UserId = client.UserId,
+                Title = "Appointment Updated",
+                Message =
+                    $"Your appointment status is now {request.Status}.",
+                IsRead = false
+            };
+
+            _context.Notifications.Add(notification);
+        }
+
         await _context.SaveChangesAsync();
     }
 }
