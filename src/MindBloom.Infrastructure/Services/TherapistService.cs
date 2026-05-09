@@ -14,8 +14,8 @@ public class TherapistService : ITherapistService
     public TherapistService(ApplicationDbContext context)
     {
         _context = context;
-    }
 
+    }
     public async Task<TherapistResponseDto> CreateAsync(
         int userId,
         CreateTherapistDto request)
@@ -210,5 +210,99 @@ public class TherapistService : ITherapistService
                     totalCount
                     / (double)request.PageSize)
         };
+    }
+
+    public async Task<List<TherapistResponseDto>>
+    FilterAsync(
+        TherapistFilterDto filter)
+    {
+        var query =
+            _context.Therapists
+                .Include(x => x.User)
+                .Include(x => x.Reviews)
+                .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(
+            filter.SearchTerm))
+        {
+            var search =
+                filter.SearchTerm.ToLower();
+
+            query = query.Where(x =>
+                (x.User.FirstName + " "
+                 + x.User.LastName)
+                .ToLower()
+                .Contains(search));
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+            filter.Specialization))
+        {
+            var specialization =
+                filter.Specialization.ToLower();
+
+            query = query.Where(x =>
+                x.Specialization
+                    .ToLower()
+                    .Contains(specialization));
+        }
+
+        if (filter.MinPrice.HasValue)
+        {
+            query = query.Where(x =>
+                x.HourlyRate >= filter.MinPrice.Value);
+        }
+
+        if (filter.MaxPrice.HasValue)
+        {
+            query = query.Where(x =>
+                x.HourlyRate <= filter.MaxPrice.Value);
+        }
+
+        var therapists =
+            await query
+                .Select(x => new TherapistResponseDto
+                {
+                    Id = x.Id,
+
+                    FullName =
+                        x.User.FirstName
+                        + " "
+                        + x.User.LastName,
+
+                    Specialization =
+                        x.Specialization,
+
+                    Biography =
+                        x.Biography,
+
+                    HourlyRate =
+                        x.HourlyRate,
+
+                    ExperienceYears =
+                        x.ExperienceYears,
+
+                    AverageRating =
+                        x.Reviews.Any()
+                            ? Math.Round(
+                                x.Reviews
+                                    .Average(r => r.Rating),
+                                1)
+                            : 0,
+
+                    TotalReviews =
+                        x.Reviews.Count
+                })
+                .ToListAsync();
+
+        if (filter.SortByRating)
+        {
+            therapists = therapists
+                .OrderByDescending(
+                    x => x.AverageRating)
+                .ToList();
+        }
+
+        return therapists;
     }
 }

@@ -18,12 +18,9 @@ public class Therapist : BaseEntity
 
     public int ExperienceYears { get; set; }
 
-    public ICollection<TherapistAvailability> Availabilities { get; set; }
-        = new List<TherapistAvailability>();
+    public ICollection<TherapistAvailability> Availabilities { get; set; } = new List<TherapistAvailability>();
 
-    public ICollection<Appointment> Appointments { get; set; }
-        = new List<Appointment>();
+    public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
 
-    public ICollection<Review> Reviews { get; set; }
-    = new List<Review>();
+    public ICollection<Review> Reviews { get; set; }= new List<Review>();
 }

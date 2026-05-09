@@ -78,4 +78,15 @@ public class TherapistsController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpPost("filter")]
+    public async Task<IActionResult> Filter(
+    TherapistFilterDto filter)
+    {
+        var result =
+            await _therapistService
+                .FilterAsync(filter);
+
+        return Ok(result);
+    }
 }

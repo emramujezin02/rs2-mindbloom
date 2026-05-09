@@ -18,4 +18,6 @@ public class TherapistResponseDto
 
     public int ExperienceYears { get; set; }
     public double AverageRating { get; set; }
+
+    public int TotalReviews { get; set; }
 }
