@@ -2,9 +2,9 @@
 
 public class Review : BaseEntity
 {
-    public int UserId { get; set; }
+    public int ClientId { get; set; }
 
-    public ApplicationUser User { get; set; } = null!;
+    public Client Client { get; set; } = null!;
 
     public int TherapistId { get; set; }
 

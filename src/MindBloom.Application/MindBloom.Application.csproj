@@ -22,7 +22,6 @@
     <Folder Include="Common\Helpers\" />
     <Folder Include="Common\Models\" />
     <Folder Include="Features\Recommendations\" />
-    <Folder Include="Features\Reviews\" />
     <Folder Include="Features\Notifications\" />
     <Folder Include="Features\Payments\" />
     <Folder Include="Features\Users\" />
