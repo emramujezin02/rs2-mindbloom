@@ -74,6 +74,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany()
             .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Review>()
+            .HasOne(x => x.Client)
+            .WithMany()
+            .HasForeignKey(x => x.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Review>()
+            .HasOne(x => x.Therapist)
+            .WithMany(x => x.Reviews)
+            .HasForeignKey(x => x.TherapistId)
+            .OnDelete(DeleteBehavior.Restrict);
+
     }
 
     public override async Task<int> SaveChangesAsync(

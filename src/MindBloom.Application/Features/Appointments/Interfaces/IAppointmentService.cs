@@ -11,10 +11,7 @@ public interface IAppointmentService
     Task<List<AppointmentResponseDto>>
         GetMyAppointmentsAsync(int userId);
 
-    Task UpdateStatusAsync(
-    int therapistUserId,
-    int appointmentId,
-    UpdateAppointmentStatusDto request);
+
 
     Task<List<AppointmentResponseDto>>
     GetTherapistAppointmentsAsync(int therapistUserId);

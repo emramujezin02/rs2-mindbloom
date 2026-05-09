@@ -10,4 +10,8 @@ public interface IReviewService
 
     Task<List<ReviewResponseDto>>
         GetTherapistReviewsAsync(int therapistId);
+
+    Task<TherapistRatingDto>
+    GetTherapistRatingAsync(
+        int therapistId);
 }

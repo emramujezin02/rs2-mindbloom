@@ -18,15 +18,17 @@ public class ReviewsController : ControllerBase
         _reviewService = reviewService;
     }
 
-    [HttpPost]
     [Authorize(Roles = "Client")]
-    public async Task<IActionResult> Create(
-        CreateReviewDto request)
+    [HttpPost]
+    public async Task<IActionResult>
+        Create(
+            CreateReviewDto request)
     {
         var userId =
             int.Parse(
-                User.FindFirstValue(
-                    ClaimTypes.NameIdentifier)!);
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                    .Value);
 
         await _reviewService.CreateAsync(
             userId,
@@ -40,11 +42,25 @@ public class ReviewsController : ControllerBase
 
     [HttpGet("therapist/{therapistId}")]
     public async Task<IActionResult>
-        GetTherapistReviews(int therapistId)
+        GetTherapistReviews(
+            int therapistId)
     {
         var result =
             await _reviewService
                 .GetTherapistReviewsAsync(
+                    therapistId);
+
+        return Ok(result);
+    }
+
+    [HttpGet("therapist/{therapistId}/rating")]
+    public async Task<IActionResult>
+        GetTherapistRating(
+            int therapistId)
+    {
+        var result =
+            await _reviewService
+                .GetTherapistRatingAsync(
                     therapistId);
 
         return Ok(result);

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MindBloom.Infrastructure.Persistence.Context;
 
@@ -11,9 +12,11 @@ using MindBloom.Infrastructure.Persistence.Context;
 namespace MindBloom.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260509105854_Reviews")]
+    partial class Reviews
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -465,6 +468,9 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Property<int?>("ApplicationUserId")
                         .HasColumnType("int");
 
+                    b.Property<int>("AppointmentId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ClientId")
                         .HasColumnType("int");
 
@@ -490,6 +496,9 @@ namespace MindBloom.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("AppointmentId")
+                        .IsUnique();
 
                     b.HasIndex("ClientId");
 
@@ -715,6 +724,12 @@ namespace MindBloom.Infrastructure.Migrations
                         .WithMany("Reviews")
                         .HasForeignKey("ApplicationUserId");
 
+                    b.HasOne("MindBloom.Domain.Entities.Appointment", "Appointment")
+                        .WithOne()
+                        .HasForeignKey("MindBloom.Domain.Entities.Review", "AppointmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("MindBloom.Domain.Entities.Client", "Client")
                         .WithMany()
                         .HasForeignKey("ClientId")
@@ -726,6 +741,8 @@ namespace MindBloom.Infrastructure.Migrations
                         .HasForeignKey("TherapistId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Appointment");
 
                     b.Navigation("Client");
 

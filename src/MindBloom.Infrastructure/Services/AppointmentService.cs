@@ -151,55 +151,7 @@ public class AppointmentService : IAppointmentService
             .ToListAsync();
     }
 
-    public async Task UpdateStatusAsync(
-    int therapistUserId,
-    int appointmentId,
-    UpdateAppointmentStatusDto request)
-    {
-        var therapist =
-            await _context.Therapists
-                .Include(x=>x.User)
-                .FirstOrDefaultAsync(x =>
-                    x.UserId == therapistUserId);
 
-        if (therapist == null)
-        {
-            throw new Exception("Therapist not found.");
-        }
-
-        var appointment =
-            await _context.Appointments
-                .Include(x => x.Client)
-                .ThenInclude(x => x.User)
-                .FirstOrDefaultAsync(x =>
-                    x.Id == appointmentId);
-
-        if (appointment == null)
-        {
-            throw new Exception("Appointment not found.");
-        }
-
-        if (appointment.TherapistId != therapist.Id)
-        {
-            throw new Exception(
-                "You cannot update this appointment.");
-        }
-
-        appointment.Status = request.Status;
-
-        var notification = new Notification
-        {
-            UserId = appointment.Client.UserId,
-            Title = "Appointment Updated",
-            Message =
-                $"Your appointment status is now {request.Status}.",
-            IsRead = false
-        };
-
-        _context.Notifications.Add(notification);
-
-        await _context.SaveChangesAsync();
-    }
 
     public async Task<List<AppointmentResponseDto>>
     GetTherapistAppointmentsAsync(int therapistUserId)
