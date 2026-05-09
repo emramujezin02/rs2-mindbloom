@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MindBloom.Application.Common.Models;
 using MindBloom.Application.Features.Therapists.DTOs;
 using MindBloom.Application.Features.Therapists.Interfaces;
 using MindBloom.Domain.Entities;
@@ -107,7 +108,7 @@ public class TherapistService : ITherapistService
             .ToListAsync();
     }
 
-    public async Task<List<TherapistResponseDto>>
+    public async Task<PagedResponse<TherapistResponseDto>>
     SearchAsync(SearchTherapistsDto request)
     {
         var query =
@@ -119,12 +120,14 @@ public class TherapistService : ITherapistService
         if (!string.IsNullOrWhiteSpace(request.Name))
         {
             query = query.Where(x =>
-                (x.User.FirstName + " " + x.User.LastName)
+                (x.User.FirstName + " "
+                 + x.User.LastName)
                 .ToLower()
                 .Contains(request.Name.ToLower()));
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Specialization))
+        if (!string.IsNullOrWhiteSpace(
+            request.Specialization))
         {
             query = query.Where(x =>
                 x.Specialization.ToLower()
@@ -132,31 +135,80 @@ public class TherapistService : ITherapistService
                     request.Specialization.ToLower()));
         }
 
-        return await query
-            .Select(x => new TherapistResponseDto
-            {
-                Id = x.Id,
-
-                FullName =
-                    x.User.FirstName
-                    + " "
-                    + x.User.LastName,
-
-                Email = x.User.Email!,
-
-                Specialization = x.Specialization,
-
-                Biography = x.Biography,
-
-                HourlyRate = x.HourlyRate,
-
-                ExperienceYears = x.ExperienceYears,
-
-                AverageRating =
+        query = request.SortBy?.ToLower() switch
+        {
+            "rating" =>
+                query.OrderByDescending(x =>
                     x.Reviews.Any()
                         ? x.Reviews.Average(r => r.Rating)
-                        : 0
-            })
-            .ToListAsync();
+                        : 0),
+
+            "price" =>
+                query.OrderBy(x => x.HourlyRate),
+
+            "experience" =>
+                query.OrderByDescending(
+                    x => x.ExperienceYears),
+
+            _ =>
+                query.OrderBy(x => x.Id)
+        };
+
+        var totalCount =
+            await query.CountAsync();
+
+        var items =
+            await query
+                .Skip(
+                    (request.PageNumber - 1)
+                    * request.PageSize)
+
+                .Take(request.PageSize)
+
+                .Select(x => new TherapistResponseDto
+                {
+                    Id = x.Id,
+
+                    FullName =
+                        x.User.FirstName
+                        + " "
+                        + x.User.LastName,
+
+                    Email = x.User.Email!,
+
+                    Specialization =
+                        x.Specialization,
+
+                    Biography = x.Biography,
+
+                    HourlyRate =
+                        x.HourlyRate,
+
+                    ExperienceYears =
+                        x.ExperienceYears,
+
+                    AverageRating =
+                        x.Reviews.Any()
+                            ? x.Reviews.Average(
+                                r => r.Rating)
+                            : 0
+                })
+                .ToListAsync();
+
+        return new PagedResponse<TherapistResponseDto>
+        {
+            Items = items,
+
+            PageNumber = request.PageNumber,
+
+            PageSize = request.PageSize,
+
+            TotalCount = totalCount,
+
+            TotalPages =
+                (int)Math.Ceiling(
+                    totalCount
+                    / (double)request.PageSize)
+        };
     }
 }

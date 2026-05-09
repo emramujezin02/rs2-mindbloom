@@ -1,4 +1,5 @@
-﻿using MindBloom.Application.Features.Therapists.DTOs;
+﻿using MindBloom.Application.Common.Models;
+using MindBloom.Application.Features.Therapists.DTOs;
 
 namespace MindBloom.Application.Features.Therapists.Interfaces;
 
@@ -17,6 +18,6 @@ public interface ITherapistService
     Task<List<AvailabilityResponseDto>>
         GetAvailabilitiesAsync(int therapistId);
 
-    Task<List<TherapistResponseDto>>
+    Task<PagedResponse<TherapistResponseDto>>
     SearchAsync(SearchTherapistsDto request);
 }
