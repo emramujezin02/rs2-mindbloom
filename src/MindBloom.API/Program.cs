@@ -9,6 +9,12 @@ using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Persistence.Seed;
 using Microsoft.AspNetCore.Identity;
 using MindBloom.Domain.Entities;
+using MindBloom.Infrastructure.Realtime;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authentication.BearerToken;
+using Microsoft.AspNetCore.SignalR;
+using MindBloom.Infrastructure.Realtime;
 
 Env.Load("../../.env");
 
@@ -19,6 +25,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddSignalR();
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -73,7 +81,11 @@ builder.Services.AddSwaggerGen(options =>
                 Array.Empty<string>()
             }
         });
+
+ 
 });
+
+
 
 var app = builder.Build();
 
@@ -85,11 +97,15 @@ app.UseSwaggerUI();
 
 app.UseCors("AllowAll");
 
+app.UseWebSockets();
+
 app.UseAuthentication();
 
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 using (var scope = app.Services.CreateScope())
 {

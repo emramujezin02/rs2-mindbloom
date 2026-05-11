@@ -1,18 +1,21 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Features.Notifications.DTOs;
 using MindBloom.Application.Features.Notifications.Interfaces;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Infrastructure.Realtime;
 
 namespace MindBloom.Infrastructure.Services;
 
 public class NotificationService : INotificationService
 {
     private readonly ApplicationDbContext _context;
-
+    private readonly IHubContext<NotificationHub> _hubContext;
     public NotificationService(
-        ApplicationDbContext context)
+        ApplicationDbContext context, IHubContext<NotificationHub> hubContext)
     {
         _context = context;
+        _hubContext = hubContext;
     }
 
     public async Task<List<NotificationResponseDto>>
@@ -51,5 +54,21 @@ public class NotificationService : INotificationService
         notification.IsRead = true;
 
         await _context.SaveChangesAsync();
+    }
+
+    public async Task SendRealtimeNotificationAsync(
+    int userId,
+    string title,
+    string message)
+    {
+        await _hubContext.Clients
+            .Group($"user-{userId}")
+            .SendAsync(
+                "ReceiveNotification",
+                new
+                {
+                    title,
+                    message
+                });
     }
 }

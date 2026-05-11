@@ -2,7 +2,6 @@
 
 public class TherapistFilterDto
 {
-    public string? SearchTerm { get; set; }
 
     public string? Specialization { get; set; }
 

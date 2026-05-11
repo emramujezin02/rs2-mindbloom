@@ -222,18 +222,6 @@ public class TherapistService : ITherapistService
                 .Include(x => x.Reviews)
                 .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(
-            filter.SearchTerm))
-        {
-            var search =
-                filter.SearchTerm.ToLower();
-
-            query = query.Where(x =>
-                (x.User.FirstName + " "
-                 + x.User.LastName)
-                .ToLower()
-                .Contains(search));
-        }
 
         if (!string.IsNullOrWhiteSpace(
             filter.Specialization))

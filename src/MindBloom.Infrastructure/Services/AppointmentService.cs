@@ -5,16 +5,19 @@ using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Domain.Enums;
 using MindBloom.Application.Features.Appointments.DTOs;
+using MindBloom.Application.Common.Interfaces;
+using MindBloom.Application.Features.Notifications.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
 public class AppointmentService : IAppointmentService
 {
     private readonly ApplicationDbContext _context;
-
-    public AppointmentService(ApplicationDbContext context)
+    private readonly INotificationSender _notificationSender;
+    public AppointmentService(ApplicationDbContext context, INotificationSender notificationSender)
     {
         _context = context;
+        _notificationSender = notificationSender;
     }
 
     public async Task<AppointmentResponseDto>
@@ -91,7 +94,15 @@ public class AppointmentService : IAppointmentService
             Status = AppointmentStatus.Pending
         };
 
+
         _context.Appointments.Add(appointment);
+
+
+        await _notificationSender.SendToUserAsync(
+    therapist.UserId,
+    "New Appointment",
+    "You have received a new appointment request.");
+
 
         var notification = new Notification
         {
@@ -205,10 +216,11 @@ public class AppointmentService : IAppointmentService
         }
 
         var appointment =
-            await _context.Appointments
-                .FirstOrDefaultAsync(x =>
-                    x.Id == request.AppointmentId
-                    && x.TherapistId == therapist.Id);
+    await _context.Appointments
+        .Include(x => x.Client)
+        .FirstOrDefaultAsync(x =>
+            x.Id == request.AppointmentId
+            && x.TherapistId == therapist.Id);
 
         if (appointment == null)
         {
@@ -238,5 +250,15 @@ public class AppointmentService : IAppointmentService
         }
 
         await _context.SaveChangesAsync();
+
+        await _notificationSender.SendToUserAsync(
+    appointment.Client.UserId,
+    "Appointment Updated",
+    $"Your appointment status is now {request.Status}.");
     }
+
+
+
 }
+
+

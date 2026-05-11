@@ -32,6 +32,9 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(connectionString));
 
+
+        services.AddSignalR();
+
         services.AddIdentity<ApplicationUser, IdentityRole<int>>(options =>
         {
             options.Password.RequireDigit = true;
@@ -71,25 +74,44 @@ public static class DependencyInjection
             options.DefaultChallengeScheme =
                 JwtBearerDefaults.AuthenticationScheme;
         })
-        .AddJwtBearer(options =>
-        {
-            options.TokenValidationParameters =
-                new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
+       .AddJwtBearer(options =>
+       {
+           options.TokenValidationParameters =
+               new TokenValidationParameters
+               {
+                   ValidateIssuer = true,
+                   ValidateAudience = true,
+                   ValidateLifetime = true,
+                   ValidateIssuerSigningKey = true,
 
-                    ValidIssuer = jwtSettings.Issuer,
-                    ValidAudience = jwtSettings.Audience,
+                   ValidIssuer = jwtSettings.Issuer,
+                   ValidAudience = jwtSettings.Audience,
 
-                    IssuerSigningKey =
-                        new SymmetricSecurityKey(key),
+                   IssuerSigningKey =
+                       new SymmetricSecurityKey(key)
+               };
 
-                    ClockSkew = TimeSpan.Zero
-                };
-        });
+           options.Events = new JwtBearerEvents
+           {
+               OnMessageReceived = context =>
+               {
+                   var accessToken =
+                       context.Request.Query["access_token"];
+
+                   var path =
+                       context.HttpContext.Request.Path;
+
+                   if (!string.IsNullOrEmpty(accessToken)
+                       && path.StartsWithSegments(
+                           "/hubs/notifications"))
+                   {
+                       context.Token = accessToken;
+                   }
+
+                   return Task.CompletedTask;
+               }
+           };
+       });
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
@@ -104,6 +126,8 @@ public static class DependencyInjection
         services.AddScoped<IPaymentService, PaymentService>();
 
         services.AddScoped<INotificationService,NotificationService>();
+
+        services.AddScoped<INotificationSender,SignalRNotificationSender>();
 
         return services;
     }
