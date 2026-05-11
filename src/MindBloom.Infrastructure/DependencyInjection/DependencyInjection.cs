@@ -17,6 +17,7 @@ using MindBloom.Infrastructure.Services;
 using MindBloom.Application.Features.Reviews.Interfaces;
 using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Features.Notifications.Interfaces;
+using MindBloom.Application.Features.Favorites.Interfaces;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -129,6 +130,8 @@ public static class DependencyInjection
 
         services.AddScoped<INotificationSender,SignalRNotificationSender>();
 
+        services.AddScoped<IFavoriteService, FavoriteService>();
+        
         return services;
     }
 }

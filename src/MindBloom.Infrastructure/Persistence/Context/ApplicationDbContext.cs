@@ -18,15 +18,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<MoodEntry> MoodEntries => Set<MoodEntry>();
     public DbSet<Therapist> Therapists => Set<Therapist>();
-
     public DbSet<TherapistAvailability> TherapistAvailabilities => Set<TherapistAvailability>();
-
     public DbSet<Appointment> Appointments => Set<Appointment>();
-
+    public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<Payment> Payments => Set<Payment>();
-
     public DbSet<Review> Reviews => Set<Review>();
-
     public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -86,6 +82,18 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany(x => x.Reviews)
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Favorite>()
+            .HasOne(x => x.Client)
+            .WithMany()
+            .HasForeignKey(x => x.ClientId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Favorite>()
+            .HasOne(x => x.Therapist)
+            .WithMany()
+            .HasForeignKey(x => x.TherapistId)
+            .OnDelete(DeleteBehavior.Cascade);
 
     }
 
