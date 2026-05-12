@@ -84,4 +84,26 @@ public class AppointmentsController : ControllerBase
 
         return Ok("Appointment updated.");
     }
+
+    [HttpPut("{appointmentId}/cancel")]
+    [Authorize(Roles = "Client")]
+    public async Task<IActionResult> CancelAppointment(
+    int appointmentId,
+    CancelAppointmentDto request)
+    {
+        var userId = int.Parse(
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier)!);
+
+        await _appointmentService
+            .CancelAppointmentAsync(
+                userId,
+                appointmentId,
+                request);
+
+        return Ok(new
+        {
+            message = "Appointment cancelled successfully."
+        });
+    }
 }

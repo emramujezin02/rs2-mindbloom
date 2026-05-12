@@ -257,6 +257,60 @@ public class AppointmentService : IAppointmentService
     $"Your appointment status is now {request.Status}.");
     }
 
+    public async Task CancelAppointmentAsync(
+    int clientUserId,
+    int appointmentId,
+    CancelAppointmentDto request)
+    {
+        var client =
+            await _context.Clients
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == clientUserId);
+
+        if (client == null)
+        {
+            throw new Exception("Client not found.");
+        }
+
+        var appointment =
+            await _context.Appointments
+                .Include(x => x.Therapist)
+                .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == appointmentId
+                    && x.ClientId == client.Id);
+
+        if (appointment == null)
+        {
+            throw new Exception("Appointment not found.");
+        }
+
+        if (appointment.Status == AppointmentStatus.Cancelled)
+        {
+            throw new Exception(
+                "Appointment is already cancelled.");
+        }
+
+        appointment.Status = AppointmentStatus.Cancelled;
+
+        var notification = new Notification
+        {
+            UserId = appointment.Therapist.UserId,
+            Title = "Appointment Cancelled",
+            Message =
+                $"A client cancelled the appointment. Reason: {request.Reason}",
+            IsRead = false
+        };
+
+        _context.Notifications.Add(notification);
+
+        await _context.SaveChangesAsync();
+
+        await _notificationSender.SendToUserAsync(
+            appointment.Therapist.UserId,
+            "Appointment Cancelled",
+            $"A client cancelled the appointment. Reason: {request.Reason}");
+    }
 
 
 }

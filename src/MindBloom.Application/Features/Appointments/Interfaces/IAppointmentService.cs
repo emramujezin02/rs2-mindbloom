@@ -19,4 +19,9 @@ public interface IAppointmentService
     Task UpdateStatusAsync(
         int therapistUserId,
         UpdateAppointmentStatusDto request);
+
+    Task CancelAppointmentAsync(
+    int clientUserId,
+    int appointmentId,
+    CancelAppointmentDto request);
 }
