@@ -320,4 +320,74 @@ public class TherapistService : ITherapistService
 
         await _context.SaveChangesAsync();
     }
+
+    public async Task<TherapistDetailsDto>
+    GetByIdAsync(int therapistId)
+    {
+        var therapist =
+            await _context.Therapists
+                .Include(x => x.User)
+                .Include(x => x.Reviews)
+                .Include(x => x.Availabilities)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == therapistId);
+
+        if (therapist == null)
+        {
+            throw new Exception(
+                "Therapist not found.");
+        }
+
+        return new TherapistDetailsDto
+        {
+            Id = therapist.Id,
+
+            FullName =
+                therapist.User.FirstName
+                + " "
+                + therapist.User.LastName,
+
+            Email = therapist.User.Email!,
+
+            Biography = therapist.Biography,
+
+            Specialization =
+                therapist.Specialization,
+
+            HourlyRate =
+                therapist.HourlyRate,
+
+            ExperienceYears =
+                therapist.ExperienceYears,
+
+            AverageRating =
+                therapist.Reviews.Any()
+                    ? Math.Round(
+                        therapist.Reviews
+                            .Average(x => x.Rating),
+                        1)
+                    : 0,
+
+            TotalReviews =
+                therapist.Reviews.Count,
+
+            Availabilities =
+                therapist.Availabilities
+                    .Select(x =>
+                        new AvailabilityResponseDto
+                        {
+                            Id = x.Id,
+
+                            DayOfWeek =
+                                x.DayOfWeek,
+
+                            StartTime =
+                                x.StartTime,
+
+                            EndTime =
+                                x.EndTime
+                        })
+                    .ToList()
+        };
+    }
 }

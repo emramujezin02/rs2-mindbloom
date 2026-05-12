@@ -112,4 +112,15 @@ public class TherapistsController : ControllerBase
                 "Therapist profile updated successfully."
         });
     }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult>
+    GetById(int id)
+    {
+        var result =
+            await _therapistService
+                .GetByIdAsync(id);
+
+        return Ok(result);
+    }
 }

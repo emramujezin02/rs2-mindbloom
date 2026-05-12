@@ -1,0 +1,27 @@
+﻿namespace MindBloom.Application.Features.Therapists.DTOs;
+
+public class TherapistDetailsDto
+{
+    public int Id { get; set; }
+
+    public string FullName { get; set; } = string.Empty;
+
+    public string Email { get; set; } = string.Empty;
+
+    public string Biography { get; set; } = string.Empty;
+
+    public string Specialization { get; set; } = string.Empty;
+
+    public decimal HourlyRate { get; set; }
+
+    public int ExperienceYears { get; set; }
+
+    public double AverageRating { get; set; }
+
+    public int TotalReviews { get; set; }
+
+    public List<AvailabilityResponseDto>
+        Availabilities
+    { get; set; }
+            = new();
+}

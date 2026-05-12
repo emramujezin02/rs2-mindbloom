@@ -10,6 +10,7 @@ public interface ITherapistService
     Task<List<TherapistResponseDto>> GetAllAsync();
 
     Task AddAvailabilityAsync(int therapistId,CreateAvailabilityDto request);
+    
     Task<List<AvailabilityResponseDto>> GetAvailabilitiesAsync(int therapistId);
 
     Task<PagedResponse<TherapistResponseDto>>SearchAsync(SearchTherapistsDto request);
@@ -17,4 +18,6 @@ public interface ITherapistService
     Task<List<TherapistResponseDto>>FilterAsync(TherapistFilterDto filter);
 
     Task UpdateProfileAsync(int therapistUserId,UpdateTherapistProfileDto request);
+    
+    Task<TherapistDetailsDto>GetByIdAsync(int therapistId);
 }
