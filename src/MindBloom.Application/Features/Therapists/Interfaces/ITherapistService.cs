@@ -15,4 +15,6 @@ public interface ITherapistService
     Task<PagedResponse<TherapistResponseDto>>SearchAsync(SearchTherapistsDto request);
 
     Task<List<TherapistResponseDto>>FilterAsync(TherapistFilterDto filter);
+
+    Task UpdateProfileAsync(int therapistUserId,UpdateTherapistProfileDto request);
 }

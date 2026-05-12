@@ -89,4 +89,27 @@ public class TherapistsController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpPut("profile")]
+    [Authorize(Roles = "Therapist")]
+    public async Task<IActionResult>
+    UpdateProfile(
+        UpdateTherapistProfileDto request)
+    {
+        var therapistUserId =
+            int.Parse(
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier)!);
+
+        await _therapistService
+            .UpdateProfileAsync(
+                therapistUserId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                "Therapist profile updated successfully."
+        });
+    }
 }

@@ -293,4 +293,31 @@ public class TherapistService : ITherapistService
 
         return therapists;
     }
+
+    public async Task UpdateProfileAsync(
+    int therapistUserId,
+    UpdateTherapistProfileDto request)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception("Therapist not found.");
+        }
+
+        therapist.Biography = request.Biography;
+
+        therapist.Specialization = request.Specialization;
+
+        therapist.ExperienceYears = request.ExperienceYears;
+
+        Console.WriteLine(therapist.Biography);
+        Console.WriteLine(therapist.Specialization);
+        Console.WriteLine(therapist.ExperienceYears);
+
+        await _context.SaveChangesAsync();
+    }
 }
