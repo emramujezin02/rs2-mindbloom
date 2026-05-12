@@ -106,4 +106,22 @@ public class AppointmentsController : ControllerBase
             message = "Appointment cancelled successfully."
         });
     }
+
+    [HttpGet("therapist/stats")]
+    [Authorize(Roles = "Therapist")]
+    public async Task<IActionResult>
+    GetTherapistStats()
+    {
+        var therapistUserId =
+            int.Parse(
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier)!);
+
+        var result =
+            await _appointmentService
+                .GetTherapistStatsAsync(
+                    therapistUserId);
+
+        return Ok(result);
+    }
 }

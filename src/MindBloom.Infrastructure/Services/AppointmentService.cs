@@ -7,7 +7,7 @@ using MindBloom.Domain.Enums;
 using MindBloom.Application.Features.Appointments.DTOs;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Features.Notifications.Interfaces;
-
+using MindBloom.Application.Features.Therapists.DTOs;
 namespace MindBloom.Infrastructure.Services;
 
 public class AppointmentService : IAppointmentService
@@ -312,7 +312,51 @@ public class AppointmentService : IAppointmentService
             $"A client cancelled the appointment. Reason: {request.Reason}");
     }
 
+    public async Task<TherapistStatsDto>
+    GetTherapistStatsAsync(
+        int therapistUserId)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
 
+        if (therapist == null)
+        {
+            throw new Exception("Therapist not found.");
+        }
+
+        var appointments =
+            await _context.Appointments
+                .Where(x =>
+                    x.TherapistId == therapist.Id)
+                .ToListAsync();
+
+        var completedAppointments =
+            appointments.Count(x =>
+                x.Status == AppointmentStatus.Accepted
+                && x.EndUtc < DateTime.UtcNow);
+
+        var cancelledAppointments =
+            appointments.Count(x =>
+                x.Status == AppointmentStatus.Cancelled);
+
+        decimal totalEarnings =
+            completedAppointments * 50;
+
+        return new TherapistStatsDto
+        {
+            TotalAppointments = appointments.Count,
+
+            CompletedAppointments =
+                completedAppointments,
+
+            CancelledAppointments =
+                cancelledAppointments,
+
+            TotalEarnings = totalEarnings
+        };
+    }
 }
 
 
