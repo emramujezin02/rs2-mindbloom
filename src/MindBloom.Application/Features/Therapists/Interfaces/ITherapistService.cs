@@ -22,4 +22,6 @@ public interface ITherapistService
     Task<TherapistDetailsDto>GetByIdAsync(int therapistId);
 
     Task DeleteAvailabilityAsync(int therapistUserId,int availabilityId);
+
+    Task<TherapistDashboardDto>GetDashboardAsync(int therapistUserId);
 }

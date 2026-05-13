@@ -142,4 +142,21 @@ public class TherapistsController : ControllerBase
         return Ok(
             "Availability deleted successfully.");
     }
+
+    [HttpGet("dashboard")]
+    [Authorize(Roles = "Therapist")]
+    public async Task<IActionResult>
+    GetDashboard()
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!.Value);
+
+        var result =
+            await _therapistService
+                .GetDashboardAsync(userId);
+
+        return Ok(result);
+    }
 }

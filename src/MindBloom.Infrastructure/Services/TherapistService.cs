@@ -4,6 +4,7 @@ using MindBloom.Application.Features.Therapists.DTOs;
 using MindBloom.Application.Features.Therapists.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Domain.Enums;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -421,5 +422,54 @@ public class TherapistService : ITherapistService
             .Remove(availability);
 
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<TherapistDashboardDto>
+    GetDashboardAsync(int therapistUserId)
+    {
+        var therapist =
+            await _context.Therapists
+                .Include(x => x.Reviews)
+                .Include(x => x.Appointments)
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception("Therapist not found.");
+        }
+
+        var completedAppointments =
+            therapist.Appointments
+                .Where(x =>
+                    x.Status == AppointmentStatus.Completed)
+                .ToList();
+
+        return new TherapistDashboardDto
+        {
+            TotalAppointments =
+                therapist.Appointments.Count,
+
+            CompletedAppointments =
+                completedAppointments.Count,
+
+            PendingAppointments =
+                therapist.Appointments.Count(x =>
+                    x.Status == AppointmentStatus.Pending),
+
+            AverageRating =
+                therapist.Reviews.Any()
+                    ? Math.Round(
+                        therapist.Reviews
+                            .Average(x => x.Rating),
+                        1)
+                    : 0,
+
+            TotalReviews =
+                therapist.Reviews.Count,
+
+            TotalEarnings =
+                completedAppointments.Sum(x => 50)
+        };
     }
 }
