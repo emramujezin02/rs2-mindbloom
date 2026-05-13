@@ -390,4 +390,36 @@ public class TherapistService : ITherapistService
                     .ToList()
         };
     }
+
+    public async Task DeleteAvailabilityAsync(
+    int therapistUserId,
+    int availabilityId)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception("Therapist not found.");
+        }
+
+        var availability =
+            await _context.TherapistAvailabilities
+                .FirstOrDefaultAsync(x =>
+                    x.Id == availabilityId
+                    && x.TherapistId == therapist.Id);
+
+        if (availability == null)
+        {
+            throw new Exception(
+                "Availability not found.");
+        }
+
+        _context.TherapistAvailabilities
+            .Remove(availability);
+
+        await _context.SaveChangesAsync();
+    }
 }

@@ -20,4 +20,6 @@ public interface ITherapistService
     Task UpdateProfileAsync(int therapistUserId,UpdateTherapistProfileDto request);
     
     Task<TherapistDetailsDto>GetByIdAsync(int therapistId);
+
+    Task DeleteAvailabilityAsync(int therapistUserId,int availabilityId);
 }

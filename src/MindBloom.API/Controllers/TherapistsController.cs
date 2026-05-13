@@ -123,4 +123,23 @@ public class TherapistsController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpDelete("availability/{availabilityId}")]
+    public async Task<IActionResult>
+    DeleteAvailability(
+        int availabilityId)
+    {
+        var userId =
+    int.Parse(
+        User.FindFirst(
+            ClaimTypes.NameIdentifier)!.Value);
+
+        await _therapistService
+            .DeleteAvailabilityAsync(
+                userId,
+                availabilityId);
+
+        return Ok(
+            "Availability deleted successfully.");
+    }
 }
