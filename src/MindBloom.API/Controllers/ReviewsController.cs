@@ -65,4 +65,23 @@ public class ReviewsController : ControllerBase
 
         return Ok(result);
     }
+
+    [Authorize(Roles = "Client")]
+    [HttpDelete("{reviewId}")]
+    public async Task<IActionResult>
+    Delete(int reviewId)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                        .Value);
+
+        await _reviewService.DeleteAsync(
+            userId,
+            reviewId);
+
+        return Ok(
+            "Review deleted successfully.");
+    }
 }

@@ -145,4 +145,36 @@ public class ReviewService : IReviewService
             TotalReviews = reviews.Count
         };
     }
+
+    public async Task DeleteAsync(
+    int clientUserId,
+    int reviewId)
+    {
+        var client =
+            await _context.Clients
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == clientUserId);
+
+        if (client == null)
+        {
+            throw new Exception(
+                "Client not found.");
+        }
+
+        var review =
+            await _context.Reviews
+                .FirstOrDefaultAsync(x =>
+                    x.Id == reviewId
+                    && x.ClientId == client.Id);
+
+        if (review == null)
+        {
+            throw new Exception(
+                "Review not found.");
+        }
+
+        _context.Reviews.Remove(review);
+
+        await _context.SaveChangesAsync();
+    }
 }
