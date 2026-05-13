@@ -177,4 +177,38 @@ public class ReviewService : IReviewService
 
         await _context.SaveChangesAsync();
     }
+
+    public async Task UpdateAsync(
+    int clientUserId,
+    int reviewId,
+    UpdateReviewDto request)
+    {
+        var client =
+            await _context.Clients
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == clientUserId);
+
+        if (client == null)
+        {
+            throw new Exception("Client not found.");
+        }
+
+        var review =
+            await _context.Reviews
+                .FirstOrDefaultAsync(x =>
+                    x.Id == reviewId
+                    && x.ClientId == client.Id);
+
+        if (review == null)
+        {
+            throw new Exception(
+                "Review not found.");
+        }
+
+        review.Rating = request.Rating;
+
+        review.Comment = request.Comment;
+
+        await _context.SaveChangesAsync();
+    }
 }

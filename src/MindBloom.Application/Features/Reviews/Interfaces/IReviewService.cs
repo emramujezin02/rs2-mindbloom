@@ -11,4 +11,6 @@ public interface IReviewService
     Task<TherapistRatingDto>GetTherapistRatingAsync(int therapistId);
 
     Task DeleteAsync(int clientUserId,int reviewId);
+
+    Task UpdateAsync(int clientUserId,int reviewId,UpdateReviewDto request);
 }

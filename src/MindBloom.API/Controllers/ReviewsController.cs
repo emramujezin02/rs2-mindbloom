@@ -84,4 +84,29 @@ public class ReviewsController : ControllerBase
         return Ok(
             "Review deleted successfully.");
     }
+
+    [HttpPut("{reviewId}")]
+    [Authorize(Roles = "Client")]
+    public async Task<IActionResult> Update(
+    int reviewId,
+    UpdateReviewDto request)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        await _reviewService.UpdateAsync(
+            userId,
+            reviewId,
+            request);
+
+        return Ok(
+            new
+            {
+                message =
+                    "Review updated successfully."
+            });
+    }
 }
