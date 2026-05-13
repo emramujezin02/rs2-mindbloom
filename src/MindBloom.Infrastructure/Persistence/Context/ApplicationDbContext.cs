@@ -108,13 +108,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             if (entry.State == EntityState.Added)
             {
                 entry.Entity.CreatedAtUtc =
-                    DateTime.UtcNow;
+                    DateTime.Now;
             }
 
             if (entry.State == EntityState.Modified)
             {
                 entry.Entity.UpdatedAtUtc =
-                    DateTime.UtcNow;
+                    DateTime.Now;
             }
         }
 

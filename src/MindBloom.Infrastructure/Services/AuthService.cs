@@ -45,7 +45,7 @@ public class AuthService : IAuthService
             Email = request.Email,
             UserName = request.Username,
             DateOfBirth = request.DateOfBirth,
-            CreatedAtUtc = DateTime.UtcNow,
+            CreatedAtUtc = DateTime.Now,
             EmailConfirmed = true
         };
 

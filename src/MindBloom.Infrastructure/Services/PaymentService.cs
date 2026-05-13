@@ -110,7 +110,7 @@ public class PaymentService : IPaymentService
 
         payment.Status = PaymentStatus.Paid;
 
-        payment.PaidAtUtc = DateTime.UtcNow;
+        payment.PaidAtUtc = DateTime.Now;
 
         await _context.SaveChangesAsync();
     }

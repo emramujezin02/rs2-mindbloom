@@ -31,6 +31,12 @@ public class AppointmentService : IAppointmentService
                 .FirstOrDefaultAsync(
                     x => x.Id == request.TherapistId);
 
+        if (request.StartUtc < DateTime.Now)
+        {
+            throw new Exception(
+                "You cannot book appointments in the past.");
+        }
+
         if (therapist == null)
         {
             throw new Exception("Therapist not found.");
@@ -130,9 +136,30 @@ public class AppointmentService : IAppointmentService
         };
     }
 
+    private async Task AutoCompleteAppointmentsAsync()
+    {
+        var appointments =
+            await _context.Appointments
+                .Where(x =>
+                    x.EndUtc < DateTime.Now
+                    && x.Status != AppointmentStatus.Completed
+                    && x.Status != AppointmentStatus.Cancelled
+                    && x.Status != AppointmentStatus.Rejected)
+                .ToListAsync();
+
+        foreach (var appointment in appointments)
+        {
+            appointment.Status =
+                AppointmentStatus.Completed;
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
     public async Task<List<AppointmentResponseDto>>
      GetMyAppointmentsAsync(int userId)
     {
+        await AutoCompleteAppointmentsAsync();
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
@@ -167,6 +194,7 @@ public class AppointmentService : IAppointmentService
     public async Task<List<AppointmentResponseDto>>
     GetTherapistAppointmentsAsync(int therapistUserId)
     {
+        await AutoCompleteAppointmentsAsync();
         var therapist =
             await _context.Therapists
                 .FirstOrDefaultAsync(
@@ -335,7 +363,7 @@ public class AppointmentService : IAppointmentService
         var completedAppointments =
             appointments.Count(x =>
                 x.Status == AppointmentStatus.Accepted
-                && x.EndUtc < DateTime.UtcNow);
+                && x.EndUtc < DateTime.Now);
 
         var cancelledAppointments =
             appointments.Count(x =>
