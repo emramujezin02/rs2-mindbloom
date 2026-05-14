@@ -131,7 +131,9 @@ public static class DependencyInjection
         services.AddScoped<INotificationSender,SignalRNotificationSender>();
 
         services.AddScoped<IFavoriteService, FavoriteService>();
-        
+
+        services.AddScoped<IEmailService, EmailService>();
+
         return services;
     }
 }

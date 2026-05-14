@@ -56,4 +56,28 @@ public class AuthController : ControllerBase
                 User.FindFirstValue(ClaimTypes.Role)
         });
     }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult>
+    ForgotPassword(
+        ForgotPasswordDto request)
+    {
+        await _authService
+            .ForgotPasswordAsync(request);
+
+        return Ok(
+            "Password reset code sent.");
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult>
+    ResetPassword(
+        ResetPasswordDto request)
+    {
+        await _authService
+            .ResetPasswordAsync(request);
+
+        return Ok(
+            "Password reset successful.");
+    }
 }

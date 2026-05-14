@@ -14,7 +14,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         : base(options)
     {
     }
-
+    public DbSet<PasswordResetCode> PasswordResetCodes { get; set; }
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<MoodEntry> MoodEntries => Set<MoodEntry>();
     public DbSet<Therapist> Therapists => Set<Therapist>();
