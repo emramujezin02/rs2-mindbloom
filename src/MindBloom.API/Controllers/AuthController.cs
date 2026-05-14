@@ -103,4 +103,37 @@ public class AuthController : ControllerBase
                     "Password changed successfully."
             });
     }
+
+    [HttpPost("send-verification-email")]
+    public async Task<IActionResult>
+    SendVerificationEmail(
+        ForgotPasswordDto request)
+    {
+        await _authService
+            .SendVerificationEmailAsync(
+                request.Email);
+
+        return Ok(
+            new
+            {
+                message =
+                    "Verification email sent."
+            });
+    }
+
+    [HttpGet("verify-email")]
+    public async Task<IActionResult>
+    VerifyEmail(
+        [FromQuery] VerifyEmailDto request)
+    {
+        await _authService
+            .VerifyEmailAsync(request);
+
+        return Ok(
+            new
+            {
+                message =
+                    "Email verified successfully."
+            });
+    }
 }

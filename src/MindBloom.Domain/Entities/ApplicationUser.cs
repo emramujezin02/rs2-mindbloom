@@ -16,6 +16,8 @@ public class ApplicationUser : IdentityUser<int>
 
     public DateTime CreatedAtUtc { get; set; }
 
+    public bool IsEmailVerified { get; set; }
+
     public ICollection<Appointment> ClientAppointments { get; set; }
         = new List<Appointment>();
 

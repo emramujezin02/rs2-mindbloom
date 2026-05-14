@@ -50,7 +50,8 @@ public class AuthService : IAuthService
             UserName = request.Username,
             DateOfBirth = request.DateOfBirth,
             CreatedAtUtc = DateTime.Now,
-            EmailConfirmed = true
+            EmailConfirmed = true,
+            IsEmailVerified = false
         };
 
         var result =
@@ -77,6 +78,8 @@ public class AuthService : IAuthService
 
         await _userManager.AddToRoleAsync(user, request.Role);
 
+        await SendVerificationEmailAsync(user.Email!);
+
         var token =
             await _jwtTokenService.GenerateTokenAsync(user);
 
@@ -89,6 +92,8 @@ public class AuthService : IAuthService
             Token = token,
             Role = request.Role
         };
+
+        
     }
 
     public async Task<AuthResponseDto> LoginAsync(
@@ -100,6 +105,12 @@ public class AuthService : IAuthService
         if (user == null)
         {
             throw new Exception("Invalid credentials.");
+        }
+
+        if (!user.IsEmailVerified)
+        {
+            throw new Exception(
+                "Email is not verified.");
         }
 
         var isPasswordValid =
@@ -245,5 +256,68 @@ public class AuthService : IAuthService
             throw new Exception(
                 result.Errors.First().Description);
         }
+    }
+
+    public async Task SendVerificationEmailAsync(
+    string email)
+    {
+        var user =
+            await _userManager
+                .FindByEmailAsync(email);
+
+        if (user == null)
+        {
+            throw new Exception("User not found.");
+        }
+
+        var token =
+            await _userManager
+                .GenerateEmailConfirmationTokenAsync(
+                    user);
+
+        var encodedToken =
+            Uri.EscapeDataString(token);
+
+        var verificationLink =
+            $"http://localhost:5110/api/auth/verify-email?email={user.Email}&token={encodedToken}";
+
+        var body =
+    $@"Click the link below to verify your email:
+
+{verificationLink}";
+
+        await _emailService.SendAsync(
+            user.Email!,
+            "MindBloom Email Verification",
+            body);
+    }
+
+    public async Task VerifyEmailAsync(
+    VerifyEmailDto request)
+    {
+        var user =
+            await _userManager
+                .FindByEmailAsync(request.Email);
+
+        if (user == null)
+        {
+            throw new Exception("User not found.");
+        }
+
+        var result =
+            await _userManager
+                .ConfirmEmailAsync(
+                    user,
+                    request.Token);
+
+        if (!result.Succeeded)
+        {
+            throw new Exception(
+                "Invalid verification token.");
+        }
+
+        user.IsEmailVerified = true;
+
+        await _userManager.UpdateAsync(user);
     }
 }
