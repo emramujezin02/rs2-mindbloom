@@ -220,4 +220,30 @@ public class AuthService : IAuthService
 
         await _context.SaveChangesAsync();
     }
+
+    public async Task ChangePasswordAsync(
+    int userId,
+    ChangePasswordDto request)
+    {
+        var user =
+            await _userManager
+                .FindByIdAsync(userId.ToString());
+
+        if (user == null)
+        {
+            throw new Exception("User not found.");
+        }
+
+        var result =
+            await _userManager.ChangePasswordAsync(
+                user,
+                request.CurrentPassword,
+                request.NewPassword);
+
+        if (!result.Succeeded)
+        {
+            throw new Exception(
+                result.Errors.First().Description);
+        }
+    }
 }

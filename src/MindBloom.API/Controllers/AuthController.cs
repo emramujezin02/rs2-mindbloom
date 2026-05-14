@@ -80,4 +80,27 @@ public class AuthController : ControllerBase
         return Ok(
             "Password reset successful.");
     }
+
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult>
+    ChangePassword(
+        ChangePasswordDto request)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier)!);
+
+        await _authService.ChangePasswordAsync(
+            userId,
+            request);
+
+        return Ok(
+            new
+            {
+                message =
+                    "Password changed successfully."
+            });
+    }
 }
