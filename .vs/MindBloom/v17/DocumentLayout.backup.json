@@ -15,8 +15,12 @@
       "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\auth\\interfaces\\iauthservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\auth\\dtos\\deleteaccountrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\auth\\dtos\\deleteaccountrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260515110533_AddTwoFactorFields.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260515110533_AddTwoFactorFields.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.domain\\entities\\applicationuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|solutionrelative:src\\mindbloom.domain\\entities\\applicationuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -36,9 +40,9 @@
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\AuthController.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\AuthController.cs*",
               "RelativeToolTip": "src\\MindBloom.API\\Controllers\\AuthController.cs*",
-              "ViewState": "AgIAAIsAAAAAAAAAAAAkwKoAAAAFAAAAAAAAAA==",
+              "ViewState": "AgIAAMoAAAAAAAAAAAAAAOwAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-15T10:42:22.943Z",
+              "WhenOpened": "2026-05-15T11:07:25.888Z",
               "EditorCaption": ""
             },
             {
@@ -49,9 +53,9 @@
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\AuthService.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\AuthService.cs*",
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\AuthService.cs*",
-              "ViewState": "AgIAAOABAAAAAAAAAAAowAICAAAFAAAAAAAAAA==",
+              "ViewState": "AgIAAHcCAAAAAAAAAAAowJgCAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-15T10:41:53.599Z",
+              "WhenOpened": "2026-05-15T11:06:23.917Z",
               "EditorCaption": ""
             },
             {
@@ -60,24 +64,37 @@
               "Title": "IAuthService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\Interfaces\\IAuthService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Auth\\Interfaces\\IAuthService.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\Interfaces\\IAuthService.cs*",
-              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Auth\\Interfaces\\IAuthService.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAAnAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\Interfaces\\IAuthService.cs",
+              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Auth\\Interfaces\\IAuthService.cs",
+              "ViewState": "AgIAAAUAAAAAAAAAAAAAABoAAAApAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-15T10:41:28.689Z",
+              "WhenOpened": "2026-05-15T11:05:55.046Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 3,
-              "Title": "DeleteAccountRequestDto.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\DTOs\\DeleteAccountRequestDto.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Auth\\DTOs\\DeleteAccountRequestDto.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\DTOs\\DeleteAccountRequestDto.cs",
-              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Auth\\DTOs\\DeleteAccountRequestDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAABAAAAAAAAAA==",
+              "Title": "20260515110533_AddTwoFactorFields.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260515110533_AddTwoFactorFields.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260515110533_AddTwoFactorFields.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260515110533_AddTwoFactorFields.cs",
+              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260515110533_AddTwoFactorFields.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-15T10:40:15.037Z",
+              "WhenOpened": "2026-05-15T11:05:33.542Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ApplicationUser.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\ApplicationUser.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\ApplicationUser.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\ApplicationUser.cs",
+              "RelativeToolTip": "src\\MindBloom.Domain\\Entities\\ApplicationUser.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAA8AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-15T11:04:25.779Z",
               "EditorCaption": ""
             }
           ]

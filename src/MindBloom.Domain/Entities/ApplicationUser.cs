@@ -18,6 +18,12 @@ public class ApplicationUser : IdentityUser<int>
 
     public bool IsEmailVerified { get; set; }
 
+    public bool TwoFactorEnabledCustom { get; set; }
+
+    public string? TwoFactorCode { get; set; }
+
+    public DateTime? TwoFactorCodeExpiresAtUtc { get; set; }
+
     public ICollection<Appointment> ClientAppointments { get; set; }
         = new List<Appointment>();
 

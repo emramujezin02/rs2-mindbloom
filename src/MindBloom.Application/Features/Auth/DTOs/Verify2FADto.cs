@@ -1,0 +1,8 @@
+﻿namespace MindBloom.Application.Features.Auth.DTOs;
+
+public class Verify2FADto
+{
+    public string Email { get; set; } = string.Empty;
+
+    public string Code { get; set; } = string.Empty;
+}

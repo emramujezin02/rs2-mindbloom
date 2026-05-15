@@ -169,4 +169,70 @@ public class AuthController : ControllerBase
                 "Account deleted successfully."
         });
     }
+
+    [HttpPost("login-2fa")]
+    public async Task<IActionResult>
+    LoginWith2FA(
+        LoginRequestDto request)
+    {
+        var result =
+            await _authService
+                .LoginWith2FAAsync(request);
+
+        return Ok(result);
+    }
+
+    [HttpPost("verify-2fa")]
+    public async Task<IActionResult>
+    Verify2FA(
+        Verify2FADto request)
+    {
+        var result =
+            await _authService
+                .Verify2FAAsync(request);
+
+        return Ok(result);
+    }
+
+    [Authorize]
+    [HttpPost("enable-2fa")]
+    public async Task<IActionResult>
+    Enable2FA()
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        await _authService
+            .Enable2FAAsync(userId);
+
+        return Ok(new
+        {
+            message =
+                "2FA enabled successfully."
+        });
+    }
+
+    [Authorize]
+    [HttpPost("disable-2fa")]
+    public async Task<IActionResult>
+    Disable2FA()
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        await _authService
+            .Disable2FAAsync(userId);
+
+        return Ok(new
+        {
+            message =
+                "2FA disabled successfully."
+        });
+    }
 }

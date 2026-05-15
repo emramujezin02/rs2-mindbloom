@@ -22,4 +22,11 @@ public interface IAuthService
 
     Task DeleteAccountAsync(int userId,DeleteAccountRequestDto request);
 
+    Task<Login2FAResponseDto> LoginWith2FAAsync(LoginRequestDto request);
+
+    Task<AuthResponseDto> Verify2FAAsync(Verify2FADto request);
+
+    Task Enable2FAAsync(int userId);
+
+    Task Disable2FAAsync(int userId);
 }

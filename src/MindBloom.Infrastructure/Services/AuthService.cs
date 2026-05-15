@@ -8,6 +8,7 @@ using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Shared.Constants;
 using MindBloom.Application.Features.Auth.DTOs;
 using Microsoft.EntityFrameworkCore;
+using MindBloom.Application.Features.Auth.DTOs;
 
 
 namespace MindBloom.Infrastructure.Services;
@@ -512,5 +513,154 @@ public class AuthService : IAuthService
             throw new Exception(
                 "Failed to delete account.");
         }
+    }
+
+    public async Task<Login2FAResponseDto>
+    LoginWith2FAAsync(
+        LoginRequestDto request)
+    {
+        var user =
+            await _userManager
+                .FindByEmailAsync(request.Email);
+
+        if (user == null)
+        {
+            throw new Exception(
+                "Invalid credentials.");
+        }
+
+        var isPasswordValid =
+            await _userManager
+                .CheckPasswordAsync(
+                    user,
+                    request.Password);
+
+        if (!isPasswordValid)
+        {
+            throw new Exception(
+                "Invalid credentials.");
+        }
+
+        if (!user.TwoFactorEnabledCustom)
+        {
+            throw new Exception(
+                "2FA is not enabled.");
+        }
+
+        var code =
+            new Random()
+                .Next(100000, 999999)
+                .ToString();
+
+        user.TwoFactorCode = code;
+
+        user.TwoFactorCodeExpiresAtUtc =
+            DateTime.UtcNow.AddMinutes(5);
+
+        await _userManager.UpdateAsync(user);
+
+        await _emailService.SendAsync(
+            user.Email!,
+            "MindBloom 2FA Code",
+            $"Your verification code is: {code}");
+
+        return new Login2FAResponseDto
+        {
+            RequiresTwoFactor = true,
+            Message =
+                "2FA code sent to email."
+        };
+    }
+
+    public async Task<AuthResponseDto>
+    Verify2FAAsync(
+        Verify2FADto request)
+    {
+        var user =
+            await _userManager
+                .FindByEmailAsync(request.Email);
+
+        if (user == null)
+        {
+            throw new Exception("User not found.");
+        }
+
+        if (user.TwoFactorCode != request.Code)
+        {
+            throw new Exception(
+                "Invalid code.");
+        }
+
+        if (user.TwoFactorCodeExpiresAtUtc
+            < DateTime.UtcNow)
+        {
+            throw new Exception(
+                "Code expired.");
+        }
+
+        user.TwoFactorCode = null;
+
+        user.TwoFactorCodeExpiresAtUtc = null;
+
+        await _userManager.UpdateAsync(user);
+
+        var roles =
+            await _userManager
+                .GetRolesAsync(user);
+
+        var token =
+            await _jwtTokenService
+                .GenerateTokenAsync(user);
+
+        var refreshToken =
+            _jwtTokenService
+                .GenerateRefreshToken();
+
+        return new AuthResponseDto
+        {
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email!,
+            Token = token,
+            RefreshToken = refreshToken,
+            Role = roles.First()
+        };
+    }
+
+    public async Task Enable2FAAsync(
+    int userId)
+    {
+        var user =
+            await _userManager.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Id == userId);
+
+        if (user == null)
+        {
+            throw new Exception("User not found.");
+        }
+
+        user.TwoFactorEnabledCustom = true;
+
+        await _userManager.UpdateAsync(user);
+    }
+
+    public async Task Disable2FAAsync(
+    int userId)
+    {
+        var user =
+            await _userManager.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Id == userId);
+
+        if (user == null)
+        {
+            throw new Exception("User not found.");
+        }
+
+        user.TwoFactorEnabledCustom = false;
+
+        await _userManager.UpdateAsync(user);
     }
 }
