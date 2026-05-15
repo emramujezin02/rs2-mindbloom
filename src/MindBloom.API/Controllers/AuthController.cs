@@ -148,4 +148,25 @@ public class AuthController : ControllerBase
 
         return Ok(response);
     }
+
+    [Authorize]
+    [HttpDelete("delete-account")]
+    public async Task<IActionResult> DeleteAccount(
+    DeleteAccountRequestDto request)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!.Value);
+
+        await _authService.DeleteAccountAsync(
+            userId,
+            request);
+
+        return Ok(new
+        {
+            message =
+                "Account deleted successfully."
+        });
+    }
 }

@@ -20,4 +20,6 @@ public interface IAuthService
 
     Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto request);
 
+    Task DeleteAccountAsync(int userId,DeleteAccountRequestDto request);
+
 }

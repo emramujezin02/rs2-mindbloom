@@ -6,6 +6,8 @@ using MindBloom.Application.Features.Auth.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Shared.Constants;
+using MindBloom.Application.Features.Auth.DTOs;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace MindBloom.Infrastructure.Services;
@@ -446,5 +448,69 @@ public class AuthService : IAuthService
             Email=refreshToken.User.Email,
             Role=roles.First()
         };
+    }
+
+    public async Task DeleteAccountAsync(
+    int userId,
+    DeleteAccountRequestDto request)
+    {
+        var user =
+            await _userManager.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Id == userId);
+
+        if (user == null)
+        {
+            throw new Exception("User not found.");
+        }
+
+        var isPasswordCorrect =
+            await _userManager.CheckPasswordAsync(
+                user,
+                request.Password);
+
+        if (!isPasswordCorrect)
+        {
+            throw new Exception("Invalid password.");
+        }
+
+        var refreshTokens =
+            await _context.RefreshTokens
+                .Where(x => x.UserId == user.Id)
+                .ToListAsync();
+
+        _context.RefreshTokens.RemoveRange(
+            refreshTokens);
+
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == user.Id);
+
+        if (therapist != null)
+        {
+            _context.Therapists.Remove(therapist);
+        }
+
+        var client =
+            await _context.Clients
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == user.Id);
+
+        if (client != null)
+        {
+            _context.Clients.Remove(client);
+        }
+
+        await _context.SaveChangesAsync();
+
+        var result =
+            await _userManager.DeleteAsync(user);
+
+        if (!result.Succeeded)
+        {
+            throw new Exception(
+                "Failed to delete account.");
+        }
     }
 }
