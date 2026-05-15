@@ -50,7 +50,7 @@ public class AuthService : IAuthService
             UserName = request.Username,
             DateOfBirth = request.DateOfBirth,
             CreatedAtUtc = DateTime.Now,
-            EmailConfirmed = true,
+            EmailConfirmed = false,
             IsEmailVerified = false
         };
 
@@ -63,9 +63,6 @@ public class AuthService : IAuthService
                 string.Join(", ", result.Errors.Select(x => x.Description)));
         }
 
-        await _userManager.AddToRoleAsync(
-    user,
-    RoleConstants.Client);
 
         var client = new Client
         {
@@ -83,6 +80,26 @@ public class AuthService : IAuthService
         var token =
             await _jwtTokenService.GenerateTokenAsync(user);
 
+        var refreshToken = _jwtTokenService.GenerateRefreshToken();
+
+        var refreshTokenEntity =
+    new RefreshToken
+    {
+        UserId = user.Id,
+
+        Token = refreshToken,
+
+        ExpiresAtUtc =
+            DateTime.UtcNow.AddDays(7),
+
+        IsRevoked = false
+    };
+
+        _context.RefreshTokens.Add(
+            refreshTokenEntity);
+
+        await _context.SaveChangesAsync();
+
         return new AuthResponseDto
         {
             Id = user.Id,
@@ -90,7 +107,8 @@ public class AuthService : IAuthService
             LastName = user.LastName,
             Email = user.Email!,
             Token = token,
-            Role = request.Role
+            Role = request.Role,
+            RefreshToken=refreshToken
         };
 
         
@@ -122,12 +140,44 @@ public class AuthService : IAuthService
         {
             throw new Exception("Invalid credentials.");
         }
+        var oldTokens =
+    await _context.RefreshTokens
+        .Where(x =>
+            x.UserId == user.Id
+            && !x.IsRevoked)
+        .ToListAsync();
 
-        var roles =
-            await _userManager.GetRolesAsync(user);
+        foreach (var oldToken in oldTokens)
+        {
+            oldToken.IsRevoked = true;
+        }
 
-        var token =
-            await _jwtTokenService.GenerateTokenAsync(user);
+
+        var roles = await _userManager.GetRolesAsync(user);
+
+        var token = await _jwtTokenService.GenerateTokenAsync(user);
+
+        var refreshToken =_jwtTokenService.GenerateRefreshToken();
+
+        var refreshTokenEntity =
+    new RefreshToken
+    {
+        UserId = user.Id,
+
+        Token = refreshToken,
+
+        ExpiresAtUtc =
+    request.RememberMe
+        ? DateTime.UtcNow.AddDays(30)
+        : DateTime.UtcNow.AddDays(1),
+
+        IsRevoked = false
+    };
+
+        _context.RefreshTokens.Add(
+            refreshTokenEntity);
+
+        await _context.SaveChangesAsync();
 
         return new AuthResponseDto
         {
@@ -136,7 +186,9 @@ public class AuthService : IAuthService
             LastName = user.LastName,
             Email = user.Email!,
             Token = token,
-            Role = roles.First()
+            Role = roles.First(),
+            RefreshToken=refreshToken,
+            
         };
     }
 
@@ -319,5 +371,80 @@ public class AuthService : IAuthService
         user.IsEmailVerified = true;
 
         await _userManager.UpdateAsync(user);
+    }
+
+    public async Task<AuthResponseDto>
+    RefreshTokenAsync(
+        RefreshTokenRequestDto request)
+    {
+        var refreshToken =
+            await _context.RefreshTokens
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Token == request.RefreshToken);
+
+        if (refreshToken == null)
+        {
+            throw new Exception(
+                "Invalid refresh token.");
+        }
+
+        if (refreshToken.IsRevoked)
+        {
+            throw new Exception(
+                "Refresh token revoked.");
+        }
+
+        if (refreshToken.ExpiresAtUtc
+            < DateTime.UtcNow)
+        {
+            throw new Exception(
+                "Refresh token expired.");
+        }
+
+        refreshToken.IsRevoked = true;
+
+        var newJwtToken =
+            await _jwtTokenService
+                .GenerateTokenAsync(
+                    refreshToken.User);
+
+        var newRefreshToken =
+            _jwtTokenService
+                .GenerateRefreshToken();
+
+        var newRefreshTokenEntity =
+            new RefreshToken
+            {
+                UserId =
+                    refreshToken.UserId,
+
+                Token =
+                    newRefreshToken,
+
+                ExpiresAtUtc =
+                    DateTime.UtcNow.AddDays(7),
+
+                IsRevoked = false
+               
+            };
+
+        _context.RefreshTokens.Add(
+            newRefreshTokenEntity);
+
+        await _context.SaveChangesAsync();
+
+        var roles = await _userManager.GetRolesAsync(refreshToken.User);
+
+        return new AuthResponseDto
+        {
+            Token = newJwtToken,
+            RefreshToken = newRefreshToken,
+            Id=refreshToken.Id,
+            FirstName=refreshToken.User.FirstName,
+            LastName=refreshToken.User.LastName,
+            Email=refreshToken.User.Email,
+            Role=roles.First()
+        };
     }
 }

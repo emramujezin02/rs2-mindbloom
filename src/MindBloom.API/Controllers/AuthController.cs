@@ -136,4 +136,16 @@ public class AuthController : ControllerBase
                     "Email verified successfully."
             });
     }
+
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult>
+    RefreshToken(
+        RefreshTokenRequestDto request)
+    {
+        var response =
+            await _authService
+                .RefreshTokenAsync(request);
+
+        return Ok(response);
+    }
 }

@@ -57,4 +57,10 @@ public class JwtTokenService : IJwtTokenService
         return new JwtSecurityTokenHandler()
             .WriteToken(token);
     }
+
+    public string GenerateRefreshToken()
+    {
+        return Guid.NewGuid().ToString()
+            + Guid.NewGuid().ToString();
+    }
 }

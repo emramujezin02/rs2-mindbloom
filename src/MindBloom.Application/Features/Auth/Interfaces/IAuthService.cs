@@ -18,4 +18,6 @@ public interface IAuthService
 
     Task VerifyEmailAsync(VerifyEmailDto request);
 
+    Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto request);
+
 }
