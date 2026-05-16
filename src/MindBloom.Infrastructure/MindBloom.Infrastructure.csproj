@@ -22,6 +22,7 @@
     </PackageReference>
     <PackageReference Include="RabbitMQ.Client" Version="7.2.1" />
     <PackageReference Include="Stripe.net" Version="51.1.0" />
+
   </ItemGroup>
 
   <ItemGroup>
@@ -29,6 +30,7 @@
     <Folder Include="SignalR\" />
     <Folder Include="Persistence\Configurations\" />
     <Folder Include="Identity\" />
+	  <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <PropertyGroup>

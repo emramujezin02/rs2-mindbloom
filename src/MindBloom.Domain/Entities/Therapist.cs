@@ -18,6 +18,8 @@ public class Therapist : BaseEntity
 
     public int ExperienceYears { get; set; }
 
+    public string? ProfileImagePath { get; set; }
+
     public ICollection<AppointmentNote> AppointmentNotes { get; set; } = new List<AppointmentNote>();
 
     public ICollection<TherapistAvailability> Availabilities { get; set; } = new List<TherapistAvailability>();
@@ -27,4 +29,6 @@ public class Therapist : BaseEntity
     public ICollection<Review> Reviews { get; set; }= new List<Review>();
 
     public ICollection<TherapistUnavailableDate>UnavailableDates{ get; set; } = new List<TherapistUnavailableDate>();
+
+    public ICollection<TherapistDocument>Documents { get; set; } = new List<TherapistDocument>();
 }

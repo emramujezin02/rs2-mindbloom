@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Therapists.DTOs;
 using MindBloom.Application.Features.Therapists.Interfaces;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 
 namespace MindBloom.API.Controllers;
 
@@ -220,6 +221,68 @@ public class TherapistsController : ControllerBase
         {
             message =
                 "Unavailable date deleted successfully."
+        });
+    }
+
+    [Authorize(Roles = "Therapist")]
+    [HttpPost("documents")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult>
+    UploadDocument(
+        [FromForm] UploadTherapistDocumentDto request)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        await _therapistService
+            .UploadDocumentAsync(
+                userId,
+                request.File);
+
+        return Ok(new
+        {
+            message =
+                "Document uploaded successfully."
+        });
+    }
+
+    [HttpGet("{therapistId}/documents")]
+    public async Task<IActionResult>
+    GetDocuments(
+        int therapistId)
+    {
+        var result =
+            await _therapistService
+                .GetDocumentsAsync(
+                    therapistId);
+
+        return Ok(result);
+    }
+
+    [Authorize(Roles = "Therapist")]
+    [HttpDelete("documents/{id}")]
+    public async Task<IActionResult>
+    DeleteDocument(
+        int id)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        await _therapistService
+            .DeleteDocumentAsync(
+                userId,
+                id);
+
+        return Ok(new
+        {
+            message =
+                "Document deleted successfully."
         });
     }
 }

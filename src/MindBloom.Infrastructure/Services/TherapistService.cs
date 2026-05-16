@@ -5,16 +5,21 @@ using MindBloom.Application.Features.Therapists.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Domain.Enums;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
+
 
 namespace MindBloom.Infrastructure.Services;
 
 public class TherapistService : ITherapistService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IWebHostEnvironment _environment;
 
-    public TherapistService(ApplicationDbContext context)
+    public TherapistService(ApplicationDbContext context, IWebHostEnvironment environment)
     {
         _context = context;
+        _environment = environment;
 
     }
     public async Task<TherapistResponseDto> CreateAsync(int userId, CreateTherapistDto request)
@@ -574,6 +579,174 @@ public class TherapistService : ITherapistService
         _context
             .TherapistUnavailableDates
             .Remove(unavailableDate);
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task UploadDocumentAsync(
+    int therapistUserId,
+    IFormFile file)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception(
+                "Therapist not found.");
+        }
+
+        if (file == null || file.Length == 0)
+        {
+            throw new Exception(
+                "Invalid file.");
+        }
+
+        var allowedTypes =
+            new[]
+            {
+            "image/jpeg",
+            "image/png",
+            "application/pdf"
+            };
+
+        if (!allowedTypes.Contains(
+            file.ContentType))
+        {
+            throw new Exception(
+                "Only JPG, PNG and PDF files are allowed.");
+        }
+
+        var webRootPath =
+    _environment.WebRootPath
+    ?? Path.Combine(
+        Directory.GetCurrentDirectory(),
+        "wwwroot");
+
+        var uploadsFolder =
+            Path.Combine(
+                _environment.WebRootPath?? Path.Combine(webRootPath,"uploads","therapist"),
+                "uploads",
+                "therapists");
+
+        if (!Directory.Exists(
+            uploadsFolder))
+        {
+            Directory.CreateDirectory(
+                uploadsFolder);
+        }
+
+        var uniqueFileName =
+            $"{Guid.NewGuid()}_{file.FileName}";
+
+        var filePath =
+            Path.Combine(
+                uploadsFolder,
+                uniqueFileName);
+
+        using var stream =
+            new FileStream(
+                filePath,
+                FileMode.Create);
+
+        await file.CopyToAsync(stream);
+
+        var document =
+            new TherapistDocument
+            {
+                TherapistId = therapist.Id,
+
+                FileName = file.FileName,
+
+                FilePath =
+                    $"/uploads/therapists/{uniqueFileName}",
+
+                ContentType =
+                    file.ContentType,
+
+                IsApproved = false
+            };
+
+        _context.TherapistDocuments
+            .Add(document);
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<
+    List<TherapistDocumentResponseDto>>
+    GetDocumentsAsync(
+        int therapistId)
+    {
+        return await _context
+            .TherapistDocuments
+            .Where(x =>
+                x.TherapistId == therapistId)
+            .Select(x =>
+                new TherapistDocumentResponseDto
+                {
+                    Id = x.Id,
+
+                    FileName =
+                        x.FileName,
+
+                    FilePath =
+                        x.FilePath,
+
+                    ContentType =
+                        x.ContentType,
+
+                    IsApproved =
+                        x.IsApproved
+                })
+            .ToListAsync();
+    }
+
+    public async Task DeleteDocumentAsync(
+    int therapistUserId,
+    int documentId)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception(
+                "Therapist not found.");
+        }
+
+        var document =
+            await _context
+                .TherapistDocuments
+                .FirstOrDefaultAsync(x =>
+                    x.Id == documentId
+                    && x.TherapistId
+                        == therapist.Id);
+
+        if (document == null)
+        {
+            throw new Exception(
+                "Document not found.");
+        }
+
+        var physicalPath =
+            Path.Combine(
+                _environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(),"wwwroot"),
+                document.FilePath.TrimStart('/')
+                    .Replace("/",
+                        Path.DirectorySeparatorChar.ToString()));
+
+        if (File.Exists(physicalPath))
+        {
+            File.Delete(physicalPath);
+        }
+
+        _context.TherapistDocuments
+            .Remove(document);
 
         await _context.SaveChangesAsync();
     }

@@ -15,6 +15,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.SignalR;
 using MindBloom.Infrastructure.Realtime;
+using Microsoft.AspNetCore.Mvc;
 
 Env.Load("../../.env");
 
@@ -98,6 +99,8 @@ app.UseSwaggerUI();
 app.UseCors("AllowAll");
 
 app.UseWebSockets();
+
+app.UseStaticFiles();
 
 app.UseAuthentication();
 

@@ -37,4 +37,8 @@
 		<ProjectReference Include="..\MindBloom.Infrastructure\MindBloom.Infrastructure.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="wwroot\" />
+	</ItemGroup>
+
 </Project>

@@ -25,6 +25,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<TherapistDocument>TherapistDocuments { get; set; }
     public DbSet<AppointmentNote> AppointmentNotes { get; set; }
     public DbSet<TherapistUnavailableDate> TherapistUnavailableDates{ get; set; }
     protected override void OnModelCreating(ModelBuilder builder)

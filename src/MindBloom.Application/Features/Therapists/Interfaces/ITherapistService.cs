@@ -1,4 +1,5 @@
-﻿using MindBloom.Application.Common.Models;
+﻿using Microsoft.AspNetCore.Http;
+using MindBloom.Application.Common.Models;
 using MindBloom.Application.Features.Therapists.DTOs;
 
 namespace MindBloom.Application.Features.Therapists.Interfaces;
@@ -28,6 +29,12 @@ public interface ITherapistService
     Task AddUnavailableDateAsync( int therapistUserId, CreateUnavailableDateDto request);
 
     Task<List<UnavailableDateResponseDto>> GetUnavailableDatesAsync(int therapistId);
+    Task UploadDocumentAsync(int therapistUserId,IFormFile file);
 
+    Task<List<TherapistDocumentResponseDto>>GetDocumentsAsync(int therapistId);
+
+    Task DeleteDocumentAsync(
+        int therapistUserId,
+        int documentId);
     Task DeleteUnavailableDateAsync(int therapistUserId, int unavailableDateId);
 }
