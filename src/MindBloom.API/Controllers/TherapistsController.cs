@@ -159,4 +159,67 @@ public class TherapistsController : ControllerBase
 
         return Ok(result);
     }
+
+    [Authorize(Roles = "Therapist")]
+    [HttpPost("unavailable-dates")]
+    public async Task<IActionResult>
+    AddUnavailableDate(
+        CreateUnavailableDateDto request)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        await _therapistService
+            .AddUnavailableDateAsync(
+                userId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                "Unavailable date added successfully."
+        });
+    }
+
+    [HttpGet("{therapistId}/unavailable-dates")]
+    public async Task<IActionResult>
+    GetUnavailableDates(
+        int therapistId)
+    {
+        var result =
+            await _therapistService
+                .GetUnavailableDatesAsync(
+                    therapistId);
+
+        return Ok(result);
+    }
+
+
+    [Authorize(Roles = "Therapist")]
+    [HttpDelete(
+    "unavailable-dates/{id}")]
+    public async Task<IActionResult>
+    DeleteUnavailableDate(
+        int id)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        await _therapistService
+            .DeleteUnavailableDateAsync(
+                userId,
+                id);
+
+        return Ok(new
+        {
+            message =
+                "Unavailable date deleted successfully."
+        });
+    }
 }

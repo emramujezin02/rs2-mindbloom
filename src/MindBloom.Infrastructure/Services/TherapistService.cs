@@ -17,9 +17,7 @@ public class TherapistService : ITherapistService
         _context = context;
 
     }
-    public async Task<TherapistResponseDto> CreateAsync(
-        int userId,
-        CreateTherapistDto request)
+    public async Task<TherapistResponseDto> CreateAsync(int userId, CreateTherapistDto request)
     {
         var user =
             await _context.Users
@@ -471,5 +469,112 @@ public class TherapistService : ITherapistService
             TotalEarnings =
                 completedAppointments.Sum(x => 50)
         };
+    }
+
+    public async Task AddUnavailableDateAsync(
+    int therapistUserId,
+    CreateUnavailableDateDto request)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception(
+                "Therapist not found.");
+        }
+
+        if (request.StartUtc >= request.EndUtc)
+        {
+            throw new Exception(
+                "Invalid date range.");
+        }
+
+        var hasOverlap =
+            await _context
+                .TherapistUnavailableDates
+                .AnyAsync(x =>
+                    x.TherapistId == therapist.Id
+                    && request.StartUtc < x.EndUtc
+                    && request.EndUtc > x.StartUtc);
+
+        if (hasOverlap)
+        {
+            throw new Exception(
+                "Unavailable date overlaps with existing one.");
+        }
+
+        var unavailableDate =
+            new TherapistUnavailableDate
+            {
+                TherapistId = therapist.Id,
+                StartUtc = request.StartUtc,
+                EndUtc = request.EndUtc,
+                Reason = request.Reason
+            };
+
+        _context
+            .TherapistUnavailableDates
+            .Add(unavailableDate);
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<
+    List<UnavailableDateResponseDto>>
+    GetUnavailableDatesAsync(
+        int therapistId)
+    {
+        return await _context
+            .TherapistUnavailableDates
+            .Where(x =>
+                x.TherapistId == therapistId)
+            .OrderBy(x => x.StartUtc)
+            .Select(x =>
+                new UnavailableDateResponseDto
+                {
+                    Id = x.Id,
+                    StartUtc = x.StartUtc,
+                    EndUtc = x.EndUtc,
+                    Reason = x.Reason
+                })
+            .ToListAsync();
+    }
+
+    public async Task DeleteUnavailableDateAsync(
+    int therapistUserId,
+    int unavailableDateId)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception(
+                "Therapist not found.");
+        }
+
+        var unavailableDate =
+            await _context
+                .TherapistUnavailableDates
+                .FirstOrDefaultAsync(x =>
+                    x.Id == unavailableDateId
+                    && x.TherapistId == therapist.Id);
+
+        if (unavailableDate == null)
+        {
+            throw new Exception(
+                "Unavailable date not found.");
+        }
+
+        _context
+            .TherapistUnavailableDates
+            .Remove(unavailableDate);
+
+        await _context.SaveChangesAsync();
     }
 }

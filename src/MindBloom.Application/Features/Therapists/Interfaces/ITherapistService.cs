@@ -24,4 +24,10 @@ public interface ITherapistService
     Task DeleteAvailabilityAsync(int therapistUserId,int availabilityId);
 
     Task<TherapistDashboardDto>GetDashboardAsync(int therapistUserId);
+
+    Task AddUnavailableDateAsync( int therapistUserId, CreateUnavailableDateDto request);
+
+    Task<List<UnavailableDateResponseDto>> GetUnavailableDatesAsync(int therapistId);
+
+    Task DeleteUnavailableDateAsync(int therapistUserId, int unavailableDateId);
 }

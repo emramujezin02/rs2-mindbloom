@@ -70,6 +70,21 @@ public class AppointmentService : IAppointmentService
                 "Appointment is outside working hours.");
         }
 
+        var unavailableDate =
+    await _context
+        .TherapistUnavailableDates
+        .AnyAsync(x =>
+            x.TherapistId
+                == request.TherapistId
+            && request.StartUtc < x.EndUtc
+            && request.EndUtc > x.StartUtc);
+
+        if (unavailableDate)
+        {
+            throw new Exception(
+                "Therapist is unavailable during this time.");
+        }
+
         var overlappingAppointment =
             await _context.Appointments
                 .AnyAsync(x =>
