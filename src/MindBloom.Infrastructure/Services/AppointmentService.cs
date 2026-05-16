@@ -400,6 +400,126 @@ public class AppointmentService : IAppointmentService
             TotalEarnings = totalEarnings
         };
     }
+
+    public async Task AddAppointmentNoteAsync(
+    int therapistUserId,
+    CreateAppointmentNoteDto request)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception(
+                "Therapist not found.");
+        }
+
+        var appointment =
+            await _context.Appointments
+                .FirstOrDefaultAsync(x =>
+                    x.Id == request.AppointmentId
+                    && x.TherapistId == therapist.Id);
+
+        if (appointment == null)
+        {
+            throw new Exception(
+                "Appointment not found.");
+        }
+
+        if (appointment.Status
+            != AppointmentStatus.Completed)
+        {
+            throw new Exception(
+                "Notes can only be added after completed appointments.");
+        }
+
+        var existingNote =
+            await _context.AppointmentNotes
+                .FirstOrDefaultAsync(x =>
+                    x.AppointmentId
+                        == request.AppointmentId);
+
+        if (existingNote != null)
+        {
+            throw new Exception(
+                "Appointment note already exists.");
+        }
+
+        var note =
+            new AppointmentNote
+            {
+                AppointmentId =
+                    appointment.Id,
+
+                TherapistId =
+                    therapist.Id,
+
+                Notes =
+                    request.Notes,
+
+                ClientMood =
+                    request.ClientMood,
+
+                Recommendations =
+                    request.Recommendations,
+
+                FollowUpNeeded =
+                    request.FollowUpNeeded
+            };
+
+        _context.AppointmentNotes.Add(note);
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<
+    AppointmentNoteResponseDto?>
+    GetAppointmentNoteAsync(
+        int therapistUserId,
+        int appointmentId)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception(
+                "Therapist not found.");
+        }
+
+        return await _context.AppointmentNotes
+            .Where(x =>
+                x.AppointmentId == appointmentId
+                && x.TherapistId == therapist.Id)
+            .Select(x =>
+                new AppointmentNoteResponseDto
+                {
+                    Id = x.Id,
+
+                    AppointmentId =
+                        x.AppointmentId,
+
+                    Notes =
+                        x.Notes,
+
+                    ClientMood =
+                        x.ClientMood,
+
+                    Recommendations =
+                        x.Recommendations,
+
+                    FollowUpNeeded =
+                        x.FollowUpNeeded,
+
+                    CreatedAtUtc =
+                        x.CreatedAtUtc
+                })
+            .FirstOrDefaultAsync();
+    }
 }
 
 

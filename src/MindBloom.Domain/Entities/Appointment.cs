@@ -28,6 +28,8 @@ public class Appointment : BaseEntity
 
     public DateTime EndUtc { get; set; }
 
+    public AppointmentNote? AppointmentNote { get; set; }
+
     public ICollection<Notification> Notifications { get; set; }
         = new List<Notification>();
 }

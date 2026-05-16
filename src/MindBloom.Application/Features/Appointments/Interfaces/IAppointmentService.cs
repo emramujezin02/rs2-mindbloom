@@ -12,4 +12,6 @@ public interface IAppointmentService
     Task UpdateStatusAsync(int therapistUserId,UpdateAppointmentStatusDto request);
     Task CancelAppointmentAsync(int clientUserId,int appointmentId,CancelAppointmentDto request);
     Task<TherapistStatsDto> GetTherapistStatsAsync(int therapistUserId);
+    Task AddAppointmentNoteAsync(int therapistUserId, CreateAppointmentNoteDto request);
+    Task<AppointmentNoteResponseDto?>GetAppointmentNoteAsync(int therapistUserId, int appointmentId);
 }

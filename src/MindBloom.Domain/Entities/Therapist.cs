@@ -18,6 +18,8 @@ public class Therapist : BaseEntity
 
     public int ExperienceYears { get; set; }
 
+    public ICollection<AppointmentNote> AppointmentNotes { get; set; } = new List<AppointmentNote>();
+
     public ICollection<TherapistAvailability> Availabilities { get; set; } = new List<TherapistAvailability>();
 
     public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();

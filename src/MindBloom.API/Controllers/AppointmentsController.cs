@@ -124,4 +124,49 @@ public class AppointmentsController : ControllerBase
 
         return Ok(result);
     }
+
+    [Authorize(Roles = "Therapist")]
+    [HttpPost("notes")]
+    public async Task<IActionResult>
+    AddAppointmentNote(
+        CreateAppointmentNoteDto request)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        await _appointmentService
+            .AddAppointmentNoteAsync(
+                userId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                "Appointment note added successfully."
+        });
+    }
+
+    [Authorize(Roles = "Therapist")]
+    [HttpGet("{appointmentId}/notes")]
+    public async Task<IActionResult>
+    GetAppointmentNote(
+        int appointmentId)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        var result =
+            await _appointmentService
+                .GetAppointmentNoteAsync(
+                    userId,
+                    appointmentId);
+
+        return Ok(result);
+    }
 }
