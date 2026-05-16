@@ -34,6 +34,19 @@ public class AuthService : IAuthService
         _emailService = emailService;
     }
 
+    private bool IsDemoAccount(string email)
+    {
+        var demoEmails = new List<string>
+    {
+        "therapist@mindbloom.ba",
+        "client@mindbloom.ba",
+        "admin@mindbloom.ba"
+    };
+
+        return demoEmails.Contains(
+            email.ToLower());
+    }
+
     public async Task<AuthResponseDto> RegisterAsync(
         RegisterRequestDto request)
     {
@@ -53,8 +66,8 @@ public class AuthService : IAuthService
             UserName = request.Username,
             DateOfBirth = request.DateOfBirth,
             CreatedAtUtc = DateTime.Now,
-            EmailConfirmed = false,
-            IsEmailVerified = false
+            EmailConfirmed = IsDemoAccount(request.Email),
+            IsEmailVerified = IsDemoAccount(request.Email)
         };
 
         var result =
@@ -78,7 +91,11 @@ public class AuthService : IAuthService
 
         await _userManager.AddToRoleAsync(user, request.Role);
 
-        await SendVerificationEmailAsync(user.Email!);
+        if (!IsDemoAccount(user.Email!))
+        {
+            await SendVerificationEmailAsync(
+                user.Email!);
+        }
 
         var token =
             await _jwtTokenService.GenerateTokenAsync(user);
@@ -128,7 +145,8 @@ public class AuthService : IAuthService
             throw new Exception("Invalid credentials.");
         }
 
-        if (!user.IsEmailVerified)
+        if (!user.IsEmailVerified
+    && !IsDemoAccount(user.Email!))
         {
             throw new Exception(
                 "Email is not verified.");
@@ -229,10 +247,13 @@ public class AuthService : IAuthService
 
         await _context.SaveChangesAsync();
 
-        await _emailService.SendAsync(
-            request.Email,
-            "MindBloom Password Reset",
-            $"Your password reset code is: {code}");
+        if (!IsDemoAccount(user.Email!))
+        {
+            await _emailService.SendAsync(
+                user.Email!,
+                "Reset Password Code",
+                $"Your reset code is: {code}");
+        }
     }
 
     public async Task ResetPasswordAsync(
@@ -547,6 +568,26 @@ public class AuthService : IAuthService
                 "2FA is not enabled.");
         }
 
+        if (IsDemoAccount(user.Email!))
+        {
+            var roles =
+                await _userManager.GetRolesAsync(user);
+
+            var token =
+                await _jwtTokenService
+                    .GenerateTokenAsync(user);
+
+            var refreshToken =
+                _jwtTokenService
+                    .GenerateRefreshToken();
+
+            return new Login2FAResponseDto
+            {
+                RequiresTwoFactor = false,
+                Message = "Demo account login successful."
+            };
+        }
+
         var code =
             new Random()
                 .Next(100000, 999999)
@@ -559,10 +600,13 @@ public class AuthService : IAuthService
 
         await _userManager.UpdateAsync(user);
 
-        await _emailService.SendAsync(
-            user.Email!,
-            "MindBloom 2FA Code",
-            $"Your verification code is: {code}");
+        if (!IsDemoAccount(user.Email!))
+        {
+            await _emailService.SendAsync(
+                user.Email!,
+                "MindBloom 2FA Code",
+                $"Your verification code is: {code}");
+        }
 
         return new Login2FAResponseDto
         {
@@ -585,10 +629,13 @@ public class AuthService : IAuthService
             throw new Exception("User not found.");
         }
 
-        if (user.TwoFactorCode != request.Code)
+        if (!IsDemoAccount(user.Email!))
         {
-            throw new Exception(
-                "Invalid code.");
+            if (user.TwoFactorCode != request.Code)
+            {
+                throw new Exception(
+                    "Invalid code.");
+            }
         }
 
         if (user.TwoFactorCodeExpiresAtUtc
