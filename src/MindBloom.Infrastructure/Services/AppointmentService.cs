@@ -632,6 +632,48 @@ public class AppointmentService : IAppointmentService
                     .FirstOrDefault()
         };
     }
+
+    public async Task UpdateMeetingLinkAsync(
+    int therapistUserId,
+    int appointmentId,
+    UpdateMeetingLinkDto request)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception(
+                "Therapist not found.");
+        }
+
+        var appointment =
+            await _context.Appointments
+                .FirstOrDefaultAsync(x =>
+                    x.Id == appointmentId
+                    && x.TherapistId
+                    == therapist.Id);
+
+        if (appointment == null)
+        {
+            throw new Exception(
+                "Appointment not found.");
+        }
+
+        if (appointment.Type
+            != AppointmentType.Online)
+        {
+            throw new Exception(
+                "Meeting link can only be added to online appointments.");
+        }
+
+        appointment.MeetingLink =
+            request.MeetingLink;
+
+        await _context.SaveChangesAsync();
+    }
 }
 
 

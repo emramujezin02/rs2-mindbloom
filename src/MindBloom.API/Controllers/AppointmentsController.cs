@@ -188,4 +188,30 @@ public class AppointmentsController : ControllerBase
 
         return Ok(result);
     }
+
+    [Authorize(Roles = "Therapist")]
+    [HttpPut("{appointmentId}/meeting-link")]
+    public async Task<IActionResult>
+    UpdateMeetingLink(
+        int appointmentId,
+        UpdateMeetingLinkDto request)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        await _appointmentService
+            .UpdateMeetingLinkAsync(
+                userId,
+                appointmentId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                "Meeting link updated successfully."
+        });
+    }
 }
