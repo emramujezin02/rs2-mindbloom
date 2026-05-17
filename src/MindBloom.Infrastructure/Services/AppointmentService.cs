@@ -106,14 +106,39 @@ public class AppointmentService : IAppointmentService
             throw new Exception("Client profile not found.");
         }
 
+        if (request.Type
+    == AppointmentType.Online
+    && string.IsNullOrWhiteSpace(
+        request.MeetingLink))
+        {
+            throw new Exception(
+                "Meeting link is required for online appointments.");
+        }
+
+        if (request.Type
+            == AppointmentType.InPerson
+            && string.IsNullOrWhiteSpace(
+                request.Location))
+        {
+            throw new Exception(
+                "Location is required for in-person appointments.");
+        }
+
         var appointment = new Appointment
         {
             TherapistId = request.TherapistId,
             StartUtc = request.StartUtc,
             ClientId = client.Id,
             EndUtc = request.EndUtc,
-            Status = AppointmentStatus.Pending
+            Status = AppointmentStatus.Pending,
+            Type = request.Type,
+
+            MeetingLink = request.MeetingLink,
+
+            Location = request.Location,
         };
+
+
 
 
         _context.Appointments.Add(appointment);
@@ -199,7 +224,12 @@ public class AppointmentService : IAppointmentService
                     + x.Therapist.User.LastName,
                 StartUtc = x.StartUtc,
                 EndUtc = x.EndUtc,
-                Status = x.Status.ToString()
+                Status = x.Status.ToString(),
+                Type = x.Type.ToString(),
+
+                MeetingLink = x.MeetingLink,
+
+                Location = x.Location,
             })
             .ToListAsync();
     }

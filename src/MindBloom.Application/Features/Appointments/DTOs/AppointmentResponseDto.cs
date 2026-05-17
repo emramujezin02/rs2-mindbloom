@@ -13,4 +13,11 @@ public class AppointmentResponseDto
     public DateTime EndUtc { get; set; }
 
     public string Status { get; set; } = null!;
+
+    public string Type { get; set; }
+    = string.Empty;
+
+    public string? MeetingLink { get; set; }
+
+    public string? Location { get; set; }
 }

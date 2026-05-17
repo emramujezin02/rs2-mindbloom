@@ -28,6 +28,12 @@ public class Appointment : BaseEntity
 
     public DateTime EndUtc { get; set; }
 
+    public AppointmentType Type { get; set; }
+
+    public string? MeetingLink { get; set; }
+
+    public string? Location { get; set; }
+
     public AppointmentNote? AppointmentNote { get; set; }
 
     public ICollection<Notification> Notifications { get; set; }
