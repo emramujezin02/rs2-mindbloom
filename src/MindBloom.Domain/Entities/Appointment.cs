@@ -34,6 +34,8 @@ public class Appointment : BaseEntity
 
     public string? Location { get; set; }
 
+    public bool ReminderSent { get; set; }
+
     public AppointmentNote? AppointmentNote { get; set; }
 
     public ICollection<Notification> Notifications { get; set; }

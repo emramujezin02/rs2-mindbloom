@@ -14,6 +14,7 @@ using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Security;
 using MindBloom.Infrastructure.Services;
+using MindBloom.Infrastructure.BackgroundServices;
 using MindBloom.Application.Features.Reviews.Interfaces;
 using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Features.Notifications.Interfaces;
@@ -133,6 +134,8 @@ public static class DependencyInjection
         services.AddScoped<IFavoriteService, FavoriteService>();
 
         services.AddScoped<IEmailService, EmailService>();
+
+        services.AddHostedService<AppointmentReminderService>();
 
         return services;
     }
