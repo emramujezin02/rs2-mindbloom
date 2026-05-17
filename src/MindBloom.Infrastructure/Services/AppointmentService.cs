@@ -520,6 +520,88 @@ public class AppointmentService : IAppointmentService
                 })
             .FirstOrDefaultAsync();
     }
+
+    public async Task<ClientDashboardDto>
+    GetClientDashboardAsync(
+        int clientUserId)
+    {
+        var client =
+            await _context.Clients
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == clientUserId);
+
+        if (client == null)
+        {
+            throw new Exception(
+                "Client not found.");
+        }
+
+        var appointments =
+            await _context.Appointments
+                .Include(x => x.Therapist)
+                .Where(x =>
+                    x.ClientId == client.Id)
+                .ToListAsync();
+
+        return new ClientDashboardDto
+        {
+            TotalAppointments =
+                appointments.Count,
+
+            CompletedAppointments =
+                appointments.Count(x =>
+                    x.Status
+                    == AppointmentStatus.Completed),
+
+            PendingAppointments =
+                appointments.Count(x =>
+                    x.Status
+                    == AppointmentStatus.Pending),
+
+            CancelledAppointments =
+                appointments.Count(x =>
+                    x.Status
+                    == AppointmentStatus.Cancelled
+                    || x.Status
+                    == AppointmentStatus.Rejected),
+
+            TotalTherapistsVisited =
+                appointments
+                    .Select(x => x.TherapistId)
+                    .Distinct()
+                    .Count(),
+
+            TotalSpent =
+                appointments
+                    .Where(x =>
+                        x.Status
+                        == AppointmentStatus.Completed)
+                    .Sum(x =>
+                        x.Therapist.HourlyRate),
+
+            LastAppointmentDate =
+                appointments
+                    .Where(x =>
+                        x.EndUtc
+                        < DateTime.UtcNow)
+                    .OrderByDescending(x =>
+                        x.EndUtc)
+                    .Select(x =>
+                        (DateTime?)x.EndUtc)
+                    .FirstOrDefault(),
+
+            NextAppointmentDate =
+                appointments
+                    .Where(x =>
+                        x.StartUtc
+                        > DateTime.UtcNow)
+                    .OrderBy(x =>
+                        x.StartUtc)
+                    .Select(x =>
+                        (DateTime?)x.StartUtc)
+                    .FirstOrDefault()
+        };
+    }
 }
 
 

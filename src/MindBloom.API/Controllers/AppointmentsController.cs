@@ -169,4 +169,23 @@ public class AppointmentsController : ControllerBase
 
         return Ok(result);
     }
+
+    [Authorize(Roles = "Client")]
+    [HttpGet("client-dashboard")]
+    public async Task<IActionResult>
+    GetClientDashboard()
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        var result =
+            await _appointmentService
+                .GetClientDashboardAsync(
+                    userId);
+
+        return Ok(result);
+    }
 }

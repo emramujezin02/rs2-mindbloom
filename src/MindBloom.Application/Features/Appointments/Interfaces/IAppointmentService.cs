@@ -14,4 +14,6 @@ public interface IAppointmentService
     Task<TherapistStatsDto> GetTherapistStatsAsync(int therapistUserId);
     Task AddAppointmentNoteAsync(int therapistUserId, CreateAppointmentNoteDto request);
     Task<AppointmentNoteResponseDto?>GetAppointmentNoteAsync(int therapistUserId, int appointmentId);
+    Task<ClientDashboardDto>GetClientDashboardAsync(int clientUserId);
+
 }
