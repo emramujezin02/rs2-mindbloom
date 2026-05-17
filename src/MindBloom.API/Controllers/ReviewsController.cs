@@ -109,4 +109,23 @@ public class ReviewsController : ControllerBase
                     "Review updated successfully."
             });
     }
+
+    [Authorize(Roles = "Client")]
+    [HttpGet("mine")]
+    public async Task<IActionResult>
+    GetMyReviews()
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        var result =
+            await _reviewService
+                .GetMyReviewsAsync(
+                    userId);
+
+        return Ok(result);
+    }
 }

@@ -13,4 +13,6 @@ public interface IReviewService
     Task DeleteAsync(int clientUserId,int reviewId);
 
     Task UpdateAsync(int clientUserId,int reviewId,UpdateReviewDto request);
+
+    Task<List<ClientReviewDto>>GetMyReviewsAsync(int clientUserId);
 }

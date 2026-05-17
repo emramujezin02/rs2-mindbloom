@@ -211,4 +211,48 @@ public class ReviewService : IReviewService
 
         await _context.SaveChangesAsync();
     }
+
+    public async Task<List<ClientReviewDto>>
+    GetMyReviewsAsync(
+        int clientUserId)
+    {
+        var client =
+            await _context.Clients
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == clientUserId);
+
+        if (client == null)
+        {
+            throw new Exception(
+                "Client not found.");
+        }
+
+        return await _context.Reviews
+            .Include(x => x.Therapist)
+                .ThenInclude(x => x.User)
+            .Where(x =>
+                x.ClientId == client.Id)
+            .OrderByDescending(x =>
+                x.CreatedAtUtc)
+            .Select(x => new ClientReviewDto
+            {
+                Id = x.Id,
+
+                TherapistId =
+                    x.TherapistId,
+
+                TherapistName =
+                    x.Therapist.User.FirstName
+                    + " "
+                    + x.Therapist.User.LastName,
+
+                Rating = x.Rating,
+
+                Comment = x.Comment,
+
+                CreatedAtUtc =
+                    x.CreatedAtUtc
+            })
+            .ToListAsync();
+    }
 }
