@@ -109,7 +109,10 @@ public class ReviewService : IReviewService
 
                 Comment = x.Comment,
 
-                CreatedAtUtc = x.CreatedAtUtc
+                CreatedAtUtc = x.CreatedAtUtc,
+
+                TherapistReply = x.TherapistReply,
+                TherapistReplyCreatedAtUtc = x.TherapistReplyCreatedAtUtc,
             })
             .ToListAsync();
     }
@@ -251,8 +254,50 @@ public class ReviewService : IReviewService
                 Comment = x.Comment,
 
                 CreatedAtUtc =
-                    x.CreatedAtUtc
+                    x.CreatedAtUtc,
+
+                TherapistReply = x.TherapistReply,
+                TherapistReplyCreatedAtUtc = x.TherapistReplyCreatedAtUtc,
             })
             .ToListAsync();
+    }
+
+    public async Task ReplyToReviewAsync(
+    int therapistUserId,
+    int reviewId,
+    ReplyToReviewDto request)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId
+                    == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new Exception(
+                "Therapist not found.");
+        }
+
+        var review =
+            await _context.Reviews
+                .FirstOrDefaultAsync(x =>
+                    x.Id == reviewId
+                    && x.TherapistId
+                        == therapist.Id);
+
+        if (review == null)
+        {
+            throw new Exception(
+                "Review not found.");
+        }
+
+        review.TherapistReply =
+            request.Reply;
+
+        review.TherapistReplyCreatedAtUtc =
+            DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
     }
 }

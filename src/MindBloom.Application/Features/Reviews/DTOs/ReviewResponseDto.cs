@@ -11,4 +11,8 @@ public class ReviewResponseDto
     public string Comment { get; set; } = null!;
 
     public DateTime CreatedAtUtc { get; set; }
+
+    public string? TherapistReply { get; set; }
+
+    public DateTime? TherapistReplyCreatedAtUtc{get;set;}
 }

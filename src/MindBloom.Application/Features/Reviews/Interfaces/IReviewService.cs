@@ -15,4 +15,6 @@ public interface IReviewService
     Task UpdateAsync(int clientUserId,int reviewId,UpdateReviewDto request);
 
     Task<List<ClientReviewDto>>GetMyReviewsAsync(int clientUserId);
+
+    Task ReplyToReviewAsync(int therapistUserId, int reviewId,ReplyToReviewDto request);
 }

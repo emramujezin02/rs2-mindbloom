@@ -13,4 +13,8 @@ public class Review : BaseEntity
     public int Rating { get; set; }
 
     public string Comment { get; set; } = null!;
+
+    public string? TherapistReply { get; set; }
+
+    public DateTime? TherapistReplyCreatedAtUtc { get; set; }
 }

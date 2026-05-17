@@ -128,4 +128,30 @@ public class ReviewsController : ControllerBase
 
         return Ok(result);
     }
+
+    [Authorize(Roles = "Therapist")]
+    [HttpPut("{reviewId}/reply")]
+    public async Task<IActionResult>
+    ReplyToReview(
+        int reviewId,
+        ReplyToReviewDto request)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        await _reviewService
+            .ReplyToReviewAsync(
+                userId,
+                reviewId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                "Reply added successfully."
+        });
+    }
 }
