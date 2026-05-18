@@ -17,4 +17,6 @@ public interface IReviewService
     Task<List<ClientReviewDto>>GetMyReviewsAsync(int clientUserId);
 
     Task ReplyToReviewAsync(int therapistUserId, int reviewId,ReplyToReviewDto request);
+
+    Task<List<ReviewResponseDto>>GetTherapistReviewsAsync(int therapistId,ReviewFilterDto filter);
 }

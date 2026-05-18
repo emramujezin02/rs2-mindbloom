@@ -300,4 +300,65 @@ public class ReviewService : IReviewService
 
         await _context.SaveChangesAsync();
     }
+
+    public async Task<List<ReviewResponseDto>>
+    GetTherapistReviewsAsync(
+        int therapistId,
+        ReviewFilterDto filter)
+    {
+        var query =
+            _context.Reviews
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .Where(x =>
+                    x.TherapistId == therapistId);
+
+        query = filter.SortBy switch
+        {
+            ReviewSortBy.Newest =>
+                query.OrderByDescending(x =>
+                    x.CreatedAtUtc),
+
+            ReviewSortBy.Oldest =>
+                query.OrderBy(x =>
+                    x.CreatedAtUtc),
+
+            ReviewSortBy.HighestRating =>
+                query.OrderByDescending(x =>
+                    x.Rating),
+
+            ReviewSortBy.LowestRating =>
+                query.OrderBy(x =>
+                    x.Rating),
+
+            _ =>
+                query.OrderByDescending(x =>
+                    x.CreatedAtUtc)
+        };
+
+        return await query
+            .Select(x => new ReviewResponseDto
+            {
+                Id = x.Id,
+
+                ClientName =
+                    x.Client.User.FirstName
+                    + " "
+                    + x.Client.User.LastName,
+
+                Rating = x.Rating,
+
+                Comment = x.Comment,
+
+                CreatedAtUtc =
+                    x.CreatedAtUtc,
+
+                TherapistReply =
+                    x.TherapistReply,
+
+                TherapistReplyCreatedAtUtc =
+                    x.TherapistReplyCreatedAtUtc
+            })
+            .ToListAsync();
+    }
 }

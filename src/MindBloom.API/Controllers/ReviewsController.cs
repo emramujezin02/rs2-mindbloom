@@ -154,4 +154,20 @@ public class ReviewsController : ControllerBase
                 "Reply added successfully."
         });
     }
+
+    [HttpGet("therapist/{therapistId}/filtered")]
+    public async Task<IActionResult>
+    GetTherapistReviews(
+        int therapistId,
+        [FromQuery]
+        ReviewFilterDto filter)
+    {
+        var result =
+            await _reviewService
+                .GetTherapistReviewsAsync(
+                    therapistId,
+                    filter);
+
+        return Ok(result);
+    }
 }
