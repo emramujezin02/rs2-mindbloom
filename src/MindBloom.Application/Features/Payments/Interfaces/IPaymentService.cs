@@ -4,11 +4,9 @@ namespace MindBloom.Application.Features.Payments.Interfaces;
 
 public interface IPaymentService
 {
-    Task<PaymentIntentResponseDto>
-        CreatePaymentIntentAsync(
-            int clientUserId,
-            CreatePaymentIntentDto request);
+    Task<PaymentIntentResponseDto> CreatePaymentIntentAsync(int clientUserId, CreatePaymentIntentDto request);
 
-    Task ConfirmPaymentAsync(
-        ConfirmPaymentDto request);
+    Task ConfirmPaymentAsync(ConfirmPaymentDto request);
+
+    Task<List<PaymentHistoryDto>>GetMyPaymentsAsync(int clientUserId);
 }

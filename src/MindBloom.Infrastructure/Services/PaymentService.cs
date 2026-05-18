@@ -114,4 +114,57 @@ public class PaymentService : IPaymentService
 
         await _context.SaveChangesAsync();
     }
+
+    public async Task<List<PaymentHistoryDto>>
+    GetMyPaymentsAsync(
+        int clientUserId)
+    {
+        var client =
+            await _context.Clients
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == clientUserId);
+
+        if (client == null)
+        {
+            throw new Exception(
+                "Client not found.");
+        }
+
+        return await _context.Payments
+            .Include(x => x.Appointment)
+                .ThenInclude(x => x.Therapist)
+                    .ThenInclude(x => x.User)
+            .Where(x =>
+                x.Appointment.ClientId
+                    == client.Id)
+            .OrderByDescending(x =>
+                x.CreatedAtUtc)
+            .Select(x => new PaymentHistoryDto
+            {
+                Id = x.Id,
+
+                Amount = x.Amount,
+
+                Status =
+                    x.Status.ToString(),
+
+                CreatedAtUtc =
+                    x.CreatedAtUtc,
+
+                AppointmentId =
+                    x.AppointmentId,
+
+                TherapistName =
+                    x.Appointment
+                        .Therapist
+                        .User
+                        .FirstName
+                    + " "
+                    + x.Appointment
+                        .Therapist
+                        .User
+                        .LastName
+            })
+            .ToListAsync();
+    }
 }

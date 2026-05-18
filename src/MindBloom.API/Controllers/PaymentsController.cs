@@ -53,4 +53,23 @@ public class PaymentsController : ControllerBase
             message = "Payment confirmed."
         });
     }
+
+    [Authorize(Roles = "Client")]
+    [HttpGet("mine")]
+    public async Task<IActionResult>
+    GetMyPayments()
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        var result =
+            await _paymentService
+                .GetMyPaymentsAsync(
+                    userId);
+
+        return Ok(result);
+    }
 }
