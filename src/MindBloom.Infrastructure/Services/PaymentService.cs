@@ -44,6 +44,13 @@ public class PaymentService : IPaymentService
             throw new Exception("Appointment not found.");
         }
 
+        if (appointment.Status
+    != AppointmentStatus.Accepted)
+        {
+            throw new Exception(
+                "Only accepted appointments can be paid.");
+        }
+
         if (appointment.ClientId != client.Id)
         {
             throw new Exception(
