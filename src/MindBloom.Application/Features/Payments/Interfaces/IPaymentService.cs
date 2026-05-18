@@ -9,4 +9,9 @@ public interface IPaymentService
     Task ConfirmPaymentAsync(ConfirmPaymentDto request);
 
     Task<List<PaymentHistoryDto>>GetMyPaymentsAsync(int clientUserId);
+
+    Task<PaymentReceiptDto>
+    GetReceiptAsync(
+        int paymentId,
+        int clientUserId);
 }

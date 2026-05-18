@@ -72,4 +72,25 @@ public class PaymentsController : ControllerBase
 
         return Ok(result);
     }
+
+    [Authorize(Roles = "Client")]
+    [HttpGet("{paymentId}/receipt")]
+    public async Task<IActionResult>
+    GetReceipt(
+        int paymentId)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirst(
+                    ClaimTypes.NameIdentifier)!
+                .Value);
+
+        var result =
+            await _paymentService
+                .GetReceiptAsync(
+                    paymentId,
+                    userId);
+
+        return Ok(result);
+    }
 }

@@ -167,4 +167,87 @@ public class PaymentService : IPaymentService
             })
             .ToListAsync();
     }
+
+    public async Task<PaymentReceiptDto>
+    GetReceiptAsync(
+        int paymentId,
+        int clientUserId)
+    {
+        var client =
+            await _context.Clients
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == clientUserId);
+
+        if (client == null)
+        {
+            throw new Exception(
+                "Client not found.");
+        }
+
+        var payment =
+            await _context.Payments
+                .Include(x => x.Appointment)
+                    .ThenInclude(x => x.Therapist)
+                        .ThenInclude(x => x.User)
+                .Include(x => x.Appointment)
+                    .ThenInclude(x => x.Client)
+                        .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == paymentId
+                    && x.Appointment.ClientId
+                        == client.Id);
+
+        if (payment == null)
+        {
+            throw new Exception(
+                "Payment not found.");
+        }
+
+        return new PaymentReceiptDto
+        {
+            PaymentId = payment.Id,
+
+            Amount = payment.Amount,
+
+            Status =
+                payment.Status.ToString(),
+
+            PaymentDateUtc =
+                payment.CreatedAtUtc,
+
+            AppointmentId =
+                payment.AppointmentId,
+
+            AppointmentStartUtc =
+                payment.Appointment.StartUtc,
+
+            AppointmentEndUtc =
+                payment.Appointment.EndUtc,
+
+            TherapistName =
+                payment.Appointment
+                    .Therapist
+                    .User
+                    .FirstName
+                + " "
+                + payment.Appointment
+                    .Therapist
+                    .User
+                    .LastName,
+
+            ClientName =
+                payment.Appointment
+                    .Client
+                    .User
+                    .FirstName
+                + " "
+                + payment.Appointment
+                    .Client
+                    .User
+                    .LastName,
+
+            InvoiceNumber =
+                $"INV-{payment.Id:D6}"
+        };
+    }
 }
