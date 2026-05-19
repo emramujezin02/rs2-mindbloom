@@ -145,6 +145,12 @@ public class AuthService : IAuthService
             throw new Exception("Invalid credentials.");
         }
 
+        if (user.IsBlocked)
+        {
+            throw new Exception(
+                "Your account is blocked.");
+        }
+
         if (!user.IsEmailVerified
     && !IsDemoAccount(user.Email!))
         {

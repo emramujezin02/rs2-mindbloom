@@ -39,28 +39,38 @@ public class AdminService : IAdminService
             result.Add(new UserListDto
             {
                 Id = user.Id,
-
-                FirstName =
-                    user.FirstName,
-
-                LastName =
-                    user.LastName,
-
-                Email =
-                    user.Email!,
-
-                Role =
-                    roles.FirstOrDefault()
-                    ?? "No Role",
-
-                IsEmailVerified =
-                    user.IsEmailVerified,
-
-                CreatedAtUtc =
-                    user.CreatedAtUtc
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email!,
+                Role = roles.FirstOrDefault() ?? "No Role",
+                IsEmailVerified = user.IsEmailVerified,
+                CreatedAtUtc = user.CreatedAtUtc,
+                IsBlocked = user.IsBlocked
             });
         }
 
         return result;
+    }
+
+    public async Task UpdateUserStatusAsync(
+    int userId,
+    UpdateUserStatusDto request)
+    {
+        var user =
+            await _userManager
+                .FindByIdAsync(
+                    userId.ToString());
+
+        if (user == null)
+        {
+            throw new Exception(
+                "User not found.");
+        }
+
+        user.IsBlocked =
+            request.IsBlocked;
+
+        await _userManager
+            .UpdateAsync(user);
     }
 }

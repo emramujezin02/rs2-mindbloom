@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MindBloom.Application.Features.Admin.DTOs;
 using MindBloom.Application.Features.Admin.Interfaces;
 
 namespace MindBloom.API.Controllers;
@@ -27,5 +28,23 @@ public class AdminController : ControllerBase
                 .GetUsersAsync();
 
         return Ok(result);
+    }
+
+    [HttpPut("users/{userId}/status")]
+    public async Task<IActionResult>
+    UpdateUserStatus(
+        int userId,
+        UpdateUserStatusDto request)
+    {
+        await _adminService
+            .UpdateUserStatusAsync(
+                userId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                "User status updated successfully."
+        });
     }
 }

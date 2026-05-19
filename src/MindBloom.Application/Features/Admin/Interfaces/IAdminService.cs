@@ -4,6 +4,6 @@ namespace MindBloom.Application.Features.Admin.Interfaces;
 
 public interface IAdminService
 {
-    Task<List<UserListDto>>
-        GetUsersAsync();
+    Task<List<UserListDto>> GetUsersAsync();
+    Task UpdateUserStatusAsync(int userId, UpdateUserStatusDto request);
 }
