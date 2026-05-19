@@ -6,11 +6,7 @@ public interface IAdminService
 {
     Task<List<UserListDto>> GetUsersAsync();
     Task UpdateUserStatusAsync(int userId, UpdateUserStatusDto request);
-
-    Task UpdateTherapistVerificationAsync(
-    int therapistId,
-    UpdateTherapistVerificationDto request);
-
-    Task<AdminDashboardDto>
-    GetDashboardAsync();
+    Task UpdateTherapistVerificationAsync(int therapistId, UpdateTherapistVerificationDto request);
+    Task<AdminDashboardDto> GetDashboardAsync();
+    Task DeleteReviewAsync(int reviewId);
 }

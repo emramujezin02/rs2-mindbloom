@@ -77,4 +77,20 @@ public class AdminController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpDelete("reviews/{reviewId}")]
+    public async Task<IActionResult>
+    DeleteReview(
+        int reviewId)
+    {
+        await _adminService
+            .DeleteReviewAsync(
+                reviewId);
+
+        return Ok(new
+        {
+            message =
+                "Review deleted successfully."
+        });
+    }
 }

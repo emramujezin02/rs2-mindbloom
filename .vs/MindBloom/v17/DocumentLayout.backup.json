@@ -60,7 +60,7 @@
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\AdminService.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\AdminService.cs*",
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\AdminService.cs*",
-              "ViewState": "AgIAAKEAAAAAAAAAAAAcwLsAAAAFAAAAAAAAAA==",
+              "ViewState": "AgIAALYAAAAAAAAAAAAcwM4AAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-05-19T10:53:50.961Z",
               "EditorCaption": ""
@@ -73,7 +73,7 @@
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\AdminController.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\AdminController.cs*",
               "RelativeToolTip": "src\\MindBloom.API\\Controllers\\AdminController.cs*",
-              "ViewState": "AgIAADUAAAAAAAAAAAAUwE4AAAAFAAAAAAAAAA==",
+              "ViewState": "AgIAAEcAAAAAAAAAAAAUwF4AAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-05-19T10:54:35.46Z",
               "EditorCaption": ""
@@ -84,9 +84,9 @@
               "Title": "IAdminService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\Interfaces\\IAdminService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\Interfaces\\IAdminService.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\Interfaces\\IAdminService.cs*",
-              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Admin\\Interfaces\\IAdminService.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAYAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\Interfaces\\IAdminService.cs",
+              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Admin\\Interfaces\\IAdminService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAABIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-05-19T10:53:26.207Z",
               "EditorCaption": ""
@@ -97,12 +97,11 @@
               "Title": "AdminDashboardDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminDashboardDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminDashboardDto.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminDashboardDto.cs*",
-              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminDashboardDto.cs*",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminDashboardDto.cs",
+              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminDashboardDto.cs",
               "ViewState": "AgIAACIAAAAAAAAAAAAuwD0AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-19T11:40:57.174Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-19T11:40:57.174Z"
             },
             {
               "$type": "Document",
@@ -126,8 +125,7 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\TherapistService.cs",
               "ViewState": "AgIAAEAAAAAAAAAAAAAUwEMAAABKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-19T10:48:24.393Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-19T10:48:24.393Z"
             },
             {
               "$type": "Document",

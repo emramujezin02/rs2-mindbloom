@@ -186,4 +186,23 @@ public class AdminService : IAdminService
                     ?? 0
         };
     }
+
+    public async Task DeleteReviewAsync(
+    int reviewId)
+    {
+        var review =
+            await _context.Reviews
+                .FirstOrDefaultAsync(x =>
+                    x.Id == reviewId);
+
+        if (review == null)
+        {
+            throw new Exception(
+                "Review not found.");
+        }
+
+        _context.Reviews.Remove(review);
+
+        await _context.SaveChangesAsync();
+    }
 }
