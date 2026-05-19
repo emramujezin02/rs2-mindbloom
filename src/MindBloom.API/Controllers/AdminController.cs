@@ -66,4 +66,15 @@ public class AdminController : ControllerBase
                 "Therapist verification updated."
         });
     }
+
+    [HttpGet("dashboard")]
+    public async Task<IActionResult>
+    GetDashboard()
+    {
+        var result =
+            await _adminService
+                .GetDashboardAsync();
+
+        return Ok(result);
+    }
 }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Features.Admin.DTOs;
 using MindBloom.Application.Features.Admin.Interfaces;
 using MindBloom.Domain.Entities;
+using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 
 namespace MindBloom.Infrastructure.Services;
@@ -102,5 +103,87 @@ public class AdminService : IAdminService
             request.Notes;
 
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<AdminDashboardDto>
+    GetDashboardAsync()
+    {
+        return new AdminDashboardDto
+        {
+            TotalUsers =
+                await _context.Users
+                    .CountAsync(),
+
+            TotalClients =
+                await _context.Clients
+                    .CountAsync(),
+
+            TotalTherapists =
+                await _context.Therapists
+                    .CountAsync(),
+
+            PendingTherapists =
+                await _context.Therapists
+                    .CountAsync(x =>
+                        x.VerificationStatus
+                        == TherapistVerificationStatus
+                            .Pending),
+
+            ApprovedTherapists =
+                await _context.Therapists
+                    .CountAsync(x =>
+                        x.VerificationStatus
+                        == TherapistVerificationStatus
+                            .Approved),
+
+            RejectedTherapists =
+                await _context.Therapists
+                    .CountAsync(x =>
+                        x.VerificationStatus
+                        == TherapistVerificationStatus
+                            .Rejected),
+
+            TotalAppointments =
+                await _context.Appointments
+                    .CountAsync(),
+
+            CompletedAppointments =
+                await _context.Appointments
+                    .CountAsync(x =>
+                        x.Status
+                        == AppointmentStatus
+                            .Completed),
+
+            PendingAppointments =
+                await _context.Appointments
+                    .CountAsync(x =>
+                        x.Status
+                        == AppointmentStatus
+                            .Pending),
+
+            CancelledAppointments =
+                await _context.Appointments
+                    .CountAsync(x =>
+                        x.Status
+                        == AppointmentStatus
+                            .Cancelled),
+
+            TotalReviews =
+                await _context.Reviews
+                    .CountAsync(),
+
+            TotalPayments =
+                await _context.Payments
+                    .CountAsync(),
+
+            TotalRevenue =
+                await _context.Payments
+                    .Where(x =>
+                        x.Status
+                        == PaymentStatus.Paid)
+                    .SumAsync(x =>
+                        (decimal?)x.Amount)
+                    ?? 0
+        };
     }
 }

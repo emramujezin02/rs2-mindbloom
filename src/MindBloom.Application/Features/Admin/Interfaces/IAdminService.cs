@@ -10,4 +10,7 @@ public interface IAdminService
     Task UpdateTherapistVerificationAsync(
     int therapistId,
     UpdateTherapistVerificationDto request);
+
+    Task<AdminDashboardDto>
+    GetDashboardAsync();
 }
