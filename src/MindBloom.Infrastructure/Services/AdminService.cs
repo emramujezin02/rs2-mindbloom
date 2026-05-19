@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Features.Admin.DTOs;
 using MindBloom.Application.Features.Admin.Interfaces;
 using MindBloom.Domain.Entities;
+using MindBloom.Infrastructure.Persistence.Context;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -11,11 +12,15 @@ public class AdminService : IAdminService
     private readonly UserManager<ApplicationUser>
         _userManager;
 
+    private readonly ApplicationDbContext
+    _context;
+
     public AdminService(
         UserManager<ApplicationUser>
-            userManager)
+            userManager, ApplicationDbContext context)
     {
         _userManager = userManager;
+        _context = context;
     }
 
     public async Task<List<UserListDto>>
@@ -72,5 +77,30 @@ public class AdminService : IAdminService
 
         await _userManager
             .UpdateAsync(user);
+    }
+
+    public async Task
+    UpdateTherapistVerificationAsync(
+        int therapistId,
+        UpdateTherapistVerificationDto request)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.Id == therapistId);
+
+        if (therapist == null)
+        {
+            throw new Exception(
+                "Therapist not found.");
+        }
+
+        therapist.VerificationStatus =
+            request.Status;
+
+        therapist.VerificationNotes =
+            request.Notes;
+
+        await _context.SaveChangesAsync();
     }
 }

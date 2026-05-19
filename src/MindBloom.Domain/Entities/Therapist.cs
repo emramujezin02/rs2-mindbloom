@@ -1,4 +1,6 @@
-﻿namespace MindBloom.Domain.Entities;
+﻿using MindBloom.Domain.Enums;
+
+namespace MindBloom.Domain.Entities;
 
 public class Therapist : BaseEntity
 {
@@ -12,7 +14,18 @@ public class Therapist : BaseEntity
 
     public decimal PricePerSession { get; set; }
 
-    public bool IsVerified { get; set; }
+    public TherapistVerificationStatus
+    VerificationStatus
+    {
+        get;
+        set;
+    }
+
+    public string? VerificationNotes
+    {
+        get;
+        set;
+    }
 
     public decimal HourlyRate { get; set; }
 

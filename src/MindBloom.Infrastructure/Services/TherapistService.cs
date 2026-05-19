@@ -39,7 +39,8 @@ public class TherapistService : ITherapistService
             Specialization = request.Specialization,
             Biography = request.Biography,
             HourlyRate = request.HourlyRate,
-            ExperienceYears = request.ExperienceYears
+            ExperienceYears = request.ExperienceYears,
+            VerificationStatus = TherapistVerificationStatus.Pending,
         };
 
         _context.Therapists.Add(therapist);
@@ -64,17 +65,19 @@ public class TherapistService : ITherapistService
     {
         return await _context.Therapists
             .Include(x => x.User)
+            .Where(x =>x.VerificationStatus == TherapistVerificationStatus.Approved)
             .Select(x => new TherapistResponseDto
             {
                 Id = x.Id,
                 UserId = x.UserId,
-                FullName =
-                    x.User.FirstName + " " + x.User.LastName,
+                FullName = x.User.FirstName + " " + x.User.LastName,
                 Email = x.User.Email!,
                 Specialization = x.Specialization,
                 Biography = x.Biography,
                 HourlyRate = x.HourlyRate,
-                ExperienceYears = x.ExperienceYears
+                ExperienceYears = x.ExperienceYears,
+                VerificationStatus = x.VerificationStatus.ToString(),
+                VerificationNotes = x.VerificationNotes
             })
             .ToListAsync();
     }
@@ -119,6 +122,10 @@ public class TherapistService : ITherapistService
             _context.Therapists
                 .Include(x => x.User)
                 .Include(x => x.Reviews)
+                 .Where(x =>
+            x.VerificationStatus
+            == TherapistVerificationStatus
+                .Approved)
                 .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.Name))
@@ -224,6 +231,10 @@ public class TherapistService : ITherapistService
             _context.Therapists
                 .Include(x => x.User)
                 .Include(x => x.Reviews)
+                 .Where(x =>
+            x.VerificationStatus
+            == TherapistVerificationStatus
+                .Approved)
                 .AsQueryable();
 
 

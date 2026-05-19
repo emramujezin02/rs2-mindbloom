@@ -47,4 +47,23 @@ public class AdminController : ControllerBase
                 "User status updated successfully."
         });
     }
+
+    [HttpPut(
+    "therapists/{therapistId}/verification")]
+    public async Task<IActionResult>
+    UpdateTherapistVerification(
+        int therapistId,
+        UpdateTherapistVerificationDto request)
+    {
+        await _adminService
+            .UpdateTherapistVerificationAsync(
+                therapistId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                "Therapist verification updated."
+        });
+    }
 }

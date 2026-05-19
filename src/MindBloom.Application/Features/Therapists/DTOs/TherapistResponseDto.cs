@@ -20,4 +20,16 @@ public class TherapistResponseDto
     public double AverageRating { get; set; }
 
     public int TotalReviews { get; set; }
+
+    public string VerificationStatus
+    {
+        get;
+        set;
+    } = string.Empty;
+
+    public string? VerificationNotes
+    {
+        get;
+        set;
+    }
 }
