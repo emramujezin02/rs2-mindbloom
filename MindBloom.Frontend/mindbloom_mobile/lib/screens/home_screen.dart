@@ -29,29 +29,43 @@ class HomeScreen extends StatelessWidget {
       ),
       body: Center(
         child: session.isInitialized
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    session.isLoggedIn
-                        ? 'You are logged in.'
-                        : 'You are not logged in.',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+            ? Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      session.isLoggedIn
+                          ? 'Welcome to MindBloom'
+                          : 'You are not logged in.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
-                  if (!session.isLoggedIn)
                     ElevatedButton(
                       onPressed: () {
-                        Navigator.of(context).pushNamed(AppRouter.login);
+                        Navigator.of(context).pushNamed(AppRouter.therapists);
                       },
-                      child: const Text('Go to login'),
+                      child: const Text('Browse therapists'),
                     ),
-                ],
+
+                    const SizedBox(height: 12),
+
+                    if (!session.isLoggedIn)
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pushNamed(AppRouter.login);
+                        },
+                        child: const Text('Login'),
+                      ),
+                  ],
+                ),
               )
             : const CircularProgressIndicator(),
       ),

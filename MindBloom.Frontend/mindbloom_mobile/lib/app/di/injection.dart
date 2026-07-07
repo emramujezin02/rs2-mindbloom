@@ -4,6 +4,9 @@ import '../../features/auth/data/services/auth_api_service.dart';
 import '../../features/auth/presentation/viewmodels/auth_viewmodel.dart';
 import '../../features/session/presentation/viewmodels/session_viewmodel.dart';
 import '../../services/session_storage_service.dart';
+import '../../features/therapist/data/repositories/therapist_repository.dart';
+import '../../features/therapist/data/services/therapist_api_service.dart';
+import '../../features/therapist/presentation/viewmodels/therapist_list_viewmodel.dart';
 
 class AppInjection {
   static final ApiClient apiClient = ApiClient();
@@ -23,5 +26,13 @@ class AppInjection {
     );
 
     return AuthViewModel(authRepository: authRepository);
+  }
+
+  static TherapistListViewModel createTherapistListViewModel() {
+    final apiService = TherapistApiService(apiClient: apiClient);
+
+    final repository = TherapistRepository(therapistApiService: apiService);
+
+    return TherapistListViewModel(therapistRepository: repository);
   }
 }

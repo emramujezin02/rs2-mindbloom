@@ -1,0 +1,129 @@
+import 'package:flutter/material.dart';
+
+import '../../../../app/di/injection.dart';
+import '../viewmodels/therapist_list_viewmodel.dart';
+
+class TherapistListPage extends StatefulWidget {
+  const TherapistListPage({super.key});
+
+  @override
+  State<TherapistListPage> createState() => _TherapistListPageState();
+}
+
+class _TherapistListPageState extends State<TherapistListPage> {
+  final TherapistListViewModel _viewModel =
+      AppInjection.createTherapistListViewModel();
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel.addListener(_onChanged);
+    _viewModel.loadTherapists();
+  }
+
+  @override
+  void dispose() {
+    _viewModel.removeListener(_onChanged);
+    super.dispose();
+  }
+
+  void _onChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Therapists')),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_viewModel.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_viewModel.errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            _viewModel.errorMessage!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
+      );
+    }
+
+    if (_viewModel.therapists.isEmpty) {
+      return const Center(child: Text('No therapists available.'));
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: _viewModel.therapists.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final therapist = _viewModel.therapists[index];
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  therapist.fullName,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                Text(
+                  therapist.specialization,
+                  style: const TextStyle(fontSize: 15),
+                ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  therapist.biography.isEmpty
+                      ? 'No biography added.'
+                      : therapist.biography,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    const Icon(Icons.star, size: 18),
+                    const SizedBox(width: 4),
+                    Text(therapist.averageRating.toStringAsFixed(1)),
+                    const Spacer(),
+                    Text(
+                      '${therapist.hourlyRate.toStringAsFixed(2)} KM',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+
+                Text('${therapist.experienceYears} years of experience'),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
