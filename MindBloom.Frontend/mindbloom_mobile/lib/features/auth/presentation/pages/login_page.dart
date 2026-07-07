@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/di/injection.dart';
 import '../../../session/presentation/session_scope.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../../../../app/router/app_router.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -160,6 +161,17 @@ class _LoginPageState extends State<LoginPage> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Text('Login'),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(
+                        context,
+                      ).pushReplacementNamed(AppRouter.register);
+                    },
+                    child: const Text('Do not have an account? Register'),
                   ),
                 ],
               ),

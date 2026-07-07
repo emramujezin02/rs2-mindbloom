@@ -1,6 +1,7 @@
 import '../../../../services/session_storage_service.dart';
 import '../models/auth_response.dart';
 import '../models/login_request.dart';
+import '../models/register_request.dart';
 import '../services/auth_api_service.dart';
 
 class AuthRepository {
@@ -11,6 +12,16 @@ class AuthRepository {
 
   Future<AuthResponse> login(LoginRequest request) async {
     final response = await authApiService.login(request);
+
+    await sessionStorage.saveToken(response.token);
+
+    await sessionStorage.saveRefreshToken(response.refreshToken);
+
+    return response;
+  }
+
+  Future<AuthResponse> register(RegisterRequest request) async {
+    final response = await authApiService.register(request);
 
     await sessionStorage.saveToken(response.token);
 
