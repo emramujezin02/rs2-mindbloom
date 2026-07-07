@@ -3,6 +3,8 @@ import '../models/auth_response.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
 import '../services/auth_api_service.dart';
+import '../models/forgot_password_request.dart';
+import '../models/reset_password_request.dart';
 
 class AuthRepository {
   final AuthApiService authApiService;
@@ -28,5 +30,13 @@ class AuthRepository {
     await sessionStorage.saveRefreshToken(response.refreshToken);
 
     return response;
+  }
+
+  Future<void> forgotPassword(ForgotPasswordRequest request) async {
+    await authApiService.forgotPassword(request);
+  }
+
+  Future<void> resetPassword(ResetPasswordRequest request) async {
+    await authApiService.resetPassword(request);
   }
 }

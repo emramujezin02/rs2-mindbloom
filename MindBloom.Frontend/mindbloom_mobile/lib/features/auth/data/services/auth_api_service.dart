@@ -2,6 +2,8 @@ import '../../../../core/network/api_client.dart';
 import '../models/auth_response.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
+import '../models/forgot_password_request.dart';
+import '../models/reset_password_request.dart';
 
 class AuthApiService {
   final ApiClient apiClient;
@@ -24,5 +26,13 @@ class AuthApiService {
     );
 
     return AuthResponse.fromJson(response);
+  }
+
+  Future<void> forgotPassword(ForgotPasswordRequest request) async {
+    await apiClient.post('/Auth/forgot-password', body: request.toJson());
+  }
+
+  Future<void> resetPassword(ResetPasswordRequest request) async {
+    await apiClient.post('/Auth/reset-password', body: request.toJson());
   }
 }
