@@ -15,6 +15,10 @@ import '../../features/appointment/data/services/appointment_api_service.dart';
 import '../../features/appointment/presentation/viewmodels/appointment_create_viewmodel.dart';
 import '../../features/appointment/presentation/viewmodels/my_appointments_viewmodel.dart';
 
+import '../../features/payment/data/repositories/payment_repository.dart';
+import '../../features/payment/data/services/payment_api_service.dart';
+import '../../features/payment/presentation/viewmodels/payment_list_viewmodel.dart';
+
 class AppInjection {
   static final ApiClient apiClient = ApiClient();
 
@@ -57,5 +61,13 @@ class AppInjection {
     final repository = AppointmentRepository(apiService: api);
 
     return MyAppointmentsViewModel(repository: repository);
+  }
+
+  static PaymentListViewModel createPaymentViewModel() {
+    final api = PaymentApiService(apiClient: apiClient);
+
+    final repository = PaymentRepository(apiService: api);
+
+    return PaymentListViewModel(repository: repository);
   }
 }

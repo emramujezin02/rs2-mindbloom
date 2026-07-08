@@ -69,6 +69,15 @@ class HomeScreen extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pushNamed(AppRouter.myPayments);
+                      },
+                      child: const Text('Payment history'),
+                    ),
+
+                    const SizedBox(height: 12),
+
                     if (!session.isLoggedIn)
                       ElevatedButton(
                         onPressed: () {

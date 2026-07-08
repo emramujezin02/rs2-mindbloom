@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-
+import '../../../../app/router/app_router.dart';
 import '../../data/models/appointment_model.dart';
 
 class AppointmentDetailsPage extends StatelessWidget {
@@ -134,7 +134,9 @@ class AppointmentDetailsPage extends StatelessWidget {
             const SizedBox(height: 10),
 
             ElevatedButton.icon(
-              onPressed: null,
+              onPressed: () {
+                Navigator.of(context).pushNamed(AppRouter.myPayments);
+              },
               icon: const Icon(Icons.payment),
               label: const Text('Payment (coming soon)'),
             ),
