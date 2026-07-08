@@ -27,6 +27,10 @@ import '../../features/profile/data/repositories/profile_repository.dart';
 import '../../features/profile/data/services/profile_api_service.dart';
 import '../../features/profile/presentation/viewmodels/profile_viewmodel.dart';
 
+import '../../features/dashboard/data/repositories/client_dashboard_repository.dart';
+import '../../features/dashboard/data/services/client_dashboard_api_service.dart';
+import '../../features/dashboard/presentation/viewmodels/client_dashboard_viewmodel.dart';
+
 class AppInjection {
   static final ApiClient apiClient = ApiClient();
 
@@ -93,5 +97,13 @@ class AppInjection {
     final repository = ProfileRepository(apiService: api);
 
     return ProfileViewModel(repository: repository);
+  }
+
+  static ClientDashboardViewModel createClientDashboardViewModel() {
+    final api = ClientDashboardApiService(apiClient: apiClient);
+
+    final repository = ClientDashboardRepository(apiService: api);
+
+    return ClientDashboardViewModel(repository: repository);
   }
 }

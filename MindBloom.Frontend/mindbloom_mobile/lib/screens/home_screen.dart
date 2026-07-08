@@ -46,6 +46,18 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
 
+                    if (session.isLoggedIn)
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(
+                            context,
+                          ).pushNamed(AppRouter.clientDashboard);
+                        },
+                        child: const Text('My dashboard'),
+                      ),
+
+                    if (session.isLoggedIn) const SizedBox(height: 12),
+
                     const SizedBox(height: 24),
 
                     ElevatedButton(
