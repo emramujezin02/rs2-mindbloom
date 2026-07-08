@@ -58,6 +58,17 @@ class HomeScreen extends StatelessWidget {
 
                     if (session.isLoggedIn) const SizedBox(height: 12),
 
+                    const SizedBox(height: 12),
+
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(
+                          context,
+                        ).pushNamed(AppRouter.notifications);
+                      },
+                      icon: const Icon(Icons.notifications),
+                      label: const Text('Notifications'),
+                    ),
                     const SizedBox(height: 24),
 
                     ElevatedButton(

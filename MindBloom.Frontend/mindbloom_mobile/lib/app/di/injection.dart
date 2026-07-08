@@ -32,6 +32,10 @@ import '../../features/dashboard/data/repositories/client_dashboard_repository.d
 import '../../features/dashboard/data/services/client_dashboard_api_service.dart';
 import '../../features/dashboard/presentation/viewmodels/client_dashboard_viewmodel.dart';
 
+import '../../features/notification/data/repositories/notification_repository.dart';
+import '../../features/notification/data/services/notification_api_service.dart';
+import '../../features/notification/presentation/viewmodels/notification_viewmodel.dart';
+
 class AppInjection {
   static final ApiClient apiClient = ApiClient();
 
@@ -114,5 +118,13 @@ class AppInjection {
     final repository = ReviewRepository(apiService: api);
 
     return CreateReviewViewModel(repository: repository);
+  }
+
+  static NotificationViewModel createNotificationViewModel() {
+    final api = NotificationApiService(apiClient: apiClient);
+
+    final repository = NotificationRepository(apiService: api);
+
+    return NotificationViewModel(repository: repository);
   }
 }
