@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/models/appointment_model.dart';
 
@@ -8,9 +9,35 @@ class AppointmentDetailsPage extends StatelessWidget {
 
   const AppointmentDetailsPage({super.key, required this.appointment});
 
+  Future<void> _joinSession(BuildContext context) async {
+    final link = appointment.meetingLink;
+
+    if (link == null || link.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Meeting link is not available yet.')),
+      );
+      return;
+    }
+
+    final uri = Uri.parse(link);
+
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open meeting link.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final formatter = DateFormat('dd.MM.yyyy. HH:mm');
+
+    final canJoinSession =
+        appointment.type == 'Online' &&
+        appointment.meetingLink != null &&
+        appointment.meetingLink!.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Appointment details')),
@@ -37,20 +64,14 @@ class AppointmentDetailsPage extends StatelessWidget {
                 child: Column(
                   children: [
                     _RowItem(label: 'Status', value: appointment.status),
-
                     const Divider(),
-
                     _RowItem(label: 'Type', value: appointment.type),
-
                     const Divider(),
-
                     _RowItem(
                       label: 'Start',
                       value: formatter.format(appointment.startUtc.toLocal()),
                     ),
-
                     const Divider(),
-
                     _RowItem(
                       label: 'End',
                       value: formatter.format(appointment.endUtc.toLocal()),
@@ -103,9 +124,11 @@ class AppointmentDetailsPage extends StatelessWidget {
             const SizedBox(height: 20),
 
             ElevatedButton.icon(
-              onPressed: null,
+              onPressed: canJoinSession ? () => _joinSession(context) : null,
               icon: const Icon(Icons.video_call),
-              label: const Text('Join session (coming soon)'),
+              label: Text(
+                canJoinSession ? 'Join session' : 'Join session unavailable',
+              ),
             ),
 
             const SizedBox(height: 10),
