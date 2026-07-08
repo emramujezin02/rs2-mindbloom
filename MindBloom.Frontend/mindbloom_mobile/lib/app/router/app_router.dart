@@ -12,6 +12,8 @@ import '../../features/therapist/data/models/therapist_model.dart';
 
 import '../../features/appointment/presentation/pages/appointment_create_page.dart';
 import '../../features/appointment/presentation/pages/my_appointments_page.dart';
+import '../../features/appointment/presentation/pages/appointment_details_page.dart';
+import '../../features/appointment/data/models/appointment_model.dart';
 
 class AppRouter {
   static const String home = '/';
@@ -23,6 +25,7 @@ class AppRouter {
   static const String therapistDetails = '/therapist-details';
   static const appointmentCreate = "/appointments/create";
   static const String myAppointments = '/appointments/mine';
+  static const appointmentDetails = '/appointments/details';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -61,6 +64,13 @@ class AppRouter {
 
       case myAppointments:
         return MaterialPageRoute(builder: (_) => const MyAppointmentsPage());
+
+      case appointmentDetails:
+        final appointment = settings.arguments as AppointmentModel;
+
+        return MaterialPageRoute(
+          builder: (_) => AppointmentDetailsPage(appointment: appointment),
+        );
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

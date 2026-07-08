@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import '../../../../app/router/app_router.dart';
 import '../../../../app/di/injection.dart';
 import '../../data/models/appointment_model.dart';
 import '../viewmodels/my_appointments_viewmodel.dart';
@@ -78,7 +78,14 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
         itemBuilder: (context, index) {
           final appointment = _viewModel.appointments[index];
 
-          return _AppointmentCard(appointment: appointment);
+          return InkWell(
+            onTap: () {
+              Navigator.of(
+                context,
+              ).pushNamed(AppRouter.appointmentDetails, arguments: appointment);
+            },
+            child: _AppointmentCard(appointment: appointment),
+          );
         },
       ),
     );
