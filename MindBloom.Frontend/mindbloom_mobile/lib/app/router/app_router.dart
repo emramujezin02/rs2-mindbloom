@@ -18,6 +18,7 @@ import '../../features/appointment/data/models/appointment_model.dart';
 import '../../features/payment/presentation/pages/payment_list_page.dart';
 
 import '../../features/review/presentation/pages/review_list_page.dart';
+import '../../features/review/presentation/pages/create_review_page.dart';
 
 import '../../features/profile/presentation/pages/profile_page.dart';
 
@@ -38,6 +39,7 @@ class AppRouter {
   static const therapistReviews = '/therapists/reviews';
   static const profile = '/profile';
   static const clientDashboard = '/client-dashboard';
+  static const createReview = '/reviews/create';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -99,6 +101,13 @@ class AppRouter {
 
       case clientDashboard:
         return MaterialPageRoute(builder: (_) => const ClientDashboardPage());
+
+      case createReview:
+        final appointment = settings.arguments as AppointmentModel;
+
+        return MaterialPageRoute(
+          builder: (_) => CreateReviewPage(appointment: appointment),
+        );
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

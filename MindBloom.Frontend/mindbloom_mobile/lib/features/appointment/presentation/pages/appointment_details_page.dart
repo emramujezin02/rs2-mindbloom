@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../../../app/router/app_router.dart';
 import '../../data/models/appointment_model.dart';
 
@@ -38,6 +39,8 @@ class AppointmentDetailsPage extends StatelessWidget {
         appointment.type == 'Online' &&
         appointment.meetingLink != null &&
         appointment.meetingLink!.isNotEmpty;
+
+    final canReview = appointment.status.toLowerCase() == 'completed';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Appointment details')),
@@ -138,15 +141,26 @@ class AppointmentDetailsPage extends StatelessWidget {
                 Navigator.of(context).pushNamed(AppRouter.myPayments);
               },
               icon: const Icon(Icons.payment),
-              label: const Text('Payment (coming soon)'),
+              label: const Text('Payment history'),
             ),
 
             const SizedBox(height: 10),
 
             ElevatedButton.icon(
-              onPressed: null,
+              onPressed: canReview
+                  ? () {
+                      Navigator.of(context).pushNamed(
+                        AppRouter.createReview,
+                        arguments: appointment,
+                      );
+                    }
+                  : null,
               icon: const Icon(Icons.star),
-              label: const Text('Leave review (coming soon)'),
+              label: Text(
+                canReview
+                    ? 'Leave review'
+                    : 'Review available after completion',
+              ),
             ),
           ],
         ),

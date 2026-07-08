@@ -22,6 +22,7 @@ import '../../features/payment/presentation/viewmodels/payment_list_viewmodel.da
 import '../../features/review/data/repositories/review_repository.dart';
 import '../../features/review/data/services/review_api_service.dart';
 import '../../features/review/presentation/viewmodels/review_list_viewmodel.dart';
+import '../../features/review/presentation/viewmodels/create_review_viewmodel.dart';
 
 import '../../features/profile/data/repositories/profile_repository.dart';
 import '../../features/profile/data/services/profile_api_service.dart';
@@ -105,5 +106,13 @@ class AppInjection {
     final repository = ClientDashboardRepository(apiService: api);
 
     return ClientDashboardViewModel(repository: repository);
+  }
+
+  static CreateReviewViewModel createCreateReviewViewModel() {
+    final api = ReviewApiService(apiClient: apiClient);
+
+    final repository = ReviewRepository(apiService: api);
+
+    return CreateReviewViewModel(repository: repository);
   }
 }
