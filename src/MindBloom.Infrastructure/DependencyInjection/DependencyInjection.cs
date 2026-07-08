@@ -20,6 +20,7 @@ using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Features.Notifications.Interfaces;
 using MindBloom.Application.Features.Favorites.Interfaces;
 using MindBloom.Application.Features.Admin.Interfaces;
+using MindBloom.Application.Features.Memberships.Interfaces;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -139,7 +140,8 @@ public static class DependencyInjection
         services.AddHostedService<AppointmentReminderService>();
 
         services.AddScoped<IAdminService,AdminService>();
-        
+
+        services.AddScoped<IMembershipService, MembershipService>();
         return services;
     }
 }

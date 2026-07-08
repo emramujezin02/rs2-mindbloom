@@ -28,6 +28,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<TherapistDocument>TherapistDocuments { get; set; }
     public DbSet<AppointmentNote> AppointmentNotes { get; set; }
     public DbSet<TherapistUnavailableDate> TherapistUnavailableDates{ get; set; }
+    public DbSet<ClientMembership> ClientMemberships { get; set; }
+
+    public DbSet<MembershipUsage> MembershipUsages { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -97,6 +101,34 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany()
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ClientMembership>()
+    .HasOne(x => x.Client)
+    .WithMany()
+    .HasForeignKey(x => x.ClientId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<ClientMembership>()
+            .HasOne(x => x.Therapist)
+            .WithMany()
+            .HasForeignKey(x => x.TherapistId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<MembershipUsage>()
+            .HasOne(x => x.ClientMembership)
+            .WithMany(x => x.Usages)
+            .HasForeignKey(x => x.ClientMembershipId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<MembershipUsage>()
+            .HasOne(x => x.Appointment)
+            .WithMany()
+            .HasForeignKey(x => x.AppointmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<MembershipUsage>()
+            .HasIndex(x => x.AppointmentId)
+            .IsUnique();
 
     }
 
