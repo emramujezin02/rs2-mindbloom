@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../app/router/app_router.dart';
 import '../viewmodels/therapist_list_viewmodel.dart';
 
 class TherapistListPage extends StatefulWidget {
@@ -66,60 +67,67 @@ class _TherapistListPageState extends State<TherapistListPage> {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: _viewModel.therapists.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final therapist = _viewModel.therapists[index];
 
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  therapist.fullName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 6),
-
-                Text(
-                  therapist.specialization,
-                  style: const TextStyle(fontSize: 15),
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  therapist.biography.isEmpty
-                      ? 'No biography added.'
-                      : therapist.biography,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    const Icon(Icons.star, size: 18),
-                    const SizedBox(width: 4),
-                    Text(therapist.averageRating.toStringAsFixed(1)),
-                    const Spacer(),
-                    Text(
-                      '${therapist.hourlyRate.toStringAsFixed(2)} KM',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+        return InkWell(
+          onTap: () {
+            Navigator.of(
+              context,
+            ).pushNamed(AppRouter.therapistDetails, arguments: therapist);
+          },
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    therapist.fullName,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
+                  ),
 
-                const SizedBox(height: 10),
+                  const SizedBox(height: 6),
 
-                Text('${therapist.experienceYears} years of experience'),
-              ],
+                  Text(
+                    therapist.specialization,
+                    style: const TextStyle(fontSize: 15),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    therapist.biography.isEmpty
+                        ? 'No biography added.'
+                        : therapist.biography,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      const Icon(Icons.star, size: 18),
+                      const SizedBox(width: 4),
+                      Text(therapist.averageRating.toStringAsFixed(1)),
+                      const Spacer(),
+                      Text(
+                        '${therapist.hourlyRate.toStringAsFixed(2)} KM',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Text('${therapist.experienceYears} years of experience'),
+                ],
+              ),
             ),
           ),
         );

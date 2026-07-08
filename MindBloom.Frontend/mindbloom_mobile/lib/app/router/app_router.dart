@@ -6,6 +6,8 @@ import '../../screens/home_screen.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/therapist/presentation/pages/therapist_list_page.dart';
+import '../../features/therapist/presentation/pages/therapist_details_page.dart';
+import '../../features/therapist/data/models/therapist_model.dart';
 
 class AppRouter {
   static const String home = '/';
@@ -14,6 +16,7 @@ class AppRouter {
   static const String forgotPassword = '/forgot-password';
   static const String resetPassword = '/reset-password';
   static const String therapists = '/therapists';
+  static const String therapistDetails = '/therapist-details';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -35,6 +38,13 @@ class AppRouter {
 
       case therapists:
         return MaterialPageRoute(builder: (_) => const TherapistListPage());
+
+      case therapistDetails:
+        final therapist = settings.arguments as TherapistModel;
+
+        return MaterialPageRoute(
+          builder: (_) => TherapistDetailsPage(therapist: therapist),
+        );
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
