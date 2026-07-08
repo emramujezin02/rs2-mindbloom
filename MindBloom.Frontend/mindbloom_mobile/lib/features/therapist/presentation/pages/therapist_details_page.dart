@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../data/models/therapist_model.dart';
 
 class TherapistDetailsPage extends StatelessWidget {
@@ -98,11 +99,9 @@ class TherapistDetailsPage extends StatelessWidget {
 
             ElevatedButton.icon(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Appointment booking will be added next.'),
-                  ),
-                );
+                Navigator.of(
+                  context,
+                ).pushNamed(AppRouter.appointmentCreate, arguments: therapist);
               },
               icon: const Icon(Icons.calendar_month),
               label: const Text('Book appointment'),

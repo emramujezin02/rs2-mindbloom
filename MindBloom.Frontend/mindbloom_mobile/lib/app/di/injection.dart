@@ -7,6 +7,9 @@ import '../../services/session_storage_service.dart';
 import '../../features/therapist/data/repositories/therapist_repository.dart';
 import '../../features/therapist/data/services/therapist_api_service.dart';
 import '../../features/therapist/presentation/viewmodels/therapist_list_viewmodel.dart';
+import '../../features/appointment/data/repositories/appointment_repository.dart';
+import '../../features/appointment/data/services/appointment_api_service.dart';
+import '../../features/appointment/presentation/viewmodels/appointment_create_viewmodel.dart';
 
 class AppInjection {
   static final ApiClient apiClient = ApiClient();
@@ -34,5 +37,13 @@ class AppInjection {
     final repository = TherapistRepository(therapistApiService: apiService);
 
     return TherapistListViewModel(therapistRepository: repository);
+  }
+
+  static AppointmentCreateViewModel createAppointmentViewModel() {
+    final api = AppointmentApiService(apiClient: apiClient);
+
+    final repository = AppointmentRepository(apiService: api);
+
+    return AppointmentCreateViewModel(repository: repository);
   }
 }
