@@ -19,6 +19,10 @@ import '../../features/payment/data/repositories/payment_repository.dart';
 import '../../features/payment/data/services/payment_api_service.dart';
 import '../../features/payment/presentation/viewmodels/payment_list_viewmodel.dart';
 
+import '../../features/review/data/repositories/review_repository.dart';
+import '../../features/review/data/services/review_api_service.dart';
+import '../../features/review/presentation/viewmodels/review_list_viewmodel.dart';
+
 class AppInjection {
   static final ApiClient apiClient = ApiClient();
 
@@ -69,5 +73,13 @@ class AppInjection {
     final repository = PaymentRepository(apiService: api);
 
     return PaymentListViewModel(repository: repository);
+  }
+
+  static ReviewListViewModel createReviewViewModel() {
+    final api = ReviewApiService(apiClient: apiClient);
+
+    final repository = ReviewRepository(apiService: api);
+
+    return ReviewListViewModel(repository: repository);
   }
 }

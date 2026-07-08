@@ -106,6 +106,19 @@ class TherapistDetailsPage extends StatelessWidget {
               icon: const Icon(Icons.calendar_month),
               label: const Text('Book appointment'),
             ),
+
+            const SizedBox(height: 12),
+
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushNamed(
+                  AppRouter.therapistReviews,
+                  arguments: therapist.id,
+                );
+              },
+              icon: const Icon(Icons.star),
+              label: const Text('View reviews'),
+            ),
           ],
         ),
       ),
