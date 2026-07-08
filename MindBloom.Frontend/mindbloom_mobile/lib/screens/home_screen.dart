@@ -78,6 +78,15 @@ class HomeScreen extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pushNamed(AppRouter.profile);
+                      },
+                      child: const Text('My profile'),
+                    ),
+
+                    const SizedBox(height: 12),
+
                     if (!session.isLoggedIn)
                       ElevatedButton(
                         onPressed: () {

@@ -19,6 +19,8 @@ import '../../features/payment/presentation/pages/payment_list_page.dart';
 
 import '../../features/review/presentation/pages/review_list_page.dart';
 
+import '../../features/profile/presentation/pages/profile_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String login = '/login';
@@ -32,6 +34,7 @@ class AppRouter {
   static const appointmentDetails = '/appointments/details';
   static const myPayments = '/payments';
   static const therapistReviews = '/therapists/reviews';
+  static const profile = '/profile';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -87,6 +90,9 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => ReviewListPage(therapistId: therapistId),
         );
+
+      case profile:
+        return MaterialPageRoute(builder: (_) => const ProfilePage());
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

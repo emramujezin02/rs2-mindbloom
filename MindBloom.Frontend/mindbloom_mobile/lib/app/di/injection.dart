@@ -23,6 +23,10 @@ import '../../features/review/data/repositories/review_repository.dart';
 import '../../features/review/data/services/review_api_service.dart';
 import '../../features/review/presentation/viewmodels/review_list_viewmodel.dart';
 
+import '../../features/profile/data/repositories/profile_repository.dart';
+import '../../features/profile/data/services/profile_api_service.dart';
+import '../../features/profile/presentation/viewmodels/profile_viewmodel.dart';
+
 class AppInjection {
   static final ApiClient apiClient = ApiClient();
 
@@ -81,5 +85,13 @@ class AppInjection {
     final repository = ReviewRepository(apiService: api);
 
     return ReviewListViewModel(repository: repository);
+  }
+
+  static ProfileViewModel createProfileViewModel() {
+    final api = ProfileApiService(apiClient: apiClient);
+
+    final repository = ProfileRepository(apiService: api);
+
+    return ProfileViewModel(repository: repository);
   }
 }
