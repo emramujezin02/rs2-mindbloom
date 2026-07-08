@@ -121,7 +121,7 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
 
       Navigator.of(
         context,
-      ).pushNamedAndRemoveUntil(AppRouter.home, (route) => false);
+      ).pushNamedAndRemoveUntil(AppRouter.myAppointments, (route) => false);
     }
   }
 

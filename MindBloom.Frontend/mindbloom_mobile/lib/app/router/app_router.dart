@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import '../../screens/home_screen.dart';
 
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
-import '../../screens/home_screen.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
+
 import '../../features/therapist/presentation/pages/therapist_list_page.dart';
 import '../../features/therapist/presentation/pages/therapist_details_page.dart';
 import '../../features/therapist/data/models/therapist_model.dart';
+
 import '../../features/appointment/presentation/pages/appointment_create_page.dart';
+import '../../features/appointment/presentation/pages/my_appointments_page.dart';
 
 class AppRouter {
   static const String home = '/';
@@ -19,6 +22,7 @@ class AppRouter {
   static const String therapists = '/therapists';
   static const String therapistDetails = '/therapist-details';
   static const appointmentCreate = "/appointments/create";
+  static const String myAppointments = '/appointments/mine';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -54,6 +58,9 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => AppointmentCreatePage(therapist: therapist),
         );
+
+      case myAppointments:
+        return MaterialPageRoute(builder: (_) => const MyAppointmentsPage());
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

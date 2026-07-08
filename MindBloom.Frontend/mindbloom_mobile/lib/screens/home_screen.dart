@@ -57,6 +57,18 @@ class HomeScreen extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
+                    if (session.isLoggedIn)
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(
+                            context,
+                          ).pushNamed(AppRouter.myAppointments);
+                        },
+                        child: const Text('My appointments'),
+                      ),
+
+                    const SizedBox(height: 12),
+
                     if (!session.isLoggedIn)
                       ElevatedButton(
                         onPressed: () {

@@ -1,4 +1,5 @@
 import '../models/appointment_create_request.dart';
+import '../models/appointment_model.dart';
 import '../services/appointment_api_service.dart';
 
 class AppointmentRepository {
@@ -8,5 +9,9 @@ class AppointmentRepository {
 
   Future<void> createAppointment(AppointmentCreateRequest request) {
     return apiService.createAppointment(request);
+  }
+
+  Future<List<AppointmentModel>> getMyAppointments() {
+    return apiService.getMyAppointments();
   }
 }
