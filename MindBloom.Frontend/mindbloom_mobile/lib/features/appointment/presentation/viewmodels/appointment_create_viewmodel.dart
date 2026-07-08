@@ -9,27 +9,29 @@ class AppointmentCreateViewModel extends ChangeNotifier {
   AppointmentCreateViewModel({required this.repository});
 
   bool isLoading = false;
-
   String? error;
 
   Future<bool> createAppointment({
     required int therapistId,
-    required DateTime dateTime,
-    required String type,
-    String? notes,
+    required DateTime startUtc,
+    required DateTime endUtc,
+    required int type,
+    String? meetingLink,
+    String? location,
   }) async {
     isLoading = true;
     error = null;
-
     notifyListeners();
 
     try {
       await repository.createAppointment(
         AppointmentCreateRequest(
           therapistId: therapistId,
-          startTimeUtc: dateTime,
+          startUtc: startUtc,
+          endUtc: endUtc,
           type: type,
-          notes: notes,
+          meetingLink: meetingLink,
+          location: location,
         ),
       );
 

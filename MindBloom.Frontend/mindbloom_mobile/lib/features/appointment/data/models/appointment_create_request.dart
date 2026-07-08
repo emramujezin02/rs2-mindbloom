@@ -1,22 +1,28 @@
 class AppointmentCreateRequest {
   final int therapistId;
-  final DateTime startTimeUtc;
-  final String type;
-  final String? notes;
+  final DateTime startUtc;
+  final DateTime endUtc;
+  final int type;
+  final String? meetingLink;
+  final String? location;
 
   AppointmentCreateRequest({
     required this.therapistId,
-    required this.startTimeUtc,
+    required this.startUtc,
+    required this.endUtc,
     required this.type,
-    this.notes,
+    this.meetingLink,
+    this.location,
   });
 
   Map<String, dynamic> toJson() {
     return {
-      "therapistId": therapistId,
-      "startTimeUtc": startTimeUtc.toIso8601String(),
-      "type": type,
-      "notes": notes,
+      'therapistId': therapistId,
+      'startUtc': startUtc.toIso8601String(),
+      'endUtc': endUtc.toIso8601String(),
+      'type': type,
+      'meetingLink': meetingLink,
+      'location': location,
     };
   }
 }

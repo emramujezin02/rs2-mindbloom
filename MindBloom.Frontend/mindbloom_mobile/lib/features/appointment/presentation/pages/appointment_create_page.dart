@@ -20,12 +20,14 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
 
   final _formKey = GlobalKey<FormState>();
 
-  final _notesController = TextEditingController();
+  final _meetingLinkController = TextEditingController();
+
+  final _locationController = TextEditingController();
 
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
 
-  String _type = 'Online';
+  int _type = 1;
 
   @override
   void initState() {
@@ -36,7 +38,8 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onChanged);
-    _notesController.dispose();
+    _meetingLinkController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -95,19 +98,23 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
       return;
     }
 
-    final startDateTime = DateTime(
+    final startUtc = DateTime(
       _selectedDate!.year,
       _selectedDate!.month,
       _selectedDate!.day,
       _selectedTime!.hour,
       _selectedTime!.minute,
-    );
+    ).toUtc();
+
+    final endUtc = startUtc.add(const Duration(hours: 1));
 
     final success = await _viewModel.createAppointment(
       therapistId: widget.therapist.id,
-      dateTime: startDateTime,
+      startUtc: startUtc,
+      endUtc: endUtc,
       type: _type,
-      notes: _notesController.text.trim(),
+      meetingLink: _type == 1 ? _meetingLinkController.text.trim() : null,
+      location: _type == 2 ? _locationController.text.trim() : null,
     );
 
     if (!mounted) {
@@ -178,15 +185,15 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
 
               const SizedBox(height: 12),
 
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<int>(
                 initialValue: _type,
                 decoration: const InputDecoration(
                   labelText: 'Appointment type',
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'Online', child: Text('Online')),
-                  DropdownMenuItem(value: 'InPerson', child: Text('In person')),
+                  DropdownMenuItem(value: 1, child: Text('Online')),
+                  DropdownMenuItem(value: 2, child: Text('In person')),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -199,14 +206,39 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
 
               const SizedBox(height: 12),
 
-              TextFormField(
-                controller: _notesController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  border: OutlineInputBorder(),
+              if (_type == 1)
+                TextFormField(
+                  controller: _meetingLinkController,
+                  decoration: const InputDecoration(
+                    labelText: 'Meeting link',
+                    hintText: 'https://meet.google.com/...',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (_type == 1 && (value == null || value.trim().isEmpty)) {
+                      return 'Meeting link is required for online appointments.';
+                    }
+
+                    return null;
+                  },
                 ),
-              ),
+
+              if (_type == 2)
+                TextFormField(
+                  controller: _locationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    hintText: 'Sarajevo office',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (_type == 2 && (value == null || value.trim().isEmpty)) {
+                      return 'Location is required for in-person appointments.';
+                    }
+
+                    return null;
+                  },
+                ),
 
               const SizedBox(height: 16),
 
