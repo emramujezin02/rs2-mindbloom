@@ -44,6 +44,10 @@ import '../../features/journal/data/repositories/journal_repository.dart';
 import '../../features/journal/data/services/journal_api_service.dart';
 import '../../features/journal/presentation/viewmodels/journal_viewmodel.dart';
 
+import '../../features/article/data/repositories/article_repository.dart';
+import '../../features/article/data/services/article_api_service.dart';
+import '../../features/article/presentation/viewmodels/article_viewmodel.dart';
+
 class AppInjection {
   static final ApiClient apiClient = ApiClient();
 
@@ -150,5 +154,13 @@ class AppInjection {
     final repository = JournalRepository(apiService: api);
 
     return JournalViewModel(repository: repository);
+  }
+
+  static ArticleViewModel createArticleViewModel() {
+    final api = ArticleApiService(apiClient: apiClient);
+
+    final repository = ArticleRepository(apiService: api);
+
+    return ArticleViewModel(repository: repository);
   }
 }

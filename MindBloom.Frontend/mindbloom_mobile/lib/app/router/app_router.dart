@@ -35,6 +35,10 @@ import '../../features/membership/presentation/pages/use_membership_page.dart';
 import '../../features/journal/presentation/pages/journal_page.dart';
 import '../../features/journal/presentation/pages/add_journal_entry_page.dart';
 
+import '../../features/article/data/models/article_model.dart';
+import '../../features/article/presentation/pages/article_details_page.dart';
+import '../../features/article/presentation/pages/article_list_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String login = '/login';
@@ -58,6 +62,8 @@ class AppRouter {
   static const journal = '/journal';
   static const addJournalEntry = '/journal/add';
   static const editProfile = '/profile/edit';
+  static const articles = '/articles';
+  static const articleDetails = '/articles/details';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -158,6 +164,16 @@ class AppRouter {
 
         return MaterialPageRoute(
           builder: (_) => EditProfilePage(profile: profile),
+        );
+
+      case articles:
+        return MaterialPageRoute(builder: (_) => const ArticleListPage());
+
+      case articleDetails:
+        final article = settings.arguments as ArticleModel;
+
+        return MaterialPageRoute(
+          builder: (_) => ArticleDetailsPage(article: article),
         );
 
       case home:
