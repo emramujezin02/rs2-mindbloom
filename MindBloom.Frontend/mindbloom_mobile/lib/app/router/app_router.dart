@@ -31,6 +31,7 @@ import '../../features/membership/presentation/pages/purchase_membership_page.da
 import '../../features/membership/presentation/pages/use_membership_page.dart';
 
 import '../../features/journal/presentation/pages/journal_page.dart';
+import '../../features/journal/presentation/pages/add_journal_entry_page.dart';
 
 class AppRouter {
   static const String home = '/';
@@ -53,6 +54,7 @@ class AppRouter {
   static const purchaseMembership = '/memberships/purchase';
   static const useMembership = '/memberships/use';
   static const journal = '/journal';
+  static const addJournalEntry = '/journal/add';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -144,6 +146,9 @@ class AppRouter {
 
       case journal:
         return MaterialPageRoute(builder: (_) => const JournalPage());
+
+      case addJournalEntry:
+        return MaterialPageRoute(builder: (_) => const AddJournalEntryPage());
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

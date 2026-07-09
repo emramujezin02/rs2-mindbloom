@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../app/router/app_router.dart';
 import '../viewmodels/journal_viewmodel.dart';
 
 class JournalPage extends StatefulWidget {
@@ -32,13 +33,24 @@ class _JournalPageState extends State<JournalPage> {
     }
   }
 
+  Future<void> _addEntry() async {
+    final result = await Navigator.pushNamed(
+      context,
+      AppRouter.addJournalEntry,
+    );
+
+    if (result == true) {
+      await viewModel.loadEntries();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Journal')),
+      appBar: AppBar(title: const Text("Journal")),
       floatingActionButton: FloatingActionButton(
+        onPressed: _addEntry,
         child: const Icon(Icons.add),
-        onPressed: () {},
       ),
       body: viewModel.isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -50,9 +62,9 @@ class _JournalPageState extends State<JournalPage> {
                 return Card(
                   margin: const EdgeInsets.all(12),
                   child: ListTile(
+                    leading: CircleAvatar(child: Text(entry.mood.toString())),
                     title: Text(entry.emotion),
                     subtitle: Text(entry.note),
-                    trailing: Text(entry.mood.toString()),
                   ),
                 );
               },
