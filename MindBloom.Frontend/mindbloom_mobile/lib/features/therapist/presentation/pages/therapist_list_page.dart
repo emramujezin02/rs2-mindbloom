@@ -15,6 +15,13 @@ class _TherapistListPageState extends State<TherapistListPage> {
   final TherapistListViewModel _viewModel =
       AppInjection.createTherapistListViewModel();
 
+  final _nameController = TextEditingController();
+  final _specializationController = TextEditingController();
+  final _minPriceController = TextEditingController();
+  final _maxPriceController = TextEditingController();
+
+  String? _sortBy;
+
   @override
   void initState() {
     super.initState();
@@ -25,6 +32,10 @@ class _TherapistListPageState extends State<TherapistListPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onChanged);
+    _nameController.dispose();
+    _specializationController.dispose();
+    _minPriceController.dispose();
+    _maxPriceController.dispose();
     super.dispose();
   }
 
@@ -34,11 +45,139 @@ class _TherapistListPageState extends State<TherapistListPage> {
     }
   }
 
+  void _applyFilters() {
+    _viewModel.searchTherapists(
+      name: _nameController.text,
+      specialization: _specializationController.text,
+      minPrice: double.tryParse(_minPriceController.text),
+      maxPrice: double.tryParse(_maxPriceController.text),
+      sortBy: _sortBy,
+    );
+  }
+
+  void _clearFilters() {
+    _nameController.clear();
+    _specializationController.clear();
+    _minPriceController.clear();
+    _maxPriceController.clear();
+
+    setState(() {
+      _sortBy = null;
+    });
+
+    _viewModel.loadTherapists();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Therapists')),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          _buildFilters(),
+          Expanded(child: _buildBody()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilters() {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: 'Search by name',
+              border: OutlineInputBorder(),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          TextField(
+            controller: _specializationController,
+            decoration: const InputDecoration(
+              labelText: 'Specialization',
+              border: OutlineInputBorder(),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _minPriceController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Min price',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: _maxPriceController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Max price',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          DropdownButtonFormField<String>(
+            initialValue: _sortBy,
+            decoration: const InputDecoration(
+              labelText: 'Sort by',
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'rating', child: Text('Highest rating')),
+              DropdownMenuItem(value: 'price', child: Text('Lowest price')),
+              DropdownMenuItem(
+                value: 'experience',
+                child: Text('Most experience'),
+              ),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _sortBy = value;
+              });
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _applyFilters,
+                  icon: const Icon(Icons.search),
+                  label: const Text('Search'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _clearFilters,
+                  icon: const Icon(Icons.clear),
+                  label: const Text('Clear'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -67,7 +206,7 @@ class _TherapistListPageState extends State<TherapistListPage> {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: _viewModel.therapists.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final therapist = _viewModel.therapists[index];
 
