@@ -39,6 +39,8 @@ import '../../features/article/data/models/article_model.dart';
 import '../../features/article/presentation/pages/article_details_page.dart';
 import '../../features/article/presentation/pages/article_list_page.dart';
 
+import '../../features/workshop/presentation/pages/workshop_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String login = '/login';
@@ -64,6 +66,7 @@ class AppRouter {
   static const editProfile = '/profile/edit';
   static const articles = '/articles';
   static const articleDetails = '/articles/details';
+  static const workshops = '/workshops';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -175,6 +178,9 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => ArticleDetailsPage(article: article),
         );
+
+      case workshops:
+        return MaterialPageRoute(builder: (_) => const WorkshopPage());
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

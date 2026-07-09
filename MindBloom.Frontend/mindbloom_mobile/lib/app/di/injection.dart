@@ -48,6 +48,10 @@ import '../../features/article/data/repositories/article_repository.dart';
 import '../../features/article/data/services/article_api_service.dart';
 import '../../features/article/presentation/viewmodels/article_viewmodel.dart';
 
+import '../../features/workshop/data/repositories/workshop_repository.dart';
+import '../../features/workshop/data/services/workshop_api_service.dart';
+import '../../features/workshop/presentation/viewmodels/workshop_viewmodel.dart';
+
 class AppInjection {
   static final ApiClient apiClient = ApiClient();
 
@@ -162,5 +166,13 @@ class AppInjection {
     final repository = ArticleRepository(apiService: api);
 
     return ArticleViewModel(repository: repository);
+  }
+
+  static WorkshopViewModel createWorkshopViewModel() {
+    final api = WorkshopApiService(apiClient: apiClient);
+
+    final repository = WorkshopRepository(apiService: api);
+
+    return WorkshopViewModel(repository: repository);
   }
 }
