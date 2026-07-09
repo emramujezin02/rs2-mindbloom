@@ -147,6 +147,18 @@ class AppointmentDetailsPage extends StatelessWidget {
             const SizedBox(height: 10),
 
             ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).pushNamed(AppRouter.useMembership, arguments: appointment);
+              },
+              icon: const Icon(Icons.card_membership),
+              label: const Text('Use membership'),
+            ),
+
+            const SizedBox(height: 10),
+
+            ElevatedButton.icon(
               onPressed: canReview
                   ? () {
                       Navigator.of(context).pushNamed(

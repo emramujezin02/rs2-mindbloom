@@ -92,6 +92,18 @@ class HomeScreen extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(
+                          context,
+                        ).pushNamed(AppRouter.myMemberships);
+                      },
+                      icon: const Icon(Icons.card_membership),
+                      label: const Text('My memberships'),
+                    ),
+
+                    const SizedBox(height: 12),
+
                     ElevatedButton(
                       onPressed: () {
                         Navigator.of(context).pushNamed(AppRouter.myPayments);

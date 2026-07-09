@@ -111,6 +111,18 @@ class TherapistDetailsPage extends StatelessWidget {
 
             OutlinedButton.icon(
               onPressed: () {
+                Navigator.of(
+                  context,
+                ).pushNamed(AppRouter.purchaseMembership, arguments: therapist);
+              },
+              icon: const Icon(Icons.card_membership),
+              label: const Text('Buy membership package'),
+            ),
+
+            const SizedBox(height: 12),
+
+            OutlinedButton.icon(
+              onPressed: () {
                 Navigator.of(context).pushNamed(
                   AppRouter.therapistReviews,
                   arguments: therapist.id,

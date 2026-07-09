@@ -26,6 +26,10 @@ import '../../features/dashboard/presentation/pages/client_dashboard_page.dart';
 
 import '../../features/notification/presentation/pages/notification_page.dart';
 
+import '../../features/membership/presentation/pages/my_memberships_page.dart';
+import '../../features/membership/presentation/pages/purchase_membership_page.dart';
+import '../../features/membership/presentation/pages/use_membership_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String login = '/login';
@@ -43,6 +47,9 @@ class AppRouter {
   static const clientDashboard = '/client-dashboard';
   static const createReview = '/reviews/create';
   static const notifications = '/notifications';
+  static const myMemberships = '/memberships/mine';
+  static const purchaseMembership = '/memberships/purchase';
+  static const useMembership = '/memberships/use';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -115,6 +122,22 @@ class AppRouter {
       case notifications:
         return MaterialPageRoute(builder: (_) => const NotificationPage());
 
+      case myMemberships:
+        return MaterialPageRoute(builder: (_) => const MyMembershipsPage());
+
+      case purchaseMembership:
+        final therapist = settings.arguments as TherapistModel;
+
+        return MaterialPageRoute(
+          builder: (_) => PurchaseMembershipPage(therapist: therapist),
+        );
+
+      case useMembership:
+        final appointment = settings.arguments as AppointmentModel;
+
+        return MaterialPageRoute(
+          builder: (_) => UseMembershipPage(appointment: appointment),
+        );
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
 

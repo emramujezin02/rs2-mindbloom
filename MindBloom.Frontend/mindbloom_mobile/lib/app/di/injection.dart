@@ -36,6 +36,10 @@ import '../../features/notification/data/repositories/notification_repository.da
 import '../../features/notification/data/services/notification_api_service.dart';
 import '../../features/notification/presentation/viewmodels/notification_viewmodel.dart';
 
+import '../../features/membership/data/repositories/membership_repository.dart';
+import '../../features/membership/data/services/membership_api_service.dart';
+import '../../features/membership/presentation/viewmodels/membership_viewmodel.dart';
+
 class AppInjection {
   static final ApiClient apiClient = ApiClient();
 
@@ -126,5 +130,13 @@ class AppInjection {
     final repository = NotificationRepository(apiService: api);
 
     return NotificationViewModel(repository: repository);
+  }
+
+  static MembershipViewModel createMembershipViewModel() {
+    final api = MembershipApiService(apiClient: apiClient);
+
+    final repository = MembershipRepository(apiService: api);
+
+    return MembershipViewModel(repository: repository);
   }
 }
