@@ -40,6 +40,10 @@ import '../../features/membership/data/repositories/membership_repository.dart';
 import '../../features/membership/data/services/membership_api_service.dart';
 import '../../features/membership/presentation/viewmodels/membership_viewmodel.dart';
 
+import '../../features/journal/data/repositories/journal_repository.dart';
+import '../../features/journal/data/services/journal_api_service.dart';
+import '../../features/journal/presentation/viewmodels/journal_viewmodel.dart';
+
 class AppInjection {
   static final ApiClient apiClient = ApiClient();
 
@@ -138,5 +142,13 @@ class AppInjection {
     final repository = MembershipRepository(apiService: api);
 
     return MembershipViewModel(repository: repository);
+  }
+
+  static JournalViewModel createJournalViewModel() {
+    final api = JournalApiService(apiClient: apiClient);
+
+    final repository = JournalRepository(apiService: api);
+
+    return JournalViewModel(repository: repository);
   }
 }

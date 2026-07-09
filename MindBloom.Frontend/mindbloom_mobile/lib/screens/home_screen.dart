@@ -122,6 +122,16 @@ class HomeScreen extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pushNamed(context, AppRouter.journal);
+                      },
+                      icon: const Icon(Icons.menu_book),
+                      label: const Text("Journal"),
+                    ),
+
+                    const SizedBox(height: 12),
+
                     if (!session.isLoggedIn)
                       ElevatedButton(
                         onPressed: () {
