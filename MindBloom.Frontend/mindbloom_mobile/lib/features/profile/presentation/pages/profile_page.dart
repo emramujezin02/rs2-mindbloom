@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../app/router/app_router.dart';
 import '../viewmodels/profile_viewmodel.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -18,14 +19,12 @@ class _ProfilePageState extends State<ProfilePage> {
     super.initState();
 
     _viewModel.addListener(_refresh);
-
     _viewModel.loadProfile();
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
-
     super.dispose();
   }
 
@@ -35,10 +34,36 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _openEditProfile() async {
+    final result = await Navigator.of(
+      context,
+    ).pushNamed(AppRouter.editProfile, arguments: _viewModel.profile);
+
+    if (result == true) {
+      await _viewModel.loadProfile();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_viewModel.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_viewModel.error != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('My profile')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              _viewModel.error!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ),
+      );
     }
 
     if (_viewModel.profile == null) {
@@ -50,7 +75,12 @@ class _ProfilePageState extends State<ProfilePage> {
     final profile = _viewModel.profile!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My profile')),
+      appBar: AppBar(
+        title: const Text('My profile'),
+        actions: [
+          IconButton(onPressed: _openEditProfile, icon: const Icon(Icons.edit)),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -74,7 +104,9 @@ class _ProfilePageState extends State<ProfilePage> {
             ListTile(
               leading: const Icon(Icons.phone),
               title: const Text('Phone'),
-              subtitle: Text(profile.phoneNumber),
+              subtitle: Text(
+                profile.phoneNumber.isEmpty ? 'Not added' : profile.phoneNumber,
+              ),
             ),
           ],
         ),

@@ -21,6 +21,8 @@ import '../../features/review/presentation/pages/review_list_page.dart';
 import '../../features/review/presentation/pages/create_review_page.dart';
 
 import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/profile/data/models/profile_model.dart';
+import '../../features/profile/presentation/pages/edit_profile_page.dart';
 
 import '../../features/dashboard/presentation/pages/client_dashboard_page.dart';
 
@@ -55,6 +57,7 @@ class AppRouter {
   static const useMembership = '/memberships/use';
   static const journal = '/journal';
   static const addJournalEntry = '/journal/add';
+  static const editProfile = '/profile/edit';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -149,6 +152,13 @@ class AppRouter {
 
       case addJournalEntry:
         return MaterialPageRoute(builder: (_) => const AddJournalEntryPage());
+
+      case editProfile:
+        final profile = settings.arguments as ProfileModel;
+
+        return MaterialPageRoute(
+          builder: (_) => EditProfilePage(profile: profile),
+        );
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

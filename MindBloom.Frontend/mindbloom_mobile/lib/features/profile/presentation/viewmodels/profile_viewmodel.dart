@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../../data/models/update_profile_request.dart';
 import '../../data/models/profile_model.dart';
 import '../../data/repositories/profile_repository.dart';
 
@@ -29,5 +29,35 @@ class ProfileViewModel extends ChangeNotifier {
     isLoading = false;
 
     notifyListeners();
+  }
+
+  Future<bool> updateProfile({
+    required String firstName,
+    required String lastName,
+    required String phoneNumber,
+  }) async {
+    isLoading = true;
+    error = null;
+    notifyListeners();
+
+    try {
+      await repository.updateProfile(
+        UpdateProfileRequest(
+          firstName: firstName,
+          lastName: lastName,
+          phoneNumber: phoneNumber,
+        ),
+      );
+
+      await loadProfile();
+
+      return true;
+    } catch (e) {
+      error = e.toString();
+      isLoading = false;
+      notifyListeners();
+
+      return false;
+    }
   }
 }
