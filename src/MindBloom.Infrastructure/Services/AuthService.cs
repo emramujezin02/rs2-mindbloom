@@ -48,37 +48,79 @@ public class AuthService : IAuthService
     }
 
     public async Task<AuthResponseDto> RegisterAsync(
-        RegisterRequestDto request)
+     RegisterRequestDto request)
     {
-        var existingUser =
-            await _userManager.FindByEmailAsync(request.Email);
+        const string clientRole = "Client";
 
-        if (existingUser != null)
+        var normalizedEmail =
+            request.Email.Trim().ToLowerInvariant();
+
+        var normalizedUsername =
+            request.Username.Trim();
+
+        var existingEmailUser =
+            await _userManager.FindByEmailAsync(
+                normalizedEmail);
+
+        if (existingEmailUser != null)
         {
-            throw new Exception("User already exists.");
+            throw new Exception(
+                "A user with this email already exists.");
+        }
+
+        var existingUsernameUser =
+            await _userManager.FindByNameAsync(
+                normalizedUsername);
+
+        if (existingUsernameUser != null)
+        {
+            throw new Exception(
+                "A user with this username already exists.");
         }
 
         var user = new ApplicationUser
         {
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            Email = request.Email,
-            UserName = request.Username,
+            FirstName = request.FirstName.Trim(),
+            LastName = request.LastName.Trim(),
+            Email = normalizedEmail,
+            UserName = normalizedUsername,
             DateOfBirth = request.DateOfBirth,
-            CreatedAtUtc = DateTime.Now,
-            EmailConfirmed = IsDemoAccount(request.Email),
-            IsEmailVerified = IsDemoAccount(request.Email)
+            CreatedAtUtc = DateTime.UtcNow,
+            EmailConfirmed =
+                IsDemoAccount(normalizedEmail),
+            IsEmailVerified =
+                IsDemoAccount(normalizedEmail)
         };
 
-        var result =
-            await _userManager.CreateAsync(user, request.Password);
+        var createResult =
+            await _userManager.CreateAsync(
+                user,
+                request.Password);
 
-        if (!result.Succeeded)
+        if (!createResult.Succeeded)
         {
             throw new Exception(
-                string.Join(", ", result.Errors.Select(x => x.Description)));
+                string.Join(
+                    ", ",
+                    createResult.Errors.Select(
+                        error => error.Description)));
         }
 
+        var addRoleResult =
+            await _userManager.AddToRoleAsync(
+                user,
+                clientRole);
+
+        if (!addRoleResult.Succeeded)
+        {
+            await _userManager.DeleteAsync(user);
+
+            throw new Exception(
+                string.Join(
+                    ", ",
+                    addRoleResult.Errors.Select(
+                        error => error.Description)));
+        }
 
         var client = new Client
         {
@@ -87,9 +129,15 @@ public class AuthService : IAuthService
 
         _context.Clients.Add(client);
 
-        await _context.SaveChangesAsync();
-
-        await _userManager.AddToRoleAsync(user, request.Role);
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            await _userManager.DeleteAsync(user);
+            throw;
+        }
 
         if (!IsDemoAccount(user.Email!))
         {
@@ -98,22 +146,21 @@ public class AuthService : IAuthService
         }
 
         var token =
-            await _jwtTokenService.GenerateTokenAsync(user);
+            await _jwtTokenService.GenerateTokenAsync(
+                user);
 
-        var refreshToken = _jwtTokenService.GenerateRefreshToken();
+        var refreshToken =
+            _jwtTokenService.GenerateRefreshToken();
 
         var refreshTokenEntity =
-    new RefreshToken
-    {
-        UserId = user.Id,
-
-        Token = refreshToken,
-
-        ExpiresAtUtc =
-            DateTime.UtcNow.AddDays(7),
-
-        IsRevoked = false
-    };
+            new RefreshToken
+            {
+                UserId = user.Id,
+                Token = refreshToken,
+                ExpiresAtUtc =
+                    DateTime.UtcNow.AddDays(7),
+                IsRevoked = false
+            };
 
         _context.RefreshTokens.Add(
             refreshTokenEntity);
@@ -127,11 +174,9 @@ public class AuthService : IAuthService
             LastName = user.LastName,
             Email = user.Email!,
             Token = token,
-            Role = request.Role,
-            RefreshToken=refreshToken
+            Role = clientRole,
+            RefreshToken = refreshToken
         };
-
-        
     }
 
     public async Task<AuthResponseDto> LoginAsync(

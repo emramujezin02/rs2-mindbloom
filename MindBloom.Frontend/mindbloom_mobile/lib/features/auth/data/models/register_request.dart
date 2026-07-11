@@ -23,7 +23,6 @@ class RegisterRequest {
       'email': email,
       'password': password,
       'dateOfBirth': dateOfBirth.toIso8601String(),
-      'role': 'Client',
     };
   }
 }
