@@ -7,6 +7,8 @@ import '../models/login_request.dart';
 import '../models/register_request.dart';
 import '../models/reset_password_request.dart';
 import '../models/verify_2fa_request.dart';
+import '../models/send_email_verification_code_request.dart';
+import '../models/verify_email_code_request.dart';
 
 class AuthApiService {
   final ApiClient apiClient;
@@ -79,5 +81,23 @@ class AuthApiService {
 
   Future<void> logout() async {
     await apiClient.post('/Auth/logout');
+  }
+
+  Future<void> sendEmailVerificationCode(
+    SendEmailVerificationCodeRequest request,
+  ) async {
+    await apiClient.post(
+      '/Auth/send-verification-code',
+      body: request.toJson(),
+      requiresAuth: false,
+    );
+  }
+
+  Future<void> verifyEmailCode(VerifyEmailCodeRequest request) async {
+    await apiClient.post(
+      '/Auth/verify-email-code',
+      body: request.toJson(),
+      requiresAuth: false,
+    );
   }
 }

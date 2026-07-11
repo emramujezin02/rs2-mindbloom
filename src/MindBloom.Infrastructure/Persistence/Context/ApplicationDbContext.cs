@@ -29,7 +29,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<AppointmentNote> AppointmentNotes { get; set; }
     public DbSet<TherapistUnavailableDate> TherapistUnavailableDates{ get; set; }
     public DbSet<ClientMembership> ClientMemberships { get; set; }
-
+    public DbSet<EmailVerificationCode> EmailVerificationCodes { get; set; }
     public DbSet<MembershipUsage> MembershipUsages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -129,6 +129,25 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         builder.Entity<MembershipUsage>()
             .HasIndex(x => x.AppointmentId)
             .IsUnique();
+
+        builder.Entity<EmailVerificationCode>(
+    entity =>
+    {
+        entity.Property(x => x.CodeHash)
+            .IsRequired();
+
+        entity.HasOne(x => x.User)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        entity.HasIndex(x => new
+        {
+            x.UserId,
+            x.IsUsed,
+            x.ExpiresAtUtc
+        });
+    });
 
     }
 

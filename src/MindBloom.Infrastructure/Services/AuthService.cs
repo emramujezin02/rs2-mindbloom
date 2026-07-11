@@ -9,6 +9,7 @@ using MindBloom.Shared.Constants;
 using MindBloom.Application.Features.Auth.DTOs;
 using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Features.Auth.DTOs;
+using System.Security.Cryptography;
 
 
 namespace MindBloom.Infrastructure.Services;
@@ -141,7 +142,7 @@ public class AuthService : IAuthService
 
         if (!IsDemoAccount(user.Email!))
         {
-            await SendVerificationEmailAsync(
+            await SendEmailVerificationCodeAsync(
                 user.Email!);
         }
 
@@ -854,5 +855,153 @@ public class AuthService : IAuthService
         }
 
         return user.TwoFactorEnabledCustom;
+    }
+
+    public async Task
+    SendEmailVerificationCodeAsync(
+        string email)
+    {
+        var normalizedEmail =
+            email.Trim().ToLowerInvariant();
+
+        var user =
+            await _userManager.FindByEmailAsync(
+                normalizedEmail);
+
+        if (user == null)
+        {
+            throw new Exception(
+                "User not found.");
+        }
+
+        if (user.IsEmailVerified ||
+            user.EmailConfirmed)
+        {
+            throw new Exception(
+                "Email is already verified.");
+        }
+
+        var previousCodes =
+            await _context.EmailVerificationCodes
+                .Where(x =>
+                    x.UserId == user.Id &&
+                    !x.IsUsed)
+                .ToListAsync();
+
+        foreach (var previousCode
+                 in previousCodes)
+        {
+            previousCode.IsUsed = true;
+        }
+
+        var code =
+            RandomNumberGenerator
+                .GetInt32(100000, 1000000)
+                .ToString();
+
+        var codeHash =
+            _userManager.PasswordHasher
+                .HashPassword(
+                    user,
+                    code);
+
+        var verificationCode =
+            new EmailVerificationCode
+            {
+                UserId = user.Id,
+                CodeHash = codeHash,
+                ExpiresAtUtc =
+                    DateTime.UtcNow
+                        .AddMinutes(10),
+                IsUsed = false
+            };
+
+        _context.EmailVerificationCodes.Add(
+            verificationCode);
+
+        await _context.SaveChangesAsync();
+
+        if (!IsDemoAccount(user.Email!))
+        {
+            await _emailService.SendAsync(
+                user.Email!,
+                "MindBloom Email Verification",
+                $"Your email verification code is: {code}. "
+                + "The code expires in 10 minutes.");
+        }
+    }
+
+    public async Task VerifyEmailCodeAsync(
+    VerifyEmailCodeDto request)
+    {
+        var normalizedEmail =
+            request.Email
+                .Trim()
+                .ToLowerInvariant();
+
+        var user =
+            await _userManager.FindByEmailAsync(
+                normalizedEmail);
+
+        if (user == null)
+        {
+            throw new Exception(
+                "User not found.");
+        }
+
+        if (user.IsEmailVerified &&
+            user.EmailConfirmed)
+        {
+            return;
+        }
+
+        var verificationCode =
+            await _context.EmailVerificationCodes
+                .Where(x =>
+                    x.UserId == user.Id &&
+                    !x.IsUsed)
+                .OrderByDescending(x =>
+                    x.CreatedAtUtc)
+                .FirstOrDefaultAsync();
+
+        if (verificationCode == null)
+        {
+            throw new Exception(
+                "No active verification code exists.");
+        }
+
+        if (verificationCode.ExpiresAtUtc <
+            DateTime.UtcNow)
+        {
+            verificationCode.IsUsed = true;
+
+            await _context.SaveChangesAsync();
+
+            throw new Exception(
+                "Verification code expired.");
+        }
+
+        var verificationResult =
+            _userManager.PasswordHasher
+                .VerifyHashedPassword(
+                    user,
+                    verificationCode.CodeHash,
+                    request.Code.Trim());
+
+        if (verificationResult ==
+            PasswordVerificationResult.Failed)
+        {
+            throw new Exception(
+                "Invalid verification code.");
+        }
+
+        verificationCode.IsUsed = true;
+
+        user.IsEmailVerified = true;
+        user.EmailConfirmed = true;
+
+        await _userManager.UpdateAsync(user);
+
+        await _context.SaveChangesAsync();
     }
 }

@@ -14,11 +14,11 @@ class AuthViewModel extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
   String? successMessage;
-
   bool requiresTwoFactor = false;
   String? pendingTwoFactorEmail;
-
   bool isTwoFactorEnabled = false;
+  bool needsEmailVerification = false;
+  String? pendingVerificationEmail;
 
   AuthViewModel({required this.authRepository});
 
@@ -32,6 +32,8 @@ class AuthViewModel extends ChangeNotifier {
     successMessage = null;
     requiresTwoFactor = false;
     pendingTwoFactorEmail = null;
+    needsEmailVerification = false;
+    pendingVerificationEmail = null;
     notifyListeners();
 
     try {
@@ -51,8 +53,18 @@ class AuthViewModel extends ChangeNotifier {
 
       return true;
     } catch (error) {
+      final message = error.toString();
+
+      needsEmailVerification = message.toLowerCase().contains(
+        'email is not verified',
+      );
+
+      if (needsEmailVerification) {
+        pendingVerificationEmail = email;
+      }
+
       isLoading = false;
-      errorMessage = error.toString();
+      errorMessage = message;
       notifyListeners();
 
       return false;
@@ -243,6 +255,58 @@ class AuthViewModel extends ChangeNotifier {
       isLoading = false;
       errorMessage = error.toString();
       notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> sendEmailVerificationCode({required String email}) async {
+    isLoading = true;
+    errorMessage = null;
+    successMessage = null;
+    notifyListeners();
+
+    try {
+      await authRepository.sendEmailVerificationCode(email);
+
+      isLoading = false;
+      successMessage = 'A new verification code has been sent to your email.';
+      notifyListeners();
+
+      return true;
+    } catch (error) {
+      isLoading = false;
+      errorMessage = error.toString();
+      notifyListeners();
+
+      return false;
+    }
+  }
+
+  Future<bool> verifyEmailCode({
+    required String email,
+    required String code,
+  }) async {
+    isLoading = true;
+    errorMessage = null;
+    successMessage = null;
+    notifyListeners();
+
+    try {
+      await authRepository.verifyEmailCode(email: email, code: code);
+
+      needsEmailVerification = false;
+      pendingVerificationEmail = null;
+
+      isLoading = false;
+      successMessage = 'Email verified successfully. You can now log in.';
+      notifyListeners();
+
+      return true;
+    } catch (error) {
+      isLoading = false;
+      errorMessage = error.toString();
+      notifyListeners();
+
       return false;
     }
   }

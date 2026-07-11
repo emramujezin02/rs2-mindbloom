@@ -61,23 +61,35 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    if (_viewModel.requiresTwoFactor) {
-      Navigator.of(context).pushNamed(AppRouter.verify2FA, arguments: email);
+    if (!success && _viewModel.needsEmailVerification) {
+      Navigator.of(context).pushNamed(
+        AppRouter.verifyEmail,
+        arguments:
+            _viewModel.pendingVerificationEmail ?? _emailController.text.trim(),
+      );
 
       return;
     }
 
-    final session = SessionScope.of(context);
+    if (success) {
+      if (_viewModel.requiresTwoFactor) {
+        Navigator.of(context).pushNamed(AppRouter.verify2FA, arguments: email);
 
-    await session.initialize();
+        return;
+      }
 
-    if (!mounted) {
-      return;
+      final session = SessionScope.of(context);
+
+      await session.initialize();
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(AppRouter.home, (route) => false);
     }
-
-    Navigator.of(
-      context,
-    ).pushNamedAndRemoveUntil(AppRouter.home, (route) => false);
   }
 
   @override

@@ -8,6 +8,7 @@ import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/change_password_page.dart';
 import '../../features/auth/presentation/pages/two_factor_settings_page.dart';
 import '../../features/auth/presentation/pages/verify_2fa_page.dart';
+import '../../features/auth/presentation/pages/verify_email_page.dart';
 
 import '../../features/therapist/presentation/pages/therapist_list_page.dart';
 import '../../features/therapist/presentation/pages/therapist_details_page.dart';
@@ -75,6 +76,7 @@ class AppRouter {
   static const String myReviews = '/reviews/mine';
   static const String verify2FA = '/verify-2fa';
   static const String twoFactorSettings = '/profile/two-factor';
+  static const String verifyEmail = '/verify-email';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -203,6 +205,11 @@ class AppRouter {
 
       case twoFactorSettings:
         return MaterialPageRoute(builder: (_) => const TwoFactorSettingsPage());
+
+      case verifyEmail:
+        final email = settings.arguments as String;
+
+        return MaterialPageRoute(builder: (_) => VerifyEmailPage(email: email));
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

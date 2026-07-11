@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
-import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -95,12 +94,19 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     if (success) {
-      final session = SessionScope.of(context);
-      final navigator = Navigator.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Registration successful. Enter the code sent to your email.',
+          ),
+        ),
+      );
 
-      await session.initialize();
-
-      navigator.pushReplacementNamed(AppRouter.home);
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRouter.verifyEmail,
+        (route) => false,
+        arguments: _emailController.text.trim(),
+      );
     }
   }
 

@@ -8,6 +8,8 @@ import '../models/register_request.dart';
 import '../models/reset_password_request.dart';
 import '../models/verify_2fa_request.dart';
 import '../services/auth_api_service.dart';
+import '../models/send_email_verification_code_request.dart';
+import '../models/verify_email_code_request.dart';
 
 class AuthRepository {
   final AuthApiService authApiService;
@@ -42,14 +44,7 @@ class AuthRepository {
   }
 
   Future<AuthResponse> register(RegisterRequest request) async {
-    final response = await authApiService.register(request);
-
-    await sessionStorage.saveTokens(
-      accessToken: response.token,
-      refreshToken: response.refreshToken,
-    );
-
-    return response;
+    return authApiService.register(request);
   }
 
   Future<void> forgotPassword(ForgotPasswordRequest request) {
@@ -88,5 +83,17 @@ class AuthRepository {
     }
 
     return serverLogoutSucceeded;
+  }
+
+  Future<void> sendEmailVerificationCode(String email) {
+    return authApiService.sendEmailVerificationCode(
+      SendEmailVerificationCodeRequest(email: email),
+    );
+  }
+
+  Future<void> verifyEmailCode({required String email, required String code}) {
+    return authApiService.verifyEmailCode(
+      VerifyEmailCodeRequest(email: email, code: code),
+    );
   }
 }

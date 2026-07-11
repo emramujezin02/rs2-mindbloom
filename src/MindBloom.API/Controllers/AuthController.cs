@@ -286,4 +286,35 @@ public class AuthController : ControllerBase
             isEnabled
         });
     }
+
+    [HttpPost("send-verification-code")]
+    public async Task<IActionResult>
+    SendVerificationCode(
+        SendEmailVerificationCodeDto request)
+    {
+        await _authService
+            .SendEmailVerificationCodeAsync(
+                request.Email);
+
+        return Ok(new
+        {
+            message =
+                "Verification code sent successfully."
+        });
+    }
+
+    [HttpPost("verify-email-code")]
+    public async Task<IActionResult>
+        VerifyEmailCode(
+            VerifyEmailCodeDto request)
+    {
+        await _authService
+            .VerifyEmailCodeAsync(request);
+
+        return Ok(new
+        {
+            message =
+                "Email verified successfully."
+        });
+    }
 }

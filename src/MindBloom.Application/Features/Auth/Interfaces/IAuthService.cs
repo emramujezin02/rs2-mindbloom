@@ -32,4 +32,8 @@ public interface IAuthService
 
     Task LogoutAsync(int userId);
     Task<bool> Is2FAEnabledAsync(int userId);
+
+    Task SendEmailVerificationCodeAsync(string email);
+
+    Task VerifyEmailCodeAsync(VerifyEmailCodeDto request);
 }
