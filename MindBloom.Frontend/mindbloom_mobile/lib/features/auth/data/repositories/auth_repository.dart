@@ -5,6 +5,7 @@ import '../models/register_request.dart';
 import '../services/auth_api_service.dart';
 import '../models/forgot_password_request.dart';
 import '../models/reset_password_request.dart';
+import '../models/change_password_request.dart';
 
 class AuthRepository {
   final AuthApiService authApiService;
@@ -38,5 +39,9 @@ class AuthRepository {
 
   Future<void> resetPassword(ResetPasswordRequest request) async {
     await authApiService.resetPassword(request);
+  }
+
+  Future<void> changePassword(ChangePasswordRequest request) async {
+    await authApiService.changePassword(request);
   }
 }

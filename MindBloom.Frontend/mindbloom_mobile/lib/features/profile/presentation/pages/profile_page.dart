@@ -108,6 +108,19 @@ class _ProfilePageState extends State<ProfilePage> {
                 profile.phoneNumber.isEmpty ? 'Not added' : profile.phoneNumber,
               ),
             ),
+
+            const SizedBox(height: 20),
+
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pushNamed(AppRouter.changePassword);
+                },
+                icon: const Icon(Icons.lock_reset),
+                label: const Text('Change password'),
+              ),
+            ),
           ],
         ),
       ),

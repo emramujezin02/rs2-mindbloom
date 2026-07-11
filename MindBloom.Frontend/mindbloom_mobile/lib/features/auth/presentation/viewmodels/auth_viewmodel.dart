@@ -5,6 +5,7 @@ import '../../data/models/register_request.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/models/forgot_password_request.dart';
 import '../../data/models/reset_password_request.dart';
+import '../../data/models/change_password_request.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final AuthRepository authRepository;
@@ -124,6 +125,37 @@ class AuthViewModel extends ChangeNotifier {
 
       isLoading = false;
       successMessage = 'Password has been reset successfully.';
+      notifyListeners();
+
+      return true;
+    } catch (error) {
+      isLoading = false;
+      errorMessage = error.toString();
+      notifyListeners();
+
+      return false;
+    }
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    isLoading = true;
+    errorMessage = null;
+    successMessage = null;
+    notifyListeners();
+
+    try {
+      await authRepository.changePassword(
+        ChangePasswordRequest(
+          currentPassword: currentPassword,
+          newPassword: newPassword,
+        ),
+      );
+
+      isLoading = false;
+      successMessage = 'Password changed successfully.';
       notifyListeners();
 
       return true;

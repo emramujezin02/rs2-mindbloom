@@ -5,6 +5,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
+import '../../features/auth/presentation/pages/change_password_page.dart';
 
 import '../../features/therapist/presentation/pages/therapist_list_page.dart';
 import '../../features/therapist/presentation/pages/therapist_details_page.dart';
@@ -67,7 +68,7 @@ class AppRouter {
   static const articles = '/articles';
   static const articleDetails = '/articles/details';
   static const workshops = '/workshops';
-
+  static const String changePassword = '/change-password';
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case login:
@@ -181,6 +182,9 @@ class AppRouter {
 
       case workshops:
         return MaterialPageRoute(builder: (_) => const WorkshopPage());
+
+      case changePassword:
+        return MaterialPageRoute(builder: (_) => const ChangePasswordPage());
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

@@ -4,6 +4,7 @@ import '../models/login_request.dart';
 import '../models/register_request.dart';
 import '../models/forgot_password_request.dart';
 import '../models/reset_password_request.dart';
+import '../models/change_password_request.dart';
 
 class AuthApiService {
   final ApiClient apiClient;
@@ -34,5 +35,9 @@ class AuthApiService {
 
   Future<void> resetPassword(ResetPasswordRequest request) async {
     await apiClient.post('/Auth/reset-password', body: request.toJson());
+  }
+
+  Future<void> changePassword(ChangePasswordRequest request) async {
+    await apiClient.post('/Auth/change-password', body: request.toJson());
   }
 }
