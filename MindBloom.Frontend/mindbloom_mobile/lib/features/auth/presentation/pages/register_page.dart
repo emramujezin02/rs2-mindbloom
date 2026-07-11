@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
-import '../../../session/presentation/session_scope.dart';
+import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
 class RegisterPage extends StatefulWidget {

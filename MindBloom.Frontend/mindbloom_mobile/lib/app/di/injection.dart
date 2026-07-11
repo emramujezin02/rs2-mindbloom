@@ -58,7 +58,17 @@ class AppInjection {
 
   static final ApiClient apiClient = ApiClient(sessionStorage: sessionStorage);
   static SessionViewModel createSessionViewModel() {
-    return SessionViewModel(sessionStorage: sessionStorage);
+    final authApiService = AuthApiService(apiClient: apiClient);
+
+    final authRepository = AuthRepository(
+      authApiService: authApiService,
+      sessionStorage: sessionStorage,
+    );
+
+    return SessionViewModel(
+      sessionStorage: sessionStorage,
+      authRepository: authRepository,
+    );
   }
 
   static AuthViewModel createAuthViewModel() {

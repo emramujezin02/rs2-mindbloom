@@ -50,4 +50,8 @@ class AuthApiService {
   Future<void> changePassword(ChangePasswordRequest request) async {
     await apiClient.post('/Auth/change-password', body: request.toJson());
   }
+
+  Future<void> logout() async {
+    await apiClient.post('/Auth/logout');
+  }
 }

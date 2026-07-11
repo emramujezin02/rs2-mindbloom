@@ -235,4 +235,35 @@ public class AuthController : ControllerBase
                 "2FA disabled successfully."
         });
     }
+
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        var userIdValue =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(
+                userIdValue,
+                out var userId))
+        {
+            return Unauthorized(
+                new
+                {
+                    message =
+                        "Invalid authenticated user."
+                });
+        }
+
+        await _authService.LogoutAsync(
+            userId);
+
+        return Ok(
+            new
+            {
+                message =
+                    "Logged out successfully."
+            });
+    }
 }

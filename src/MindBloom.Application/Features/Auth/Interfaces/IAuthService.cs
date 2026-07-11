@@ -29,4 +29,6 @@ public interface IAuthService
     Task Enable2FAAsync(int userId);
 
     Task Disable2FAAsync(int userId);
+
+    Task LogoutAsync(int userId);
 }

@@ -44,4 +44,18 @@ class AuthRepository {
   Future<void> changePassword(ChangePasswordRequest request) async {
     await authApiService.changePassword(request);
   }
+
+  Future<bool> logout() async {
+    var serverLogoutSucceeded = true;
+
+    try {
+      await authApiService.logout();
+    } catch (_) {
+      serverLogoutSucceeded = false;
+    } finally {
+      await sessionStorage.clearSession();
+    }
+
+    return serverLogoutSucceeded;
+  }
 }

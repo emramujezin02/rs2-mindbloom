@@ -761,4 +761,39 @@ public class AuthService : IAuthService
 
         await _userManager.UpdateAsync(user);
     }
+
+    public async Task LogoutAsync(
+    int userId)
+    {
+        var userExists =
+            await _userManager.Users
+                .AnyAsync(x =>
+                    x.Id == userId);
+
+        if (!userExists)
+        {
+            throw new Exception(
+                "User not found.");
+        }
+
+        var activeRefreshTokens =
+            await _context.RefreshTokens
+                .Where(x =>
+                    x.UserId == userId
+                    && !x.IsRevoked)
+                .ToListAsync();
+
+        if (activeRefreshTokens.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var refreshToken
+                 in activeRefreshTokens)
+        {
+            refreshToken.IsRevoked = true;
+        }
+
+        await _context.SaveChangesAsync();
+    }
 }

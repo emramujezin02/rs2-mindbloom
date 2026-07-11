@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'viewmodels/session_viewmodel.dart';
+import 'session_viewmodel.dart';
 
 class SessionScope extends InheritedNotifier<SessionViewModel> {
   const SessionScope({
