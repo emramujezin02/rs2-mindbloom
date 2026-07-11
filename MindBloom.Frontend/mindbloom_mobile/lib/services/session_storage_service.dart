@@ -18,6 +18,13 @@ class SessionStorageService {
     await _storage.write(key: _refreshTokenKey, value: refreshToken);
   }
 
+  Future<void> saveTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    await Future.wait([saveToken(accessToken), saveRefreshToken(refreshToken)]);
+  }
+
   Future<String?> getToken() async {
     return _storage.read(key: _accessTokenKey);
   }
