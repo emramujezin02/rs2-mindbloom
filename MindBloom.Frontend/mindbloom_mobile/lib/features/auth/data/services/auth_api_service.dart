@@ -2,18 +2,30 @@ import '../../../../core/network/api_client.dart';
 import '../models/auth_response.dart';
 import '../models/change_password_request.dart';
 import '../models/forgot_password_request.dart';
+import '../models/login_2fa_response.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
 import '../models/reset_password_request.dart';
+import '../models/verify_2fa_request.dart';
 
 class AuthApiService {
   final ApiClient apiClient;
 
   AuthApiService({required this.apiClient});
 
-  Future<AuthResponse> login(LoginRequest request) async {
+  Future<Login2FAResponse> login(LoginRequest request) async {
     final response = await apiClient.post(
-      '/Auth/login',
+      '/Auth/login-2fa',
+      body: request.toJson(),
+      requiresAuth: false,
+    );
+
+    return Login2FAResponse.fromJson(response as Map<String, dynamic>);
+  }
+
+  Future<AuthResponse> verify2FA(Verify2FARequest request) async {
+    final response = await apiClient.post(
+      '/Auth/verify-2fa',
       body: request.toJson(),
       requiresAuth: false,
     );
@@ -49,6 +61,20 @@ class AuthApiService {
 
   Future<void> changePassword(ChangePasswordRequest request) async {
     await apiClient.post('/Auth/change-password', body: request.toJson());
+  }
+
+  Future<bool> get2FAStatus() async {
+    final response = await apiClient.get('/Auth/2fa-status');
+
+    return response['isEnabled'] ?? false;
+  }
+
+  Future<void> enable2FA() async {
+    await apiClient.post('/Auth/enable-2fa');
+  }
+
+  Future<void> disable2FA() async {
+    await apiClient.post('/Auth/disable-2fa');
   }
 
   Future<void> logout() async {

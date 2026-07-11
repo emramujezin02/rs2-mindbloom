@@ -592,8 +592,8 @@ public class AuthService : IAuthService
         LoginRequestDto request)
     {
         var user =
-            await _userManager
-                .FindByEmailAsync(request.Email);
+            await _userManager.FindByEmailAsync(
+                request.Email);
 
         if (user == null)
         {
@@ -601,11 +601,23 @@ public class AuthService : IAuthService
                 "Invalid credentials.");
         }
 
+        if (user.IsBlocked)
+        {
+            throw new Exception(
+                "Your account is blocked.");
+        }
+
+        if (!user.IsEmailVerified &&
+            !IsDemoAccount(user.Email!))
+        {
+            throw new Exception(
+                "Email is not verified.");
+        }
+
         var isPasswordValid =
-            await _userManager
-                .CheckPasswordAsync(
-                    user,
-                    request.Password);
+            await _userManager.CheckPasswordAsync(
+                user,
+                request.Password);
 
         if (!isPasswordValid)
         {
@@ -613,35 +625,25 @@ public class AuthService : IAuthService
                 "Invalid credentials.");
         }
 
-        if (!user.TwoFactorEnabledCustom)
+        if (!user.TwoFactorEnabledCustom ||
+            IsDemoAccount(user.Email!))
         {
-            throw new Exception(
-                "2FA is not enabled.");
-        }
-
-        if (IsDemoAccount(user.Email!))
-        {
-            var roles =
-                await _userManager.GetRolesAsync(user);
-
-            var token =
-                await _jwtTokenService
-                    .GenerateTokenAsync(user);
-
-            var refreshToken =
-                _jwtTokenService
-                    .GenerateRefreshToken();
+            var authResponse =
+                await LoginAsync(request);
 
             return new Login2FAResponseDto
             {
                 RequiresTwoFactor = false,
-                Message = "Demo account login successful."
+                Message =
+                    "Login successful.",
+                Auth = authResponse
             };
         }
 
         var code =
-            new Random()
-                .Next(100000, 999999)
+            System.Security.Cryptography
+                .RandomNumberGenerator
+                .GetInt32(100000, 1000000)
                 .ToString();
 
         user.TwoFactorCode = code;
@@ -651,19 +653,17 @@ public class AuthService : IAuthService
 
         await _userManager.UpdateAsync(user);
 
-        if (!IsDemoAccount(user.Email!))
-        {
-            await _emailService.SendAsync(
-                user.Email!,
-                "MindBloom 2FA Code",
-                $"Your verification code is: {code}");
-        }
+        await _emailService.SendAsync(
+            user.Email!,
+            "MindBloom 2FA Code",
+            $"Your verification code is: {code}");
 
         return new Login2FAResponseDto
         {
             RequiresTwoFactor = true,
             Message =
-                "2FA code sent to email."
+                "A verification code has been sent to your email.",
+            Auth = null
         };
     }
 
@@ -672,39 +672,67 @@ public class AuthService : IAuthService
         Verify2FADto request)
     {
         var user =
-            await _userManager
-                .FindByEmailAsync(request.Email);
+            await _userManager.FindByEmailAsync(
+                request.Email);
 
         if (user == null)
         {
-            throw new Exception("User not found.");
+            throw new Exception(
+                "User not found.");
         }
 
-        if (!IsDemoAccount(user.Email!))
-        {
-            if (user.TwoFactorCode != request.Code)
-            {
-                throw new Exception(
-                    "Invalid code.");
-            }
-        }
-
-        if (user.TwoFactorCodeExpiresAtUtc
-            < DateTime.UtcNow)
+        if (!user.TwoFactorEnabledCustom)
         {
             throw new Exception(
-                "Code expired.");
+                "Two-factor authentication is not enabled.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                user.TwoFactorCode))
+        {
+            throw new Exception(
+                "No active verification code exists.");
+        }
+
+        if (user.TwoFactorCodeExpiresAtUtc == null ||
+            user.TwoFactorCodeExpiresAtUtc <
+            DateTime.UtcNow)
+        {
+            user.TwoFactorCode = null;
+            user.TwoFactorCodeExpiresAtUtc = null;
+
+            await _userManager.UpdateAsync(user);
+
+            throw new Exception(
+                "Verification code expired.");
+        }
+
+        if (user.TwoFactorCode !=
+            request.Code.Trim())
+        {
+            throw new Exception(
+                "Invalid verification code.");
         }
 
         user.TwoFactorCode = null;
-
         user.TwoFactorCodeExpiresAtUtc = null;
 
         await _userManager.UpdateAsync(user);
 
+        var oldTokens =
+            await _context.RefreshTokens
+                .Where(x =>
+                    x.UserId == user.Id &&
+                    !x.IsRevoked)
+                .ToListAsync();
+
+        foreach (var oldToken in oldTokens)
+        {
+            oldToken.IsRevoked = true;
+        }
+
         var roles =
-            await _userManager
-                .GetRolesAsync(user);
+            await _userManager.GetRolesAsync(user);
 
         var token =
             await _jwtTokenService
@@ -714,6 +742,18 @@ public class AuthService : IAuthService
             _jwtTokenService
                 .GenerateRefreshToken();
 
+        _context.RefreshTokens.Add(
+            new RefreshToken
+            {
+                UserId = user.Id,
+                Token = refreshToken,
+                ExpiresAtUtc =
+                    DateTime.UtcNow.AddDays(7),
+                IsRevoked = false
+            });
+
+        await _context.SaveChangesAsync();
+
         return new AuthResponseDto
         {
             Id = user.Id,
@@ -722,7 +762,8 @@ public class AuthService : IAuthService
             Email = user.Email!,
             Token = token,
             RefreshToken = refreshToken,
-            Role = roles.First()
+            Role = roles.FirstOrDefault()
+                ?? string.Empty
         };
     }
 
@@ -795,5 +836,23 @@ public class AuthService : IAuthService
         }
 
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<bool>
+    Is2FAEnabledAsync(
+        int userId)
+    {
+        var user =
+            await _userManager.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Id == userId);
+
+        if (user == null)
+        {
+            throw new Exception(
+                "User not found.");
+        }
+
+        return user.TwoFactorEnabledCustom;
     }
 }

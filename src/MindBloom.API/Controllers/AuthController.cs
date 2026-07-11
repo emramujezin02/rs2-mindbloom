@@ -266,4 +266,24 @@ public class AuthController : ControllerBase
                     "Logged out successfully."
             });
     }
+
+    [Authorize]
+    [HttpGet("2fa-status")]
+    public async Task<IActionResult>
+    Get2FAStatus()
+    {
+        var userId =
+            int.Parse(
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier)!);
+
+        var isEnabled =
+            await _authService
+                .Is2FAEnabledAsync(userId);
+
+        return Ok(new
+        {
+            isEnabled
+        });
+    }
 }

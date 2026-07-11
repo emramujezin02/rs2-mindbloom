@@ -49,24 +49,35 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    final email = _emailController.text.trim();
+
     final success = await _viewModel.login(
-      email: _emailController.text.trim(),
+      email: email,
       password: _passwordController.text,
       rememberMe: _rememberMe,
     );
+
+    if (!mounted || !success) {
+      return;
+    }
+
+    if (_viewModel.requiresTwoFactor) {
+      Navigator.of(context).pushNamed(AppRouter.verify2FA, arguments: email);
+
+      return;
+    }
+
+    final session = SessionScope.of(context);
+
+    await session.initialize();
 
     if (!mounted) {
       return;
     }
 
-    if (success) {
-      final session = SessionScope.of(context);
-      final navigator = Navigator.of(context);
-
-      await session.initialize();
-
-      navigator.pushReplacementNamed('/');
-    }
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(AppRouter.home, (route) => false);
   }
 
   @override
