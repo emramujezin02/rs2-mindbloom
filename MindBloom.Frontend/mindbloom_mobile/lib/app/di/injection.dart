@@ -54,10 +54,9 @@ import '../../features/workshop/data/services/workshop_api_service.dart';
 import '../../features/workshop/presentation/viewmodels/workshop_viewmodel.dart';
 
 class AppInjection {
-  static final ApiClient apiClient = ApiClient();
-
   static final SessionStorageService sessionStorage = SessionStorageService();
 
+  static final ApiClient apiClient = ApiClient(sessionStorage: sessionStorage);
   static SessionViewModel createSessionViewModel() {
     return SessionViewModel(sessionStorage: sessionStorage);
   }
