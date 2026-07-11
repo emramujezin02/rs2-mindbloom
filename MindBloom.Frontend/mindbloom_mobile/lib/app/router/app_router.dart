@@ -20,6 +20,7 @@ import '../../features/payment/presentation/pages/payment_list_page.dart';
 
 import '../../features/review/presentation/pages/review_list_page.dart';
 import '../../features/review/presentation/pages/create_review_page.dart';
+import '../../features/review/presentation/pages/my_reviews_page.dart';
 
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/data/models/profile_model.dart';
@@ -69,6 +70,8 @@ class AppRouter {
   static const articleDetails = '/articles/details';
   static const workshops = '/workshops';
   static const String changePassword = '/change-password';
+  static const String myReviews = '/reviews/mine';
+
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case login:
@@ -185,6 +188,9 @@ class AppRouter {
 
       case changePassword:
         return MaterialPageRoute(builder: (_) => const ChangePasswordPage());
+
+      case myReviews:
+        return MaterialPageRoute(builder: (_) => const MyReviewsPage());
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

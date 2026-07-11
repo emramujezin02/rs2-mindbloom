@@ -14,4 +14,8 @@ class ReviewRepository {
   Future<void> createReview(CreateReviewRequest request) {
     return apiService.createReview(request);
   }
+
+  Future<List<ReviewModel>> getMyReviews() {
+    return apiService.getMyReviews();
+  }
 }

@@ -16,4 +16,12 @@ class ReviewApiService {
   Future<void> createReview(CreateReviewRequest request) async {
     await apiClient.post('/Reviews', body: request.toJson());
   }
+
+  Future<List<ReviewModel>> getMyReviews() async {
+    final response = await apiClient.get('/Reviews/mine');
+
+    return (response as List)
+        .map((item) => ReviewModel.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
 }

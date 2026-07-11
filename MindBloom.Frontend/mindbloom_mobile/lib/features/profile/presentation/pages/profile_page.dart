@@ -121,6 +121,18 @@ class _ProfilePageState extends State<ProfilePage> {
                 label: const Text('Change password'),
               ),
             ),
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pushNamed(AppRouter.myReviews);
+                },
+                icon: const Icon(Icons.reviews),
+                label: const Text('My reviews'),
+              ),
+            ),
           ],
         ),
       ),
