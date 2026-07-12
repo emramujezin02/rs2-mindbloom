@@ -1,5 +1,6 @@
 import '../models/appointment_create_request.dart';
 import '../models/appointment_model.dart';
+import '../models/cancel_appointment_request.dart';
 import '../services/appointment_api_service.dart';
 
 class AppointmentRepository {
@@ -13,5 +14,15 @@ class AppointmentRepository {
 
   Future<List<AppointmentModel>> getMyAppointments() {
     return apiService.getMyAppointments();
+  }
+
+  Future<void> cancelAppointment({
+    required int appointmentId,
+    required String reason,
+  }) {
+    return apiService.cancelAppointment(
+      appointmentId: appointmentId,
+      request: CancelAppointmentRequest(reason: reason),
+    );
   }
 }

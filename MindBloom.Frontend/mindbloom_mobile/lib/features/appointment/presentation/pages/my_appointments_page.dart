@@ -79,10 +79,16 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
           final appointment = _viewModel.appointments[index];
 
           return InkWell(
-            onTap: () {
-              Navigator.of(
+            onTap: () async {
+              await Navigator.of(
                 context,
               ).pushNamed(AppRouter.appointmentDetails, arguments: appointment);
+
+              if (!mounted) {
+                return;
+              }
+
+              await _viewModel.loadAppointments();
             },
             child: _AppointmentCard(appointment: appointment),
           );

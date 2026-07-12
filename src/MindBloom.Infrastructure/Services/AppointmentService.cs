@@ -8,16 +8,27 @@ using MindBloom.Application.Features.Appointments.DTOs;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Features.Notifications.Interfaces;
 using MindBloom.Application.Features.Therapists.DTOs;
+using MindBloom.Application.Features.Payments.Interfaces;
+
 namespace MindBloom.Infrastructure.Services;
 
 public class AppointmentService : IAppointmentService
 {
     private readonly ApplicationDbContext _context;
     private readonly INotificationSender _notificationSender;
-    public AppointmentService(ApplicationDbContext context, INotificationSender notificationSender)
+    private readonly IPaymentService _paymentService;
+    public AppointmentService(
+    ApplicationDbContext context,
+    INotificationSender notificationSender,
+    IPaymentService paymentService)
     {
         _context = context;
-        _notificationSender = notificationSender;
+
+        _notificationSender =
+            notificationSender;
+
+        _paymentService =
+            paymentService;
     }
 
     public async Task<AppointmentResponseDto>
@@ -331,10 +342,33 @@ public class AppointmentService : IAppointmentService
     }
 
     public async Task CancelAppointmentAsync(
-    int clientUserId,
-    int appointmentId,
-    CancelAppointmentDto request)
+     int clientUserId,
+     int appointmentId,
+     CancelAppointmentDto request)
     {
+        var reason =
+            request.Reason?.Trim()
+            ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(
+                reason))
+        {
+            throw new Exception(
+                "Cancellation reason is required.");
+        }
+
+        if (reason.Length < 5)
+        {
+            throw new Exception(
+                "Cancellation reason must contain at least 5 characters.");
+        }
+
+        if (reason.Length > 500)
+        {
+            throw new Exception(
+                "Cancellation reason may contain at most 500 characters.");
+        }
+
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
@@ -342,47 +376,117 @@ public class AppointmentService : IAppointmentService
 
         if (client == null)
         {
-            throw new Exception("Client not found.");
+            throw new Exception(
+                "Client not found.");
         }
 
         var appointment =
             await _context.Appointments
                 .Include(x => x.Therapist)
-                .ThenInclude(x => x.User)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Payment)
                 .FirstOrDefaultAsync(x =>
-                    x.Id == appointmentId
-                    && x.ClientId == client.Id);
+                    x.Id == appointmentId &&
+                    x.ClientId == client.Id);
 
         if (appointment == null)
         {
-            throw new Exception("Appointment not found.");
+            throw new Exception(
+                "Appointment not found.");
         }
 
-        if (appointment.Status == AppointmentStatus.Cancelled)
+        if (appointment.Status ==
+            AppointmentStatus.Cancelled)
         {
             throw new Exception(
                 "Appointment is already cancelled.");
         }
 
-        appointment.Status = AppointmentStatus.Cancelled;
-
-        var notification = new Notification
+        if (appointment.Status ==
+            AppointmentStatus.Completed)
         {
-            UserId = appointment.Therapist.UserId,
-            Title = "Appointment Cancelled",
-            Message =
-                $"A client cancelled the appointment. Reason: {request.Reason}",
-            IsRead = false
-        };
+            throw new Exception(
+                "Completed appointments cannot be cancelled.");
+        }
 
-        _context.Notifications.Add(notification);
+        if (appointment.Status ==
+            AppointmentStatus.Rejected)
+        {
+            throw new Exception(
+                "Rejected appointments cannot be cancelled.");
+        }
+
+        if (appointment.Status !=
+                AppointmentStatus.Pending &&
+            appointment.Status !=
+                AppointmentStatus.Accepted)
+        {
+            throw new Exception(
+                "This appointment cannot be cancelled in its current status.");
+        }
+
+        var hasPaidPayment =
+            appointment.Payment != null &&
+            appointment.Payment.Status ==
+                PaymentStatus.Paid;
+
+        if (hasPaidPayment)
+        {
+            await _paymentService
+                .RefundAppointmentPaymentAsync(
+                    clientUserId,
+                    appointment.Id,
+                    reason);
+        }
+
+        appointment.Status =
+            AppointmentStatus.Cancelled;
+
+        appointment.Notes =
+            string.IsNullOrWhiteSpace(
+                appointment.Notes)
+                ? $"Cancellation reason: {reason}"
+                : $"{appointment.Notes}\n"
+                    + $"Cancellation reason: {reason}";
+
+        var refundMessage =
+            hasPaidPayment
+                ? " The payment refund has been initiated."
+                : string.Empty;
+
+        var notification =
+            new Notification
+            {
+                UserId =
+                    appointment
+                        .Therapist
+                        .UserId,
+
+                Title =
+                    "Appointment Cancelled",
+
+                Message =
+                    "A client cancelled the appointment. "
+                    + $"Reason: {reason}."
+                    + refundMessage,
+
+                IsRead = false
+            };
+
+        _context.Notifications.Add(
+            notification);
 
         await _context.SaveChangesAsync();
 
-        await _notificationSender.SendToUserAsync(
-            appointment.Therapist.UserId,
-            "Appointment Cancelled",
-            $"A client cancelled the appointment. Reason: {request.Reason}");
+        await _notificationSender
+            .SendToUserAsync(
+                appointment
+                    .Therapist
+                    .UserId,
+                "Appointment Cancelled",
+                "A client cancelled the appointment. "
+                    + $"Reason: {reason}."
+                    + refundMessage);
     }
 
     public async Task<TherapistStatsDto>

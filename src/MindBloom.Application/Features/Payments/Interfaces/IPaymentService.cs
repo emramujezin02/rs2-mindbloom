@@ -14,4 +14,9 @@ public interface IPaymentService
     GetReceiptAsync(
         int paymentId,
         int clientUserId);
+
+    Task RefundAppointmentPaymentAsync(
+    int clientUserId,
+    int appointmentId,
+    string reason);
 }

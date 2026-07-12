@@ -15,6 +15,8 @@ import '../../features/appointment/data/repositories/appointment_repository.dart
 import '../../features/appointment/data/services/appointment_api_service.dart';
 import '../../features/appointment/presentation/viewmodels/appointment_create_viewmodel.dart';
 import '../../features/appointment/presentation/viewmodels/my_appointments_viewmodel.dart';
+import '../../features/appointment/data/models/appointment_model.dart';
+import '../../features/appointment/presentation/viewmodels/appointment_details_viewmodel.dart';
 
 import '../../features/payment/data/repositories/payment_repository.dart';
 import '../../features/payment/data/services/payment_api_service.dart';
@@ -201,5 +203,18 @@ class AppInjection {
     final repository = TherapistRepository(therapistApiService: apiService);
 
     return TherapistDetailsViewModel(repository: repository);
+  }
+
+  static AppointmentDetailsViewModel createAppointmentDetailsViewModel(
+    AppointmentModel appointment,
+  ) {
+    final apiService = AppointmentApiService(apiClient: apiClient);
+
+    final repository = AppointmentRepository(apiService: apiService);
+
+    return AppointmentDetailsViewModel(
+      repository: repository,
+      appointment: appointment,
+    );
   }
 }

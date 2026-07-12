@@ -104,11 +104,11 @@ public class PaymentService : IPaymentService
         ConfirmPaymentDto request)
     {
         var payment =
-            await _context.Payments
-                .FirstOrDefaultAsync(
-                    x =>
-                        x.StripePaymentIntentId
-                        == request.PaymentIntentId);
+    await _context.Payments
+        .Include(x => x.Appointment)
+        .FirstOrDefaultAsync(x =>
+            x.StripePaymentIntentId ==
+                request.PaymentIntentId);
 
         if (payment == null)
         {
@@ -117,7 +117,9 @@ public class PaymentService : IPaymentService
 
         payment.Status = PaymentStatus.Paid;
 
-        payment.PaidAtUtc = DateTime.Now;
+        payment.PaidAtUtc = DateTime.UtcNow;
+
+        payment.Appointment.IsPaid = true;
 
         await _context.SaveChangesAsync();
     }
@@ -256,5 +258,106 @@ public class PaymentService : IPaymentService
             InvoiceNumber =
                 $"INV-{payment.Id:D6}"
         };
+    }
+
+    public async Task RefundAppointmentPaymentAsync(
+    int clientUserId,
+    int appointmentId,
+    string reason)
+    {
+        var client =
+            await _context.Clients
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == clientUserId);
+
+        if (client == null)
+        {
+            throw new Exception(
+                "Client not found.");
+        }
+
+        var payment =
+            await _context.Payments
+                .Include(x => x.Appointment)
+                .FirstOrDefaultAsync(x =>
+                    x.AppointmentId == appointmentId &&
+                    x.Appointment.ClientId ==
+                        client.Id);
+
+        if (payment == null)
+        {
+            return;
+        }
+
+        if (payment.Status ==
+            PaymentStatus.Refunded)
+        {
+            return;
+        }
+
+        if (payment.Status !=
+            PaymentStatus.Paid)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                payment.StripePaymentIntentId))
+        {
+            throw new Exception(
+                "Stripe payment reference is missing.");
+        }
+
+        StripeConfiguration.ApiKey =
+            Environment.GetEnvironmentVariable(
+                "STRIPE_SECRET_KEY");
+
+        if (string.IsNullOrWhiteSpace(
+                StripeConfiguration.ApiKey))
+        {
+            throw new Exception(
+                "Stripe configuration is missing.");
+        }
+
+        var refundService =
+            new RefundService();
+
+        var refundOptions =
+            new RefundCreateOptions
+            {
+                PaymentIntent =
+                    payment.StripePaymentIntentId,
+                Reason =
+                    RefundReasons.RequestedByCustomer,
+                Metadata =
+                    new Dictionary<string, string>
+                    {
+                        ["appointmentId"] =
+                            appointmentId.ToString(),
+                        ["cancellationReason"] =
+                            reason
+                    }
+            };
+
+        var stripeRefund =
+            await refundService.CreateAsync(
+                refundOptions);
+
+        if (stripeRefund.Status !=
+                "succeeded" &&
+            stripeRefund.Status !=
+                "pending")
+        {
+            throw new Exception(
+                "Stripe refund could not be initiated.");
+        }
+
+        payment.Status =
+            PaymentStatus.Refunded;
+
+        payment.Appointment.IsPaid =
+            false;
+
+        await _context.SaveChangesAsync();
     }
 }
