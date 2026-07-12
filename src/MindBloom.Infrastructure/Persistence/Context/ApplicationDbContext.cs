@@ -149,6 +149,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         });
     });
 
+        builder.Entity<Review>()
+    .HasOne(x => x.Appointment)
+    .WithOne()
+    .HasForeignKey<Review>(
+        x => x.AppointmentId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Review>()
+            .HasIndex(x => x.AppointmentId)
+            .IsUnique();
+
     }
 
     public override async Task<int> SaveChangesAsync(

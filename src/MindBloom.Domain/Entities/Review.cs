@@ -10,11 +10,19 @@ public class Review : BaseEntity
 
     public Therapist Therapist { get; set; } = null!;
 
+    public int AppointmentId { get; set; }
+
+    public Appointment Appointment { get; set; } =
+        null!;
+
     public int Rating { get; set; }
 
-    public string Comment { get; set; } = null!;
+    public string Comment { get; set; } =
+        string.Empty;
 
     public string? TherapistReply { get; set; }
 
-    public DateTime? TherapistReplyCreatedAtUtc { get; set; }
+    public DateTime?
+        TherapistReplyCreatedAtUtc
+    { get; set; }
 }

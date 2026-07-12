@@ -2,9 +2,10 @@
 
 public class CreateReviewDto
 {
-    public int TherapistId { get; set; }
+    public int AppointmentId { get; set; }
 
     public int Rating { get; set; }
 
-    public string Comment { get; set; } = null!;
+    public string Comment { get; set; } =
+        string.Empty;
 }

@@ -18,68 +18,82 @@ public class ReviewService : IReviewService
     }
 
     public async Task CreateAsync(
-        int clientUserId,
-        CreateReviewDto request)
+     int clientUserId,
+     CreateReviewDto request)
     {
-        if (request.Rating < 1 || request.Rating > 5)
+        if (request.Rating < 1 ||
+            request.Rating > 5)
         {
             throw new Exception(
                 "Rating must be between 1 and 5.");
         }
 
+        var comment =
+            request.Comment.Trim();
+
+        if (string.IsNullOrWhiteSpace(comment))
+        {
+            throw new Exception(
+                "Review comment is required.");
+        }
+
+        if (comment.Length > 1000)
+        {
+            throw new Exception(
+                "Review comment may contain at most 1000 characters.");
+        }
+
         var client =
             await _context.Clients
-                .FirstOrDefaultAsync(
-                    x => x.UserId == clientUserId);
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == clientUserId);
 
         if (client == null)
         {
-            throw new Exception("Client not found.");
+            throw new Exception(
+                "Client not found.");
         }
 
-        var therapist =
-            await _context.Therapists
-                .FirstOrDefaultAsync(
-                    x => x.Id == request.TherapistId);
-
-        if (therapist == null)
-        {
-            throw new Exception("Therapist not found.");
-        }
-
-        var hasCompletedAppointment =
+        var appointment =
             await _context.Appointments
-                .AnyAsync(x =>
-                    x.ClientId == client.Id
-                    && x.TherapistId == request.TherapistId
-                    && x.Status == AppointmentStatus.Completed);
+                .FirstOrDefaultAsync(x =>
+                    x.Id == request.AppointmentId &&
+                    x.ClientId == client.Id);
 
-        if (!hasCompletedAppointment)
+        if (appointment == null)
         {
             throw new Exception(
-                "You can review only therapists you had completed appointments with.");
+                "Appointment not found or does not belong to the current client.");
+        }
+
+        if (appointment.Status !=
+            AppointmentStatus.Completed)
+        {
+            throw new Exception(
+                "A review can only be submitted after the appointment is completed.");
         }
 
         var existingReview =
-    await _context.Reviews.AnyAsync(x =>
-        x.ClientId == client.Id
-        && x.TherapistId == request.TherapistId);
+            await _context.Reviews
+                .AnyAsync(x =>
+                    x.AppointmentId ==
+                    appointment.Id);
 
         if (existingReview)
         {
             throw new Exception(
-                "You already reviewed this therapist.");
+                "A review has already been submitted for this appointment.");
         }
 
         var review = new Review
         {
             ClientId = client.Id,
-
-            TherapistId = request.TherapistId,
-
+            TherapistId =
+                appointment.TherapistId,
+            AppointmentId =
+                appointment.Id,
             Rating = request.Rating,
-
-            Comment = request.Comment
+            Comment = comment
         };
 
         _context.Reviews.Add(review);
