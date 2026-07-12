@@ -46,6 +46,8 @@ import '../../features/article/presentation/pages/article_list_page.dart';
 
 import '../../features/workshop/presentation/pages/workshop_page.dart';
 
+import '../../features/favorite/presentation/pages/my_favorites_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String login = '/login';
@@ -77,6 +79,7 @@ class AppRouter {
   static const String verify2FA = '/verify-2fa';
   static const String twoFactorSettings = '/profile/two-factor';
   static const String verifyEmail = '/verify-email';
+  static const String myFavorites = '/favorites/mine';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -210,6 +213,9 @@ class AppRouter {
         final email = settings.arguments as String;
 
         return MaterialPageRoute(builder: (_) => VerifyEmailPage(email: email));
+
+      case myFavorites:
+        return MaterialPageRoute(builder: (_) => const MyFavoritesPage());
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

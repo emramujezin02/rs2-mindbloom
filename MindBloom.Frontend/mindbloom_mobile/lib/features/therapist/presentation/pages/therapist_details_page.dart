@@ -46,7 +46,48 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Therapist details')),
+      appBar: AppBar(
+        title: const Text('Therapist details'),
+        actions: [
+          IconButton(
+            onPressed: _viewModel.isChangingFavorite
+                ? null
+                : () async {
+                    final wasFavorite = _viewModel.isFavorite;
+
+                    final success = await _viewModel.toggleFavorite();
+
+                    if (!context.mounted || !success) {
+                      return;
+                    }
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          wasFavorite
+                              ? 'Therapist removed from favorites.'
+                              : 'Therapist added to favorites.',
+                        ),
+                      ),
+                    );
+                  },
+            tooltip: _viewModel.isFavorite
+                ? 'Remove from favorites'
+                : 'Add to favorites',
+            icon: _viewModel.isChangingFavorite
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    _viewModel.isFavorite
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                  ),
+          ),
+        ],
+      ),
       body: _buildBody(),
     );
   }

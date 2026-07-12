@@ -56,6 +56,10 @@ import '../../features/workshop/data/repositories/workshop_repository.dart';
 import '../../features/workshop/data/services/workshop_api_service.dart';
 import '../../features/workshop/presentation/viewmodels/workshop_viewmodel.dart';
 
+import '../../features/favorite/data/repositories/favorite_repository.dart';
+import '../../features/favorite/data/services/favorite_api_service.dart';
+import '../../features/favorite/presentation/viewmodels/favorite_list_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
@@ -88,9 +92,14 @@ class AppInjection {
   static TherapistListViewModel createTherapistListViewModel() {
     final apiService = TherapistApiService(apiClient: apiClient);
 
-    final repository = TherapistRepository(therapistApiService: apiService);
+    final therapistRepository = TherapistRepository(
+      therapistApiService: apiService,
+    );
 
-    return TherapistListViewModel(therapistRepository: repository);
+    return TherapistListViewModel(
+      therapistRepository: therapistRepository,
+      favoriteRepository: _createFavoriteRepository(),
+    );
   }
 
   static AppointmentCreateViewModel createAppointmentViewModel() {
@@ -200,9 +209,14 @@ class AppInjection {
   static TherapistDetailsViewModel createTherapistDetailsViewModel() {
     final apiService = TherapistApiService(apiClient: apiClient);
 
-    final repository = TherapistRepository(therapistApiService: apiService);
+    final therapistRepository = TherapistRepository(
+      therapistApiService: apiService,
+    );
 
-    return TherapistDetailsViewModel(repository: repository);
+    return TherapistDetailsViewModel(
+      repository: therapistRepository,
+      favoriteRepository: _createFavoriteRepository(),
+    );
   }
 
   static AppointmentDetailsViewModel createAppointmentDetailsViewModel(
@@ -216,5 +230,15 @@ class AppInjection {
       repository: repository,
       appointment: appointment,
     );
+  }
+
+  static FavoriteRepository _createFavoriteRepository() {
+    final apiService = FavoriteApiService(apiClient: apiClient);
+
+    return FavoriteRepository(apiService: apiService);
+  }
+
+  static FavoriteListViewModel createFavoriteListViewModel() {
+    return FavoriteListViewModel(repository: _createFavoriteRepository());
   }
 }

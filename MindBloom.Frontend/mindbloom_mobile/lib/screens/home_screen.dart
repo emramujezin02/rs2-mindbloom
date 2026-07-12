@@ -81,6 +81,19 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: 12),
 
                     if (session.isLoggedIn)
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(
+                            context,
+                          ).pushNamed(AppRouter.myFavorites);
+                        },
+                        icon: const Icon(Icons.favorite),
+                        label: const Text('My favorites'),
+                      ),
+
+                    const SizedBox(height: 12),
+
+                    if (session.isLoggedIn)
                       ElevatedButton(
                         onPressed: () {
                           Navigator.of(

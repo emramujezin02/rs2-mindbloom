@@ -1,17 +1,26 @@
 import 'package:flutter/foundation.dart';
-
+import '../../../favorite/data/models/favorite_model.dart';
+import '../../../favorite/data/repositories/favorite_repository.dart';
+import '../../data/models/therapist_filter_request.dart';
 import '../../data/models/therapist_model.dart';
 import '../../data/repositories/therapist_repository.dart';
-import '../../data/models/therapist_filter_request.dart';
 
 class TherapistListViewModel extends ChangeNotifier {
   final TherapistRepository therapistRepository;
 
+  final FavoriteRepository favoriteRepository;
+
   bool isLoading = false;
   String? errorMessage;
+
   List<TherapistModel> therapists = [];
 
-  TherapistListViewModel({required this.therapistRepository});
+  final Set<int> favoriteTherapistIds = <int>{};
+
+  TherapistListViewModel({
+    required this.therapistRepository,
+    required this.favoriteRepository,
+  });
 
   Future<void> loadTherapists() async {
     isLoading = true;
@@ -19,7 +28,18 @@ class TherapistListViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      therapists = await therapistRepository.getTherapists();
+      final results = await Future.wait([
+        therapistRepository.getTherapists(),
+        favoriteRepository.getMyFavorites(),
+      ]);
+
+      therapists = results[0] as List<TherapistModel>;
+
+      final favorites = results[1] as List<FavoriteModel>;
+
+      favoriteTherapistIds
+        ..clear()
+        ..addAll(favorites.map((favorite) => favorite.therapistId));
     } catch (error) {
       errorMessage = error.toString();
     }
@@ -49,11 +69,52 @@ class TherapistListViewModel extends ChangeNotifier {
           sortBy: sortBy,
         ),
       );
+
+      await loadFavoriteIds();
     } catch (error) {
       errorMessage = error.toString();
     }
 
     isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> loadFavoriteIds() async {
+    final favorites = await favoriteRepository.getMyFavorites();
+
+    favoriteTherapistIds
+      ..clear()
+      ..addAll(favorites.map((favorite) => favorite.therapistId));
+
+    notifyListeners();
+  }
+
+  bool isFavorite(int therapistId) {
+    return favoriteTherapistIds.contains(therapistId);
+  }
+
+  Future<bool> toggleFavorite(int therapistId) async {
+    errorMessage = null;
+
+    try {
+      if (isFavorite(therapistId)) {
+        await favoriteRepository.removeFavorite(therapistId);
+
+        favoriteTherapistIds.remove(therapistId);
+      } else {
+        await favoriteRepository.addFavorite(therapistId);
+
+        favoriteTherapistIds.add(therapistId);
+      }
+
+      notifyListeners();
+
+      return true;
+    } catch (error) {
+      errorMessage = error.toString();
+      notifyListeners();
+
+      return false;
+    }
   }
 }

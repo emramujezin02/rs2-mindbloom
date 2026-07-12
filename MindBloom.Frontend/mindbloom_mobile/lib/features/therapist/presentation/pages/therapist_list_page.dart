@@ -222,12 +222,51 @@ class _TherapistListPageState extends State<TherapistListPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    therapist.fullName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          therapist.fullName,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () async {
+                          final wasFavorite = _viewModel.isFavorite(
+                            therapist.id,
+                          );
+
+                          final success = await _viewModel.toggleFavorite(
+                            therapist.id,
+                          );
+
+                          if (!context.mounted || !success) {
+                            return;
+                          }
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                wasFavorite
+                                    ? 'Therapist removed from favorites.'
+                                    : 'Therapist added to favorites.',
+                              ),
+                            ),
+                          );
+                        },
+                        tooltip: _viewModel.isFavorite(therapist.id)
+                            ? 'Remove from favorites'
+                            : 'Add to favorites',
+                        icon: Icon(
+                          _viewModel.isFavorite(therapist.id)
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                        ),
+                      ),
+                    ],
                   ),
 
                   const SizedBox(height: 6),
