@@ -60,7 +60,7 @@ class _NotificationPageState extends State<NotificationPage> {
                         Text(item.message),
                         const SizedBox(height: 6),
                         Text(
-                          formatter.format(item.createdAt.toLocal()),
+                          formatter.format(item.createdAtUtc.toLocal()),
                           style: const TextStyle(fontSize: 12),
                         ),
                       ],

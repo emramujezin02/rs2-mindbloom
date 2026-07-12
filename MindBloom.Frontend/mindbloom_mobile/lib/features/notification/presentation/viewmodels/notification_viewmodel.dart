@@ -27,6 +27,18 @@ class NotificationViewModel extends ChangeNotifier {
   Future<void> markAsRead(int id) async {
     await repository.markAsRead(id);
 
-    await loadNotifications();
+    final notification = notifications.firstWhere((x) => x.id == id);
+
+    final index = notifications.indexOf(notification);
+
+    notifications[index] = NotificationModel(
+      id: notification.id,
+      title: notification.title,
+      message: notification.message,
+      isRead: true,
+      createdAtUtc: notification.createdAtUtc,
+    );
+
+    notifyListeners();
   }
 }
