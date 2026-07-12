@@ -214,7 +214,7 @@ class _TherapistListPageState extends State<TherapistListPage> {
           onTap: () {
             Navigator.of(
               context,
-            ).pushNamed(AppRouter.therapistDetails, arguments: therapist);
+            ).pushNamed(AppRouter.therapistDetails, arguments: therapist.id);
           },
           child: Card(
             child: Padding(

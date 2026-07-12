@@ -9,6 +9,7 @@ import '../../features/auth/presentation/viewmodels/auth_viewmodel.dart';
 import '../../features/therapist/data/repositories/therapist_repository.dart';
 import '../../features/therapist/data/services/therapist_api_service.dart';
 import '../../features/therapist/presentation/viewmodels/therapist_list_viewmodel.dart';
+import '../../features/therapist/presentation/viewmodels/therapist_details_viewmodel.dart';
 
 import '../../features/appointment/data/repositories/appointment_repository.dart';
 import '../../features/appointment/data/services/appointment_api_service.dart';
@@ -192,5 +193,13 @@ class AppInjection {
     final repository = ReviewRepository(apiService: apiService);
 
     return MyReviewsViewModel(repository: repository);
+  }
+
+  static TherapistDetailsViewModel createTherapistDetailsViewModel() {
+    final apiService = TherapistApiService(apiClient: apiClient);
+
+    final repository = TherapistRepository(therapistApiService: apiService);
+
+    return TherapistDetailsViewModel(repository: repository);
   }
 }

@@ -100,10 +100,10 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const TherapistListPage());
 
       case therapistDetails:
-        final therapist = settings.arguments as TherapistModel;
+        final therapistId = settings.arguments as int;
 
         return MaterialPageRoute(
-          builder: (_) => TherapistDetailsPage(therapist: therapist),
+          builder: (_) => TherapistDetailsPage(therapistId: therapistId),
         );
 
       case appointmentCreate:

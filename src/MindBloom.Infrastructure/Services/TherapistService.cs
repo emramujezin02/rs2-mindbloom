@@ -337,20 +337,25 @@ public class TherapistService : ITherapistService
     }
 
     public async Task<TherapistDetailsDto>
-    GetByIdAsync(int therapistId)
+     GetByIdAsync(
+         int therapistId)
     {
         var therapist =
             await _context.Therapists
+                .AsNoTracking()
                 .Include(x => x.User)
                 .Include(x => x.Reviews)
                 .Include(x => x.Availabilities)
                 .FirstOrDefaultAsync(x =>
-                    x.Id == therapistId);
+                    x.Id == therapistId &&
+                    x.VerificationStatus ==
+                        TherapistVerificationStatus
+                            .Approved);
 
         if (therapist == null)
         {
             throw new Exception(
-                "Therapist not found.");
+                "Therapist not found or is not publicly available.");
         }
 
         return new TherapistDetailsDto
@@ -362,9 +367,12 @@ public class TherapistService : ITherapistService
                 + " "
                 + therapist.User.LastName,
 
-            Email = therapist.User.Email!,
+            Email =
+                therapist.User.Email
+                ?? string.Empty,
 
-            Biography = therapist.Biography,
+            Biography =
+                therapist.Biography,
 
             Specialization =
                 therapist.Specialization,
@@ -379,7 +387,8 @@ public class TherapistService : ITherapistService
                 therapist.Reviews.Any()
                     ? Math.Round(
                         therapist.Reviews
-                            .Average(x => x.Rating),
+                            .Average(x =>
+                                x.Rating),
                         1)
                     : 0,
 
@@ -388,17 +397,18 @@ public class TherapistService : ITherapistService
 
             Availabilities =
                 therapist.Availabilities
+                    .OrderBy(x =>
+                        x.DayOfWeek)
+                    .ThenBy(x =>
+                        x.StartTime)
                     .Select(x =>
                         new AvailabilityResponseDto
                         {
                             Id = x.Id,
-
                             DayOfWeek =
                                 x.DayOfWeek,
-
                             StartTime =
                                 x.StartTime,
-
                             EndTime =
                                 x.EndTime
                         })

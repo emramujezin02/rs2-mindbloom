@@ -1,138 +1,268 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
-import '../../data/models/therapist_model.dart';
+import '../viewmodels/therapist_details_viewmodel.dart';
 
-class TherapistDetailsPage extends StatelessWidget {
-  final TherapistModel therapist;
+class TherapistDetailsPage extends StatefulWidget {
+  final int therapistId;
 
-  const TherapistDetailsPage({super.key, required this.therapist});
+  const TherapistDetailsPage({super.key, required this.therapistId});
+
+  @override
+  State<TherapistDetailsPage> createState() => _TherapistDetailsPageState();
+}
+
+class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
+  final TherapistDetailsViewModel _viewModel =
+      AppInjection.createTherapistDetailsViewModel();
+
+  @override
+  void initState() {
+    super.initState();
+
+    _viewModel.addListener(_onViewModelChanged);
+
+    _viewModel.loadTherapist(widget.therapistId);
+  }
+
+  @override
+  void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
+
+    super.dispose();
+  }
+
+  void _onViewModelChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _reload() async {
+    await _viewModel.loadTherapist(widget.therapistId);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(therapist.fullName)),
-      body: SingleChildScrollView(
+      appBar: AppBar(title: const Text('Therapist details')),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_viewModel.isLoading && _viewModel.therapist == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_viewModel.errorMessage != null && _viewModel.therapist == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _viewModel.errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: _reload,
+                child: const Text('Try again'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final therapist = _viewModel.therapist;
+
+    if (therapist == null) {
+      return const Center(child: Text('Therapist could not be loaded.'));
+    }
+
+    final therapistSummary = therapist.toTherapistModel();
+
+    return RefreshIndicator(
+      onRefresh: _reload,
+      child: ListView(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            CircleAvatar(
-              radius: 45,
-              child: Text(
-                therapist.fullName.isNotEmpty ? therapist.fullName[0] : '?',
-                style: const TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                ),
+        children: [
+          CircleAvatar(
+            radius: 45,
+            child: Text(
+              therapist.fullName.isNotEmpty
+                  ? therapist.fullName[0].toUpperCase()
+                  : '?',
+              style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          Text(
+            therapist.fullName,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            therapist.specialization,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16),
+          ),
+
+          const SizedBox(height: 20),
+
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _InfoRow(
+                    icon: Icons.star,
+                    label: 'Rating',
+                    value:
+                        '${therapist.averageRating.toStringAsFixed(1)} '
+                        '(${therapist.totalReviews} reviews)',
+                  ),
+                  const Divider(),
+                  _InfoRow(
+                    icon: Icons.work,
+                    label: 'Experience',
+                    value: '${therapist.experienceYears} years',
+                  ),
+                  const Divider(),
+                  _InfoRow(
+                    icon: Icons.payments,
+                    label: 'Price',
+                    value: '${therapist.hourlyRate.toStringAsFixed(2)} KM',
+                  ),
+                  const Divider(),
+                  _InfoRow(
+                    icon: Icons.email,
+                    label: 'Email',
+                    value: therapist.email,
+                  ),
+                ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 20),
+          const SizedBox(height: 20),
 
-            Text(
-              therapist.fullName,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+          const Text(
+            'Biography',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
 
-            const SizedBox(height: 6),
+          const SizedBox(height: 8),
 
-            Text(
-              therapist.specialization,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
-            ),
+          Text(
+            therapist.biography.isEmpty
+                ? 'No biography added.'
+                : therapist.biography,
+            style: const TextStyle(fontSize: 15, height: 1.4),
+          ),
 
-            const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
+          const Text(
+            'Regular availability',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 8),
+
+          if (therapist.availabilities.isEmpty)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'The therapist has not published regular availability.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          else
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
-                  children: [
-                    _InfoRow(
-                      icon: Icons.star,
-                      label: 'Rating',
-                      value: therapist.averageRating.toStringAsFixed(1),
-                    ),
-                    const Divider(),
-                    _InfoRow(
-                      icon: Icons.work,
-                      label: 'Experience',
-                      value: '${therapist.experienceYears} years',
-                    ),
-                    const Divider(),
-                    _InfoRow(
-                      icon: Icons.payments,
-                      label: 'Price',
-                      value: '${therapist.hourlyRate.toStringAsFixed(2)} KM',
-                    ),
-                    const Divider(),
-                    _InfoRow(
-                      icon: Icons.email,
-                      label: 'Email',
-                      value: therapist.email,
-                    ),
-                  ],
+                  children: therapist.availabilities
+                      .map(
+                        (availability) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 7),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.schedule, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  availability.dayName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '${availability.formattedStartTime}'
+                                ' – '
+                                '${availability.formattedEndTime}',
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ),
 
-            const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-            const Text(
-              'Biography',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pushNamed(
+                AppRouter.appointmentCreate,
+                arguments: therapistSummary,
+              );
+            },
+            icon: const Icon(Icons.calendar_month),
+            label: const Text('Book appointment'),
+          ),
 
-            const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
-            Text(
-              therapist.biography.isEmpty
-                  ? 'No biography added.'
-                  : therapist.biography,
-              style: const TextStyle(fontSize: 15, height: 1.4),
-            ),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pushNamed(
+                AppRouter.purchaseMembership,
+                arguments: therapistSummary,
+              );
+            },
+            icon: const Icon(Icons.card_membership),
+            label: const Text('Buy membership package'),
+          ),
 
-            const SizedBox(height: 24),
+          const SizedBox(height: 12),
 
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).pushNamed(AppRouter.appointmentCreate, arguments: therapist);
-              },
-              icon: const Icon(Icons.calendar_month),
-              label: const Text('Book appointment'),
-            ),
-
-            const SizedBox(height: 12),
-
-            OutlinedButton.icon(
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).pushNamed(AppRouter.purchaseMembership, arguments: therapist);
-              },
-              icon: const Icon(Icons.card_membership),
-              label: const Text('Buy membership package'),
-            ),
-
-            const SizedBox(height: 12),
-
-            OutlinedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pushNamed(
-                  AppRouter.therapistReviews,
-                  arguments: therapist.id,
-                );
-              },
-              icon: const Icon(Icons.star),
-              label: const Text('View reviews'),
-            ),
-          ],
-        ),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).pushNamed(AppRouter.therapistReviews, arguments: therapist.id);
+            },
+            icon: const Icon(Icons.star),
+            label: const Text('View reviews'),
+          ),
+        ],
       ),
     );
   }
@@ -152,6 +282,7 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon),
         const SizedBox(width: 12),
@@ -161,6 +292,7 @@ class _InfoRow extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
+        const SizedBox(width: 12),
         Flexible(child: Text(value, textAlign: TextAlign.right)),
       ],
     );

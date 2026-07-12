@@ -1,6 +1,7 @@
+import '../models/therapist_details_model.dart';
+import '../models/therapist_filter_request.dart';
 import '../models/therapist_model.dart';
 import '../services/therapist_api_service.dart';
-import '../models/therapist_filter_request.dart';
 
 class TherapistRepository {
   final TherapistApiService therapistApiService;
@@ -15,5 +16,9 @@ class TherapistRepository {
     TherapistFilterRequest request,
   ) {
     return therapistApiService.searchTherapists(request);
+  }
+
+  Future<TherapistDetailsModel> getTherapistById(int therapistId) {
+    return therapistApiService.getTherapistById(therapistId);
   }
 }
