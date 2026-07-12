@@ -214,4 +214,21 @@ public class AppointmentsController : ControllerBase
                 "Meeting link updated successfully."
         });
     }
+
+    [Authorize(Roles = "Client")]
+    [HttpGet(
+    "therapist/{therapistId}/occupied-slots")]
+    public async Task<IActionResult>
+    GetOccupiedSlots(
+        int therapistId,
+        [FromQuery] DateTime date)
+    {
+        var result =
+            await _appointmentService
+                .GetOccupiedSlotsAsync(
+                    therapistId,
+                    date);
+
+        return Ok(result);
+    }
 }

@@ -16,4 +16,5 @@ public interface IAppointmentService
     Task<AppointmentNoteResponseDto?>GetAppointmentNoteAsync(int therapistUserId, int appointmentId);
     Task<ClientDashboardDto>GetClientDashboardAsync(int clientUserId);
     Task UpdateMeetingLinkAsync(int therapistUserId, int appointmentId,UpdateMeetingLinkDto request);
+    Task<List<OccupiedAppointmentSlotDto>> GetOccupiedSlotsAsync(int therapistId,DateTime date);
 }

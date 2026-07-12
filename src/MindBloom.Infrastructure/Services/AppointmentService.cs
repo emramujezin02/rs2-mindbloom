@@ -74,6 +74,21 @@ public class AppointmentService : IAppointmentService
         var endTime =
             request.EndUtc.TimeOfDay;
 
+        if (request.StartUtc >= request.EndUtc)
+        {
+            throw new Exception(
+                "Appointment start time must be before end time.");
+        }
+
+        var appointmentDuration =
+            request.EndUtc - request.StartUtc;
+
+        if (appointmentDuration != TimeSpan.FromHours(1))
+        {
+            throw new Exception(
+                "Appointment must last exactly one hour.");
+        }
+
         if (startTime < availability.StartTime
             || endTime > availability.EndTime)
         {
@@ -97,11 +112,18 @@ public class AppointmentService : IAppointmentService
         }
 
         var overlappingAppointment =
-            await _context.Appointments
-                .AnyAsync(x =>
-                    x.TherapistId == request.TherapistId
-                    && request.StartUtc < x.EndUtc
-                    && request.EndUtc > x.StartUtc);
+    await _context.Appointments
+        .AnyAsync(x =>
+            x.TherapistId ==
+                request.TherapistId &&
+            request.StartUtc < x.EndUtc &&
+            request.EndUtc > x.StartUtc &&
+            (
+                x.Status ==
+                    AppointmentStatus.Pending ||
+                x.Status ==
+                    AppointmentStatus.Accepted
+            ));
 
         if (overlappingAppointment)
         {
@@ -777,6 +799,51 @@ public class AppointmentService : IAppointmentService
             request.MeetingLink;
 
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<OccupiedAppointmentSlotDto>>
+    GetOccupiedSlotsAsync(
+        int therapistId,
+        DateTime date)
+    {
+        var therapistExists =
+            await _context.Therapists
+                .AnyAsync(x =>
+                    x.Id == therapistId &&
+                    x.VerificationStatus ==
+                        TherapistVerificationStatus.Approved);
+
+        if (!therapistExists)
+        {
+            throw new Exception(
+                "Therapist not found or is not available.");
+        }
+
+        var dateUtc = DateTime.SpecifyKind(
+            date.Date,
+            DateTimeKind.Utc);
+
+        var nextDateUtc =
+            dateUtc.AddDays(1);
+
+        return await _context.Appointments
+            .AsNoTracking()
+            .Where(x =>
+                x.TherapistId == therapistId &&
+                x.StartUtc < nextDateUtc &&
+                x.EndUtc > dateUtc &&
+                (
+                    x.Status == AppointmentStatus.Pending ||
+                    x.Status == AppointmentStatus.Accepted
+                ))
+            .OrderBy(x => x.StartUtc)
+            .Select(x =>
+                new OccupiedAppointmentSlotDto
+                {
+                    StartUtc = x.StartUtc,
+                    EndUtc = x.EndUtc
+                })
+            .ToListAsync();
     }
 }
 

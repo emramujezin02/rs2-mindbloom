@@ -1,6 +1,9 @@
+import '../../../therapist/data/models/therapist_availability_model.dart';
 import '../models/appointment_create_request.dart';
 import '../models/appointment_model.dart';
 import '../models/cancel_appointment_request.dart';
+import '../models/occupied_slot_model.dart';
+import '../models/unavailable_date_model.dart';
 import '../services/appointment_api_service.dart';
 
 class AppointmentRepository {
@@ -24,5 +27,24 @@ class AppointmentRepository {
       appointmentId: appointmentId,
       request: CancelAppointmentRequest(reason: reason),
     );
+  }
+
+  Future<List<TherapistAvailabilityModel>> getTherapistAvailabilities(
+    int therapistId,
+  ) {
+    return apiService.getTherapistAvailabilities(therapistId);
+  }
+
+  Future<List<UnavailableDateModel>> getTherapistUnavailableDates(
+    int therapistId,
+  ) {
+    return apiService.getTherapistUnavailableDates(therapistId);
+  }
+
+  Future<List<OccupiedSlotModel>> getOccupiedSlots({
+    required int therapistId,
+    required DateTime date,
+  }) {
+    return apiService.getOccupiedSlots(therapistId: therapistId, date: date);
   }
 }

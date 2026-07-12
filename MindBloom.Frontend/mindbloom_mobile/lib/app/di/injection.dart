@@ -94,9 +94,9 @@ class AppInjection {
   }
 
   static AppointmentCreateViewModel createAppointmentViewModel() {
-    final api = AppointmentApiService(apiClient: apiClient);
+    final apiService = AppointmentApiService(apiClient: apiClient);
 
-    final repository = AppointmentRepository(apiService: api);
+    final repository = AppointmentRepository(apiService: apiService);
 
     return AppointmentCreateViewModel(repository: repository);
   }
