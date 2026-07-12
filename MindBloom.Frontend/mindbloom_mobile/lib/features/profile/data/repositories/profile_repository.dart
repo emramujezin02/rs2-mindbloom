@@ -1,6 +1,6 @@
 import '../models/profile_model.dart';
-import '../services/profile_api_service.dart';
 import '../models/update_profile_request.dart';
+import '../services/profile_api_service.dart';
 
 class ProfileRepository {
   final ProfileApiService apiService;
@@ -11,7 +11,7 @@ class ProfileRepository {
     return apiService.getProfile();
   }
 
-  Future<void> updateProfile(UpdateProfileRequest request) {
+  Future<ProfileModel> updateProfile(UpdateProfileRequest request) {
     return apiService.updateProfile(request);
   }
 }

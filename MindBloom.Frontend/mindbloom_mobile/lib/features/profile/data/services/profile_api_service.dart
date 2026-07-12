@@ -10,10 +10,12 @@ class ProfileApiService {
   Future<ProfileModel> getProfile() async {
     final response = await apiClient.get('/Users/me');
 
-    return ProfileModel.fromJson(response);
+    return ProfileModel.fromJson(response as Map<String, dynamic>);
   }
 
-  Future<void> updateProfile(UpdateProfileRequest request) async {
-    await apiClient.put('/Users/me', body: request.toJson());
+  Future<ProfileModel> updateProfile(UpdateProfileRequest request) async {
+    final response = await apiClient.put('/Users/me', body: request.toJson());
+
+    return ProfileModel.fromJson(response as Map<String, dynamic>);
   }
 }

@@ -41,7 +41,7 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await repository.updateProfile(
+      profile = await repository.updateProfile(
         UpdateProfileRequest(
           firstName: firstName,
           lastName: lastName,
@@ -49,7 +49,8 @@ class ProfileViewModel extends ChangeNotifier {
         ),
       );
 
-      await loadProfile();
+      isLoading = false;
+      notifyListeners();
 
       return true;
     } catch (e) {

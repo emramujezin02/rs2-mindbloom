@@ -94,8 +94,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  final firstName = value?.trim() ?? '';
+
+                  if (firstName.isEmpty) {
                     return 'First name is required.';
+                  }
+
+                  if (firstName.length < 2) {
+                    return 'First name must contain at least 2 characters.';
+                  }
+
+                  if (firstName.length > 50) {
+                    return 'First name may contain at most 50 characters.';
                   }
 
                   return null;
@@ -111,8 +121,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  final lastName = value?.trim() ?? '';
+
+                  if (lastName.isEmpty) {
                     return 'Last name is required.';
+                  }
+
+                  if (lastName.length < 2) {
+                    return 'Last name must contain at least 2 characters.';
+                  }
+
+                  if (lastName.length > 50) {
+                    return 'Last name may contain at most 50 characters.';
                   }
 
                   return null;
@@ -128,6 +148,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   labelText: 'Phone number',
                   border: OutlineInputBorder(),
                 ),
+                validator: (value) {
+                  final phone = value?.trim() ?? '';
+
+                  if (phone.isEmpty) {
+                    return null;
+                  }
+
+                  final phoneRegex = RegExp(r'^\+?[0-9][0-9\s\-]{6,19}$');
+
+                  if (!phoneRegex.hasMatch(phone)) {
+                    return 'Enter a valid phone number using digits, spaces, hyphens and an optional leading +.';
+                  }
+
+                  return null;
+                },
               ),
 
               const SizedBox(height: 16),
