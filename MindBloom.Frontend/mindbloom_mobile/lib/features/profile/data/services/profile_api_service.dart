@@ -18,4 +18,14 @@ class ProfileApiService {
 
     return ProfileModel.fromJson(response as Map<String, dynamic>);
   }
+
+  Future<ProfileModel> uploadProfileImage(String filePath) async {
+    final response = await apiClient.multipartPost(
+      '/Users/me/profile-image',
+      filePath: filePath,
+      fileFieldName: 'file',
+    );
+
+    return ProfileModel.fromJson(response as Map<String, dynamic>);
+  }
 }

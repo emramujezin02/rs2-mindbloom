@@ -14,4 +14,8 @@ class ProfileRepository {
   Future<ProfileModel> updateProfile(UpdateProfileRequest request) {
     return apiService.updateProfile(request);
   }
+
+  Future<ProfileModel> uploadProfileImage(String filePath) {
+    return apiService.uploadProfileImage(filePath);
+  }
 }

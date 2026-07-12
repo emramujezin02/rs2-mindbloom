@@ -100,6 +100,8 @@ app.UseCors("AllowAll");
 
 app.UseWebSockets();
 
+app.UseHttpsRedirection();
+
 app.UseStaticFiles();
 
 app.UseAuthentication();

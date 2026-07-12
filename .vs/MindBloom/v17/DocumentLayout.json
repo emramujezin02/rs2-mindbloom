@@ -1,122 +1,12 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\",
-  "Documents": [
-    {
-      "AbsoluteMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.domain\\entities\\favorite.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|solutionrelative:src\\mindbloom.domain\\entities\\favorite.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\controllers\\favoritescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\controllers\\favoritescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\services\\favoriteservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\services\\favoriteservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\favorites\\interfaces\\ifavoriteservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\favorites\\interfaces\\ifavoriteservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\favorites\\dtos\\favoriteresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\favorites\\dtos\\favoriteresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\favorites\\dtos\\addfavoritedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\favorites\\dtos\\addfavoritedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    }
-  ],
+  "Documents": [],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": [
-        {
-          "DockedWidth": 200,
-          "SelectedChildIndex": 0,
-          "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "Favorite.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\Favorite.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\Favorite.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\Favorite.cs",
-              "RelativeToolTip": "src\\MindBloom.Domain\\Entities\\Favorite.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-12T13:55:50.065Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "FavoritesController.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\FavoritesController.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\FavoritesController.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\FavoritesController.cs",
-              "RelativeToolTip": "src\\MindBloom.API\\Controllers\\FavoritesController.cs",
-              "ViewState": "AgIAAC0AAAAAAAAAAAAqwFIAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-12T13:55:36.835Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "FavoriteService.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\FavoriteService.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\FavoriteService.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\FavoriteService.cs",
-              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\FavoriteService.cs",
-              "ViewState": "AgIAAF8AAAAAAAAAAAAuwIUAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-12T13:55:25.229Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "IFavoriteService.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Favorites\\Interfaces\\IFavoriteService.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Favorites\\Interfaces\\IFavoriteService.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Favorites\\Interfaces\\IFavoriteService.cs",
-              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Favorites\\Interfaces\\IFavoriteService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-12T13:55:10.259Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "FavoriteResponseDto.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Favorites\\DTOs\\FavoriteResponseDto.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Favorites\\DTOs\\FavoriteResponseDto.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Favorites\\DTOs\\FavoriteResponseDto.cs",
-              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Favorites\\DTOs\\FavoriteResponseDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-12T13:54:54.116Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "AddFavoriteDto.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Favorites\\DTOs\\AddFavoriteDto.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Favorites\\DTOs\\AddFavoriteDto.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Favorites\\DTOs\\AddFavoriteDto.cs",
-              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Favorites\\DTOs\\AddFavoriteDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-12T13:54:40.608Z",
-              "EditorCaption": ""
-            }
-          ]
-        }
-      ]
+      "DocumentGroups": []
     }
   ]
 }

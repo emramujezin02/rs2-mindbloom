@@ -6,6 +6,8 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+<string>MindBloom needs access to your photos so you can select a profile picture.</string>
 	<key>CFBundleDisplayName</key>
 	<string>Mindbloom Mobile</string>
 	<key>CFBundleExecutable</key>

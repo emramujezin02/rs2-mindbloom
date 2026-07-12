@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../data/models/update_profile_request.dart';
+
 import '../../data/models/profile_model.dart';
+import '../../data/models/update_profile_request.dart';
 import '../../data/repositories/profile_repository.dart';
 
 class ProfileViewModel extends ChangeNotifier {
@@ -9,6 +10,7 @@ class ProfileViewModel extends ChangeNotifier {
   ProfileViewModel({required this.repository});
 
   bool isLoading = false;
+  bool isUploadingImage = false;
 
   String? error;
 
@@ -17,17 +19,15 @@ class ProfileViewModel extends ChangeNotifier {
   Future<void> loadProfile() async {
     isLoading = true;
     error = null;
-
     notifyListeners();
 
     try {
       profile = await repository.getProfile();
-    } catch (e) {
-      error = e.toString();
+    } catch (exception) {
+      error = exception.toString();
     }
 
     isLoading = false;
-
     notifyListeners();
   }
 
@@ -53,9 +53,30 @@ class ProfileViewModel extends ChangeNotifier {
       notifyListeners();
 
       return true;
-    } catch (e) {
-      error = e.toString();
+    } catch (exception) {
+      error = exception.toString();
       isLoading = false;
+      notifyListeners();
+
+      return false;
+    }
+  }
+
+  Future<bool> uploadProfileImage(String filePath) async {
+    isUploadingImage = true;
+    error = null;
+    notifyListeners();
+
+    try {
+      profile = await repository.uploadProfileImage(filePath);
+
+      isUploadingImage = false;
+      notifyListeners();
+
+      return true;
+    } catch (exception) {
+      error = exception.toString();
+      isUploadingImage = false;
       notifyListeners();
 
       return false;

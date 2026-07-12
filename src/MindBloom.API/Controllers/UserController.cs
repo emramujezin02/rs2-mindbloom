@@ -69,4 +69,24 @@ public class UsersController : ControllerBase
 
         return userId;
     }
+
+    [HttpPost("me/profile-image")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<IActionResult>
+    UploadMyProfileImage(
+        [FromForm]
+        UploadProfileImageDto request)
+    {
+        var userId =
+            GetAuthenticatedUserId();
+
+        var result =
+            await _userProfileService
+                .UploadProfileImageAsync(
+                    userId,
+                    request.File);
+
+        return Ok(result);
+    }
 }
