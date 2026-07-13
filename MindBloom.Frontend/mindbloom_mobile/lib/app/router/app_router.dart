@@ -39,6 +39,9 @@ import '../../features/membership/presentation/pages/use_membership_page.dart';
 
 import '../../features/journal/presentation/pages/journal_page.dart';
 import '../../features/journal/presentation/pages/add_journal_entry_page.dart';
+import '../../features/journal/data/models/journal_entry_model.dart';
+import '../../features/journal/presentation/pages/edit_journal_entry_page.dart';
+import '../../features/journal/presentation/pages/journal_entry_details_page.dart';
 
 import '../../features/article/data/models/article_model.dart';
 import '../../features/article/presentation/pages/article_details_page.dart';
@@ -80,6 +83,8 @@ class AppRouter {
   static const String twoFactorSettings = '/profile/two-factor';
   static const String verifyEmail = '/verify-email';
   static const String myFavorites = '/favorites/mine';
+  static const String journalEntryDetails = '/journal/details';
+  static const String editJournalEntry = '/journal/edit';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -216,6 +221,20 @@ class AppRouter {
 
       case myFavorites:
         return MaterialPageRoute(builder: (_) => const MyFavoritesPage());
+
+      case journalEntryDetails:
+        final entryId = settings.arguments as int;
+
+        return MaterialPageRoute(
+          builder: (_) => JournalEntryDetailsPage(entryId: entryId),
+        );
+
+      case editJournalEntry:
+        final entry = settings.arguments as JournalEntryModel;
+
+        return MaterialPageRoute(
+          builder: (_) => EditJournalEntryPage(entry: entry),
+        );
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

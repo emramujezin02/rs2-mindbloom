@@ -22,6 +22,7 @@ using MindBloom.Application.Features.Favorites.Interfaces;
 using MindBloom.Application.Features.Admin.Interfaces;
 using MindBloom.Application.Features.Memberships.Interfaces;
 using MindBloom.Application.Features.Users.Interfaces;
+using MindBloom.Application.Features.JournalEntries.Interfaces;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -145,6 +146,8 @@ public static class DependencyInjection
         services.AddScoped<IMembershipService, MembershipService>();
 
         services.AddScoped<IUserProfileService, UserProfileService>();
+        services.AddScoped<IJournalEntryService,JournalEntryService>();
+
         return services;
     }
 }

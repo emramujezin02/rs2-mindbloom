@@ -114,9 +114,9 @@ class _AddJournalEntryPageState extends State<AddJournalEntryPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _viewModel.isLoading ? null : _save,
+                  onPressed: _viewModel.isSaving ? null : _save,
                   icon: const Icon(Icons.save),
-                  label: _viewModel.isLoading
+                  label: _viewModel.isSaving
                       ? const SizedBox(
                           height: 22,
                           width: 22,

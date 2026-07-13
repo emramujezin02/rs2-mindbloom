@@ -8,5 +8,9 @@ public class MoodEntry : BaseEntity
 
     public int MoodScore { get; set; }
 
-    public string Notes { get; set; } = string.Empty;
+    public string Emotion { get; set; } =
+        string.Empty;
+
+    public string Notes { get; set; } =
+        string.Empty;
 }
