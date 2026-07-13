@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/constants/api_constants.dart';
+import '../../data/models/article_model.dart';
 import '../viewmodels/article_viewmodel.dart';
 
 class ArticleListPage extends StatefulWidget {
@@ -18,25 +19,65 @@ class _ArticleListPageState extends State<ArticleListPage> {
 
   final TextEditingController _searchController = TextEditingController();
 
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
 
-    _viewModel.addListener(_refresh);
+    _viewModel.addListener(_onViewModelChanged);
+
+    _scrollController.addListener(_onScroll);
+
     _viewModel.loadArticles();
   }
 
   @override
   void dispose() {
-    _viewModel.removeListener(_refresh);
+    _viewModel.removeListener(_onViewModelChanged);
+
+    _scrollController.removeListener(_onScroll);
+
     _searchController.dispose();
+    _scrollController.dispose();
+
     super.dispose();
   }
 
-  void _refresh() {
+  void _onViewModelChanged() {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    final position = _scrollController.position;
+
+    if (position.pixels >= position.maxScrollExtent - 150) {
+      _viewModel.loadMore();
+    }
+  }
+
+  Future<void> _search() async {
+    FocusScope.of(context).unfocus();
+
+    await _viewModel.loadArticles(search: _searchController.text.trim());
+  }
+
+  Future<void> _clearSearch() async {
+    _searchController.clear();
+
+    FocusScope.of(context).unfocus();
+
+    await _viewModel.loadArticles();
+  }
+
+  Future<void> _refresh() async {
+    await _viewModel.loadArticles(search: _viewModel.currentSearch);
   }
 
   String? _buildImageUrl(String imageUrl) {
@@ -52,18 +93,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
 
     final normalizedPath = value.startsWith('/') ? value : '/$value';
 
-    return '${ApiConstants.baseUrl}'
-        '$normalizedPath';
-  }
-
-  Future<void> _search() async {
-    await _viewModel.loadArticles(search: _searchController.text.trim());
-  }
-
-  Future<void> _clearSearch() async {
-    _searchController.clear();
-
-    await _viewModel.loadArticles();
+    return '${ApiConstants.baseUrl}$normalizedPath';
   }
 
   @override
@@ -91,9 +121,14 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton(onPressed: _search, icon: const Icon(Icons.search)),
                 IconButton(
-                  onPressed: _clearSearch,
+                  onPressed: _viewModel.isLoading ? null : _search,
+                  tooltip: 'Search',
+                  icon: const Icon(Icons.search),
+                ),
+                IconButton(
+                  onPressed: _viewModel.isLoading ? null : _clearSearch,
+                  tooltip: 'Clear search',
                   icon: const Icon(Icons.clear),
                 ),
               ],
@@ -114,115 +149,148 @@ class _ArticleListPageState extends State<ArticleListPage> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            _viewModel.error!,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.red),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _viewModel.error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: _refresh,
+                child: const Text('Try again'),
+              ),
+            ],
           ),
         ),
       );
     }
 
     if (_viewModel.articles.isEmpty) {
-      return const Center(child: Text('No articles were found.'));
+      return RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 180),
+            Center(child: Text('No articles were found.')),
+          ],
+        ),
+      );
     }
 
     return RefreshIndicator(
-      onRefresh: () =>
-          _viewModel.loadArticles(search: _viewModel.currentSearch),
+      onRefresh: _refresh,
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.all(12),
         itemCount:
             _viewModel.articles.length + (_viewModel.hasMorePages ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == _viewModel.articles.length) {
             return Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Center(
-                child: ElevatedButton(
-                  onPressed: _viewModel.isLoadingMore
-                      ? null
-                      : _viewModel.loadMore,
-                  child: _viewModel.isLoadingMore
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Load more'),
-                ),
+                child: _viewModel.isLoadingMore
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton(
+                        onPressed: _viewModel.loadMore,
+                        child: const Text('Load more'),
+                      ),
               ),
             );
           }
 
           final article = _viewModel.articles[index];
 
-          final imageUrl = _buildImageUrl(article.imageUrl);
+          return _ArticleCard(
+            article: article,
+            imageUrl: _buildImageUrl(article.imageUrl),
+          );
+        },
+      ),
+    );
+  }
+}
 
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () {
-                Navigator.of(
-                  context,
-                ).pushNamed(AppRouter.articleDetails, arguments: article.id);
-              },
+class _ArticleCard extends StatelessWidget {
+  final ArticleModel article;
+  final String? imageUrl;
+
+  const _ArticleCard({required this.article, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(
+            context,
+          ).pushNamed(AppRouter.articleDetails, arguments: article.id);
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (imageUrl != null)
+              Image.network(
+                imageUrl!,
+                width: double.infinity,
+                height: 180,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const SizedBox(
+                    height: 140,
+                    child: Center(child: Icon(Icons.broken_image, size: 45)),
+                  );
+                },
+              ),
+            Padding(
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (imageUrl != null)
-                    Image.network(
-                      imageUrl,
-                      width: double.infinity,
-                      height: 180,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const SizedBox(
-                          height: 130,
-                          child: Center(
-                            child: Icon(Icons.broken_image, size: 45),
-                          ),
-                        );
-                      },
+                  Text(
+                    article.title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          article.title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          article.description,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          article.authorName,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          DateFormat(
-                            'dd.MM.yyyy.',
-                          ).format(article.publishedAtUtc.toLocal()),
-                        ),
-                      ],
-                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    article.description,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.person, size: 18),
+                      const SizedBox(width: 6),
+                      Expanded(child: Text(article.authorName)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_month, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        DateFormat(
+                          'dd.MM.yyyy.',
+                        ).format(article.publishedAtUtc.toLocal()),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }

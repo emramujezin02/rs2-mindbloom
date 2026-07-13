@@ -24,13 +24,16 @@ class ArticleViewModel extends ChangeNotifier {
 
   String currentSearch = '';
 
-  bool get hasMorePages => pageNumber < totalPages;
+  bool get hasMorePages {
+    return pageNumber < totalPages;
+  }
 
   Future<void> loadArticles({String search = ''}) async {
     isLoading = true;
     error = null;
     currentSearch = search;
     pageNumber = 1;
+
     notifyListeners();
 
     try {
@@ -41,6 +44,7 @@ class ArticleViewModel extends ChangeNotifier {
       );
 
       articles = response.items;
+      pageNumber = response.pageNumber;
       totalPages = response.totalPages;
     } catch (exception) {
       error = exception.toString();
@@ -67,9 +71,7 @@ class ArticleViewModel extends ChangeNotifier {
       );
 
       articles.addAll(response.items);
-
       pageNumber = response.pageNumber;
-
       totalPages = response.totalPages;
     } catch (exception) {
       error = exception.toString();
@@ -83,6 +85,7 @@ class ArticleViewModel extends ChangeNotifier {
     isLoadingDetails = true;
     error = null;
     selectedArticle = null;
+
     notifyListeners();
 
     try {
