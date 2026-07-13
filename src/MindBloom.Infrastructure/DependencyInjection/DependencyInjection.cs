@@ -24,6 +24,7 @@ using MindBloom.Application.Features.Memberships.Interfaces;
 using MindBloom.Application.Features.Users.Interfaces;
 using MindBloom.Application.Features.JournalEntries.Interfaces;
 using MindBloom.Application.Features.Articles.Interfaces;
+using MindBloom.Application.Features.Workshops.Interfaces;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -152,6 +153,8 @@ public static class DependencyInjection
 
         services.AddScoped<IArticleService,ArticleService>();
 
+        services.AddScoped<IWorkshopService, WorkshopService>();
+        
         return services;
     }
 }

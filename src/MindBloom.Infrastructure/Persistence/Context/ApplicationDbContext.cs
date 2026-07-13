@@ -32,6 +32,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<EmailVerificationCode> EmailVerificationCodes { get; set; }
     public DbSet<MembershipUsage> MembershipUsages { get; set; }
     public DbSet<Article> Articles => Set<Article>();
+    public DbSet<Workshop> Workshops => Set<Workshop>();
+    public DbSet<WorkshopRegistration>WorkshopRegistrations => Set<WorkshopRegistration>();
+    
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -147,6 +150,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             x.IsUsed,
             x.ExpiresAtUtc
         });
+    });
 
         builder.Entity<Article>(entity =>
         {
@@ -182,7 +186,79 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 x.IsDeleted
             });
         });
-    });
+
+        builder.Entity<Workshop>(entity =>
+        {
+            entity.Property(x => x.Title)
+                .IsRequired()
+                .HasMaxLength(150);
+
+            entity.Property(x => x.Description)
+                .IsRequired()
+                .HasMaxLength(2000);
+
+            entity.Property(x => x.OnlineLink)
+                .HasMaxLength(1000);
+
+            entity.Property(x => x.Location)
+                .HasMaxLength(300);
+
+            entity.Property(x => x.Price)
+                .HasPrecision(18, 2);
+
+            entity.Property(x => x.StatusChangeReason)
+                .HasMaxLength(500);
+
+            entity.HasOne(x => x.OrganizerUser)
+                .WithMany()
+                .HasForeignKey(x => x.OrganizerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.Therapist)
+                .WithMany(x => x.Workshops)
+                .HasForeignKey(x => x.TherapistId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.StatusChangedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.StatusChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => x.StartUtc);
+
+            entity.HasIndex(x => new
+            {
+                x.Status,
+                x.IsDeleted
+            });
+        });
+
+        builder.Entity<WorkshopRegistration>(entity =>
+        {
+            entity.HasOne(x => x.Workshop)
+                .WithMany(x => x.Registrations)
+                .HasForeignKey(x => x.WorkshopId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.Client)
+                .WithMany(x => x.WorkshopRegistrations)
+                .HasForeignKey(x => x.ClientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => new
+            {
+                x.WorkshopId,
+                x.ClientId
+            })
+            .IsUnique();
+
+            entity.HasIndex(x => new
+            {
+                x.WorkshopId,
+                x.Status
+            });
+        });
+
 
         builder.Entity<Review>()
     .HasOne(x => x.Appointment)

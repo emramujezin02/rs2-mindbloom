@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MindBloom.Domain.Entities;
+using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Shared.Constants;
 
@@ -152,6 +153,70 @@ public static class ApplicationDbSeeder
 
             context.Articles.AddRange(
                 articles);
+
+            await context.SaveChangesAsync();
+        }
+
+        var workshopAdmin =
+    await userManager.FindByNameAsync(
+        "desktop");
+
+        if (workshopAdmin != null &&
+            !await context.Workshops.AnyAsync())
+        {
+            context.Workshops.AddRange(
+                new Workshop
+                {
+                    Title =
+                        "Managing Everyday Anxiety",
+                    Description =
+                        "An interactive workshop focused on recognizing anxiety triggers and learning practical coping strategies.",
+                    StartUtc =
+                        DateTime.UtcNow.AddDays(14)
+                            .Date
+                            .AddHours(17),
+                    EndUtc =
+                        DateTime.UtcNow.AddDays(14)
+                            .Date
+                            .AddHours(19),
+                    Type =
+                        WorkshopType.Online,
+                    OnlineLink =
+                        "https://meet.google.com/example-anxiety",
+                    Location = null,
+                    Capacity = 30,
+                    Price = 20,
+                    Status =
+                        WorkshopStatus.Scheduled,
+                    OrganizerUserId =
+                        workshopAdmin.Id
+                },
+                new Workshop
+                {
+                    Title =
+                        "Emotional Awareness Workshop",
+                    Description =
+                        "A practical in-person workshop about identifying, understanding and expressing emotions in a healthy way.",
+                    StartUtc =
+                        DateTime.UtcNow.AddDays(21)
+                            .Date
+                            .AddHours(16),
+                    EndUtc =
+                        DateTime.UtcNow.AddDays(21)
+                            .Date
+                            .AddHours(18),
+                    Type =
+                        WorkshopType.InPerson,
+                    OnlineLink = null,
+                    Location =
+                        "MindBloom Center, Sarajevo",
+                    Capacity = 20,
+                    Price = 25,
+                    Status =
+                        WorkshopStatus.Scheduled,
+                    OrganizerUserId =
+                        workshopAdmin.Id
+                });
 
             await context.SaveChangesAsync();
         }

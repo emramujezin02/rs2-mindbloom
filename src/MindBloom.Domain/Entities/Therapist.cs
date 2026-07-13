@@ -15,17 +15,9 @@ public class Therapist : BaseEntity
     public decimal PricePerSession { get; set; }
 
     public TherapistVerificationStatus
-    VerificationStatus
-    {
-        get;
-        set;
-    }
+    VerificationStatus{get; set;}
 
-    public string? VerificationNotes
-    {
-        get;
-        set;
-    }
+    public string? VerificationNotes{get; set;}
 
     public decimal HourlyRate { get; set; }
 
@@ -34,15 +26,11 @@ public class Therapist : BaseEntity
     public string? ProfileImagePath { get; set; }
 
     public ICollection<AppointmentNote> AppointmentNotes { get; set; } = new List<AppointmentNote>();
-
     public ICollection<TherapistAvailability> Availabilities { get; set; } = new List<TherapistAvailability>();
-
     public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
-
     public ICollection<Review> Reviews { get; set; }= new List<Review>();
     public ICollection<Article> Articles { get; set; } = new List<Article>();
-
     public ICollection<TherapistUnavailableDate>UnavailableDates{ get; set; } = new List<TherapistUnavailableDate>();
-
     public ICollection<TherapistDocument>Documents { get; set; } = new List<TherapistDocument>();
+    public ICollection<Workshop> Workshops { get; set; } = new List<Workshop>();
 }
