@@ -47,6 +47,8 @@ import '../../features/article/presentation/pages/article_details_page.dart';
 import '../../features/article/presentation/pages/article_list_page.dart';
 
 import '../../features/workshop/presentation/pages/workshop_page.dart';
+import '../../features/workshop/presentation/pages/workshop_details_page.dart';
+import '../../features/workshop/presentation/pages/my_workshop_registrations_page.dart';
 
 import '../../features/favorite/presentation/pages/my_favorites_page.dart';
 
@@ -84,6 +86,8 @@ class AppRouter {
   static const String myFavorites = '/favorites/mine';
   static const String journalEntryDetails = '/journal/details';
   static const String editJournalEntry = '/journal/edit';
+  static const String workshopDetails = '/workshops/details';
+  static const String myWorkshopRegistrations = '/workshops/mine';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -233,6 +237,18 @@ class AppRouter {
 
         return MaterialPageRoute(
           builder: (_) => EditJournalEntryPage(entry: entry),
+        );
+
+      case workshopDetails:
+        final workshopId = settings.arguments as int;
+
+        return MaterialPageRoute(
+          builder: (_) => WorkshopDetailsPage(workshopId: workshopId),
+        );
+
+      case myWorkshopRegistrations:
+        return MaterialPageRoute(
+          builder: (_) => const MyWorkshopRegistrationsPage(),
         );
 
       case home:

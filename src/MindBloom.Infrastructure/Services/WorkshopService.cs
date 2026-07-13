@@ -73,6 +73,9 @@ public class WorkshopService : IWorkshopService
         var currentClientId =
             clientId;
 
+        var currentUtc =
+    DateTime.UtcNow;
+
         var items =
             await workshops
                 .OrderBy(x => x.StartUtc)
@@ -94,7 +97,24 @@ public class WorkshopService : IWorkshopService
                         Type =
                             x.Type.ToString(),
                         OnlineLink =
-                            x.OnlineLink,
+    currentClientId.HasValue
+    && x.Type ==
+        WorkshopType.Online
+    && x.Status ==
+        WorkshopStatus.Scheduled
+    && x.StartUtc <=
+        currentUtc.AddMinutes(15)
+    && x.EndUtc >
+        currentUtc
+    && x.Registrations.Any(r =>
+        r.ClientId ==
+            currentClientId.Value
+        && !r.IsDeleted
+        && r.Status ==
+            WorkshopRegistrationStatus
+                .Registered)
+        ? x.OnlineLink
+        : null,
                         Location =
                             x.Location,
                         Capacity =
@@ -171,6 +191,9 @@ public class WorkshopService : IWorkshopService
         var currentClientId =
             clientId;
 
+        var currentUtc =
+    DateTime.UtcNow;
+
         var result =
             await _context.Workshops
                 .AsNoTracking()
@@ -191,7 +214,24 @@ public class WorkshopService : IWorkshopService
                         Type =
                             x.Type.ToString(),
                         OnlineLink =
-                            x.OnlineLink,
+    currentClientId.HasValue
+    && x.Type ==
+        WorkshopType.Online
+    && x.Status ==
+        WorkshopStatus.Scheduled
+    && x.StartUtc <=
+        currentUtc.AddMinutes(15)
+    && x.EndUtc >
+        currentUtc
+    && x.Registrations.Any(r =>
+        r.ClientId ==
+            currentClientId.Value
+        && !r.IsDeleted
+        && r.Status ==
+            WorkshopRegistrationStatus
+                .Registered)
+        ? x.OnlineLink
+        : null,
                         Location =
                             x.Location,
                         Capacity =
@@ -901,8 +941,9 @@ public class WorkshopService : IWorkshopService
                     WorkshopRegistrationStatus
                         .Registered);
 
-        var totalCount =
-            await query.CountAsync();
+        var totalCount = await query.CountAsync();
+
+        var currentUtc = DateTime.UtcNow;
 
         var items =
             await query
@@ -928,7 +969,16 @@ public class WorkshopService : IWorkshopService
                         Type =
                             x.Workshop.Type.ToString(),
                         OnlineLink =
-                            x.Workshop.OnlineLink,
+    x.Workshop.Type ==
+        WorkshopType.Online
+    && x.Workshop.Status ==
+        WorkshopStatus.Scheduled
+    && x.Workshop.StartUtc <=
+        currentUtc.AddMinutes(15)
+    && x.Workshop.EndUtc >
+        currentUtc
+        ? x.Workshop.OnlineLink
+        : null,
                         Location =
                             x.Workshop.Location,
                         Capacity =
