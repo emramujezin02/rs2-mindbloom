@@ -49,8 +49,8 @@ import '../../features/journal/data/services/journal_api_service.dart';
 import '../../features/journal/presentation/viewmodels/journal_viewmodel.dart';
 
 import '../../features/article/data/repositories/article_repository.dart';
-import '../../features/article/data/services/article_api_service.dart';
 import '../../features/article/presentation/viewmodels/article_viewmodel.dart';
+import '../../features/article/data/services/article_api_service.dart';
 
 import '../../features/workshop/data/repositories/workshop_repository.dart';
 import '../../features/workshop/data/services/workshop_api_service.dart';

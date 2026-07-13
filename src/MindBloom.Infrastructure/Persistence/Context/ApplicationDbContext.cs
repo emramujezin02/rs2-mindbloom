@@ -31,7 +31,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ClientMembership> ClientMemberships { get; set; }
     public DbSet<EmailVerificationCode> EmailVerificationCodes { get; set; }
     public DbSet<MembershipUsage> MembershipUsages { get; set; }
-
+    public DbSet<Article> Articles => Set<Article>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -146,6 +146,41 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             x.UserId,
             x.IsUsed,
             x.ExpiresAtUtc
+        });
+
+        builder.Entity<Article>(entity =>
+        {
+            entity.Property(x => x.Title)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.Description)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(x => x.Content)
+                .IsRequired();
+
+            entity.Property(x => x.ImageUrl)
+                .HasMaxLength(1000);
+
+            entity.HasOne(x => x.AuthorUser)
+                .WithMany()
+                .HasForeignKey(x => x.AuthorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.Therapist)
+                .WithMany(x => x.Articles)
+                .HasForeignKey(x => x.TherapistId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => x.PublishedAtUtc);
+
+            entity.HasIndex(x => new
+            {
+                x.IsPublished,
+                x.IsDeleted
+            });
         });
     });
 

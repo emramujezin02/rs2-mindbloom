@@ -43,7 +43,6 @@ import '../../features/journal/data/models/journal_entry_model.dart';
 import '../../features/journal/presentation/pages/edit_journal_entry_page.dart';
 import '../../features/journal/presentation/pages/journal_entry_details_page.dart';
 
-import '../../features/article/data/models/article_model.dart';
 import '../../features/article/presentation/pages/article_details_page.dart';
 import '../../features/article/presentation/pages/article_list_page.dart';
 
@@ -191,10 +190,10 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const ArticleListPage());
 
       case articleDetails:
-        final article = settings.arguments as ArticleModel;
+        final articleId = settings.arguments as int;
 
         return MaterialPageRoute(
-          builder: (_) => ArticleDetailsPage(article: article),
+          builder: (_) => ArticleDetailsPage(articleId: articleId),
         );
 
       case workshops:

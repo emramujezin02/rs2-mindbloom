@@ -1,4 +1,5 @@
 import '../models/article_model.dart';
+import '../models/article_paged_response.dart';
 import '../services/article_api_service.dart';
 
 class ArticleRepository {
@@ -6,7 +7,19 @@ class ArticleRepository {
 
   ArticleRepository({required this.apiService});
 
-  Future<List<ArticleModel>> getArticles() {
-    return apiService.getArticles();
+  Future<ArticlePagedResponse> getArticles({
+    required int pageNumber,
+    required int pageSize,
+    String? search,
+  }) {
+    return apiService.getArticles(
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+      search: search,
+    );
+  }
+
+  Future<ArticleModel> getArticle(int articleId) {
+    return apiService.getArticle(articleId);
   }
 }

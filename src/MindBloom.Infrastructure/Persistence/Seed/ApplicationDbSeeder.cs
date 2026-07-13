@@ -86,5 +86,74 @@ public static class ApplicationDbSeeder
                     RoleConstants.Client);
             }
         }
+
+        var seededAdmin =
+    await userManager.FindByNameAsync(
+        "desktop");
+
+        if (seededAdmin != null &&
+            !await context.Articles.AnyAsync())
+        {
+            var articles =
+                new List<Article>
+                {
+            new()
+            {
+                Title =
+                    "Understanding Anxiety",
+                Description =
+                    "Learn how anxiety affects thoughts, emotions and everyday behavior.",
+                Content =
+                    "Anxiety is a natural response to stress, but it can become difficult when it begins to interfere with everyday life. Recognizing triggers, observing physical symptoms and learning healthy coping strategies can help a person regain a sense of control.",
+                ImageUrl =
+                    "https://images.unsplash.com/photo-1499209974431-9dddcece7f88",
+                AuthorUserId =
+                    seededAdmin.Id,
+                TherapistId = null,
+                IsPublished = true,
+                PublishedAtUtc =
+                    DateTime.UtcNow.AddDays(-5)
+            },
+            new()
+            {
+                Title =
+                    "Creating a Healthy Sleep Routine",
+                Description =
+                    "Simple habits that can improve sleep quality and emotional wellbeing.",
+                Content =
+                    "A regular sleep schedule supports mental and physical health. Try going to bed at a similar time each evening, reduce screen exposure before sleep and create a calm environment that helps your body prepare for rest.",
+                ImageUrl =
+                    "https://images.unsplash.com/photo-1455642305367-68834a2d5f7a",
+                AuthorUserId =
+                    seededAdmin.Id,
+                TherapistId = null,
+                IsPublished = true,
+                PublishedAtUtc =
+                    DateTime.UtcNow.AddDays(-3)
+            },
+            new()
+            {
+                Title =
+                    "The Importance of Emotional Awareness",
+                Description =
+                    "Understanding emotions is an important step toward healthier coping.",
+                Content =
+                    "Emotional awareness means noticing and naming what you feel without immediately judging yourself. Keeping a journal, tracking your mood and speaking with a therapist can make emotional patterns easier to understand.",
+                ImageUrl =
+                    "https://images.unsplash.com/photo-1506126613408-eca07ce68773",
+                AuthorUserId =
+                    seededAdmin.Id,
+                TherapistId = null,
+                IsPublished = true,
+                PublishedAtUtc =
+                    DateTime.UtcNow.AddDays(-1)
+            }
+                };
+
+            context.Articles.AddRange(
+                articles);
+
+            await context.SaveChangesAsync();
+        }
     } 
 }
