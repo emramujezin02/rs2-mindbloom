@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Payments.DTOs;
 using MindBloom.Application.Features.Payments.Interfaces;
-using System.Security.Claims;
 
 namespace MindBloom.API.Controllers;
 
@@ -10,12 +10,14 @@ namespace MindBloom.API.Controllers;
 [Route("api/[controller]")]
 public class PaymentsController : ControllerBase
 {
-    private readonly IPaymentService _paymentService;
+    private readonly IPaymentService
+        _paymentService;
 
     public PaymentsController(
         IPaymentService paymentService)
     {
-        _paymentService = paymentService;
+        _paymentService =
+            paymentService;
     }
 
     [Authorize(Roles = "Client")]
@@ -25,10 +27,7 @@ public class PaymentsController : ControllerBase
             CreatePaymentIntentDto request)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                    .Value);
+            GetAuthenticatedUserId();
 
         var result =
             await _paymentService
@@ -45,25 +44,28 @@ public class PaymentsController : ControllerBase
         Confirm(
             ConfirmPaymentDto request)
     {
+        var userId =
+            GetAuthenticatedUserId();
+
         await _paymentService
-            .ConfirmPaymentAsync(request);
+            .ConfirmPaymentAsync(
+                userId,
+                request);
 
         return Ok(new
         {
-            message = "Payment confirmed."
+            message =
+                "Payment verified and confirmed successfully."
         });
     }
 
     [Authorize(Roles = "Client")]
     [HttpGet("mine")]
     public async Task<IActionResult>
-    GetMyPayments()
+        GetMyPayments()
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetAuthenticatedUserId();
 
         var result =
             await _paymentService
@@ -76,14 +78,11 @@ public class PaymentsController : ControllerBase
     [Authorize(Roles = "Client")]
     [HttpGet("{paymentId}/receipt")]
     public async Task<IActionResult>
-    GetReceipt(
-        int paymentId)
+        GetReceipt(
+            int paymentId)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetAuthenticatedUserId();
 
         var result =
             await _paymentService
@@ -92,5 +91,22 @@ public class PaymentsController : ControllerBase
                     userId);
 
         return Ok(result);
+    }
+
+    private int GetAuthenticatedUserId()
+    {
+        var userIdValue =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(
+                userIdValue,
+                out var userId))
+        {
+            throw new UnauthorizedAccessException(
+                "Authenticated user identifier is invalid.");
+        }
+
+        return userId;
     }
 }

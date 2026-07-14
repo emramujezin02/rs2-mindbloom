@@ -2,5 +2,5 @@
 
 public class ConfirmPaymentDto
 {
-    public string PaymentIntentId { get; set; } = null!;
+    public string PaymentIntentId { get; set; } = string.Empty;
 }
