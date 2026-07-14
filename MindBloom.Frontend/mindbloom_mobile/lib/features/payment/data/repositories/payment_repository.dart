@@ -2,8 +2,8 @@ import '../models/confirm_payment_request.dart';
 import '../models/create_payment_intent_request.dart';
 import '../models/payment_intent_response.dart';
 import '../models/payment_model.dart';
-import '../services/payment_api_service.dart';
 import '../models/payment_receipt_model.dart';
+import '../services/payment_api_service.dart';
 
 class PaymentRepository {
   final PaymentApiService apiService;
@@ -26,15 +26,25 @@ class PaymentRepository {
     );
   }
 
-  Future<bool> isAppointmentPaid(int appointmentId) async {
-    final payments = await apiService.getMyPayments();
-
-    return payments.any(
-      (payment) => payment.appointmentId == appointmentId && payment.isPaid,
-    );
-  }
-
   Future<PaymentReceiptModel> getReceipt(int paymentId) {
     return apiService.getReceipt(paymentId);
+  }
+
+  Future<PaymentModel?> getPaymentForAppointment(int appointmentId) async {
+    final payments = await apiService.getMyPayments();
+
+    for (final payment in payments) {
+      if (payment.appointmentId == appointmentId) {
+        return payment;
+      }
+    }
+
+    return null;
+  }
+
+  Future<bool> isAppointmentPaid(int appointmentId) async {
+    final payment = await getPaymentForAppointment(appointmentId);
+
+    return payment?.isPaid == true;
   }
 }

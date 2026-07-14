@@ -139,9 +139,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   }
 
   void _openReceipt() {
-    final appointment = _viewModel.currentAppointment;
-
-    final paymentId = appointment.paymentId;
+    final paymentId = _paymentViewModel.paymentId;
 
     if (paymentId == null || paymentId <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -161,6 +159,20 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   }
 
   Future<void> _showCancellationDialog() async {
+    if (_paymentViewModel.isRefundPending || _paymentViewModel.isRefunded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _paymentViewModel.isRefundPending
+                ? 'A refund is already being processed.'
+                : 'This payment has already been refunded.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
     final reasonController = TextEditingController();
 
     final formKey = GlobalKey<FormState>();
@@ -172,31 +184,48 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
           title: const Text('Cancel appointment'),
           content: Form(
             key: formKey,
-            child: TextFormField(
-              controller: reasonController,
-              autofocus: true,
-              minLines: 3,
-              maxLines: 5,
-              maxLength: 500,
-              decoration: const InputDecoration(
-                labelText: 'Cancellation reason',
-                hintText: 'Explain why you are cancelling the appointment.',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
-              ),
-              validator: (value) {
-                final reason = value?.trim() ?? '';
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_paymentViewModel.isPaid)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      'This appointment has already been paid. '
+                      'After cancellation, MindBloom will automatically '
+                      'send a refund request to Stripe. '
+                      'The refund may remain pending until Stripe finishes processing it.',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                TextFormField(
+                  controller: reasonController,
+                  autofocus: true,
+                  minLines: 3,
+                  maxLines: 5,
+                  maxLength: 500,
+                  decoration: const InputDecoration(
+                    labelText: 'Cancellation reason',
+                    hintText: 'Explain why you are cancelling the appointment.',
+                    border: OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                  ),
+                  validator: (value) {
+                    final reason = value?.trim() ?? '';
 
-                if (reason.isEmpty) {
-                  return 'Cancellation reason is required.';
-                }
+                    if (reason.isEmpty) {
+                      return 'Cancellation reason is required.';
+                    }
 
-                if (reason.length < 5) {
-                  return 'Reason must contain at least 5 characters.';
-                }
+                    if (reason.length < 5) {
+                      return 'Reason must contain at least 5 characters.';
+                    }
 
-                return null;
-              },
+                    return null;
+                  },
+                ),
+              ],
             ),
           ),
           actions: [
@@ -232,9 +261,11 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Confirm cancellation'),
-          content: const Text(
-            'Are you sure you want to cancel this appointment? '
-            'If it has already been paid, the refund will be initiated automatically.',
+          content: Text(
+            _paymentViewModel.isPaid
+                ? 'Are you sure you want to cancel this paid appointment? '
+                      'The appointment will be cancelled and a Stripe refund will be initiated automatically.'
+                : 'Are you sure you want to cancel this appointment?',
           ),
           actions: [
             TextButton(
@@ -247,7 +278,11 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               onPressed: () {
                 Navigator.of(dialogContext).pop(true);
               },
-              child: const Text('Yes, cancel'),
+              child: Text(
+                _paymentViewModel.isPaid
+                    ? 'Cancel and request refund'
+                    : 'Yes, cancel',
+              ),
             ),
           ],
         );
@@ -258,26 +293,112 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       return;
     }
 
+    final wasPaid = _paymentViewModel.isPaid;
+
     final success = await _viewModel.cancelAppointment(reason);
 
     if (!mounted) {
       return;
     }
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Appointment cancelled successfully. '
-            'Any eligible refund has been initiated.',
+    if (!success) {
+      return;
+    }
+
+    await _paymentViewModel.loadPaymentStatus(_viewModel.currentAppointment.id);
+
+    if (!mounted) {
+      return;
+    }
+
+    String message;
+
+    if (_paymentViewModel.isRefunded) {
+      message =
+          'Appointment cancelled successfully. '
+          'The payment has been refunded.';
+    } else if (_paymentViewModel.isRefundPending) {
+      message =
+          'Appointment cancelled successfully. '
+          'Your refund request is being processed by Stripe.';
+    } else if (_paymentViewModel.isRefundFailed) {
+      message =
+          'Appointment was cancelled, but the refund could not be completed. '
+          'Please contact support.';
+    } else if (wasPaid) {
+      message =
+          'Appointment cancelled successfully. '
+          'The refund request has been submitted.';
+    } else {
+      message = 'Appointment cancelled successfully.';
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _buildPaymentStatusCard() {
+    if (_paymentViewModel.isCheckingPayment) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_paymentViewModel.isRefundPending) {
+      return const Card(
+        child: ListTile(
+          leading: Icon(Icons.hourglass_top),
+          title: Text('Refund pending'),
+          subtitle: Text(
+            'Stripe is currently processing your refund. '
+            'A second refund request cannot be submitted.',
           ),
         ),
       );
+    }
 
-      await _paymentViewModel.loadPaymentStatus(
-        _viewModel.currentAppointment.id,
+    if (_paymentViewModel.isRefunded) {
+      return const Card(
+        child: ListTile(
+          leading: Icon(Icons.replay_circle_filled),
+          title: Text('Payment refunded'),
+          subtitle: Text(
+            'The paid amount has been refunded. '
+            'No additional refund request is required.',
+          ),
+        ),
       );
     }
+
+    if (_paymentViewModel.isRefundFailed) {
+      return const Card(
+        child: ListTile(
+          leading: Icon(Icons.error_outline),
+          title: Text('Refund failed'),
+          subtitle: Text(
+            'The refund could not be completed. '
+            'Please contact support before trying again.',
+          ),
+        ),
+      );
+    }
+
+    if (_paymentViewModel.isPaid) {
+      return const Card(
+        child: ListTile(
+          leading: Icon(Icons.check_circle),
+          title: Text('Appointment paid'),
+          subtitle: Text(
+            'If you cancel this appointment, '
+            'a Stripe refund will be initiated automatically.',
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   @override
@@ -288,15 +409,24 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
     final normalizedStatus = appointment.status.trim().toLowerCase();
 
-    final canCancel =
+    final appointmentAllowsCancel =
         normalizedStatus == 'pending' || normalizedStatus == 'accepted';
 
-    final canPay = normalizedStatus == 'accepted' && !_paymentViewModel.isPaid;
+    final refundBlocksCancellation =
+        _paymentViewModel.isRefundPending ||
+        _paymentViewModel.isRefunded ||
+        _paymentViewModel.isRefundFailed;
+
+    final canCancel = appointmentAllowsCancel && !refundBlocksCancellation;
+
+    final canPay =
+        normalizedStatus == 'accepted' &&
+        !_paymentViewModel.isPaid &&
+        !_paymentViewModel.hasRefundProcess;
 
     final canOpenReceipt =
-        _paymentViewModel.isPaid &&
-        appointment.paymentId != null &&
-        appointment.paymentId! > 0;
+        _paymentViewModel.paymentId != null &&
+        (_paymentViewModel.isPaid || _paymentViewModel.hasRefundProcess);
 
     final canJoinSession =
         appointment.type.trim().toLowerCase() == 'online' &&
@@ -348,21 +478,9 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               ),
             ),
 
-            if (_paymentViewModel.isCheckingPayment) ...[
-              const SizedBox(height: 16),
-              const Center(child: CircularProgressIndicator()),
-            ],
+            const SizedBox(height: 16),
 
-            if (_paymentViewModel.isPaid) ...[
-              const SizedBox(height: 16),
-              const Card(
-                child: ListTile(
-                  leading: Icon(Icons.check_circle),
-                  title: Text('Appointment paid'),
-                  subtitle: Text('No additional payment is required.'),
-                ),
-              ),
-            ],
+            _buildPaymentStatusCard(),
 
             if (appointment.meetingLink != null &&
                 appointment.meetingLink!.trim().isNotEmpty) ...[
@@ -427,24 +545,14 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
             if (canPay) const SizedBox(height: 10),
 
-            if (_paymentViewModel.isPaid)
+            if (canOpenReceipt)
               ElevatedButton.icon(
-                onPressed: canOpenReceipt
-                    ? _openReceipt
-                    : () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Receipt is not available for this appointment.',
-                            ),
-                          ),
-                        );
-                      },
+                onPressed: _openReceipt,
                 icon: const Icon(Icons.receipt_long),
                 label: const Text('View receipt'),
               ),
 
-            if (_paymentViewModel.isPaid) const SizedBox(height: 10),
+            if (canOpenReceipt) const SizedBox(height: 10),
 
             ElevatedButton.icon(
               onPressed: canJoinSession ? _joinSession : null,
@@ -467,7 +575,10 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
             const SizedBox(height: 10),
 
             ElevatedButton.icon(
-              onPressed: canCancel && !_paymentViewModel.isPaid
+              onPressed:
+                  appointmentAllowsCancel &&
+                      !_paymentViewModel.isPaid &&
+                      !_paymentViewModel.hasRefundProcess
                   ? () {
                       Navigator.of(context).pushNamed(
                         AppRouter.useMembership,
@@ -479,6 +590,8 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               label: Text(
                 _paymentViewModel.isPaid
                     ? 'Appointment already paid'
+                    : _paymentViewModel.hasRefundProcess
+                    ? 'Refund already processed'
                     : 'Use membership',
               ),
             ),
@@ -516,7 +629,13 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                     )
                   : const Icon(Icons.cancel_outlined),
               label: Text(
-                canCancel ? 'Cancel appointment' : 'Cancellation unavailable',
+                refundBlocksCancellation
+                    ? 'Refund already requested'
+                    : appointmentAllowsCancel
+                    ? _paymentViewModel.isPaid
+                          ? 'Cancel and request refund'
+                          : 'Cancel appointment'
+                    : 'Cancellation unavailable',
               ),
             ),
 

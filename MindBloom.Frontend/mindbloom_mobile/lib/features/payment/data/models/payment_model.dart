@@ -30,11 +30,63 @@ class PaymentModel {
     );
   }
 
+  String get normalizedStatus {
+    return status.trim().toLowerCase();
+  }
+
+  bool get isPending {
+    return normalizedStatus == 'pending';
+  }
+
   bool get isPaid {
-    return status.trim().toLowerCase() == 'paid';
+    return normalizedStatus == 'paid';
+  }
+
+  bool get isFailed {
+    return normalizedStatus == 'failed';
+  }
+
+  bool get isRefundPending {
+    return normalizedStatus == 'refundpending';
   }
 
   bool get isRefunded {
-    return status.trim().toLowerCase() == 'refunded';
+    return normalizedStatus == 'refunded';
+  }
+
+  bool get isRefundFailed {
+    return normalizedStatus == 'refundfailed';
+  }
+
+  bool get hasRefundProcess {
+    return isRefundPending || isRefunded || isRefundFailed;
+  }
+
+  String get displayStatus {
+    if (isPending) {
+      return 'Pending';
+    }
+
+    if (isPaid) {
+      return 'Paid';
+    }
+
+    if (isFailed) {
+      return 'Failed';
+    }
+
+    if (isRefundPending) {
+      return 'Refund pending';
+    }
+
+    if (isRefunded) {
+      return 'Refunded';
+    }
+
+    if (isRefundFailed) {
+      return 'Refund failed';
+    }
+
+    return status;
   }
 }

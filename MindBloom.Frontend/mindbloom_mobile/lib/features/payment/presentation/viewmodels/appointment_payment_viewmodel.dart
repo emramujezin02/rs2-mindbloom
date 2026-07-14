@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
+import '../../data/models/payment_model.dart';
 import '../../data/repositories/payment_repository.dart';
 
 class AppointmentPaymentViewModel extends ChangeNotifier {
@@ -10,9 +11,34 @@ class AppointmentPaymentViewModel extends ChangeNotifier {
 
   bool isCheckingPayment = false;
   bool isPaying = false;
-  bool isPaid = false;
 
   String? errorMessage;
+
+  PaymentModel? payment;
+
+  bool get isPaid {
+    return payment?.isPaid == true;
+  }
+
+  bool get isRefundPending {
+    return payment?.isRefundPending == true;
+  }
+
+  bool get isRefunded {
+    return payment?.isRefunded == true;
+  }
+
+  bool get isRefundFailed {
+    return payment?.isRefundFailed == true;
+  }
+
+  bool get hasRefundProcess {
+    return payment?.hasRefundProcess == true;
+  }
+
+  int? get paymentId {
+    return payment?.id;
+  }
 
   Future<void> loadPaymentStatus(int appointmentId) async {
     isCheckingPayment = true;
@@ -21,9 +47,9 @@ class AppointmentPaymentViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      isPaid = await repository.isAppointmentPaid(appointmentId);
+      payment = await repository.getPaymentForAppointment(appointmentId);
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = _normalizeError(error);
     } finally {
       isCheckingPayment = false;
 
@@ -67,9 +93,9 @@ class AppointmentPaymentViewModel extends ChangeNotifier {
 
       await repository.confirmPayment(paymentIntent.paymentIntentId);
 
-      isPaid = true;
+      await loadPaymentStatus(appointmentId);
 
-      return true;
+      return isPaid;
     } on StripeException catch (error) {
       errorMessage =
           error.error.localizedMessage ??

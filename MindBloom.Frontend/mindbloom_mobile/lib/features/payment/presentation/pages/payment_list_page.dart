@@ -49,6 +49,32 @@ class _PaymentListPageState extends State<PaymentListPage> {
     );
   }
 
+  IconData _statusIcon(String status) {
+    final normalized = status.trim().toLowerCase();
+
+    if (normalized == 'paid') {
+      return Icons.check_circle;
+    }
+
+    if (normalized == 'refundpending') {
+      return Icons.hourglass_top;
+    }
+
+    if (normalized == 'refunded') {
+      return Icons.replay_circle_filled;
+    }
+
+    if (normalized == 'refundfailed') {
+      return Icons.error_outline;
+    }
+
+    if (normalized == 'failed') {
+      return Icons.cancel;
+    }
+
+    return Icons.payments;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,26 +134,22 @@ class _PaymentListPageState extends State<PaymentListPage> {
         itemBuilder: (context, index) {
           final payment = _viewModel.payments[index];
 
+          final receiptAvailable = payment.isPaid || payment.hasRefundProcess;
+
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
-              onTap: payment.isPaid
+              onTap: receiptAvailable
                   ? () {
                       _openReceipt(payment.id);
                     }
                   : null,
-              leading: Icon(
-                payment.isPaid
-                    ? Icons.check_circle
-                    : payment.isRefunded
-                    ? Icons.replay
-                    : Icons.payments,
-              ),
+              leading: Icon(_statusIcon(payment.status)),
               title: Text(payment.therapistName),
               subtitle: Text(
                 '${formatter.format(payment.createdAtUtc.toLocal())}\n'
                 'Appointment #${payment.appointmentId}'
-                '${payment.isPaid ? '\nTap to view receipt' : ''}',
+                '${receiptAvailable ? '\nTap to view receipt' : ''}',
               ),
               isThreeLine: true,
               trailing: Column(
@@ -139,8 +161,9 @@ class _PaymentListPageState extends State<PaymentListPage> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
-                  Text(payment.status),
-                  if (payment.isPaid) const Icon(Icons.chevron_right, size: 18),
+                  Text(payment.displayStatus),
+                  if (receiptAvailable)
+                    const Icon(Icons.chevron_right, size: 18),
                 ],
               ),
             ),
