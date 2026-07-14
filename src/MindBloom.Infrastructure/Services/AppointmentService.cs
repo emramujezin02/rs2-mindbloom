@@ -10,6 +10,8 @@ using MindBloom.Application.Features.Notifications.Interfaces;
 using MindBloom.Application.Features.Therapists.DTOs;
 using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Features.Payments.Interfaces;
+using MindBloom.Application.Features.Memberships.Interfaces;
+using MindBloom.Application.Features.Payments.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -24,18 +26,26 @@ public class AppointmentService : IAppointmentService
     private readonly IPaymentService
         _paymentService;
 
+    private readonly IMembershipService
+        _membershipService;
+
     public AppointmentService(
         ApplicationDbContext context,
         INotificationSender notificationSender,
-        IPaymentService paymentService)
+        IPaymentService paymentService,
+        IMembershipService membershipService)
     {
-        _context = context;
+        _context =
+            context;
 
         _notificationSender =
             notificationSender;
 
         _paymentService =
             paymentService;
+
+        _membershipService =
+            membershipService;
     }
 
     public async Task<AppointmentResponseDto>
@@ -216,24 +226,44 @@ public class AppointmentService : IAppointmentService
         };
     }
 
-    private async Task AutoCompleteAppointmentsAsync()
+    private async Task
+        AutoCompleteAppointmentsAsync()
     {
         var appointments =
             await _context.Appointments
                 .Where(x =>
-                    x.EndUtc < DateTime.Now
-                    && x.Status != AppointmentStatus.Completed
-                    && x.Status != AppointmentStatus.Cancelled
-                    && x.Status != AppointmentStatus.Rejected)
+                    x.EndUtc <
+                        DateTime.UtcNow &&
+                    x.Status !=
+                        AppointmentStatus.Completed &&
+                    x.Status !=
+                        AppointmentStatus.Cancelled &&
+                    x.Status !=
+                        AppointmentStatus.Rejected)
                 .ToListAsync();
 
-        foreach (var appointment in appointments)
+        if (appointments.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var appointment
+                 in appointments)
         {
             appointment.Status =
                 AppointmentStatus.Completed;
         }
 
         await _context.SaveChangesAsync();
+
+        foreach (var appointment
+                 in appointments)
+        {
+            await _membershipService
+                .FinalizeAppointmentUsageAsync(
+                    appointment.Id,
+                    "Membership session consumed after automatic appointment completion.");
+        }
     }
 
     public async Task<List<AppointmentResponseDto>>
@@ -315,69 +345,120 @@ public class AppointmentService : IAppointmentService
     }
 
     public async Task UpdateStatusAsync(
-    int therapistUserId,
-    UpdateAppointmentStatusDto request)
+     int therapistUserId,
+     UpdateAppointmentStatusDto request)
     {
         var therapist =
             await _context.Therapists
-                .FirstOrDefaultAsync(
-                    x => x.UserId == therapistUserId);
+                .FirstOrDefaultAsync(x =>
+                    x.UserId ==
+                        therapistUserId);
 
         if (therapist == null)
         {
-            throw new Exception("Therapist not found.");
+            throw new Exception(
+                "Therapist not found.");
         }
 
         var appointment =
-    await _context.Appointments
-        .Include(x => x.Client)
-        .FirstOrDefaultAsync(x =>
-            x.Id == request.AppointmentId
-            && x.TherapistId == therapist.Id);
+            await _context.Appointments
+                .Include(x =>
+                    x.Client)
+                .ThenInclude(x =>
+                    x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Id ==
+                        request.AppointmentId &&
+                    x.TherapistId ==
+                        therapist.Id);
 
         if (appointment == null)
         {
-            throw new Exception("Appointment not found.");
+            throw new Exception(
+                "Appointment not found.");
         }
 
-        appointment.Status = request.Status;
-
-        var client =
-    await _context.Clients
-        .Include(x => x.User)
-        .FirstOrDefaultAsync(x =>
-            x.Id == appointment.ClientId);
-
-        if (client != null)
+        if (appointment.Status ==
+                AppointmentStatus.Cancelled ||
+            appointment.Status ==
+                AppointmentStatus.Rejected ||
+            appointment.Status ==
+                AppointmentStatus.Completed)
         {
-            var notification = new Notification
+            if (appointment.Status ==
+                request.Status)
             {
-                UserId = client.UserId,
-                Title = "Appointment Updated",
+                return;
+            }
+
+            throw new Exception(
+                "The status of a finished appointment cannot be changed.");
+        }
+
+        if (request.Status ==
+            AppointmentStatus.Rejected)
+        {
+            await _membershipService
+                .HandleAppointmentCancellationAsync(
+                    appointment.Id,
+                    "Appointment rejected by therapist.",
+                    forceRestore: true);
+        }
+
+        if (request.Status ==
+            AppointmentStatus.Completed)
+        {
+            await _membershipService
+                .FinalizeAppointmentUsageAsync(
+                    appointment.Id,
+                    "Membership session consumed after the appointment was completed.");
+        }
+
+        appointment.Status =
+            request.Status;
+
+        var notification =
+            new Notification
+            {
+                UserId =
+                    appointment
+                        .Client
+                        .UserId,
+
+                Title =
+                    "Appointment Updated",
+
                 Message =
-                    $"Your appointment status is now {request.Status}.",
-                IsRead = false
+                    $"Your appointment status is now "
+                    + $"{request.Status}.",
+
+                IsRead =
+                    false
             };
 
-            _context.Notifications.Add(notification);
-        }
+        _context.Notifications.Add(
+            notification);
 
         await _context.SaveChangesAsync();
 
-        await _notificationSender.SendToUserAsync(
-    appointment.Client.UserId,
-    "Appointment Updated",
-    $"Your appointment status is now {request.Status}.");
+        await _notificationSender
+            .SendToUserAsync(
+                appointment
+                    .Client
+                    .UserId,
+                "Appointment Updated",
+                $"Your appointment status is now "
+                + $"{request.Status}.");
     }
 
     public async Task CancelAppointmentAsync(
-     int clientUserId,
-     int appointmentId,
-     CancelAppointmentDto request)
+    int clientUserId,
+    int appointmentId,
+    CancelAppointmentDto request)
     {
         var reason =
-            request.Reason?.Trim()
-            ?? string.Empty;
+            request.Reason?.Trim() ??
+            string.Empty;
 
         if (string.IsNullOrWhiteSpace(
                 reason))
@@ -432,14 +513,28 @@ public class AppointmentService : IAppointmentService
         }
 
         if (appointment.Status ==
+            AppointmentStatus.Completed)
+        {
+            throw new Exception(
+                "A completed appointment cannot be cancelled.");
+        }
+
+        if (appointment.Status ==
+            AppointmentStatus.Rejected)
+        {
+            throw new Exception(
+                "A rejected appointment cannot be cancelled.");
+        }
+
+        if (appointment.Status ==
             AppointmentStatus.Cancelled)
         {
-            /*
-             * Otkazivanje je idempotentno.
-             * Ako je ranije plaćeno, ponovno
-             * pozivamo refund metodu koja je
-             * također idempotentna.
-             */
+            await _membershipService
+                .HandleAppointmentCancellationAsync(
+                    appointmentId,
+                    reason,
+                    forceRestore: false);
+
             if (appointment.Payment != null)
             {
                 await _paymentService
@@ -452,19 +547,12 @@ public class AppointmentService : IAppointmentService
             return;
         }
 
-        if (appointment.Status ==
-                AppointmentStatus.Completed ||
-            appointment.Status ==
-                AppointmentStatus.Rejected)
-        {
-            throw new Exception(
-                "This appointment can no longer be cancelled.");
-        }
+        await _membershipService
+            .HandleAppointmentCancellationAsync(
+                appointmentId,
+                reason,
+                forceRestore: false);
 
-        /*
-         * Refund se pokreće prije lokalnog
-         * označavanja termina kao otkazanog.
-         */
         if (appointment.Payment != null &&
             (appointment.Payment.Status ==
                  PaymentStatus.Paid ||

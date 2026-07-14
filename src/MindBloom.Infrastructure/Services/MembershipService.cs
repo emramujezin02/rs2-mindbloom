@@ -6,6 +6,7 @@ using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Payments;
 using MindBloom.Infrastructure.Persistence.Context;
 using Stripe;
+using System.Data;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -458,11 +459,6 @@ public class MembershipService : IMembershipService
                 "This membership payment does not belong to you.");
         }
 
-        /*
-         * Idempotent confirmation:
-         * ako je već plaćeno i membership aktiviran,
-         * samo vraćamo trenutno stanje.
-         */
         if (membershipPayment.Status ==
                 PaymentStatus.Paid &&
             membership.IsActive)
@@ -746,107 +742,394 @@ public class MembershipService : IMembershipService
     }
 
     public async Task UseMembershipAsync(
-        int clientUserId,
-        UseMembershipDto request)
+     int clientUserId,
+     UseMembershipDto request)
     {
-        var client =
-            await _context.Clients
-                .FirstOrDefaultAsync(x =>
-                    x.UserId == clientUserId &&
-                    !x.IsDeleted);
+        await using var transaction =
+            await _context.Database
+                .BeginTransactionAsync(
+                    IsolationLevel.Serializable);
 
-        if (client == null)
+        try
         {
-            throw new Exception(
-                "Client not found.");
+            var client =
+                await _context.Clients
+                    .FirstOrDefaultAsync(x =>
+                        x.UserId ==
+                            clientUserId &&
+                        !x.IsDeleted);
+
+            if (client == null)
+            {
+                throw new Exception(
+                    "Client not found.");
+            }
+
+            var appointment =
+                await _context.Appointments
+                    .Include(x => x.Payment)
+                    .FirstOrDefaultAsync(x =>
+                        x.Id ==
+                            request.AppointmentId &&
+                        x.ClientId ==
+                            client.Id);
+
+            if (appointment == null)
+            {
+                throw new Exception(
+                    "Appointment not found.");
+            }
+
+            if (appointment.Status !=
+                AppointmentStatus.Accepted)
+            {
+                throw new Exception(
+                    "Membership can only be reserved for an accepted appointment.");
+            }
+
+            if (appointment.StartUtc <=
+                DateTime.UtcNow)
+            {
+                throw new Exception(
+                    "Membership cannot be used for an appointment that has already started.");
+            }
+
+            if (appointment.IsPaid)
+            {
+                throw new Exception(
+                    "This appointment has already been paid.");
+            }
+
+            if (appointment.Payment != null &&
+                (appointment.Payment.Status ==
+                     PaymentStatus.Paid ||
+                 appointment.Payment.Status ==
+                     PaymentStatus.RefundPending ||
+                 appointment.Payment.Status ==
+                     PaymentStatus.Refunded))
+            {
+                throw new Exception(
+                    "A Stripe payment already exists for this appointment.");
+            }
+
+            var existingUsage =
+                await _context.MembershipUsages
+                    .FirstOrDefaultAsync(x =>
+                        x.AppointmentId ==
+                            appointment.Id);
+
+            if (existingUsage != null)
+            {
+                switch (existingUsage.Status)
+                {
+                    case MembershipUsageStatus.Reserved:
+                        throw new Exception(
+                            "A membership session is already reserved for this appointment.");
+
+                    case MembershipUsageStatus.Consumed:
+                        throw new Exception(
+                            "A membership session has already been consumed for this appointment.");
+
+                    case MembershipUsageStatus.Restored:
+                        throw new Exception(
+                            "A previously restored membership session cannot be reserved again for the same appointment.");
+
+                    default:
+                        throw new Exception(
+                            "Membership usage already exists for this appointment.");
+                }
+            }
+
+            var membership =
+                await _context.ClientMemberships
+                    .Include(x => x.Payment)
+                    .FirstOrDefaultAsync(x =>
+                        x.ClientId ==
+                            client.Id &&
+                        x.TherapistId ==
+                            appointment.TherapistId &&
+                        x.IsActive &&
+                        x.Payment != null &&
+                        x.Payment.Status ==
+                            PaymentStatus.Paid &&
+                        x.RemainingSessions > 0 &&
+                        !x.IsDeleted &&
+                        (x.ExpiresAtUtc == null ||
+                         x.ExpiresAtUtc >
+                            DateTime.UtcNow));
+
+            if (membership == null)
+            {
+                throw new Exception(
+                    "No active paid membership is available for this therapist.");
+            }
+
+            membership.RemainingSessions--;
+
+            if (membership.RemainingSessions == 0)
+            {
+                membership.IsActive = false;
+            }
+
+            var reservedAtUtc =
+                DateTime.UtcNow;
+
+            var usage =
+                new MembershipUsage
+                {
+                    ClientMembershipId =
+                        membership.Id,
+
+                    AppointmentId =
+                        appointment.Id,
+
+                    UsedAtUtc =
+                        reservedAtUtc,
+
+                    ReservedAtUtc =
+                        reservedAtUtc,
+
+                    Status =
+                        MembershipUsageStatus
+                            .Reserved,
+
+                    ResolutionReason =
+                        "Membership session reserved for an accepted appointment."
+                };
+
+            _context.MembershipUsages.Add(
+                usage);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+            }
+            catch (DbUpdateException exception)
+            {
+                throw new Exception(
+                    "A membership session has already been reserved for this appointment.",
+                    exception);
+            }
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+
+            throw;
+        }
+    }
+
+    public async Task
+    HandleAppointmentCancellationAsync(
+        int appointmentId,
+        string reason,
+        bool forceRestore)
+    {
+        const int cancellationDeadlineHours =
+            24;
+
+        var normalizedReason =
+            reason?.Trim() ??
+            string.Empty;
+
+        if (normalizedReason.Length > 500)
+        {
+            normalizedReason =
+                normalizedReason[..500];
         }
 
-        var appointment =
-            await _context.Appointments
-                .FirstOrDefaultAsync(x =>
-                    x.Id ==
-                        request.AppointmentId &&
-                    x.ClientId ==
-                        client.Id);
+        await using var transaction =
+            await _context.Database
+                .BeginTransactionAsync(
+                    IsolationLevel.Serializable);
 
-        if (appointment == null)
+        try
         {
-            throw new Exception(
-                "Appointment not found.");
+            var usage =
+                await _context.MembershipUsages
+                    .Include(x =>
+                        x.ClientMembership)
+                    .Include(x =>
+                        x.Appointment)
+                    .FirstOrDefaultAsync(x =>
+                        x.AppointmentId ==
+                            appointmentId);
+
+            /*
+             * Termin nije plaćen membershipom.
+             * Nema membership sesije koju treba
+             * vratiti ili potrošiti.
+             */
+            if (usage == null)
+            {
+                await transaction.CommitAsync();
+
+                return;
+            }
+
+            /*
+             * Idempotency:
+             * vraćena ili potrošena sesija se više
+             * ne obrađuje.
+             */
+            if (usage.Status ==
+                    MembershipUsageStatus.Restored ||
+                usage.Status ==
+                    MembershipUsageStatus.Consumed)
+            {
+                await transaction.CommitAsync();
+
+                return;
+            }
+
+            if (usage.Status !=
+                MembershipUsageStatus.Reserved)
+            {
+                throw new Exception(
+                    "Membership usage is not in a valid reserved state.");
+            }
+
+            var nowUtc =
+                DateTime.UtcNow;
+
+            var cancellationDeadlineUtc =
+                usage.Appointment.StartUtc
+                    .AddHours(
+                        -cancellationDeadlineHours);
+
+            var isTimelyCancellation =
+                nowUtc <=
+                cancellationDeadlineUtc;
+
+            var shouldRestore =
+                forceRestore ||
+                isTimelyCancellation;
+
+            if (shouldRestore)
+            {
+                var membership =
+                    usage.ClientMembership;
+
+                membership.RemainingSessions =
+                    Math.Min(
+                        membership.TotalSessions,
+                        membership
+                            .RemainingSessions +
+                        1);
+
+                if (membership.RemainingSessions >
+                        0 &&
+                    !membership.IsDeleted &&
+                    (membership.ExpiresAtUtc ==
+                         null ||
+                     membership.ExpiresAtUtc >
+                         nowUtc))
+                {
+                    membership.IsActive =
+                        true;
+                }
+
+                usage.Status =
+                    MembershipUsageStatus.Restored;
+
+                usage.RestoredAtUtc =
+                    nowUtc;
+
+                usage.ResolutionReason =
+                    forceRestore
+                        ? $"Session restored because the appointment was rejected or cancelled by the therapist. {normalizedReason}"
+                        : $"Session restored because the appointment was cancelled at least {cancellationDeadlineHours} hours before its start. {normalizedReason}";
+            }
+            else
+            {
+                /*
+                 * Kod kasnog otkazivanja sesija se ne
+                 * vraća. Nema dodatnog umanjenja jer je
+                 * već rezervisana.
+                 */
+                usage.Status =
+                    MembershipUsageStatus.Consumed;
+
+                usage.ConsumedAtUtc =
+                    nowUtc;
+
+                usage.ResolutionReason =
+                    $"Session consumed because the appointment was cancelled less than "
+                    + $"{cancellationDeadlineHours} hours before its start. "
+                    + normalizedReason;
+            }
+
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
         }
-
-        if (appointment.Status !=
-            AppointmentStatus.Accepted)
+        catch
         {
-            throw new Exception(
-                "Membership can only be used for accepted appointments.");
+            await transaction.RollbackAsync();
+
+            throw;
         }
+    }
 
-        if (appointment.IsPaid)
+    public async Task
+    FinalizeAppointmentUsageAsync(
+        int appointmentId,
+        string reason)
+    {
+        var normalizedReason =
+            reason?.Trim() ??
+            string.Empty;
+
+        if (normalizedReason.Length > 500)
         {
-            throw new Exception(
-                "This appointment has already been paid.");
-        }
-
-        var alreadyUsed =
-            await _context.MembershipUsages
-                .AnyAsync(x =>
-                    x.AppointmentId ==
-                        appointment.Id);
-
-        if (alreadyUsed)
-        {
-            throw new Exception(
-                "Membership has already been used for this appointment.");
-        }
-
-        var membership =
-            await _context.ClientMemberships
-                .Include(x => x.Payment)
-                .FirstOrDefaultAsync(x =>
-                    x.ClientId ==
-                        client.Id &&
-                    x.TherapistId ==
-                        appointment.TherapistId &&
-                    x.IsActive &&
-                    x.Payment != null &&
-                    x.Payment.Status ==
-                        PaymentStatus.Paid &&
-                    x.RemainingSessions > 0 &&
-                    !x.IsDeleted &&
-                    (x.ExpiresAtUtc == null ||
-                     x.ExpiresAtUtc >
-                        DateTime.UtcNow));
-
-        if (membership == null)
-        {
-            throw new Exception(
-                "No active paid membership is available for this therapist.");
-        }
-
-        membership.RemainingSessions--;
-
-        if (membership.RemainingSessions == 0)
-        {
-            membership.IsActive =
-                false;
+            normalizedReason =
+                normalizedReason[..500];
         }
 
         var usage =
-            new MembershipUsage
-            {
-                ClientMembershipId =
-                    membership.Id,
+            await _context.MembershipUsages
+                .FirstOrDefaultAsync(x =>
+                    x.AppointmentId ==
+                        appointmentId);
 
-                AppointmentId =
-                    appointment.Id,
+        if (usage == null)
+        {
+            return;
+        }
 
-                UsedAtUtc =
-                    DateTime.UtcNow
-            };
+        /*
+         * Idempotency:
+         * završeni ili vraćeni usage se ponovo
+         * ne mijenja.
+         */
+        if (usage.Status ==
+                MembershipUsageStatus.Consumed ||
+            usage.Status ==
+                MembershipUsageStatus.Restored)
+        {
+            return;
+        }
 
-        _context.MembershipUsages.Add(
-            usage);
+        if (usage.Status !=
+            MembershipUsageStatus.Reserved)
+        {
+            throw new Exception(
+                "Membership usage is not in a valid reserved state.");
+        }
+
+        usage.Status =
+            MembershipUsageStatus.Consumed;
+
+        usage.ConsumedAtUtc =
+            DateTime.UtcNow;
+
+        usage.ResolutionReason =
+            string.IsNullOrWhiteSpace(
+                normalizedReason)
+                ? "Membership session consumed after the appointment was completed."
+                : normalizedReason;
 
         await _context.SaveChangesAsync();
     }

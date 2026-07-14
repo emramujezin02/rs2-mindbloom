@@ -121,8 +121,7 @@ public class MembershipsController : ControllerBase
 
         return Ok(new
         {
-            message =
-                "Membership used successfully."
+            message = "Membership session reserved successfully."
         });
     }
 

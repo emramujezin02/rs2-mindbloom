@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using MindBloom.Domain.Entities;
+using MindBloom.Domain.Enums;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 
@@ -138,21 +139,46 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         });
     });
 
-        builder.Entity<MembershipUsage>()
-            .HasOne(x => x.ClientMembership)
-            .WithMany(x => x.Usages)
-            .HasForeignKey(x => x.ClientMembershipId)
-            .OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<MembershipUsage>(
+    entity =>
+    {
+        entity.HasOne(x =>
+                x.ClientMembership)
+            .WithMany(x =>
+                x.Usages)
+            .HasForeignKey(x =>
+                x.ClientMembershipId)
+            .OnDelete(
+                DeleteBehavior.Restrict);
 
-        builder.Entity<MembershipUsage>()
-            .HasOne(x => x.Appointment)
+        entity.HasOne(x =>
+                x.Appointment)
             .WithMany()
-            .HasForeignKey(x => x.AppointmentId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .HasForeignKey(x =>
+                x.AppointmentId)
+            .OnDelete(
+                DeleteBehavior.Restrict);
 
-        builder.Entity<MembershipUsage>()
-            .HasIndex(x => x.AppointmentId)
+        entity.Property(x =>
+                x.Status)
+            .HasDefaultValue(
+                MembershipUsageStatus
+                    .Consumed);
+
+        entity.Property(x =>
+                x.ResolutionReason)
+            .HasMaxLength(500);
+
+        entity.HasIndex(x =>
+                x.AppointmentId)
             .IsUnique();
+
+        entity.HasIndex(x => new
+        {
+            x.ClientMembershipId,
+            x.Status
+        });
+    });
 
         builder.Entity<EmailVerificationCode>(
         entity =>
@@ -359,6 +385,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 x.StripePaymentIntentId)
             .IsUnique();
     });
+
+
 
     }
 

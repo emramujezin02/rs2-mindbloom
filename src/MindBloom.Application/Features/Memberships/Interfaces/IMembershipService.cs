@@ -30,4 +30,13 @@ public interface IMembershipService
     Task UseMembershipAsync(
         int clientUserId,
         UseMembershipDto request);
+
+    Task HandleAppointmentCancellationAsync(
+        int appointmentId,
+        string reason,
+        bool forceRestore);
+
+    Task FinalizeAppointmentUsageAsync(
+        int appointmentId,
+        string reason);
 }

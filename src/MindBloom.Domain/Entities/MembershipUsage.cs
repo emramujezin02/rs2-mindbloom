@@ -1,4 +1,6 @@
-﻿namespace MindBloom.Domain.Entities;
+﻿using MindBloom.Domain.Enums;
+
+namespace MindBloom.Domain.Entities;
 
 public class MembershipUsage : BaseEntity
 {
@@ -11,4 +13,14 @@ public class MembershipUsage : BaseEntity
     public Appointment Appointment { get; set; } = null!;
 
     public DateTime UsedAtUtc { get; set; }
+
+    public MembershipUsageStatus Status { get; set; }
+
+    public DateTime? ReservedAtUtc { get; set; }
+
+    public DateTime? ConsumedAtUtc { get; set; }
+
+    public DateTime? RestoredAtUtc { get; set; }
+
+    public string? ResolutionReason { get; set; }
 }
