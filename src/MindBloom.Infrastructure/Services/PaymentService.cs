@@ -11,19 +11,16 @@ namespace MindBloom.Infrastructure.Services;
 
 public class PaymentService : IPaymentService
 {
-    private const string PaymentCurrency =
-        "usd";
+    private const string PaymentCurrency = "usd";
 
-    private readonly ApplicationDbContext
-        _context;
+    private readonly ApplicationDbContext _context;
 
     private readonly StripeVerificationService
         _stripeVerificationService;
 
     public PaymentService(
         ApplicationDbContext context,
-        StripeVerificationService
-            stripeVerificationService)
+        StripeVerificationService stripeVerificationService)
     {
         _context = context;
 
@@ -39,8 +36,7 @@ public class PaymentService : IPaymentService
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
-                    x.UserId ==
-                    clientUserId &&
+                    x.UserId == clientUserId &&
                     !x.IsDeleted);
 
         if (client == null)
@@ -53,8 +49,7 @@ public class PaymentService : IPaymentService
             await _context.Appointments
                 .Include(x => x.Therapist)
                 .FirstOrDefaultAsync(x =>
-                    x.Id ==
-                    request.AppointmentId);
+                    x.Id == request.AppointmentId);
 
         if (appointment == null)
         {
@@ -62,8 +57,7 @@ public class PaymentService : IPaymentService
                 "Appointment not found.");
         }
 
-        if (appointment.ClientId !=
-            client.Id)
+        if (appointment.ClientId != client.Id)
         {
             throw new Exception(
                 "This appointment does not belong to you.");
@@ -82,23 +76,96 @@ public class PaymentService : IPaymentService
                 "This appointment is already paid.");
         }
 
-        var existingPaidPayment =
+        var existingPayment =
             await _context.Payments
-                .AnyAsync(x =>
+                .FirstOrDefaultAsync(x =>
                     x.AppointmentId ==
-                        appointment.Id &&
-                    x.Status ==
-                        PaymentStatus.Paid);
+                    appointment.Id);
 
-        if (existingPaidPayment)
+        if (existingPayment != null)
         {
-            throw new Exception(
-                "This appointment is already paid.");
+            if (existingPayment.Status ==
+                PaymentStatus.Paid)
+            {
+                throw new Exception(
+                    "Appointment has already been paid.");
+            }
+
+            if (existingPayment.Status ==
+                PaymentStatus.Refunded)
+            {
+                throw new Exception(
+                    "Refunded appointments require a new booking.");
+            }
+
+            if (existingPayment.Status ==
+                PaymentStatus.Pending)
+            {
+                PaymentIntent existingPaymentIntent;
+
+                try
+                {
+                    existingPaymentIntent =
+                        await _stripeVerificationService
+                            .GetPaymentIntentAsync(
+                                existingPayment
+                                    .StripePaymentIntentId);
+                }
+                catch (StripeException exception)
+                {
+                    throw new Exception(
+                        "Existing payment could not be verified with Stripe.",
+                        exception);
+                }
+
+                var reusableStatuses =
+                    new[]
+                    {
+                        "requires_payment_method",
+                        "requires_confirmation",
+                        "requires_action",
+                        "processing",
+                        "requires_capture"
+                    };
+
+                if (reusableStatuses.Any(status =>
+                        string.Equals(
+                            existingPaymentIntent.Status,
+                            status,
+                            StringComparison.OrdinalIgnoreCase)))
+                {
+                    return new PaymentIntentResponseDto
+                    {
+                        ClientSecret =
+                            existingPaymentIntent.ClientSecret,
+
+                        PaymentIntentId =
+                            existingPaymentIntent.Id
+                    };
+                }
+
+                if (string.Equals(
+                        existingPaymentIntent.Status,
+                        "succeeded",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return new PaymentIntentResponseDto
+                    {
+                        ClientSecret =
+                            existingPaymentIntent.ClientSecret,
+
+                        PaymentIntentId =
+                            existingPaymentIntent.Id
+                    };
+                }
+
+                existingPayment.Status =
+                    PaymentStatus.Failed;
+            }
         }
 
         var amount =
-            appointment.Therapist
-                .HourlyRate;
+            appointment.Therapist.HourlyRate;
 
         if (amount <= 0)
         {
@@ -110,8 +177,7 @@ public class PaymentService : IPaymentService
             Environment.GetEnvironmentVariable(
                 "STRIPE_SECRET_KEY");
 
-        if (string.IsNullOrWhiteSpace(
-                secretKey))
+        if (string.IsNullOrWhiteSpace(secretKey))
         {
             throw new Exception(
                 "Stripe configuration is missing.");
@@ -124,8 +190,7 @@ public class PaymentService : IPaymentService
             new PaymentIntentCreateOptions
             {
                 Amount =
-                    ConvertToMinorUnits(
-                        amount),
+                    ConvertToMinorUnits(amount),
 
                 Currency =
                     PaymentCurrency,
@@ -140,21 +205,17 @@ public class PaymentService : IPaymentService
                     new Dictionary<string, string>
                     {
                         ["appointmentId"] =
-                            appointment.Id
-                                .ToString(),
+                            appointment.Id.ToString(),
 
                         ["clientUserId"] =
-                            clientUserId
-                                .ToString(),
+                            clientUserId.ToString(),
 
                         ["clientId"] =
-                            client.Id
-                                .ToString()
+                            client.Id.ToString()
                     },
 
                 Description =
-                    $"MindBloom appointment "
-                    + $"{appointment.Id}"
+                    $"MindBloom appointment {appointment.Id}"
             };
 
         var paymentIntentService =
@@ -164,26 +225,51 @@ public class PaymentService : IPaymentService
             await paymentIntentService
                 .CreateAsync(options);
 
-        var payment =
-            new Payment
-            {
-                AppointmentId =
-                    appointment.Id,
+        if (existingPayment != null)
+        {
+            existingPayment.Amount =
+                amount;
 
-                Amount =
-                    amount,
+            existingPayment.Status =
+                PaymentStatus.Pending;
 
-                Status =
-                    PaymentStatus.Pending,
+            existingPayment.StripePaymentIntentId =
+                paymentIntent.Id;
 
-                StripePaymentIntentId =
-                    paymentIntent.Id
-            };
+            existingPayment.PaidAtUtc =
+                null;
+        }
+        else
+        {
+            var payment =
+                new Payment
+                {
+                    AppointmentId =
+                        appointment.Id,
 
-        _context.Payments.Add(
-            payment);
+                    Amount =
+                        amount,
 
-        await _context.SaveChangesAsync();
+                    Status =
+                        PaymentStatus.Pending,
+
+                    StripePaymentIntentId =
+                        paymentIntent.Id
+                };
+
+            _context.Payments.Add(payment);
+        }
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception)
+        {
+            throw new Exception(
+                "A payment already exists for this appointment or Stripe PaymentIntent.",
+                exception);
+        }
 
         return new PaymentIntentResponseDto
         {
@@ -209,8 +295,7 @@ public class PaymentService : IPaymentService
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
-                    x.UserId ==
-                    clientUserId &&
+                    x.UserId == clientUserId &&
                     !x.IsDeleted);
 
         if (client == null)
@@ -221,10 +306,8 @@ public class PaymentService : IPaymentService
 
         var payment =
             await _context.Payments
-                .Include(x =>
-                    x.Appointment)
-                .ThenInclude(x =>
-                    x.Therapist)
+                .Include(x => x.Appointment)
+                .ThenInclude(x => x.Therapist)
                 .FirstOrDefaultAsync(x =>
                     x.StripePaymentIntentId ==
                     request.PaymentIntentId);
@@ -235,6 +318,10 @@ public class PaymentService : IPaymentService
                 "Payment not found.");
         }
 
+        /*
+         * Provjera vlasništva mora biti prije
+         * idempotentnog returna.
+         */
         if (payment.Appointment.ClientId !=
             client.Id)
         {
@@ -249,11 +336,38 @@ public class PaymentService : IPaymentService
                 "This payment has already been refunded.");
         }
 
+        /*
+         * Idempotentni rezultat:
+         * ako je payment već evidentiran kao plaćen,
+         * ne izvršavaju se ponovo nikakvi efekti.
+         */
         if (payment.Status ==
-                PaymentStatus.Paid &&
-            payment.Appointment.IsPaid)
+            PaymentStatus.Paid)
         {
+            if (!payment.Appointment.IsPaid)
+            {
+                payment.Appointment.IsPaid =
+                    true;
+
+                await _context.SaveChangesAsync();
+            }
+
             return;
+        }
+
+        var anotherPaidPaymentExists =
+            await _context.Payments
+                .AnyAsync(x =>
+                    x.Id != payment.Id &&
+                    x.AppointmentId ==
+                    payment.AppointmentId &&
+                    x.Status ==
+                    PaymentStatus.Paid);
+
+        if (anotherPaidPaymentExists)
+        {
+            throw new Exception(
+                "Appointment already has a completed payment.");
         }
 
         PaymentIntent stripePaymentIntent;
@@ -272,8 +386,10 @@ public class PaymentService : IPaymentService
                 exception);
         }
 
-        if (stripePaymentIntent.Id !=
-            payment.StripePaymentIntentId)
+        if (!string.Equals(
+                stripePaymentIntent.Id,
+                payment.StripePaymentIntentId,
+                StringComparison.Ordinal))
         {
             throw new Exception(
                 "Stripe payment reference does not match.");
@@ -286,8 +402,7 @@ public class PaymentService : IPaymentService
         {
             throw new Exception(
                 $"Stripe payment has not succeeded. "
-                + $"Current status: "
-                + $"{stripePaymentIntent.Status}.");
+                + $"Current status: {stripePaymentIntent.Status}.");
         }
 
         var expectedAmount =
@@ -319,13 +434,41 @@ public class PaymentService : IPaymentService
         payment.Status =
             PaymentStatus.Paid;
 
-        payment.PaidAtUtc =
+        payment.PaidAtUtc ??=
             DateTime.UtcNow;
 
         payment.Appointment.IsPaid =
             true;
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception)
+        {
+            /*
+             * U slučaju paralelnih confirm zahtjeva
+             * ponovo provjeravamo stanje iz baze.
+             */
+            _context.ChangeTracker.Clear();
+
+            var confirmedPayment =
+                await _context.Payments
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x =>
+                        x.StripePaymentIntentId ==
+                        request.PaymentIntentId);
+
+            if (confirmedPayment?.Status ==
+                PaymentStatus.Paid)
+            {
+                return;
+            }
+
+            throw new Exception(
+                "Payment confirmation could not be completed.",
+                exception);
+        }
     }
 
     public async Task<List<PaymentHistoryDto>>
@@ -335,8 +478,7 @@ public class PaymentService : IPaymentService
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
-                    x.UserId ==
-                    clientUserId);
+                    x.UserId == clientUserId);
 
         if (client == null)
         {
@@ -346,10 +488,8 @@ public class PaymentService : IPaymentService
 
         return await _context.Payments
             .Include(x => x.Appointment)
-                .ThenInclude(x =>
-                    x.Therapist)
-                    .ThenInclude(x =>
-                        x.User)
+            .ThenInclude(x => x.Therapist)
+            .ThenInclude(x => x.User)
             .Where(x =>
                 x.Appointment.ClientId ==
                 client.Id)
@@ -406,23 +546,16 @@ public class PaymentService : IPaymentService
 
         var payment =
             await _context.Payments
-                .Include(x =>
-                    x.Appointment)
-                    .ThenInclude(x =>
-                        x.Therapist)
-                        .ThenInclude(x =>
-                            x.User)
-                .Include(x =>
-                    x.Appointment)
-                    .ThenInclude(x =>
-                        x.Client)
-                        .ThenInclude(x =>
-                            x.User)
+                .Include(x => x.Appointment)
+                .ThenInclude(x => x.Therapist)
+                .ThenInclude(x => x.User)
+                .Include(x => x.Appointment)
+                .ThenInclude(x => x.Client)
+                .ThenInclude(x => x.User)
                 .FirstOrDefaultAsync(x =>
-                    x.Id ==
-                        paymentId &&
+                    x.Id == paymentId &&
                     x.Appointment.ClientId ==
-                        client.Id);
+                    client.Id);
 
         if (payment == null)
         {
@@ -449,12 +582,10 @@ public class PaymentService : IPaymentService
                 payment.AppointmentId,
 
             AppointmentStartUtc =
-                payment.Appointment
-                    .StartUtc,
+                payment.Appointment.StartUtc,
 
             AppointmentEndUtc =
-                payment.Appointment
-                    .EndUtc,
+                payment.Appointment.EndUtc,
 
             TherapistName =
                 payment.Appointment
@@ -503,19 +634,21 @@ public class PaymentService : IPaymentService
 
         var payment =
             await _context.Payments
-                .Include(x =>
-                    x.Appointment)
+                .Include(x => x.Appointment)
                 .FirstOrDefaultAsync(x =>
                     x.AppointmentId ==
-                        appointmentId &&
+                    appointmentId &&
                     x.Appointment.ClientId ==
-                        client.Id);
+                    client.Id);
 
         if (payment == null)
         {
             return;
         }
 
+        /*
+         * Refund je također idempotentan.
+         */
         if (payment.Status ==
             PaymentStatus.Refunded)
         {
@@ -529,8 +662,7 @@ public class PaymentService : IPaymentService
         }
 
         if (string.IsNullOrWhiteSpace(
-                payment
-                    .StripePaymentIntentId))
+                payment.StripePaymentIntentId))
         {
             throw new Exception(
                 "Stripe payment reference is missing.");
@@ -557,8 +689,7 @@ public class PaymentService : IPaymentService
             new RefundCreateOptions
             {
                 PaymentIntent =
-                    payment
-                        .StripePaymentIntentId,
+                    payment.StripePaymentIntentId,
 
                 Reason =
                     RefundReasons
@@ -568,12 +699,10 @@ public class PaymentService : IPaymentService
                     new Dictionary<string, string>
                     {
                         ["appointmentId"] =
-                            appointmentId
-                                .ToString(),
+                            appointmentId.ToString(),
 
                         ["clientUserId"] =
-                            clientUserId
-                                .ToString(),
+                            clientUserId.ToString(),
 
                         ["cancellationReason"] =
                             reason
@@ -588,13 +717,11 @@ public class PaymentService : IPaymentService
         if (!string.Equals(
                 stripeRefund.Status,
                 "succeeded",
-                StringComparison
-                    .OrdinalIgnoreCase) &&
+                StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(
                 stripeRefund.Status,
                 "pending",
-                StringComparison
-                    .OrdinalIgnoreCase))
+                StringComparison.OrdinalIgnoreCase))
         {
             throw new Exception(
                 "Stripe refund could not be initiated.");
@@ -672,8 +799,7 @@ public class PaymentService : IPaymentService
                 "Stripe client metadata is missing or invalid.");
         }
 
-        if (metadataClientId !=
-            clientId)
+        if (metadataClientId != clientId)
         {
             throw new Exception(
                 "Stripe payment is linked to a different client profile.");

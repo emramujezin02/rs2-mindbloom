@@ -259,6 +259,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             });
         });
 
+        builder.Entity<Payment>()
+    .HasIndex(x => x.StripePaymentIntentId)
+    .IsUnique();
+
+        builder.Entity<Payment>()
+            .HasIndex(x => x.AppointmentId)
+            .IsUnique();
+
 
         builder.Entity<Review>()
     .HasOne(x => x.Appointment)
