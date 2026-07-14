@@ -20,11 +20,13 @@ public class ClientMembership : BaseEntity
 
     public decimal Price { get; set; }
 
-    public bool IsActive { get; set; } = true;
+    public bool IsActive { get; set; }
 
-    public DateTime PurchasedAtUtc { get; set; }
+    public DateTime? PurchasedAtUtc { get; set; }
 
     public DateTime? ExpiresAtUtc { get; set; }
+
+    public MembershipPayment? Payment { get; set; }
 
     public ICollection<MembershipUsage> Usages { get; set; }
         = new List<MembershipUsage>();

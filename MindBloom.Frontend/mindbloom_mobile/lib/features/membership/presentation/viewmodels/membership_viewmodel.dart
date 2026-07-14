@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 import '../../data/models/membership_model.dart';
 import '../../data/models/membership_plan_model.dart';
+import '../../data/models/membership_receipt_model.dart';
 import '../../data/models/purchase_membership_request.dart';
 import '../../data/models/use_membership_request.dart';
 import '../../data/repositories/membership_repository.dart';
@@ -12,70 +14,122 @@ class MembershipViewModel extends ChangeNotifier {
   MembershipViewModel({required this.repository});
 
   bool isLoading = false;
+  bool isPurchasing = false;
+
   String? error;
 
   List<MembershipModel> memberships = [];
+
   List<MembershipPlanModel> plans = [];
 
   Future<void> loadMyMemberships() async {
     isLoading = true;
     error = null;
+
     notifyListeners();
 
     try {
       memberships = await repository.getMyMemberships();
-    } catch (e) {
-      error = e.toString();
-    }
+    } catch (exception) {
+      error = _normalizeError(exception);
+    } finally {
+      isLoading = false;
 
-    isLoading = false;
-    notifyListeners();
+      notifyListeners();
+    }
   }
 
   Future<void> loadPlans(int therapistId) async {
     isLoading = true;
     error = null;
+
     notifyListeners();
 
     try {
       plans = await repository.getPlansForTherapist(therapistId);
-    } catch (e) {
-      error = e.toString();
-    }
+    } catch (exception) {
+      error = _normalizeError(exception);
+    } finally {
+      isLoading = false;
 
-    isLoading = false;
-    notifyListeners();
+      notifyListeners();
+    }
   }
 
   Future<bool> purchaseMembership({
     required int therapistId,
     required int planType,
   }) async {
-    isLoading = true;
+    if (isPurchasing) {
+      return false;
+    }
+
+    isPurchasing = true;
     error = null;
+
     notifyListeners();
 
     try {
-      await repository.purchaseMembership(
+      final paymentIntent = await repository.createPaymentIntent(
         PurchaseMembershipRequest(therapistId: therapistId, planType: planType),
       );
 
-      isLoading = false;
-      notifyListeners();
+      if (paymentIntent.clientSecret.trim().isEmpty) {
+        throw Exception('Stripe client secret was not returned.');
+      }
 
-      return true;
-    } catch (e) {
-      error = e.toString();
-      isLoading = false;
-      notifyListeners();
+      if (paymentIntent.paymentIntentId.trim().isEmpty) {
+        throw Exception('Stripe PaymentIntent ID was not returned.');
+      }
+
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: paymentIntent.clientSecret,
+
+          merchantDisplayName: 'MindBloom',
+
+          style: ThemeMode.system,
+
+          primaryButtonLabel: 'Purchase membership',
+        ),
+      );
+
+      await Stripe.instance.presentPaymentSheet();
+
+      final membership = await repository.confirmPayment(
+        paymentIntent.paymentIntentId,
+      );
+
+      memberships.removeWhere((item) => item.id == membership.id);
+
+      memberships.insert(0, membership);
+
+      return membership.isPaid && membership.isActive;
+    } on StripeException catch (exception) {
+      error =
+          exception.error.localizedMessage ??
+          'Stripe payment was cancelled or could not be completed.';
 
       return false;
+    } catch (exception) {
+      error = _normalizeError(exception);
+
+      return false;
+    } finally {
+      isPurchasing = false;
+
+      notifyListeners();
     }
+  }
+
+  Future<MembershipReceiptModel> getReceipt(int membershipId) {
+    return repository.getReceipt(membershipId);
   }
 
   Future<bool> useMembership({required int appointmentId}) async {
     isLoading = true;
     error = null;
+
     notifyListeners();
 
     try {
@@ -83,16 +137,25 @@ class MembershipViewModel extends ChangeNotifier {
         UseMembershipRequest(appointmentId: appointmentId),
       );
 
-      isLoading = false;
-      notifyListeners();
-
       return true;
-    } catch (e) {
-      error = e.toString();
-      isLoading = false;
-      notifyListeners();
+    } catch (exception) {
+      error = _normalizeError(exception);
 
       return false;
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
     }
+  }
+
+  String _normalizeError(Object exception) {
+    final message = exception.toString();
+
+    if (message.startsWith('Exception: ')) {
+      return message.substring('Exception: '.length);
+    }
+
+    return message;
   }
 }

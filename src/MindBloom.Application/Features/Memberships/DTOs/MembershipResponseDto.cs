@@ -18,7 +18,11 @@ public class MembershipResponseDto
 
     public bool IsActive { get; set; }
 
-    public DateTime PurchasedAtUtc { get; set; }
+    public bool IsPaid { get; set; }
+
+    public string PaymentStatus { get; set; } = string.Empty;
+
+    public DateTime? PurchasedAtUtc { get; set; }
 
     public DateTime? ExpiresAtUtc { get; set; }
 }

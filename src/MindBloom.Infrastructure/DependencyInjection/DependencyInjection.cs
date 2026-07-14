@@ -160,6 +160,8 @@ public static class DependencyInjection
 
         services.AddScoped<IPaymentService,PaymentService>();
 
+        services.AddScoped<IMembershipService,MembershipService>();
+
         return services;
     }
 }

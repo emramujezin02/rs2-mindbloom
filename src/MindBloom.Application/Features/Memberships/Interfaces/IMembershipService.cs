@@ -4,15 +4,28 @@ namespace MindBloom.Application.Features.Memberships.Interfaces;
 
 public interface IMembershipService
 {
-    Task<List<MembershipPlanDto>> GetPlansForTherapistAsync(
-        int therapistId);
+    Task<List<MembershipPlanDto>>
+        GetPlansForTherapistAsync(
+            int therapistId);
 
-    Task<MembershipResponseDto> PurchaseAsync(
-        int clientUserId,
-        PurchaseMembershipDto request);
+    Task<MembershipPaymentIntentResponseDto>
+        CreatePaymentIntentAsync(
+            int clientUserId,
+            CreateMembershipPaymentIntentDto request);
 
-    Task<List<MembershipResponseDto>> GetMyMembershipsAsync(
-        int clientUserId);
+    Task<MembershipResponseDto>
+        ConfirmPaymentAsync(
+            int clientUserId,
+            ConfirmMembershipPaymentDto request);
+
+    Task<List<MembershipResponseDto>>
+        GetMyMembershipsAsync(
+            int clientUserId);
+
+    Task<MembershipReceiptDto>
+        GetReceiptAsync(
+            int clientUserId,
+            int membershipId);
 
     Task UseMembershipAsync(
         int clientUserId,

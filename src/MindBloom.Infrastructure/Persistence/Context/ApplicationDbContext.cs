@@ -34,7 +34,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Article> Articles => Set<Article>();
     public DbSet<Workshop> Workshops => Set<Workshop>();
     public DbSet<WorkshopRegistration>WorkshopRegistrations => Set<WorkshopRegistration>();
-    
+    public DbSet<MembershipPayment> MembershipPayments =>Set<MembershipPayment>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -105,17 +106,37 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Entity<ClientMembership>()
-            .HasOne(x => x.Client)
+        builder.Entity<ClientMembership>(
+    entity =>
+    {
+        entity.Property(x => x.Price)
+            .HasPrecision(18, 2);
+
+        entity.HasOne(x => x.Client)
             .WithMany()
             .HasForeignKey(x => x.ClientId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.Entity<ClientMembership>()
-            .HasOne(x => x.Therapist)
+        entity.HasOne(x => x.Therapist)
             .WithMany()
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasIndex(x => new
+        {
+            x.ClientId,
+            x.TherapistId,
+            x.IsActive
+        });
+
+        entity.HasIndex(x => new
+        {
+            x.ClientId,
+            x.TherapistId,
+            x.PlanType,
+            x.IsDeleted
+        });
+    });
 
         builder.Entity<MembershipUsage>()
             .HasOne(x => x.ClientMembership)
@@ -259,13 +280,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             });
         });
 
-        builder.Entity<Payment>()
-            .HasIndex(x => x.StripePaymentIntentId)
-            .IsUnique();
-
-        builder.Entity<Payment>()
-            .HasIndex(x => x.AppointmentId)
-            .IsUnique();
 
 
         builder.Entity<Payment>(
@@ -311,6 +325,40 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
              .HasFilter(
                  "[StripeRefundId] IS NOT NULL");
      });
+
+        builder.Entity<MembershipPayment>(
+    entity =>
+    {
+        entity.Property(x => x.Amount)
+            .HasPrecision(18, 2);
+
+        entity.Property(x => x.Currency)
+            .IsRequired()
+            .HasMaxLength(10);
+
+        entity.Property(x =>
+                x.StripePaymentIntentId)
+            .IsRequired()
+            .HasMaxLength(255);
+
+        entity.HasOne(x =>
+                x.ClientMembership)
+            .WithOne(x =>
+                x.Payment)
+            .HasForeignKey<MembershipPayment>(
+                x =>
+                    x.ClientMembershipId)
+            .OnDelete(
+                DeleteBehavior.Restrict);
+
+        entity.HasIndex(x =>
+                x.ClientMembershipId)
+            .IsUnique();
+
+        entity.HasIndex(x =>
+                x.StripePaymentIntentId)
+            .IsUnique();
+    });
 
     }
 

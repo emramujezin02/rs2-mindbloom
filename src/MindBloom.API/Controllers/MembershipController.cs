@@ -35,21 +35,36 @@ public class MembershipsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("purchase")]
+    [HttpPost("create-payment-intent")]
     [Authorize(Roles = "Client")]
     public async Task<IActionResult>
-        Purchase(
-            PurchaseMembershipDto request)
+        CreatePaymentIntent(
+            CreateMembershipPaymentIntentDto request)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetAuthenticatedUserId();
 
         var result =
             await _membershipService
-                .PurchaseAsync(
+                .CreatePaymentIntentAsync(
+                    userId,
+                    request);
+
+        return Ok(result);
+    }
+
+    [HttpPost("confirm-payment")]
+    [Authorize(Roles = "Client")]
+    public async Task<IActionResult>
+        ConfirmPayment(
+            ConfirmMembershipPaymentDto request)
+    {
+        var userId =
+            GetAuthenticatedUserId();
+
+        var result =
+            await _membershipService
+                .ConfirmPaymentAsync(
                     userId,
                     request);
 
@@ -62,15 +77,30 @@ public class MembershipsController : ControllerBase
         GetMyMemberships()
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetAuthenticatedUserId();
 
         var result =
             await _membershipService
                 .GetMyMembershipsAsync(
                     userId);
+
+        return Ok(result);
+    }
+
+    [HttpGet("{membershipId}/receipt")]
+    [Authorize(Roles = "Client")]
+    public async Task<IActionResult>
+        GetReceipt(
+            int membershipId)
+    {
+        var userId =
+            GetAuthenticatedUserId();
+
+        var result =
+            await _membershipService
+                .GetReceiptAsync(
+                    userId,
+                    membershipId);
 
         return Ok(result);
     }
@@ -82,10 +112,7 @@ public class MembershipsController : ControllerBase
             UseMembershipDto request)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetAuthenticatedUserId();
 
         await _membershipService
             .UseMembershipAsync(
@@ -97,5 +124,22 @@ public class MembershipsController : ControllerBase
             message =
                 "Membership used successfully."
         });
+    }
+
+    private int GetAuthenticatedUserId()
+    {
+        var value =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(
+                value,
+                out var userId))
+        {
+            throw new UnauthorizedAccessException(
+                "Authenticated user identifier is invalid.");
+        }
+
+        return userId;
     }
 }
