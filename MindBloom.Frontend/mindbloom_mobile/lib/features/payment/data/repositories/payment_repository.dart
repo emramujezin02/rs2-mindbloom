@@ -3,6 +3,7 @@ import '../models/create_payment_intent_request.dart';
 import '../models/payment_intent_response.dart';
 import '../models/payment_model.dart';
 import '../services/payment_api_service.dart';
+import '../models/payment_receipt_model.dart';
 
 class PaymentRepository {
   final PaymentApiService apiService;
@@ -31,5 +32,9 @@ class PaymentRepository {
     return payments.any(
       (payment) => payment.appointmentId == appointmentId && payment.isPaid,
     );
+  }
+
+  Future<PaymentReceiptModel> getReceipt(int paymentId) {
+    return apiService.getReceipt(paymentId);
   }
 }

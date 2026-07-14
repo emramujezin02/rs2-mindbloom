@@ -8,6 +8,7 @@ class AppointmentModel {
   final String type;
   final String? meetingLink;
   final String? location;
+  final int? paymentId;
 
   AppointmentModel({
     required this.id,
@@ -19,6 +20,7 @@ class AppointmentModel {
     required this.type,
     this.meetingLink,
     this.location,
+    this.paymentId,
   });
 
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,7 @@ class AppointmentModel {
       type: json['type'] ?? '',
       meetingLink: json['meetingLink'],
       location: json['location'],
+      paymentId: json["paymentId"],
     );
   }
 }

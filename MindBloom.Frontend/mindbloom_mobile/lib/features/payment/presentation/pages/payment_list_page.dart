@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../viewmodels/payment_list_viewmodel.dart';
+import 'payment_receipt_page.dart';
 
 class PaymentListPage extends StatefulWidget {
   const PaymentListPage({super.key});
@@ -38,6 +39,14 @@ class _PaymentListPageState extends State<PaymentListPage> {
 
   Future<void> _refresh() async {
     await _viewModel.loadPayments();
+  }
+
+  void _openReceipt(int paymentId) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PaymentReceiptPage(paymentId: paymentId),
+      ),
+    );
   }
 
   @override
@@ -102,6 +111,11 @@ class _PaymentListPageState extends State<PaymentListPage> {
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
+              onTap: payment.isPaid
+                  ? () {
+                      _openReceipt(payment.id);
+                    }
+                  : null,
               leading: Icon(
                 payment.isPaid
                     ? Icons.check_circle
@@ -112,7 +126,8 @@ class _PaymentListPageState extends State<PaymentListPage> {
               title: Text(payment.therapistName),
               subtitle: Text(
                 '${formatter.format(payment.createdAtUtc.toLocal())}\n'
-                'Appointment #${payment.appointmentId}',
+                'Appointment #${payment.appointmentId}'
+                '${payment.isPaid ? '\nTap to view receipt' : ''}',
               ),
               isThreeLine: true,
               trailing: Column(
@@ -125,6 +140,7 @@ class _PaymentListPageState extends State<PaymentListPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(payment.status),
+                  if (payment.isPaid) const Icon(Icons.chevron_right, size: 18),
                 ],
               ),
             ),

@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../payment/presentation/pages/payment_receipt_page.dart';
 import '../../../payment/presentation/viewmodels/appointment_payment_viewmodel.dart';
 import '../../data/models/appointment_model.dart';
 import '../viewmodels/appointment_details_viewmodel.dart';
@@ -135,6 +136,28 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         const SnackBar(content: Text('Payment completed successfully.')),
       );
     }
+  }
+
+  void _openReceipt() {
+    final appointment = _viewModel.currentAppointment;
+
+    final paymentId = appointment.paymentId;
+
+    if (paymentId == null || paymentId <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Receipt is not available for this appointment.'),
+        ),
+      );
+
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PaymentReceiptPage(paymentId: paymentId),
+      ),
+    );
   }
 
   Future<void> _showCancellationDialog() async {
@@ -270,6 +293,11 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
     final canPay = normalizedStatus == 'accepted' && !_paymentViewModel.isPaid;
 
+    final canOpenReceipt =
+        _paymentViewModel.isPaid &&
+        appointment.paymentId != null &&
+        appointment.paymentId! > 0;
+
     final canJoinSession =
         appointment.type.trim().toLowerCase() == 'online' &&
         appointment.meetingLink != null &&
@@ -337,7 +365,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
             ],
 
             if (appointment.meetingLink != null &&
-                appointment.meetingLink!.isNotEmpty) ...[
+                appointment.meetingLink!.trim().isNotEmpty) ...[
               const SizedBox(height: 20),
               Card(
                 child: Padding(
@@ -358,7 +386,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
             ],
 
             if (appointment.location != null &&
-                appointment.location!.isNotEmpty) ...[
+                appointment.location!.trim().isNotEmpty) ...[
               const SizedBox(height: 20),
               Card(
                 child: Padding(
@@ -399,6 +427,25 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
             if (canPay) const SizedBox(height: 10),
 
+            if (_paymentViewModel.isPaid)
+              ElevatedButton.icon(
+                onPressed: canOpenReceipt
+                    ? _openReceipt
+                    : () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Receipt is not available for this appointment.',
+                            ),
+                          ),
+                        );
+                      },
+                icon: const Icon(Icons.receipt_long),
+                label: const Text('View receipt'),
+              ),
+
+            if (_paymentViewModel.isPaid) const SizedBox(height: 10),
+
             ElevatedButton.icon(
               onPressed: canJoinSession ? _joinSession : null,
               icon: const Icon(Icons.video_call),
@@ -413,7 +460,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               onPressed: () {
                 Navigator.of(context).pushNamed(AppRouter.myPayments);
               },
-              icon: const Icon(Icons.receipt_long),
+              icon: const Icon(Icons.payments),
               label: const Text('Payment history'),
             ),
 

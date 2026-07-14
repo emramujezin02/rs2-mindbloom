@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../../data/models/payment_receipt_model.dart';
 import '../../data/models/payment_model.dart';
 import '../../data/repositories/payment_repository.dart';
 
@@ -29,5 +29,9 @@ class PaymentListViewModel extends ChangeNotifier {
 
       notifyListeners();
     }
+  }
+
+  Future<PaymentReceiptModel> loadReceipt(int paymentId) {
+    return repository.getReceipt(paymentId);
   }
 }

@@ -3,6 +3,7 @@ import '../models/confirm_payment_request.dart';
 import '../models/create_payment_intent_request.dart';
 import '../models/payment_intent_response.dart';
 import '../models/payment_model.dart';
+import '../models/payment_receipt_model.dart';
 
 class PaymentApiService {
   final ApiClient apiClient;
@@ -30,5 +31,11 @@ class PaymentApiService {
 
   Future<void> confirmPayment(ConfirmPaymentRequest request) async {
     await apiClient.post('/Payments/confirm', body: request.toJson());
+  }
+
+  Future<PaymentReceiptModel> getReceipt(int paymentId) async {
+    final response = await apiClient.get('/Payments/$paymentId/receipt');
+
+    return PaymentReceiptModel.fromJson(response);
   }
 }
