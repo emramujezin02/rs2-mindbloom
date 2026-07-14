@@ -11,8 +11,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
-  url_launcher: ^6.3.2
 
   cupertino_icons: ^1.0.8
 
@@ -26,6 +24,10 @@ dependencies:
 
   intl: ^0.20.2
 
+  url_launcher: ^6.3.2
+
+  flutter_stripe: ^13.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -33,7 +35,6 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
-
   uses-material-design: true
 
   assets:

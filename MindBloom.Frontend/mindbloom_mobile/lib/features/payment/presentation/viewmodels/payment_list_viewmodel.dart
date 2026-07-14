@@ -22,12 +22,12 @@ class PaymentListViewModel extends ChangeNotifier {
 
     try {
       payments = await repository.getMyPayments();
-    } catch (e) {
-      error = e.toString();
+    } catch (exception) {
+      error = exception.toString();
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
     }
-
-    isLoading = false;
-
-    notifyListeners();
   }
 }

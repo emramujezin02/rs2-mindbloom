@@ -1,4 +1,7 @@
 import '../../../../core/network/api_client.dart';
+import '../models/confirm_payment_request.dart';
+import '../models/create_payment_intent_request.dart';
+import '../models/payment_intent_response.dart';
 import '../models/payment_model.dart';
 
 class PaymentApiService {
@@ -9,6 +12,23 @@ class PaymentApiService {
   Future<List<PaymentModel>> getMyPayments() async {
     final response = await apiClient.get('/Payments/mine');
 
-    return (response as List).map((e) => PaymentModel.fromJson(e)).toList();
+    return (response as List)
+        .map((item) => PaymentModel.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<PaymentIntentResponse> createPaymentIntent(
+    CreatePaymentIntentRequest request,
+  ) async {
+    final response = await apiClient.post(
+      '/Payments/create-intent',
+      body: request.toJson(),
+    );
+
+    return PaymentIntentResponse.fromJson(response as Map<String, dynamic>);
+  }
+
+  Future<void> confirmPayment(ConfirmPaymentRequest request) async {
+    await apiClient.post('/Payments/confirm', body: request.toJson());
   }
 }

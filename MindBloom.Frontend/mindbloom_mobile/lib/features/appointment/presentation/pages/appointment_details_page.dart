@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../payment/presentation/viewmodels/appointment_payment_viewmodel.dart';
 import '../../data/models/appointment_model.dart';
 import '../viewmodels/appointment_details_viewmodel.dart';
 
@@ -19,6 +20,8 @@ class AppointmentDetailsPage extends StatefulWidget {
 class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   late final AppointmentDetailsViewModel _viewModel;
 
+  late final AppointmentPaymentViewModel _paymentViewModel;
+
   @override
   void initState() {
     super.initState();
@@ -27,12 +30,20 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       widget.appointment,
     );
 
+    _paymentViewModel = AppInjection.createAppointmentPaymentViewModel();
+
     _viewModel.addListener(_onViewModelChanged);
+
+    _paymentViewModel.addListener(_onViewModelChanged);
+
+    _paymentViewModel.loadPaymentStatus(widget.appointment.id);
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
+
+    _paymentViewModel.removeListener(_onViewModelChanged);
 
     super.dispose();
   }
@@ -68,9 +79,60 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
-    if (!opened && mounted) {
+    if (!mounted) {
+      return;
+    }
+
+    if (!opened) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open meeting link.')),
+      );
+    }
+  }
+
+  Future<void> _payAppointment() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Confirm payment'),
+          content: Text(
+            'Are you sure you want to pay for the appointment with '
+            '${_viewModel.currentAppointment.therapistName}?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Continue to payment'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final success = await _paymentViewModel.payForAppointment(
+      _viewModel.currentAppointment.id,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Payment completed successfully.')),
       );
     }
   }
@@ -188,6 +250,10 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
           ),
         ),
       );
+
+      await _paymentViewModel.loadPaymentStatus(
+        _viewModel.currentAppointment.id,
+      );
     }
   }
 
@@ -201,6 +267,8 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
     final canCancel =
         normalizedStatus == 'pending' || normalizedStatus == 'accepted';
+
+    final canPay = normalizedStatus == 'accepted' && !_paymentViewModel.isPaid;
 
     final canJoinSession =
         appointment.type.trim().toLowerCase() == 'online' &&
@@ -252,10 +320,25 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            if (_paymentViewModel.isCheckingPayment) ...[
+              const SizedBox(height: 16),
+              const Center(child: CircularProgressIndicator()),
+            ],
+
+            if (_paymentViewModel.isPaid) ...[
+              const SizedBox(height: 16),
+              const Card(
+                child: ListTile(
+                  leading: Icon(Icons.check_circle),
+                  title: Text('Appointment paid'),
+                  subtitle: Text('No additional payment is required.'),
+                ),
+              ),
+            ],
 
             if (appointment.meetingLink != null &&
-                appointment.meetingLink!.isNotEmpty)
+                appointment.meetingLink!.isNotEmpty) ...[
+              const SizedBox(height: 20),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -272,9 +355,11 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                   ),
                 ),
               ),
+            ],
 
             if (appointment.location != null &&
-                appointment.location!.isNotEmpty)
+                appointment.location!.isNotEmpty) ...[
+              const SizedBox(height: 20),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -291,8 +376,28 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                   ),
                 ),
               ),
+            ],
 
             const SizedBox(height: 20),
+
+            if (canPay)
+              ElevatedButton.icon(
+                onPressed: _paymentViewModel.isPaying ? null : _payAppointment,
+                icon: _paymentViewModel.isPaying
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.payment),
+                label: Text(
+                  _paymentViewModel.isPaying
+                      ? 'Processing payment...'
+                      : 'Pay appointment',
+                ),
+              ),
+
+            if (canPay) const SizedBox(height: 10),
 
             ElevatedButton.icon(
               onPressed: canJoinSession ? _joinSession : null,
@@ -308,14 +413,14 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               onPressed: () {
                 Navigator.of(context).pushNamed(AppRouter.myPayments);
               },
-              icon: const Icon(Icons.payment),
+              icon: const Icon(Icons.receipt_long),
               label: const Text('Payment history'),
             ),
 
             const SizedBox(height: 10),
 
             ElevatedButton.icon(
-              onPressed: canCancel
+              onPressed: canCancel && !_paymentViewModel.isPaid
                   ? () {
                       Navigator.of(context).pushNamed(
                         AppRouter.useMembership,
@@ -324,7 +429,11 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                     }
                   : null,
               icon: const Icon(Icons.card_membership),
-              label: const Text('Use membership'),
+              label: Text(
+                _paymentViewModel.isPaid
+                    ? 'Appointment already paid'
+                    : 'Use membership',
+              ),
             ),
 
             const SizedBox(height: 10),
@@ -363,6 +472,15 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                 canCancel ? 'Cancel appointment' : 'Cancellation unavailable',
               ),
             ),
+
+            if (_paymentViewModel.errorMessage != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _paymentViewModel.errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ],
 
             if (_viewModel.errorMessage != null) ...[
               const SizedBox(height: 12),

@@ -21,6 +21,7 @@ import '../../features/appointment/presentation/viewmodels/appointment_details_v
 import '../../features/payment/data/repositories/payment_repository.dart';
 import '../../features/payment/data/services/payment_api_service.dart';
 import '../../features/payment/presentation/viewmodels/payment_list_viewmodel.dart';
+import '../../features/payment/presentation/viewmodels/appointment_payment_viewmodel.dart';
 
 import '../../features/review/data/repositories/review_repository.dart';
 import '../../features/review/data/services/review_api_service.dart';
@@ -64,6 +65,7 @@ class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
   static final ApiClient apiClient = ApiClient(sessionStorage: sessionStorage);
+
   static SessionViewModel createSessionViewModel() {
     final authApiService = AuthApiService(apiClient: apiClient);
 
@@ -118,12 +120,18 @@ class AppInjection {
     return MyAppointmentsViewModel(repository: repository);
   }
 
+  static PaymentRepository _createPaymentRepository() {
+    final apiService = PaymentApiService(apiClient: apiClient);
+
+    return PaymentRepository(apiService: apiService);
+  }
+
   static PaymentListViewModel createPaymentViewModel() {
-    final api = PaymentApiService(apiClient: apiClient);
+    return PaymentListViewModel(repository: _createPaymentRepository());
+  }
 
-    final repository = PaymentRepository(apiService: api);
-
-    return PaymentListViewModel(repository: repository);
+  static AppointmentPaymentViewModel createAppointmentPaymentViewModel() {
+    return AppointmentPaymentViewModel(repository: _createPaymentRepository());
   }
 
   static ReviewListViewModel createReviewViewModel() {
