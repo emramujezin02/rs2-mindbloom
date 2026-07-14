@@ -106,10 +106,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.Entity<ClientMembership>()
-    .HasOne(x => x.Client)
-    .WithMany()
-    .HasForeignKey(x => x.ClientId)
-    .OnDelete(DeleteBehavior.Restrict);
+            .HasOne(x => x.Client)
+            .WithMany()
+            .HasForeignKey(x => x.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.Entity<ClientMembership>()
             .HasOne(x => x.Therapist)
@@ -134,23 +134,23 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .IsUnique();
 
         builder.Entity<EmailVerificationCode>(
-    entity =>
-    {
-        entity.Property(x => x.CodeHash)
-            .IsRequired();
-
-        entity.HasOne(x => x.User)
-            .WithMany()
-            .HasForeignKey(x => x.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        entity.HasIndex(x => new
+        entity =>
         {
-            x.UserId,
-            x.IsUsed,
-            x.ExpiresAtUtc
+            entity.Property(x => x.CodeHash)
+                .IsRequired();
+
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => new
+            {
+                x.UserId,
+                x.IsUsed,
+                x.ExpiresAtUtc
+            });
         });
-    });
 
         builder.Entity<Article>(entity =>
         {
@@ -260,24 +260,57 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         });
 
         builder.Entity<Payment>()
-    .HasIndex(x => x.StripePaymentIntentId)
-    .IsUnique();
+            .HasIndex(x => x.StripePaymentIntentId)
+            .IsUnique();
 
         builder.Entity<Payment>()
             .HasIndex(x => x.AppointmentId)
             .IsUnique();
 
 
-        builder.Entity<Review>()
-    .HasOne(x => x.Appointment)
-    .WithOne()
-    .HasForeignKey<Review>(
-        x => x.AppointmentId)
-    .OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<Payment>(
+     entity =>
+     {
+         entity.HasOne(x =>
+                 x.Appointment)
+             .WithOne(x =>
+                 x.Payment)
+             .HasForeignKey<Payment>(x =>
+                 x.AppointmentId)
+             .OnDelete(
+                 DeleteBehavior.Restrict);
 
-        builder.Entity<Review>()
-            .HasIndex(x => x.AppointmentId)
-            .IsUnique();
+         entity.Property(x =>
+                 x.StripePaymentIntentId)
+             .IsRequired()
+             .HasMaxLength(255);
+
+         entity.Property(x =>
+                 x.StripeRefundId)
+             .HasMaxLength(255);
+
+         entity.Property(x =>
+                 x.RefundReason)
+             .HasMaxLength(500);
+
+         entity.Property(x =>
+                 x.RefundFailureReason)
+             .HasMaxLength(1000);
+
+         entity.HasIndex(x =>
+                 x.StripePaymentIntentId)
+             .IsUnique();
+
+         entity.HasIndex(x =>
+                 x.AppointmentId)
+             .IsUnique();
+
+         entity.HasIndex(x =>
+                 x.StripeRefundId)
+             .IsUnique()
+             .HasFilter(
+                 "[StripeRefundId] IS NOT NULL");
+     });
 
     }
 

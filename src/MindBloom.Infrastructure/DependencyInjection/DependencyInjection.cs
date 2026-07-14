@@ -158,6 +158,8 @@ public static class DependencyInjection
 
         services.AddScoped<StripeVerificationService>();
 
+        services.AddScoped<IPaymentService,PaymentService>();
+
         return services;
     }
 }

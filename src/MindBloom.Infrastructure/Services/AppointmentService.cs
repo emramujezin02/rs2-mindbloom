@@ -9,18 +9,25 @@ using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Features.Notifications.Interfaces;
 using MindBloom.Application.Features.Therapists.DTOs;
 using MindBloom.Application.Features.Payments.Interfaces;
+using MindBloom.Application.Features.Payments.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
 public class AppointmentService : IAppointmentService
 {
-    private readonly ApplicationDbContext _context;
-    private readonly INotificationSender _notificationSender;
-    private readonly IPaymentService _paymentService;
+    private readonly ApplicationDbContext
+    _context;
+
+    private readonly INotificationSender
+        _notificationSender;
+
+    private readonly IPaymentService
+        _paymentService;
+
     public AppointmentService(
-    ApplicationDbContext context,
-    INotificationSender notificationSender,
-    IPaymentService paymentService)
+        ApplicationDbContext context,
+        INotificationSender notificationSender,
+        IPaymentService paymentService)
     {
         _context = context;
 
@@ -394,7 +401,9 @@ public class AppointmentService : IAppointmentService
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == clientUserId);
+                    x.UserId ==
+                        clientUserId &&
+                    !x.IsDeleted);
 
         if (client == null)
         {
@@ -404,12 +413,17 @@ public class AppointmentService : IAppointmentService
 
         var appointment =
             await _context.Appointments
-                .Include(x => x.Therapist)
-                    .ThenInclude(x => x.User)
-                .Include(x => x.Payment)
+                .Include(x =>
+                    x.Therapist)
+                .ThenInclude(x =>
+                    x.User)
+                .Include(x =>
+                    x.Payment)
                 .FirstOrDefaultAsync(x =>
-                    x.Id == appointmentId &&
-                    x.ClientId == client.Id);
+                    x.Id ==
+                        appointmentId &&
+                    x.ClientId ==
+                        client.Id);
 
         if (appointment == null)
         {
@@ -420,61 +434,56 @@ public class AppointmentService : IAppointmentService
         if (appointment.Status ==
             AppointmentStatus.Cancelled)
         {
-            throw new Exception(
-                "Appointment is already cancelled.");
+            /*
+             * Otkazivanje je idempotentno.
+             * Ako je ranije plaćeno, ponovno
+             * pozivamo refund metodu koja je
+             * također idempotentna.
+             */
+            if (appointment.Payment != null)
+            {
+                await _paymentService
+                    .RefundAppointmentPaymentAsync(
+                        clientUserId,
+                        appointmentId,
+                        reason);
+            }
+
+            return;
         }
 
         if (appointment.Status ==
-            AppointmentStatus.Completed)
+                AppointmentStatus.Completed ||
+            appointment.Status ==
+                AppointmentStatus.Rejected)
         {
             throw new Exception(
-                "Completed appointments cannot be cancelled.");
+                "This appointment can no longer be cancelled.");
         }
 
-        if (appointment.Status ==
-            AppointmentStatus.Rejected)
-        {
-            throw new Exception(
-                "Rejected appointments cannot be cancelled.");
-        }
-
-        if (appointment.Status !=
-                AppointmentStatus.Pending &&
-            appointment.Status !=
-                AppointmentStatus.Accepted)
-        {
-            throw new Exception(
-                "This appointment cannot be cancelled in its current status.");
-        }
-
-        var hasPaidPayment =
-            appointment.Payment != null &&
-            appointment.Payment.Status ==
-                PaymentStatus.Paid;
-
-        if (hasPaidPayment)
+        /*
+         * Refund se pokreće prije lokalnog
+         * označavanja termina kao otkazanog.
+         */
+        if (appointment.Payment != null &&
+            (appointment.Payment.Status ==
+                 PaymentStatus.Paid ||
+             appointment.Payment.Status ==
+                 PaymentStatus.RefundPending ||
+             appointment.Payment.Status ==
+                 PaymentStatus.RefundFailed ||
+             appointment.Payment.Status ==
+                 PaymentStatus.Refunded))
         {
             await _paymentService
                 .RefundAppointmentPaymentAsync(
                     clientUserId,
-                    appointment.Id,
+                    appointmentId,
                     reason);
         }
 
         appointment.Status =
             AppointmentStatus.Cancelled;
-
-        appointment.Notes =
-            string.IsNullOrWhiteSpace(
-                appointment.Notes)
-                ? $"Cancellation reason: {reason}"
-                : $"{appointment.Notes}\n"
-                    + $"Cancellation reason: {reason}";
-
-        var refundMessage =
-            hasPaidPayment
-                ? " The payment refund has been initiated."
-                : string.Empty;
 
         var notification =
             new Notification
@@ -489,10 +498,10 @@ public class AppointmentService : IAppointmentService
 
                 Message =
                     "A client cancelled the appointment. "
-                    + $"Reason: {reason}."
-                    + refundMessage,
+                    + $"Reason: {reason}",
 
-                IsRead = false
+                IsRead =
+                    false
             };
 
         _context.Notifications.Add(
@@ -507,8 +516,7 @@ public class AppointmentService : IAppointmentService
                     .UserId,
                 "Appointment Cancelled",
                 "A client cancelled the appointment. "
-                    + $"Reason: {reason}."
-                    + refundMessage);
+                + $"Reason: {reason}");
     }
 
     public async Task<TherapistStatsDto>

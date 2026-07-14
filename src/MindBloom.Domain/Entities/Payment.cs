@@ -15,4 +15,14 @@ public class Payment : BaseEntity
     public string StripePaymentIntentId { get; set; } = null!;
 
     public DateTime? PaidAtUtc { get; set; }
+
+    public string? StripeRefundId { get; set; }
+
+    public string? RefundReason { get; set; }
+
+    public DateTime? RefundRequestedAtUtc { get; set; }
+
+    public DateTime? RefundedAtUtc { get; set; }
+
+    public string? RefundFailureReason { get; set; }
 }

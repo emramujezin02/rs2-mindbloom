@@ -615,16 +615,33 @@ public class PaymentService : IPaymentService
     }
 
     public async Task
-        RefundAppointmentPaymentAsync(
-            int clientUserId,
-            int appointmentId,
-            string reason)
+     RefundAppointmentPaymentAsync(
+         int clientUserId,
+         int appointmentId,
+         string reason)
     {
+        var normalizedReason =
+            reason?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(
+                normalizedReason))
+        {
+            throw new Exception(
+                "Refund reason is required.");
+        }
+
+        if (normalizedReason.Length > 500)
+        {
+            throw new Exception(
+                "Refund reason may contain at most 500 characters.");
+        }
+
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
                     x.UserId ==
-                    clientUserId);
+                        clientUserId &&
+                    !x.IsDeleted);
 
         if (client == null)
         {
@@ -634,38 +651,191 @@ public class PaymentService : IPaymentService
 
         var payment =
             await _context.Payments
-                .Include(x => x.Appointment)
+                .Include(x =>
+                    x.Appointment)
                 .FirstOrDefaultAsync(x =>
                     x.AppointmentId ==
-                    appointmentId &&
+                        appointmentId &&
                     x.Appointment.ClientId ==
-                    client.Id);
+                        client.Id);
 
+        /*
+         * Termin možda nije plaćen.
+         * U tom slučaju otkazivanje se može nastaviti
+         * bez refundiranja.
+         */
         if (payment == null)
         {
             return;
         }
 
         /*
-         * Refund je također idempotentan.
+         * Idempotentni rezultat:
+         * refund je već završen i ne šaljemo
+         * novi zahtjev Stripeu.
          */
         if (payment.Status ==
             PaymentStatus.Refunded)
         {
+            if (payment.Appointment.IsPaid)
+            {
+                payment.Appointment.IsPaid =
+                    false;
+
+                await _context
+                    .SaveChangesAsync();
+            }
+
             return;
         }
 
-        if (payment.Status !=
-            PaymentStatus.Paid)
+        if (payment.Status ==
+            PaymentStatus.RefundPending)
         {
+            /*
+             * Ako već imamo Stripe refund ID,
+             * provjeravamo njegov stvarni status.
+             */
+            if (!string.IsNullOrWhiteSpace(
+                    payment.StripeRefundId))
+            {
+                var existingRefundService =
+                    new RefundService();
+
+                Refund existingRefund;
+
+                try
+                {
+                    existingRefund =
+                        await existingRefundService
+                            .GetAsync(
+                                payment
+                                    .StripeRefundId);
+                }
+                catch (StripeException exception)
+                {
+                    throw new Exception(
+                        "Existing Stripe refund could not be verified.",
+                        exception);
+                }
+
+                if (string.Equals(
+                        existingRefund.Status,
+                        "succeeded",
+                        StringComparison
+                            .OrdinalIgnoreCase))
+                {
+                    payment.Status =
+                        PaymentStatus.Refunded;
+
+                    payment.RefundedAtUtc ??=
+                        DateTime.UtcNow;
+
+                    payment
+                        .RefundFailureReason =
+                        null;
+
+                    payment.Appointment.IsPaid =
+                        false;
+
+                    await _context
+                        .SaveChangesAsync();
+
+                    return;
+                }
+
+                if (string.Equals(
+                        existingRefund.Status,
+                        "pending",
+                        StringComparison
+                            .OrdinalIgnoreCase) ||
+                    string.Equals(
+                        existingRefund.Status,
+                        "requires_action",
+                        StringComparison
+                            .OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                payment.Status =
+                    PaymentStatus.RefundFailed;
+
+                payment.RefundFailureReason =
+                    existingRefund
+                        .FailureReason ??
+                    $"Stripe refund status: "
+                    + $"{existingRefund.Status}";
+
+                await _context
+                    .SaveChangesAsync();
+            }
+        }
+
+        if (payment.Status !=
+                PaymentStatus.Paid &&
+            payment.Status !=
+                PaymentStatus.RefundFailed)
+        {
+            /*
+             * Pending ili Failed uplata nije
+             * stvarno naplaćena i nema šta
+             * refundirati.
+             */
             return;
         }
 
         if (string.IsNullOrWhiteSpace(
-                payment.StripePaymentIntentId))
+                payment
+                    .StripePaymentIntentId))
         {
             throw new Exception(
                 "Stripe payment reference is missing.");
+        }
+
+        PaymentIntent stripePaymentIntent;
+
+        try
+        {
+            stripePaymentIntent =
+                await _stripeVerificationService
+                    .GetPaymentIntentAsync(
+                        payment
+                            .StripePaymentIntentId);
+        }
+        catch (StripeException exception)
+        {
+            throw new Exception(
+                "Stripe payment could not be verified before refund.",
+                exception);
+        }
+
+        if (!string.Equals(
+                stripePaymentIntent.Status,
+                "succeeded",
+                StringComparison
+                    .OrdinalIgnoreCase))
+        {
+            throw new Exception(
+                "Only a successfully charged Stripe payment can be refunded.");
+        }
+
+        if (stripePaymentIntent.AmountReceived <= 0)
+        {
+            throw new Exception(
+                "Stripe payment does not contain a refundable charged amount.");
+        }
+
+        var expectedAmount =
+            ConvertToMinorUnits(
+                payment.Amount);
+
+        if (stripePaymentIntent
+                .AmountReceived !=
+            expectedAmount)
+        {
+            throw new Exception(
+                "Stripe charged amount does not match the recorded payment amount.");
         }
 
         var secretKey =
@@ -682,6 +852,20 @@ public class PaymentService : IPaymentService
         StripeConfiguration.ApiKey =
             secretKey;
 
+        payment.Status =
+            PaymentStatus.RefundPending;
+
+        payment.RefundReason =
+            normalizedReason;
+
+        payment.RefundRequestedAtUtc ??=
+            DateTime.UtcNow;
+
+        payment.RefundFailureReason =
+            null;
+
+        await _context.SaveChangesAsync();
+
         var refundService =
             new RefundService();
 
@@ -689,7 +873,16 @@ public class PaymentService : IPaymentService
             new RefundCreateOptions
             {
                 PaymentIntent =
-                    payment.StripePaymentIntentId,
+                    payment
+                        .StripePaymentIntentId,
+
+                /*
+                 * Refundiramo stvarni iznos koji je
+                 * Stripe evidentirao kao naplaćen.
+                 */
+                Amount =
+                    stripePaymentIntent
+                        .AmountReceived,
 
                 Reason =
                     RefundReasons
@@ -698,40 +891,109 @@ public class PaymentService : IPaymentService
                 Metadata =
                     new Dictionary<string, string>
                     {
+                        ["paymentId"] =
+                            payment.Id
+                                .ToString(),
+
                         ["appointmentId"] =
-                            appointmentId.ToString(),
+                            appointmentId
+                                .ToString(),
 
                         ["clientUserId"] =
-                            clientUserId.ToString(),
+                            clientUserId
+                                .ToString(),
 
                         ["cancellationReason"] =
-                            reason
+                            normalizedReason
                     }
             };
 
-        var stripeRefund =
-            await refundService
-                .CreateAsync(
-                    refundOptions);
+        /*
+         * Deterministički idempotency key:
+         * ponavljanje zahtjeva za isti Payment
+         * ne smije napraviti drugi refund.
+         */
+        var requestOptions =
+            new RequestOptions
+            {
+                IdempotencyKey =
+                    $"mindbloom-refund-payment-{payment.Id}"
+            };
 
-        if (!string.Equals(
-                stripeRefund.Status,
-                "succeeded",
-                StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(
-                stripeRefund.Status,
-                "pending",
-                StringComparison.OrdinalIgnoreCase))
+        Refund stripeRefund;
+
+        try
         {
+            stripeRefund =
+                await refundService
+                    .CreateAsync(
+                        refundOptions,
+                        requestOptions);
+        }
+        catch (StripeException exception)
+        {
+            payment.Status =
+                PaymentStatus.RefundFailed;
+
+            payment.RefundFailureReason =
+                exception.StripeError
+                    ?.Message ??
+                exception.Message;
+
+            await _context
+                .SaveChangesAsync();
+
             throw new Exception(
-                "Stripe refund could not be initiated.");
+                "Stripe refund could not be created.",
+                exception);
         }
 
-        payment.Status =
-            PaymentStatus.Refunded;
+        payment.StripeRefundId =
+            stripeRefund.Id;
 
-        payment.Appointment.IsPaid =
-            false;
+        if (string.Equals(
+                stripeRefund.Status,
+                "succeeded",
+                StringComparison
+                    .OrdinalIgnoreCase))
+        {
+            payment.Status =
+                PaymentStatus.Refunded;
+
+            payment.RefundedAtUtc =
+                DateTime.UtcNow;
+
+            payment.RefundFailureReason =
+                null;
+
+            payment.Appointment.IsPaid =
+                false;
+        }
+        else if (string.Equals(
+                     stripeRefund.Status,
+                     "pending",
+                     StringComparison
+                         .OrdinalIgnoreCase) ||
+                 string.Equals(
+                     stripeRefund.Status,
+                     "requires_action",
+                     StringComparison
+                         .OrdinalIgnoreCase))
+        {
+            payment.Status =
+                PaymentStatus.RefundPending;
+        }
+        else
+        {
+            payment.Status =
+                PaymentStatus.RefundFailed;
+
+            payment.RefundFailureReason =
+                stripeRefund
+                    .FailureReason ??
+                $"Stripe refund status: "
+                + $"{stripeRefund.Status}";
+        }
 
         await _context.SaveChangesAsync();
     }
