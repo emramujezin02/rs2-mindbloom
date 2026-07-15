@@ -26,6 +26,7 @@ using MindBloom.Application.Features.JournalEntries.Interfaces;
 using MindBloom.Application.Features.Articles.Interfaces;
 using MindBloom.Application.Features.Workshops.Interfaces;
 using MindBloom.Infrastructure.Payments;
+using MindBloom.Application.Features.Chat.Interfaces;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -106,10 +107,15 @@ public static class DependencyInjection
                         .Request
                         .Path;
 
+                var isSignalRHub =
+    requestPath.StartsWithSegments(
+        "/hubs/notifications") ||
+    requestPath.StartsWithSegments(
+        "/hubs/chat");
+
                 if (!string.IsNullOrWhiteSpace(
                         accessToken) &&
-                    requestPath.StartsWithSegments(
-                        "/hubs/notifications"))
+                    isSignalRHub)
                 {
                     context.Token =
                         accessToken;
@@ -155,6 +161,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkshopService, WorkshopService>();
 
         services.AddScoped<StripeVerificationService>();
+        services.AddScoped<IChatService,ChatService>();
 
         services.AddScoped<IBusinessNotificationService, BusinessNotificationService>();
 

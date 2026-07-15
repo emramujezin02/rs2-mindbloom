@@ -7,6 +7,7 @@ using MindBloom.Infrastructure.DependencyInjection;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Persistence.Seed;
 using MindBloom.Infrastructure.Realtime;
+using MindBloom.Infrastructure.Realtime;
 
 Env.Load("../../.env");
 
@@ -113,9 +114,9 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapHub<NotificationHub>(
-        "/hubs/notifications")
-    .RequireAuthorization();
+app.MapHub<NotificationHub>("/hubs/notifications").RequireAuthorization();
+
+app.MapHub<ChatHub>("/hubs/chat");
 
 using (var scope =
        app.Services.CreateScope())

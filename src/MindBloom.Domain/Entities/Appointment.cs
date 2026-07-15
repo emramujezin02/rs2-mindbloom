@@ -18,6 +18,8 @@ public class Appointment : BaseEntity
 
     public string? Notes { get; set; }
 
+    public Conversation? Conversation { get; set; }
+
     public decimal Price { get; set; }
 
     public bool IsPaid { get; set; }

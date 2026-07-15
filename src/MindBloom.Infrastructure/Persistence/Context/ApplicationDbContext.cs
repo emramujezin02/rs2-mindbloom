@@ -36,6 +36,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Workshop> Workshops => Set<Workshop>();
     public DbSet<WorkshopRegistration>WorkshopRegistrations => Set<WorkshopRegistration>();
     public DbSet<MembershipPayment> MembershipPayments =>Set<MembershipPayment>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<ConversationParticipant> ConversationParticipants => Set<ConversationParticipant>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -386,7 +389,106 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .IsUnique();
     });
 
+        builder.Entity<Conversation>(
+    entity =>
+    {
+        entity.HasOne(x =>
+                x.Appointment)
+            .WithOne(x =>
+                x.Conversation)
+            .HasForeignKey<Conversation>(
+                x => x.AppointmentId)
+            .OnDelete(
+                DeleteBehavior.Restrict);
 
+        entity.HasIndex(x =>
+                x.AppointmentId)
+            .IsUnique();
+
+        entity.HasIndex(x =>
+            new
+            {
+                x.IsClosed,
+                x.IsDeleted
+            });
+    });
+
+        builder.Entity<ConversationParticipant>(
+            entity =>
+            {
+                entity.HasOne(x =>
+                        x.Conversation)
+                    .WithMany(x =>
+                        x.Participants)
+                    .HasForeignKey(x =>
+                        x.ConversationId)
+                    .OnDelete(
+                        DeleteBehavior.Cascade);
+
+                entity.HasOne(x =>
+                        x.User)
+                    .WithMany()
+                    .HasForeignKey(x =>
+                        x.UserId)
+                    .OnDelete(
+                        DeleteBehavior.Restrict);
+
+                entity.HasIndex(x =>
+                    new
+                    {
+                        x.ConversationId,
+                        x.UserId
+                    })
+                    .IsUnique();
+
+                entity.HasIndex(x =>
+                    new
+                    {
+                        x.UserId,
+                        x.IsActive,
+                        x.IsDeleted
+                    });
+            });
+
+        builder.Entity<ChatMessage>(
+            entity =>
+            {
+                entity.Property(x =>
+                        x.Content)
+                    .IsRequired()
+                    .HasMaxLength(2000);
+
+                entity.HasOne(x =>
+                        x.Conversation)
+                    .WithMany(x =>
+                        x.Messages)
+                    .HasForeignKey(x =>
+                        x.ConversationId)
+                    .OnDelete(
+                        DeleteBehavior.Cascade);
+
+                entity.HasOne(x =>
+                        x.SenderUser)
+                    .WithMany()
+                    .HasForeignKey(x =>
+                        x.SenderUserId)
+                    .OnDelete(
+                        DeleteBehavior.Restrict);
+
+                entity.HasIndex(x =>
+                    new
+                    {
+                        x.ConversationId,
+                        x.SentAtUtc
+                    });
+
+                entity.HasIndex(x =>
+                    new
+                    {
+                        x.SenderUserId,
+                        x.SentAtUtc
+                    });
+            });
 
     }
 
@@ -401,13 +503,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             if (entry.State == EntityState.Added)
             {
                 entry.Entity.CreatedAtUtc =
-                    DateTime.Now;
+                    DateTime.UtcNow;
             }
 
             if (entry.State == EntityState.Modified)
             {
                 entry.Entity.UpdatedAtUtc =
-                    DateTime.Now;
+                    DateTime.UtcNow;
             }
         }
 
