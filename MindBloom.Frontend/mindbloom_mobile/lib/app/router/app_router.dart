@@ -52,6 +52,9 @@ import '../../features/workshop/presentation/pages/my_workshop_registrations_pag
 
 import '../../features/favorite/presentation/pages/my_favorites_page.dart';
 
+import '../../features/chat/presentation/pages/chat_details_page.dart';
+import '../../features/chat/presentation/pages/chat_list_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String login = '/login';
@@ -88,6 +91,8 @@ class AppRouter {
   static const String editJournalEntry = '/journal/edit';
   static const String workshopDetails = '/workshops/details';
   static const String myWorkshopRegistrations = '/workshops/mine';
+  static const String chats = '/chat';
+  static const String chatDetails = '/chat/details';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -251,6 +256,15 @@ class AppRouter {
           builder: (_) => const MyWorkshopRegistrationsPage(),
         );
 
+      case chats:
+        return MaterialPageRoute(builder: (_) => const ChatListPage());
+
+      case chatDetails:
+        final appointmentId = settings.arguments as int;
+
+        return MaterialPageRoute(
+          builder: (_) => ChatDetailsPage(appointmentId: appointmentId),
+        );
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
 

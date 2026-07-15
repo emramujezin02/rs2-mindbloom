@@ -436,6 +436,9 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
     final canReview = normalizedStatus == 'completed';
 
+    final canOpenChat =
+        normalizedStatus == 'accepted' || normalizedStatus == 'completed';
+
     return Scaffold(
       appBar: AppBar(title: const Text('Appointment details')),
       body: SingleChildScrollView(
@@ -559,6 +562,23 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               icon: const Icon(Icons.video_call),
               label: Text(
                 canJoinSession ? 'Join session' : 'Join session unavailable',
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            ElevatedButton.icon(
+              onPressed: canOpenChat
+                  ? () {
+                      Navigator.of(context).pushNamed(
+                        AppRouter.chatDetails,
+                        arguments: appointment.id,
+                      );
+                    }
+                  : null,
+              icon: const Icon(Icons.chat_bubble_outline),
+              label: Text(
+                canOpenChat ? 'Open chat' : 'Chat available after acceptance',
               ),
             ),
 

@@ -115,4 +115,19 @@ public class ChatController : ControllerBase
 
         return userId;
     }
+
+    [HttpGet("conversations")]
+    public async Task<IActionResult>
+    GetMyConversations()
+    {
+        var userId =
+            GetCurrentUserId();
+
+        var result =
+            await _chatService
+                .GetMyConversationsAsync(
+                    userId);
+
+        return Ok(result);
+    }
 }

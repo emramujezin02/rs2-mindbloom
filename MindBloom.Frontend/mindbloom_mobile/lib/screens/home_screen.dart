@@ -216,7 +216,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.article),
                     label: const Text('Articles'),
                   ),
+                  if (session.isLoggedIn)
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pushNamed(AppRouter.chats);
+                      },
+                      icon: const Icon(Icons.chat),
+                      label: const Text('Messages'),
+                    ),
 
+                  if (session.isLoggedIn) const SizedBox(height: 12),
                   const SizedBox(height: 12),
 
                   ElevatedButton.icon(

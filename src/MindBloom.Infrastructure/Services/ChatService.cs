@@ -22,6 +22,144 @@ public sealed class ChatService : IChatService
         _context = context;
     }
 
+    public async Task<List<ConversationListItemDto>>
+    GetMyConversationsAsync(
+        int currentUserId)
+    {
+        var conversations =
+            await _context.Conversations
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.Participants.Any(
+                        participant =>
+                            participant.UserId ==
+                                currentUserId &&
+                            participant.IsActive &&
+                            !participant.IsDeleted))
+                .Select(x =>
+                    new
+                    {
+                        Conversation =
+                            x,
+
+                        OtherParticipant =
+                            x.Participants
+                                .Where(participant =>
+                                    participant.UserId !=
+                                        currentUserId &&
+                                    participant.IsActive &&
+                                    !participant.IsDeleted)
+                                .Select(participant =>
+                                    new
+                                    {
+                                        participant.User
+                                            .FirstName,
+
+                                        participant.User
+                                            .LastName
+                                    })
+                                .FirstOrDefault(),
+
+                        CurrentParticipant =
+                            x.Participants
+                                .Where(participant =>
+                                    participant.UserId ==
+                                        currentUserId &&
+                                    participant.IsActive &&
+                                    !participant.IsDeleted)
+                                .Select(participant =>
+                                    new
+                                    {
+                                        participant
+                                            .LastReadAtUtc
+                                    })
+                                .FirstOrDefault(),
+
+                        LastMessage =
+                            x.Messages
+                                .Where(message =>
+                                    !message.IsDeleted)
+                                .OrderByDescending(message =>
+                                    message.SentAtUtc)
+                                .ThenByDescending(message =>
+                                    message.Id)
+                                .Select(message =>
+                                    new
+                                    {
+                                        message.Content,
+
+                                        message.SentAtUtc
+                                    })
+                                .FirstOrDefault(),
+
+                        UnreadCount =
+                            x.Messages.Count(message =>
+                                !message.IsDeleted &&
+                                message.SenderUserId !=
+                                    currentUserId &&
+                                (
+                                    x.Participants
+                                        .Where(participant =>
+                                            participant.UserId ==
+                                                currentUserId &&
+                                            participant.IsActive &&
+                                            !participant.IsDeleted)
+                                        .Select(participant =>
+                                            participant.LastReadAtUtc)
+                                        .FirstOrDefault() ==
+                                        null ||
+
+                                    message.SentAtUtc >
+                                    x.Participants
+                                        .Where(participant =>
+                                            participant.UserId ==
+                                                currentUserId &&
+                                            participant.IsActive &&
+                                            !participant.IsDeleted)
+                                        .Select(participant =>
+                                            participant.LastReadAtUtc)
+                                        .FirstOrDefault()
+                                ))
+                    })
+                .OrderByDescending(x =>
+                    x.LastMessage != null
+                        ? x.LastMessage.SentAtUtc
+                        : x.Conversation.CreatedAtUtc)
+                .ToListAsync();
+
+        return conversations
+            .Select(x =>
+                new ConversationListItemDto
+                {
+                    Id =
+                        x.Conversation.Id,
+
+                    AppointmentId =
+                        x.Conversation.AppointmentId,
+
+                    OtherParticipantName =
+                        x.OtherParticipant == null
+                            ? "Conversation participant"
+                            : x.OtherParticipant.FirstName
+                              + " "
+                              + x.OtherParticipant.LastName,
+
+                    LastMessage =
+                        x.LastMessage?.Content,
+
+                    LastMessageAtUtc =
+                        x.LastMessage?.SentAtUtc,
+
+                    UnreadCount =
+                        x.UnreadCount,
+
+                    IsClosed =
+                        x.Conversation.IsClosed
+                })
+            .ToList();
+    }
+
     public async Task<ConversationResponseDto>
         GetOrCreateForAppointmentAsync(
             int currentUserId,

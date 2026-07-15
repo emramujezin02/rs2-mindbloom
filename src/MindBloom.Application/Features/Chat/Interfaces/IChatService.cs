@@ -29,4 +29,8 @@ public interface IChatService
     Task<bool> IsParticipantAsync(
         int currentUserId,
         int conversationId);
+
+    Task<List<ConversationListItemDto>>
+    GetMyConversationsAsync(
+        int currentUserId);
 }

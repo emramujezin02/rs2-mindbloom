@@ -62,6 +62,12 @@ import '../../features/favorite/data/repositories/favorite_repository.dart';
 import '../../features/favorite/data/services/favorite_api_service.dart';
 import '../../features/favorite/presentation/viewmodels/favorite_list_viewmodel.dart';
 
+import '../../features/chat/data/repositories/chat_repository.dart';
+import '../../features/chat/data/services/chat_api_service.dart';
+import '../../features/chat/data/services/chat_realtime_service.dart';
+import '../../features/chat/presentation/viewmodels/chat_details_viewmodel.dart';
+import '../../features/chat/presentation/viewmodels/chat_list_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
@@ -268,5 +274,34 @@ class AppInjection {
 
   static FavoriteListViewModel createFavoriteListViewModel() {
     return FavoriteListViewModel(repository: _createFavoriteRepository());
+  }
+
+  static ChatRepository _createChatRepository() {
+    final apiService = ChatApiService(apiClient: apiClient);
+
+    return ChatRepository(apiService: apiService);
+  }
+
+  static ChatListViewModel createChatListViewModel() {
+    return ChatListViewModel(repository: _createChatRepository());
+  }
+
+  static ChatDetailsViewModel createChatDetailsViewModel() {
+    return ChatDetailsViewModel(
+      repository: _createChatRepository(),
+      realtimeServiceFactory:
+          ({
+            required onMessageReceived,
+            required onStatusChanged,
+            required onReconnected,
+          }) {
+            return ChatRealtimeService(
+              sessionStorage: sessionStorage,
+              onMessageReceived: onMessageReceived,
+              onStatusChanged: onStatusChanged,
+              onReconnected: onReconnected,
+            );
+          },
+    );
   }
 }
