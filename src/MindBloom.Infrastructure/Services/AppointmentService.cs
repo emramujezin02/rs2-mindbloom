@@ -17,35 +17,27 @@ namespace MindBloom.Infrastructure.Services;
 
 public class AppointmentService : IAppointmentService
 {
-    private readonly ApplicationDbContext
-    _context;
+    private readonly ApplicationDbContext _context;
 
-    private readonly INotificationSender
-        _notificationSender;
+    private readonly IBusinessNotificationService _businessNotificationService;
 
-    private readonly IPaymentService
-        _paymentService;
+    private readonly IPaymentService _paymentService;
 
-    private readonly IMembershipService
-        _membershipService;
+    private readonly IMembershipService _membershipService;
 
     public AppointmentService(
         ApplicationDbContext context,
-        INotificationSender notificationSender,
+        IBusinessNotificationService businessNotificationService,
         IPaymentService paymentService,
         IMembershipService membershipService)
     {
-        _context =
-            context;
+        _context = context;
 
-        _notificationSender =
-            notificationSender;
+        _businessNotificationService = businessNotificationService;
 
-        _paymentService =
-            paymentService;
+        _paymentService = paymentService;
 
-        _membershipService =
-            membershipService;
+        _membershipService = membershipService;
     }
 
     public async Task<AppointmentResponseDto>
@@ -188,30 +180,16 @@ public class AppointmentService : IAppointmentService
             Location = request.Location,
         };
 
-
-
-
         _context.Appointments.Add(appointment);
 
-
-        await _notificationSender.SendToUserAsync(
-    therapist.UserId,
-    "New Appointment",
-    "You have received a new appointment request.");
-
-
-        var notification = new Notification
-        {
-            UserId = therapist.UserId,
-            Title = "New Appointment",
-            Message =
-                "You have received a new appointment request.",
-            IsRead = false
-        };
-
-        _context.Notifications.Add(notification);
-
         await _context.SaveChangesAsync();
+
+        await _businessNotificationService
+            .PublishAsync(
+                therapist.UserId,
+                "New appointment request",
+                "You have received a new appointment request.",
+                appointment.Id);
 
         return new AppointmentResponseDto
         {
@@ -415,40 +393,48 @@ public class AppointmentService : IAppointmentService
         }
 
         appointment.Status =
-            request.Status;
-
-        var notification =
-            new Notification
-            {
-                UserId =
-                    appointment
-                        .Client
-                        .UserId,
-
-                Title =
-                    "Appointment Updated",
-
-                Message =
-                    $"Your appointment status is now "
-                    + $"{request.Status}.",
-
-                IsRead =
-                    false
-            };
-
-        _context.Notifications.Add(
-            notification);
+    request.Status;
 
         await _context.SaveChangesAsync();
 
-        await _notificationSender
-            .SendToUserAsync(
-                appointment
-                    .Client
-                    .UserId,
-                "Appointment Updated",
-                $"Your appointment status is now "
-                + $"{request.Status}.");
+        var notificationTitle =
+            request.Status switch
+            {
+                AppointmentStatus.Accepted =>
+                    "Appointment accepted",
+
+                AppointmentStatus.Rejected =>
+                    "Appointment rejected",
+
+                AppointmentStatus.Completed =>
+                    "Appointment completed",
+
+                _ =>
+                    "Appointment updated"
+            };
+
+        var notificationMessage =
+            request.Status switch
+            {
+                AppointmentStatus.Accepted =>
+                    "Your appointment request has been accepted by the therapist.",
+
+                AppointmentStatus.Rejected =>
+                    "Your appointment request has been rejected by the therapist.",
+
+                AppointmentStatus.Completed =>
+                    "Your appointment has been marked as completed.",
+
+                _ =>
+                    $"Your appointment status is now {request.Status}."
+            };
+
+        await _businessNotificationService
+            .PublishAsync(
+                appointment.Client.UserId,
+                notificationTitle,
+                notificationMessage,
+                appointment.Id);
     }
 
     public async Task CancelAppointmentAsync(
@@ -571,40 +557,17 @@ public class AppointmentService : IAppointmentService
         }
 
         appointment.Status =
-            AppointmentStatus.Cancelled;
-
-        var notification =
-            new Notification
-            {
-                UserId =
-                    appointment
-                        .Therapist
-                        .UserId,
-
-                Title =
-                    "Appointment Cancelled",
-
-                Message =
-                    "A client cancelled the appointment. "
-                    + $"Reason: {reason}",
-
-                IsRead =
-                    false
-            };
-
-        _context.Notifications.Add(
-            notification);
+    AppointmentStatus.Cancelled;
 
         await _context.SaveChangesAsync();
 
-        await _notificationSender
-            .SendToUserAsync(
-                appointment
-                    .Therapist
-                    .UserId,
-                "Appointment Cancelled",
+        await _businessNotificationService
+            .PublishAsync(
+                appointment.Therapist.UserId,
+                "Appointment cancelled",
                 "A client cancelled the appointment. "
-                + $"Reason: {reason}");
+                + $"Reason: {reason}",
+                appointment.Id);
     }
 
     public async Task<TherapistStatsDto>

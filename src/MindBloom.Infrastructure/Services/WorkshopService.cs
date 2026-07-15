@@ -8,6 +8,7 @@ using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Shared.Exceptions;
+using MindBloom.Application.Common.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -17,10 +18,19 @@ public class WorkshopService : IWorkshopService
 
     private readonly ApplicationDbContext _context;
 
+    private readonly IBusinessNotificationService
+    _businessNotificationService;
+
     public WorkshopService(
-        ApplicationDbContext context)
+    ApplicationDbContext context,
+    IBusinessNotificationService
+        businessNotificationService)
     {
-        _context = context;
+        _context =
+            context;
+
+        _businessNotificationService =
+            businessNotificationService;
     }
 
     public async Task<PagedResponse<WorkshopResponseDto>>
@@ -712,6 +722,12 @@ public class WorkshopService : IWorkshopService
                 .BeginTransactionAsync(
                     IsolationLevel.Serializable);
 
+        string workshopTitle =
+    string.Empty;
+
+        int organizerUserId =
+            0;
+
         try
         {
             var client =
@@ -738,6 +754,12 @@ public class WorkshopService : IWorkshopService
                 throw new NotFoundException(
                     "Workshop not found.");
             }
+
+            workshopTitle =
+    workshop.Title;
+
+            organizerUserId =
+                workshop.OrganizerUserId;
 
             if (workshop.Status !=
                 WorkshopStatus.Scheduled)
@@ -832,17 +854,35 @@ public class WorkshopService : IWorkshopService
             await transaction.RollbackAsync();
             throw;
         }
+
+        await _businessNotificationService
+    .PublishAsync(
+        clientUserId,
+        "Workshop registration confirmed",
+        $"You have successfully registered for "
+        + $"\"{workshopTitle}\".");
+
+        if (organizerUserId > 0 &&
+            organizerUserId != clientUserId)
+        {
+            await _businessNotificationService
+                .PublishAsync(
+                    organizerUserId,
+                    "New workshop registration",
+                    $"A new participant registered for "
+                    + $"\"{workshopTitle}\".");
+        }
     }
 
     public async Task CancelRegistrationAsync(
-        int clientUserId,
-        int workshopId)
+     int clientUserId,
+     int workshopId)
     {
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
                     x.UserId ==
-                    clientUserId &&
+                        clientUserId &&
                     !x.IsDeleted);
 
         if (client == null)
@@ -854,7 +894,8 @@ public class WorkshopService : IWorkshopService
         var workshop =
             await _context.Workshops
                 .FirstOrDefaultAsync(x =>
-                    x.Id == workshopId &&
+                    x.Id ==
+                        workshopId &&
                     !x.IsDeleted);
 
         if (workshop == null)
@@ -880,8 +921,8 @@ public class WorkshopService : IWorkshopService
                         client.Id &&
                     !x.IsDeleted &&
                     x.Status ==
-                    WorkshopRegistrationStatus
-                        .Registered);
+                        WorkshopRegistrationStatus
+                            .Registered);
 
         if (registration == null)
         {
@@ -890,13 +931,32 @@ public class WorkshopService : IWorkshopService
         }
 
         registration.Status =
-            WorkshopRegistrationStatus
-                .Cancelled;
+            WorkshopRegistrationStatus.Cancelled;
 
         registration.CancelledAtUtc =
             DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        await _businessNotificationService
+            .PublishAsync(
+                clientUserId,
+                "Workshop registration cancelled",
+                $"Your registration for "
+                + $"\"{workshop.Title}\" "
+                + "has been cancelled.");
+
+        if (workshop.OrganizerUserId > 0 &&
+            workshop.OrganizerUserId !=
+                clientUserId)
+        {
+            await _businessNotificationService
+                .PublishAsync(
+                    workshop.OrganizerUserId,
+                    "Workshop registration cancelled",
+                    $"A participant cancelled their registration for "
+                    + $"\"{workshop.Title}\".");
+        }
     }
 
     public async Task<PagedResponse<WorkshopResponseDto>>

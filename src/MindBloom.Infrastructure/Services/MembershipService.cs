@@ -7,6 +7,7 @@ using MindBloom.Infrastructure.Payments;
 using MindBloom.Infrastructure.Persistence.Context;
 using Stripe;
 using System.Data;
+using MindBloom.Application.Common.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -16,17 +17,22 @@ public class MembershipService : IMembershipService
 
     private readonly ApplicationDbContext _context;
 
-    private readonly StripeVerificationService
-        _stripeVerificationService;
+    private readonly StripeVerificationService _stripeVerificationService;
+
+    private readonly IBusinessNotificationService _businessNotificationService;
 
     public MembershipService(
-        ApplicationDbContext context,
-        StripeVerificationService stripeVerificationService)
+    ApplicationDbContext context,
+    StripeVerificationService
+        stripeVerificationService,
+    IBusinessNotificationService
+        businessNotificationService)
     {
         _context = context;
 
-        _stripeVerificationService =
-            stripeVerificationService;
+        _stripeVerificationService = stripeVerificationService;
+
+        _businessNotificationService = businessNotificationService;
     }
 
     public async Task<List<MembershipPlanDto>>
@@ -569,6 +575,26 @@ public class MembershipService : IMembershipService
 
         await _context.SaveChangesAsync();
 
+        await _businessNotificationService
+    .PublishAsync(
+        clientUserId,
+        "Membership purchased",
+        $"Your {GetPlanName(membership.PlanType)} "
+        + $"for {membership.Therapist.User.FirstName} "
+        + $"{membership.Therapist.User.LastName} "
+        + "has been activated.");
+
+        if (membership.Therapist.UserId !=
+            clientUserId)
+        {
+            await _businessNotificationService
+                .PublishAsync(
+                    membership.Therapist.UserId,
+                    "New membership purchase",
+                    $"A client purchased your "
+                    + $"{GetPlanName(membership.PlanType)}.");
+        }
+
         return MapMembership(
             membership,
             membership.Therapist,
@@ -745,6 +771,15 @@ public class MembershipService : IMembershipService
      int clientUserId,
      UseMembershipDto request)
     {
+        int therapistUserId =
+    0;
+
+        string therapistName =
+            string.Empty;
+
+        int remainingSessions =
+            0;
+
         await using var transaction =
             await _context.Database
                 .BeginTransactionAsync(
@@ -766,13 +801,18 @@ public class MembershipService : IMembershipService
             }
 
             var appointment =
-                await _context.Appointments
-                    .Include(x => x.Payment)
-                    .FirstOrDefaultAsync(x =>
-                        x.Id ==
-                            request.AppointmentId &&
-                        x.ClientId ==
-                            client.Id);
+    await _context.Appointments
+        .Include(x =>
+            x.Payment)
+        .Include(x =>
+            x.Therapist)
+        .ThenInclude(x =>
+            x.User)
+        .FirstOrDefaultAsync(x =>
+            x.Id ==
+                request.AppointmentId &&
+            x.ClientId ==
+                client.Id);
 
             if (appointment == null)
             {
@@ -866,6 +906,17 @@ public class MembershipService : IMembershipService
 
             membership.RemainingSessions--;
 
+            remainingSessions =
+    membership.RemainingSessions;
+
+            therapistUserId =
+                appointment.Therapist.UserId;
+
+            therapistName =
+                appointment.Therapist.User.FirstName
+                + " "
+                + appointment.Therapist.User.LastName;
+
             if (membership.RemainingSessions == 0)
             {
                 membership.IsActive = false;
@@ -918,6 +969,28 @@ public class MembershipService : IMembershipService
             await transaction.RollbackAsync();
 
             throw;
+        }
+
+        await _businessNotificationService
+    .PublishAsync(
+        clientUserId,
+        "Membership session reserved",
+        $"One membership session with "
+        + $"{therapistName} "
+        + "has been reserved for your appointment. "
+        + $"Remaining sessions: {remainingSessions}.",
+        request.AppointmentId);
+
+        if (therapistUserId > 0 &&
+            therapistUserId != clientUserId)
+        {
+            await _businessNotificationService
+                .PublishAsync(
+                    therapistUserId,
+                    "Membership used for appointment",
+                    "A client reserved a membership session "
+                    + "for an accepted appointment.",
+                    request.AppointmentId);
         }
     }
 

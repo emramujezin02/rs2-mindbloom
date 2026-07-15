@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Features.Payments.DTOs;
 using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Domain.Entities;
@@ -6,6 +7,7 @@ using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Payments;
 using MindBloom.Infrastructure.Persistence.Context;
 using Stripe;
+using MindBloom.Application.Common.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -15,17 +17,25 @@ public class PaymentService : IPaymentService
 
     private readonly ApplicationDbContext _context;
 
-    private readonly StripeVerificationService
-        _stripeVerificationService;
+    private readonly StripeVerificationService _stripeVerificationService;
+
+    private readonly IBusinessNotificationService _businessNotificationService;
 
     public PaymentService(
-        ApplicationDbContext context,
-        StripeVerificationService stripeVerificationService)
+    ApplicationDbContext context,
+    StripeVerificationService
+        stripeVerificationService,
+    IBusinessNotificationService
+        businessNotificationService)
     {
-        _context = context;
+        _context =
+            context;
 
         _stripeVerificationService =
             stripeVerificationService;
+
+        _businessNotificationService =
+            businessNotificationService;
     }
 
     public async Task<PaymentIntentResponseDto>
@@ -318,10 +328,6 @@ public class PaymentService : IPaymentService
                 "Payment not found.");
         }
 
-        /*
-         * Provjera vlasništva mora biti prije
-         * idempotentnog returna.
-         */
         if (payment.Appointment.ClientId !=
             client.Id)
         {
@@ -336,11 +342,6 @@ public class PaymentService : IPaymentService
                 "This payment has already been refunded.");
         }
 
-        /*
-         * Idempotentni rezultat:
-         * ako je payment već evidentiran kao plaćen,
-         * ne izvršavaju se ponovo nikakvi efekti.
-         */
         if (payment.Status ==
             PaymentStatus.Paid)
         {
@@ -446,10 +447,6 @@ public class PaymentService : IPaymentService
         }
         catch (DbUpdateException exception)
         {
-            /*
-             * U slučaju paralelnih confirm zahtjeva
-             * ponovo provjeravamo stanje iz baze.
-             */
             _context.ChangeTracker.Clear();
 
             var confirmedPayment =
@@ -457,7 +454,7 @@ public class PaymentService : IPaymentService
                     .AsNoTracking()
                     .FirstOrDefaultAsync(x =>
                         x.StripePaymentIntentId ==
-                        request.PaymentIntentId);
+                            request.PaymentIntentId);
 
             if (confirmedPayment?.Status ==
                 PaymentStatus.Paid)
@@ -469,6 +466,16 @@ public class PaymentService : IPaymentService
                 "Payment confirmation could not be completed.",
                 exception);
         }
+
+        await _businessNotificationService
+            .PublishAsync(
+                clientUserId,
+                "Payment completed",
+                $"Your payment of "
+                + $"{payment.Amount:F2} "
+                + $"{PaymentCurrency.ToUpperInvariant()} "
+                + "was completed successfully.",
+                payment.AppointmentId);
     }
 
     public async Task<List<PaymentHistoryDto>>
@@ -620,20 +627,16 @@ public class PaymentService : IPaymentService
          int appointmentId,
          string reason)
     {
-        var normalizedReason =
-            reason?.Trim() ?? string.Empty;
+        var normalizedReason = reason?.Trim() ?? string.Empty;
 
-        if (string.IsNullOrWhiteSpace(
-                normalizedReason))
+        if (string.IsNullOrWhiteSpace(normalizedReason))
         {
-            throw new Exception(
-                "Refund reason is required.");
+            throw new Exception("Refund reason is required.");
         }
 
         if (normalizedReason.Length > 500)
         {
-            throw new Exception(
-                "Refund reason may contain at most 500 characters.");
+            throw new Exception("Refund reason may contain at most 500 characters.");
         }
 
         var client =
@@ -659,21 +662,11 @@ public class PaymentService : IPaymentService
                     x.Appointment.ClientId ==
                         client.Id);
 
-        /*
-         * Termin možda nije plaćen.
-         * U tom slučaju otkazivanje se može nastaviti
-         * bez refundiranja.
-         */
         if (payment == null)
         {
             return;
         }
 
-        /*
-         * Idempotentni rezultat:
-         * refund je već završen i ne šaljemo
-         * novi zahtjev Stripeu.
-         */
         if (payment.Status ==
             PaymentStatus.Refunded)
         {
@@ -682,8 +675,7 @@ public class PaymentService : IPaymentService
                 payment.Appointment.IsPaid =
                     false;
 
-                await _context
-                    .SaveChangesAsync();
+                await _context.SaveChangesAsync();
             }
 
             return;
@@ -692,10 +684,7 @@ public class PaymentService : IPaymentService
         if (payment.Status ==
             PaymentStatus.RefundPending)
         {
-            /*
-             * Ako već imamo Stripe refund ID,
-             * provjeravamo njegov stvarni status.
-             */
+
             if (!string.IsNullOrWhiteSpace(
                     payment.StripeRefundId))
             {
@@ -720,10 +709,9 @@ public class PaymentService : IPaymentService
                 }
 
                 if (string.Equals(
-                        existingRefund.Status,
-                        "succeeded",
-                        StringComparison
-                            .OrdinalIgnoreCase))
+        existingRefund.Status,
+        "succeeded",
+        StringComparison.OrdinalIgnoreCase))
                 {
                     payment.Status =
                         PaymentStatus.Refunded;
@@ -731,15 +719,23 @@ public class PaymentService : IPaymentService
                     payment.RefundedAtUtc ??=
                         DateTime.UtcNow;
 
-                    payment
-                        .RefundFailureReason =
+                    payment.RefundFailureReason =
                         null;
 
                     payment.Appointment.IsPaid =
                         false;
 
-                    await _context
-                        .SaveChangesAsync();
+                    await _context.SaveChangesAsync();
+
+                    await _businessNotificationService
+                        .PublishAsync(
+                            clientUserId,
+                            "Payment refunded",
+                            $"Your payment of "
+                            + $"{payment.Amount:F2} "
+                            + $"{PaymentCurrency.ToUpperInvariant()} "
+                            + "has been refunded.",
+                            payment.AppointmentId);
 
                     return;
                 }
@@ -876,10 +872,6 @@ public class PaymentService : IPaymentService
                     payment
                         .StripePaymentIntentId,
 
-                /*
-                 * Refundiramo stvarni iznos koji je
-                 * Stripe evidentirao kao naplaćen.
-                 */
                 Amount =
                     stripePaymentIntent
                         .AmountReceived,
@@ -908,11 +900,6 @@ public class PaymentService : IPaymentService
                     }
             };
 
-        /*
-         * Deterministički idempotency key:
-         * ponavljanje zahtjeva za isti Payment
-         * ne smije napraviti drugi refund.
-         */
         var requestOptions =
             new RequestOptions
             {
@@ -951,6 +938,8 @@ public class PaymentService : IPaymentService
         payment.StripeRefundId =
             stripeRefund.Id;
 
+        var refundCompleted = false;
+
         if (string.Equals(
                 stripeRefund.Status,
                 "succeeded",
@@ -968,6 +957,9 @@ public class PaymentService : IPaymentService
 
             payment.Appointment.IsPaid =
                 false;
+
+            refundCompleted = true;
+
         }
         else if (string.Equals(
                      stripeRefund.Status,
@@ -996,6 +988,19 @@ public class PaymentService : IPaymentService
         }
 
         await _context.SaveChangesAsync();
+
+        if (refundCompleted)
+        {
+            await _businessNotificationService
+                .PublishAsync(
+                    clientUserId,
+                    "Payment refunded",
+                    $"Your payment of "
+                    + $"{payment.Amount:F2} "
+                    + $"{PaymentCurrency.ToUpperInvariant()} "
+                    + "has been refunded.",
+                    payment.AppointmentId);
+        }
     }
 
     private static void ValidateMetadata(

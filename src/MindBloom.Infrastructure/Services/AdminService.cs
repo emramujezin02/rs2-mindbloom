@@ -5,23 +5,33 @@ using MindBloom.Application.Features.Admin.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Application.Common.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
 public class AdminService : IAdminService
 {
-    private readonly UserManager<ApplicationUser>
-        _userManager;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    private readonly ApplicationDbContext
-    _context;
+    private readonly ApplicationDbContext _context;
+
+    private readonly IBusinessNotificationService _businessNotificationService;
 
     public AdminService(
-        UserManager<ApplicationUser>
-            userManager, ApplicationDbContext context)
+    UserManager<ApplicationUser>
+        userManager,
+    ApplicationDbContext context,
+    IBusinessNotificationService
+        businessNotificationService)
     {
-        _userManager = userManager;
-        _context = context;
+        _userManager =
+            userManager;
+
+        _context =
+            context;
+
+        _businessNotificationService =
+            businessNotificationService;
     }
 
     public async Task<List<UserListDto>>
@@ -96,13 +106,60 @@ public class AdminService : IAdminService
                 "Therapist not found.");
         }
 
+        if (therapist.VerificationStatus ==
+                request.Status &&
+            string.Equals(
+                therapist.VerificationNotes,
+                request.Notes,
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
         therapist.VerificationStatus =
             request.Status;
 
         therapist.VerificationNotes =
-            request.Notes;
+            request.Notes?.Trim();
 
         await _context.SaveChangesAsync();
+
+        var title =
+            request.Status switch
+            {
+                TherapistVerificationStatus.Approved =>
+                    "Therapist profile approved",
+
+                TherapistVerificationStatus.Rejected =>
+                    "Therapist profile rejected",
+
+                _ =>
+                    "Therapist verification updated"
+            };
+
+        var message =
+            request.Status switch
+            {
+                TherapistVerificationStatus.Approved =>
+                    "Your therapist profile has been approved. "
+                    + "You can now use therapist features.",
+
+                TherapistVerificationStatus.Rejected =>
+                    string.IsNullOrWhiteSpace(
+                        request.Notes)
+                        ? "Your therapist profile verification was rejected."
+                        : "Your therapist profile verification was rejected. "
+                          + $"Reason: {request.Notes.Trim()}",
+
+                _ =>
+                    "The verification status of your therapist profile has been updated."
+            };
+
+        await _businessNotificationService
+            .PublishAsync(
+                therapist.UserId,
+                title,
+                message);
     }
 
     public async Task<AdminDashboardDto>

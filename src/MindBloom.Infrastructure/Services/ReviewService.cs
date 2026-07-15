@@ -4,6 +4,7 @@ using MindBloom.Application.Features.Reviews.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Application.Common.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -11,10 +12,16 @@ public class ReviewService : IReviewService
 {
     private readonly ApplicationDbContext _context;
 
+    private readonly IBusinessNotificationService _businessNotificationService;
+
     public ReviewService(
-        ApplicationDbContext context)
+    ApplicationDbContext context,
+    IBusinessNotificationService
+        businessNotificationService)
     {
         _context = context;
+
+        _businessNotificationService = businessNotificationService;
     }
 
     public async Task CreateAsync(
@@ -277,42 +284,73 @@ public class ReviewService : IReviewService
     }
 
     public async Task ReplyToReviewAsync(
-    int therapistUserId,
-    int reviewId,
-    ReplyToReviewDto request)
+     int therapistUserId,
+     int reviewId,
+     ReplyToReviewDto request)
     {
+        var reply = request.Reply?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(reply))
+        {
+            throw new Exception("Review reply is required.");
+        }
+
+        if (reply.Length > 1000)
+        {
+            throw new Exception("Review reply may contain at most 1000 characters.");
+        }
+
         var therapist =
             await _context.Therapists
                 .FirstOrDefaultAsync(x =>
-                    x.UserId
-                    == therapistUserId);
+                    x.UserId ==
+                        therapistUserId);
 
         if (therapist == null)
         {
-            throw new Exception(
-                "Therapist not found.");
+            throw new Exception("Therapist not found.");
         }
 
         var review =
             await _context.Reviews
+                .Include(x =>
+                    x.Client)
+                .ThenInclude(x =>
+                    x.User)
                 .FirstOrDefaultAsync(x =>
-                    x.Id == reviewId
-                    && x.TherapistId
-                        == therapist.Id);
+                    x.Id ==
+                        reviewId &&
+                    x.TherapistId ==
+                        therapist.Id);
 
         if (review == null)
         {
-            throw new Exception(
-                "Review not found.");
+            throw new Exception("Review not found.");
         }
 
-        review.TherapistReply =
-            request.Reply;
+        var isSameReply =
+            string.Equals(
+                review.TherapistReply,
+                reply,
+                StringComparison.Ordinal);
 
-        review.TherapistReplyCreatedAtUtc =
-            DateTime.UtcNow;
+        if (isSameReply)
+        {
+            return;
+        }
+
+        review.TherapistReply = reply;
+
+        review.TherapistReplyCreatedAtUtc = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        await _businessNotificationService
+            .PublishAsync(
+                review.Client.UserId,
+                "Therapist replied to your review",
+                "Your therapist has replied to one of your reviews.",
+                review.AppointmentId);
     }
 
     public async Task<List<ReviewResponseDto>>

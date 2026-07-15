@@ -156,9 +156,7 @@ public static class DependencyInjection
 
         services.AddScoped<StripeVerificationService>();
 
-        services.AddScoped<IPaymentService,PaymentService>();
-
-        services.AddScoped<IMembershipService,MembershipService>();
+        services.AddScoped<IBusinessNotificationService, BusinessNotificationService>();
 
         return services;
     }
