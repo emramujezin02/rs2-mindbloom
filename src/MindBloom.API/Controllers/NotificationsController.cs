@@ -8,7 +8,8 @@ namespace MindBloom.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class NotificationsController : ControllerBase
+public sealed class NotificationsController
+    : ControllerBase
 {
     private readonly INotificationService
         _notificationService;
@@ -16,32 +17,32 @@ public class NotificationsController : ControllerBase
     public NotificationsController(
         INotificationService notificationService)
     {
-        _notificationService = notificationService;
+        _notificationService =
+            notificationService;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetMyNotifications()
+    public async Task<IActionResult>
+        GetMyNotifications()
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!.Value);
+            GetAuthenticatedUserId();
 
         var result =
             await _notificationService
-                .GetMyNotificationsAsync(userId);
+                .GetMyNotificationsAsync(
+                    userId);
 
         return Ok(result);
     }
 
-    [HttpPut("{notificationId}/read")]
-    public async Task<IActionResult> MarkAsRead(
-        int notificationId)
+    [HttpPut("{notificationId:int}/read")]
+    public async Task<IActionResult>
+        MarkAsRead(
+            int notificationId)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!.Value);
+            GetAuthenticatedUserId();
 
         await _notificationService
             .MarkAsReadAsync(
@@ -50,7 +51,25 @@ public class NotificationsController : ControllerBase
 
         return Ok(new
         {
-            message = "Notification marked as read."
+            message =
+                "Notification marked as read."
         });
+    }
+
+    private int GetAuthenticatedUserId()
+    {
+        var userIdValue =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(
+                userIdValue,
+                out var userId))
+        {
+            throw new UnauthorizedAccessException(
+                "Authenticated user identifier is invalid.");
+        }
+
+        return userId;
     }
 }

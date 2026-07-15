@@ -1,42 +1,33 @@
 using DotNetEnv;
-using MindBloom.API.Middlewares;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.OpenApi.Models;
+using MindBloom.API.Middlewares;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.DependencyInjection;
-using MindBloom.Infrastructure.Persistence.Seed;
-using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Persistence.Seed;
-using Microsoft.AspNetCore.Identity;
-using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Realtime;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Options;
-using Microsoft.AspNetCore.Authentication.BearerToken;
-using Microsoft.AspNetCore.SignalR;
-using MindBloom.Infrastructure.Realtime;
-using Microsoft.AspNetCore.Mvc;
 
 Env.Load("../../.env");
 
-var builder = WebApplication.CreateBuilder(args);
+var builder =
+    WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen();
-
-builder.Services.AddSignalR();
-
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(
+    builder.Configuration);
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
+    options.AddPolicy(
+        "AllowAll",
         policy =>
         {
-            policy.AllowAnyHeader()
+            policy
+                .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowAnyOrigin();
         });
@@ -46,59 +37,71 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc(
         "v1",
-        new Microsoft.OpenApi.Models.OpenApiInfo
+        new OpenApiInfo
         {
-            Title = "MindBloom API",
-            Version = "v1"
+            Title =
+                "MindBloom API",
+
+            Version =
+                "v1"
         });
 
     options.AddSecurityDefinition(
         "Bearer",
-        new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+        new OpenApiSecurityScheme
         {
-            Name = "Authorization",
-            Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-            Scheme = "bearer",
-            BearerFormat = "JWT",
-            In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-            Description = "Enter JWT token"
+            Name =
+                "Authorization",
+
+            Type =
+                SecuritySchemeType.Http,
+
+            Scheme =
+                "bearer",
+
+            BearerFormat =
+                "JWT",
+
+            In =
+                ParameterLocation.Header,
+
+            Description =
+                "Enter JWT access token."
         });
 
     options.AddSecurityRequirement(
-        new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+        new OpenApiSecurityRequirement
         {
             {
-                new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                new OpenApiSecurityScheme
                 {
                     Reference =
-                        new Microsoft.OpenApi.Models.OpenApiReference
+                        new OpenApiReference
                         {
                             Type =
-                                Microsoft.OpenApi.Models.ReferenceType
+                                ReferenceType
                                     .SecurityScheme,
-                            Id = "Bearer"
+
+                            Id =
+                                "Bearer"
                         }
                 },
                 Array.Empty<string>()
             }
         });
-
- 
 });
 
+var app =
+    builder.Build();
 
-
-var app = builder.Build();
-
-app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseMiddleware<
+    GlobalExceptionMiddleware>();
 
 app.UseSwagger();
 
 app.UseSwaggerUI();
 
 app.UseCors("AllowAll");
-
-app.UseWebSockets();
 
 app.UseHttpsRedirection();
 
@@ -110,25 +113,34 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<NotificationHub>(
+        "/hubs/notifications")
+    .RequireAuthorization();
 
-using (var scope = app.Services.CreateScope())
+using (var scope =
+       app.Services.CreateScope())
 {
-    var services = scope.ServiceProvider;
+    var services =
+        scope.ServiceProvider;
 
     var context =
-        services.GetRequiredService<ApplicationDbContext>();
+        services.GetRequiredService<
+            ApplicationDbContext>();
 
     var userManager =
-        services.GetRequiredService<UserManager<ApplicationUser>>();
+        services.GetRequiredService<
+            UserManager<ApplicationUser>>();
 
     var roleManager =
-        services.GetRequiredService<RoleManager<IdentityRole<int>>>();
+        services.GetRequiredService<
+            RoleManager<
+                IdentityRole<int>>>();
 
-    await ApplicationDbSeeder.SeedAsync(
-        context,
-        userManager,
-        roleManager);
+    await ApplicationDbSeeder
+        .SeedAsync(
+            context,
+            userManager,
+            roleManager);
 }
 
 app.Run();

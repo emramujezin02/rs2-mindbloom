@@ -1,10 +1,10 @@
-﻿using MindBloom.Infrastructure.Realtime;
+﻿using Microsoft.AspNetCore.SignalR;
 using MindBloom.Application.Common.Interfaces;
-using Microsoft.AspNetCore.SignalR;
+using MindBloom.Infrastructure.Realtime;
 
 namespace MindBloom.Infrastructure.Services;
 
-public class SignalRNotificationSender
+public sealed class SignalRNotificationSender
     : INotificationSender
 {
     private readonly IHubContext<NotificationHub>
@@ -21,15 +21,30 @@ public class SignalRNotificationSender
         string title,
         string message)
     {
+        if (userId <= 0)
+        {
+            throw new ArgumentException(
+                "User identifier is invalid.",
+                nameof(userId));
+        }
+
         await _hubContext
             .Clients
-            .Group($"user-{userId}")
+            .Group(GetUserGroupName(userId))
             .SendAsync(
                 "ReceiveNotification",
                 new
                 {
                     title,
-                    message
+                    message,
+                    createdAtUtc =
+                        DateTime.UtcNow
                 });
+    }
+
+    private static string GetUserGroupName(
+        int userId)
+    {
+        return $"user-{userId}";
     }
 }

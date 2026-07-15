@@ -35,12 +35,9 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString =
-            Environment.GetEnvironmentVariable("DB_CONNECTION");
+        var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION");
 
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString));
-
+        services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
 
         services.AddSignalR();
 
@@ -60,8 +57,7 @@ public static class DependencyInjection
             SecretKey = Environment.GetEnvironmentVariable("JWT_SECRET")!,
             Issuer = Environment.GetEnvironmentVariable("JWT_ISSUER")!,
             Audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")!,
-            ExpirationInMinutes = int.Parse(
-                Environment.GetEnvironmentVariable("JWT_EXPIRATION_MINUTES")!)
+            ExpirationInMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRATION_MINUTES")!)
         };
 
         services.Configure<JwtSettings>(options =>
@@ -69,19 +65,16 @@ public static class DependencyInjection
             options.SecretKey = jwtSettings.SecretKey;
             options.Issuer = jwtSettings.Issuer;
             options.Audience = jwtSettings.Audience;
-            options.ExpirationInMinutes =
-                jwtSettings.ExpirationInMinutes;
+            options.ExpirationInMinutes = jwtSettings.ExpirationInMinutes;
         });
 
         var key = Encoding.UTF8.GetBytes(jwtSettings.SecretKey);
 
         services.AddAuthentication(options =>
         {
-            options.DefaultAuthenticateScheme =
-                JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
 
-            options.DefaultChallengeScheme =
-                JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
         })
        .AddJwtBearer(options =>
        {
@@ -92,34 +85,39 @@ public static class DependencyInjection
                    ValidateAudience = true,
                    ValidateLifetime = true,
                    ValidateIssuerSigningKey = true,
-
                    ValidIssuer = jwtSettings.Issuer,
                    ValidAudience = jwtSettings.Audience,
-
-                   IssuerSigningKey =
-                       new SymmetricSecurityKey(key)
+                   IssuerSigningKey = new SymmetricSecurityKey(key)
                };
 
-           options.Events = new JwtBearerEvents
-           {
-               OnMessageReceived = context =>
+           options.Events =
+               new JwtBearerEvents
                {
-                   var accessToken =
-                       context.Request.Query["access_token"];
+                   OnMessageReceived =
+             context =>
+            {
+                var accessToken =
+                    context.Request
+                        .Query["access_token"]
+                        .FirstOrDefault();
 
-                   var path =
-                       context.HttpContext.Request.Path;
+                var requestPath =
+                    context.HttpContext
+                        .Request
+                        .Path;
 
-                   if (!string.IsNullOrEmpty(accessToken)
-                       && path.StartsWithSegments(
-                           "/hubs/notifications"))
-                   {
-                       context.Token = accessToken;
-                   }
+                if (!string.IsNullOrWhiteSpace(
+                        accessToken) &&
+                    requestPath.StartsWithSegments(
+                        "/hubs/notifications"))
+                {
+                    context.Token =
+                        accessToken;
+                }
 
-                   return Task.CompletedTask;
-               }
-           };
+                return Task.CompletedTask;
+            }
+    };
        });
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
