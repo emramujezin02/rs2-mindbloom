@@ -40,6 +40,7 @@ import '../../features/dashboard/presentation/viewmodels/client_dashboard_viewmo
 import '../../features/notification/data/repositories/notification_repository.dart';
 import '../../features/notification/data/services/notification_api_service.dart';
 import '../../features/notification/presentation/viewmodels/notification_viewmodel.dart';
+import '../../features/notification/data/services/notification_realtime_service.dart';
 
 import '../../features/membership/data/repositories/membership_repository.dart';
 import '../../features/membership/data/services/membership_api_service.dart';
@@ -65,6 +66,11 @@ class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
   static final ApiClient apiClient = ApiClient(sessionStorage: sessionStorage);
+
+  static final NotificationRepository _notificationRepository =
+      NotificationRepository(
+        apiService: NotificationApiService(apiClient: apiClient),
+      );
 
   static SessionViewModel createSessionViewModel() {
     final authApiService = AuthApiService(apiClient: apiClient);
@@ -166,12 +172,26 @@ class AppInjection {
     return CreateReviewViewModel(repository: repository);
   }
 
+  static final NotificationViewModel _notificationViewModel =
+      NotificationViewModel(
+        repository: _notificationRepository,
+        realtimeServiceFactory:
+            ({
+              required onNotificationReceived,
+              required onReconnected,
+              required onConnectionStatusChanged,
+            }) {
+              return NotificationRealtimeService(
+                sessionStorage: sessionStorage,
+                onNotificationReceived: onNotificationReceived,
+                onReconnected: onReconnected,
+                onConnectionStatusChanged: onConnectionStatusChanged,
+              );
+            },
+      );
+
   static NotificationViewModel createNotificationViewModel() {
-    final api = NotificationApiService(apiClient: apiClient);
-
-    final repository = NotificationRepository(apiService: api);
-
-    return NotificationViewModel(repository: repository);
+    return _notificationViewModel;
   }
 
   static MembershipViewModel createMembershipViewModel() {

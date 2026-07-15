@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../../../notification/presentation/viewmodels/notification_scope.dart';
 import '../../../../app/di/injection.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../viewmodels/auth_viewmodel.dart';
@@ -57,39 +57,48 @@ class _LoginPageState extends State<LoginPage> {
       rememberMe: _rememberMe,
     );
 
-    if (!mounted || !success) {
+    if (!mounted) {
       return;
     }
 
     if (!success && _viewModel.needsEmailVerification) {
       Navigator.of(context).pushNamed(
         AppRouter.verifyEmail,
-        arguments:
-            _viewModel.pendingVerificationEmail ?? _emailController.text.trim(),
+        arguments: _viewModel.pendingVerificationEmail ?? email,
       );
 
       return;
     }
 
-    if (success) {
-      if (_viewModel.requiresTwoFactor) {
-        Navigator.of(context).pushNamed(AppRouter.verify2FA, arguments: email);
-
-        return;
-      }
-
-      final session = SessionScope.of(context);
-
-      await session.initialize();
-
-      if (!mounted) {
-        return;
-      }
-
-      Navigator.of(
-        context,
-      ).pushNamedAndRemoveUntil(AppRouter.home, (route) => false);
+    if (!success) {
+      return;
     }
+
+    if (_viewModel.requiresTwoFactor) {
+      Navigator.of(context).pushNamed(AppRouter.verify2FA, arguments: email);
+
+      return;
+    }
+
+    final session = SessionScope.of(context);
+
+    final notifications = NotificationScope.of(context);
+
+    await session.initialize();
+
+    if (!mounted) {
+      return;
+    }
+
+    await notifications.initialize();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(AppRouter.home, (route) => false);
   }
 
   @override

@@ -5,6 +5,8 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 
 import 'app/app.dart';
 import 'app/di/injection.dart';
+import 'features/notification/presentation/viewmodels/notification_viewmodel.dart';
+import 'features/session/presentation/viewmodels/session_viewmodel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,9 +27,27 @@ Future<void> main() async {
 
   final session = AppInjection.createSessionViewModel();
 
-  runApp(MindBloomMobileApp(session: session));
+  final notificationViewModel = AppInjection.createNotificationViewModel();
+
+  runApp(
+    MindBloomMobileApp(
+      session: session,
+      notificationViewModel: notificationViewModel,
+    ),
+  );
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    unawaited(session.initialize());
+    unawaited(_initializeApplication(session, notificationViewModel));
   });
+}
+
+Future<void> _initializeApplication(
+  SessionViewModel session,
+  NotificationViewModel notificationViewModel,
+) async {
+  await session.initialize();
+
+  if (session.isLoggedIn) {
+    await notificationViewModel.initialize();
+  }
 }
