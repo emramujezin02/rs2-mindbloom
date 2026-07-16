@@ -6,6 +6,11 @@ import '../../features/auth/data/repositories/auth_repository.dart';
 import '../../features/auth/data/services/auth_api_service.dart';
 import '../../features/auth/presentation/viewmodels/auth_viewmodel.dart';
 
+import '../../features/membership_management/data/repositories/membership_management_repository.dart';
+import '../../features/membership_management/data/services/membership_management_api_service.dart';
+import '../../features/membership_management/presentation/viewmodels/membership_management_details_viewmodel.dart';
+import '../../features/membership_management/presentation/viewmodels/membership_management_viewmodel.dart';
+
 import '../../features/appointment_management/data/repositories/appointment_management_repository.dart';
 import '../../features/appointment_management/data/services/appointment_management_api_service.dart';
 import '../../features/appointment_management/presentation/viewmodels/appointment_management_details_viewmodel.dart';
@@ -160,6 +165,26 @@ class AppInjection {
   static PaymentReceiptViewModel createPaymentReceiptViewModel() {
     return PaymentReceiptViewModel(
       repository: _createPaymentManagementRepository(),
+    );
+  }
+
+  static MembershipManagementRepository
+  _createMembershipManagementRepository() {
+    final apiService = MembershipManagementApiService(apiClient: apiClient);
+
+    return MembershipManagementRepository(apiService: apiService);
+  }
+
+  static MembershipManagementViewModel createMembershipManagementViewModel() {
+    return MembershipManagementViewModel(
+      repository: _createMembershipManagementRepository(),
+    );
+  }
+
+  static MembershipManagementDetailsViewModel
+  createMembershipManagementDetailsViewModel() {
+    return MembershipManagementDetailsViewModel(
+      repository: _createMembershipManagementRepository(),
     );
   }
 }

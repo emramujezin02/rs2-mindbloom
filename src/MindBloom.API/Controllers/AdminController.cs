@@ -307,6 +307,34 @@ public class AdminController : ControllerBase
         });
     }
 
+    [HttpGet("memberships")]
+    public async Task<IActionResult>
+    GetMemberships(
+        [FromQuery]
+        SearchAdminMembershipsDto request)
+    {
+        var result =
+            await _adminService
+                .GetMembershipsAsync(
+                    request);
+
+        return Ok(result);
+    }
+
+    [HttpGet(
+        "memberships/{membershipId}")]
+    public async Task<IActionResult>
+        GetMembershipDetails(
+            int membershipId)
+    {
+        var result =
+            await _adminService
+                .GetMembershipDetailsAsync(
+                    membershipId);
+
+        return Ok(result);
+    }
+
     private int
        GetAuthenticatedUserId()
     {

@@ -2535,4 +2535,611 @@ public class AdminService : IAdminService
                 payment.AppointmentId,
                 completeReason);
     }
+
+    public async Task<
+    PagedResponse<AdminMembershipListDto>>
+    GetMembershipsAsync(
+        SearchAdminMembershipsDto request)
+    {
+        var query =
+            _context.ClientMemberships
+                .AsNoTracking()
+                .Include(x =>
+                    x.Client)
+                    .ThenInclude(x =>
+                        x.User)
+                .Include(x =>
+                    x.Therapist)
+                    .ThenInclude(x =>
+                        x.User)
+                .Include(x =>
+                    x.Payment)
+                .Include(x =>
+                    x.Usages)
+                .Where(x =>
+                    !x.IsDeleted)
+                .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(
+                request.Search))
+        {
+            var search =
+                request.Search
+                    .Trim()
+                    .ToLower();
+
+            query = query.Where(x =>
+                x.Id.ToString()
+                    .Contains(search)
+                ||
+                (
+                    x.Client.User.FirstName
+                    + " "
+                    + x.Client.User.LastName
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Client.User.Email
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Therapist.User.FirstName
+                    + " "
+                    + x.Therapist.User.LastName
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Therapist.User.Email
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search));
+        }
+
+        if (request.ClientId.HasValue)
+        {
+            query = query.Where(x =>
+                x.ClientId ==
+                request.ClientId.Value);
+        }
+
+        if (request.TherapistId.HasValue)
+        {
+            query = query.Where(x =>
+                x.TherapistId ==
+                request.TherapistId.Value);
+        }
+
+        if (request.PlanType.HasValue)
+        {
+            query = query.Where(x =>
+                x.PlanType ==
+                request.PlanType.Value);
+        }
+
+        if (request.PaymentStatus.HasValue)
+        {
+            query = query.Where(x =>
+                x.Payment != null
+                && x.Payment.Status ==
+                    request.PaymentStatus.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.MembershipStatus))
+        {
+            var membershipStatus =
+                request.MembershipStatus
+                    .Trim()
+                    .ToLower();
+
+            var now =
+                DateTime.UtcNow;
+
+            query = membershipStatus switch
+            {
+                "active" =>
+                    query.Where(x =>
+                        x.IsActive
+                        && x.RemainingSessions > 0
+                        && x.Payment != null
+                        && x.Payment.Status ==
+                            PaymentStatus.Paid
+                        && (
+                            x.ExpiresAtUtc == null
+                            || x.ExpiresAtUtc > now
+                        )),
+
+                "inactive" =>
+                    query.Where(x =>
+                        !x.IsActive),
+
+                "pendingpayment" =>
+                    query.Where(x =>
+                        x.Payment == null
+                        || x.Payment.Status ==
+                            PaymentStatus.Pending),
+
+                "expired" =>
+                    query.Where(x =>
+                        x.ExpiresAtUtc != null
+                        && x.ExpiresAtUtc <= now),
+
+                "depleted" =>
+                    query.Where(x =>
+                        x.RemainingSessions <= 0
+                        && x.Payment != null
+                        && x.Payment.Status ==
+                            PaymentStatus.Paid),
+
+                _ =>
+                    throw new Exception(
+                        "Invalid membership status filter.")
+            };
+        }
+
+        var totalCount =
+            await query.CountAsync();
+
+        var nowUtc =
+            DateTime.UtcNow;
+
+        var rawItems =
+            await query
+                .OrderByDescending(x =>
+                    x.PurchasedAtUtc
+                    ?? x.CreatedAtUtc)
+                .ThenByDescending(x =>
+                    x.Id)
+                .Skip(
+                    (request.PageNumber - 1)
+                    * request.PageSize)
+                .Take(request.PageSize)
+                .Select(x =>
+                    new
+                    {
+                        x.Id,
+
+                        x.ClientId,
+
+                        ClientName =
+                            x.Client.User.FirstName
+                            + " "
+                            + x.Client.User.LastName,
+
+                        ClientEmail =
+                            x.Client.User.Email
+                            ?? string.Empty,
+
+                        x.TherapistId,
+
+                        TherapistName =
+                            x.Therapist.User.FirstName
+                            + " "
+                            + x.Therapist.User.LastName,
+
+                        TherapistEmail =
+                            x.Therapist.User.Email
+                            ?? string.Empty,
+
+                        PlanType =
+                            x.PlanType.ToString(),
+
+                        x.TotalSessions,
+
+                        x.RemainingSessions,
+
+                        x.Price,
+
+                        x.IsActive,
+
+                        PaymentStatus =
+                            x.Payment == null
+                                ? "NotCreated"
+                                : x.Payment.Status
+                                    .ToString(),
+
+                        PaymentIsPaid =
+                            x.Payment != null
+                            && x.Payment.Status ==
+                                PaymentStatus.Paid,
+
+                        x.PurchasedAtUtc,
+
+                        x.ExpiresAtUtc,
+
+                        x.CreatedAtUtc,
+
+                        ReservedSessions =
+                            x.Usages.Count(usage =>
+                                usage.Status ==
+                                MembershipUsageStatus
+                                    .Reserved),
+
+                        ConsumedSessions =
+                            x.Usages.Count(usage =>
+                                usage.Status ==
+                                MembershipUsageStatus
+                                    .Consumed),
+
+                        RestoredSessions =
+                            x.Usages.Count(usage =>
+                                usage.Status ==
+                                MembershipUsageStatus
+                                    .Restored)
+                    })
+                .ToListAsync();
+
+        var items =
+            rawItems
+                .Select(x =>
+                    new AdminMembershipListDto
+                    {
+                        Id =
+                            x.Id,
+
+                        ClientId =
+                            x.ClientId,
+
+                        ClientName =
+                            x.ClientName,
+
+                        ClientEmail =
+                            x.ClientEmail,
+
+                        TherapistId =
+                            x.TherapistId,
+
+                        TherapistName =
+                            x.TherapistName,
+
+                        TherapistEmail =
+                            x.TherapistEmail,
+
+                        PlanType =
+                            x.PlanType,
+
+                        MembershipStatus =
+                            GetAdminMembershipStatus(
+                                x.IsActive,
+                                x.RemainingSessions,
+                                x.PaymentStatus,
+                                x.ExpiresAtUtc,
+                                nowUtc),
+
+                        TotalSessions =
+                            x.TotalSessions,
+
+                        RemainingSessions =
+                            x.RemainingSessions,
+
+                        UsedSessions =
+                            x.ConsumedSessions,
+
+                        ReservedSessions =
+                            x.ReservedSessions,
+
+                        ConsumedSessions =
+                            x.ConsumedSessions,
+
+                        RestoredSessions =
+                            x.RestoredSessions,
+
+                        Price =
+                            x.Price,
+
+                        IsActive =
+                            x.IsActive,
+
+                        PaymentStatus =
+                            x.PaymentStatus,
+
+                        PurchasedAtUtc =
+                            x.PurchasedAtUtc,
+
+                        ExpiresAtUtc =
+                            x.ExpiresAtUtc,
+
+                        CreatedAtUtc =
+                            x.CreatedAtUtc
+                    })
+                .ToList();
+
+        return new PagedResponse<
+            AdminMembershipListDto>
+        {
+            Items =
+                items,
+
+            PageNumber =
+                request.PageNumber,
+
+            PageSize =
+                request.PageSize,
+
+            TotalCount =
+                totalCount,
+
+            TotalPages =
+                totalCount == 0
+                    ? 0
+                    : (int)Math.Ceiling(
+                        totalCount
+                        / (double)request.PageSize)
+        };
+    }
+
+    public async Task<AdminMembershipDetailsDto>
+        GetMembershipDetailsAsync(
+            int membershipId)
+    {
+        var membership =
+            await _context.ClientMemberships
+                .AsNoTracking()
+                .Include(x =>
+                    x.Client)
+                    .ThenInclude(x =>
+                        x.User)
+                .Include(x =>
+                    x.Therapist)
+                    .ThenInclude(x =>
+                        x.User)
+                .Include(x =>
+                    x.Payment)
+                .Include(x =>
+                    x.Usages)
+                    .ThenInclude(x =>
+                        x.Appointment)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == membershipId
+                    && !x.IsDeleted);
+
+        if (membership == null)
+        {
+            throw new Exception(
+                "Membership not found.");
+        }
+
+        var reservedSessions =
+            membership.Usages.Count(x =>
+                x.Status ==
+                MembershipUsageStatus.Reserved);
+
+        var consumedSessions =
+            membership.Usages.Count(x =>
+                x.Status ==
+                MembershipUsageStatus.Consumed);
+
+        var restoredSessions =
+            membership.Usages.Count(x =>
+                x.Status ==
+                MembershipUsageStatus.Restored);
+
+        var paymentStatus =
+            membership.Payment == null
+                ? "NotCreated"
+                : membership.Payment.Status
+                    .ToString();
+
+        return new AdminMembershipDetailsDto
+        {
+            Id =
+                membership.Id,
+
+            ClientId =
+                membership.ClientId,
+
+            ClientUserId =
+                membership.Client.UserId,
+
+            ClientName =
+                membership.Client.User.FirstName
+                + " "
+                + membership.Client.User.LastName,
+
+            ClientEmail =
+                membership.Client.User.Email
+                ?? string.Empty,
+
+            TherapistId =
+                membership.TherapistId,
+
+            TherapistUserId =
+                membership.Therapist.UserId,
+
+            TherapistName =
+                membership.Therapist.User.FirstName
+                + " "
+                + membership.Therapist.User.LastName,
+
+            TherapistEmail =
+                membership.Therapist.User.Email
+                ?? string.Empty,
+
+            PlanType =
+                membership.PlanType.ToString(),
+
+            MembershipStatus =
+                GetAdminMembershipStatus(
+                    membership.IsActive,
+                    membership.RemainingSessions,
+                    paymentStatus,
+                    membership.ExpiresAtUtc,
+                    DateTime.UtcNow),
+
+            TotalSessions =
+                membership.TotalSessions,
+
+            RemainingSessions =
+                membership.RemainingSessions,
+
+            UsedSessions =
+                consumedSessions,
+
+            ReservedSessions =
+                reservedSessions,
+
+            ConsumedSessions =
+                consumedSessions,
+
+            RestoredSessions =
+                restoredSessions,
+
+            Price =
+                membership.Price,
+
+            IsActive =
+                membership.IsActive,
+
+            PurchasedAtUtc =
+                membership.PurchasedAtUtc,
+
+            ExpiresAtUtc =
+                membership.ExpiresAtUtc,
+
+            CreatedAtUtc =
+                membership.CreatedAtUtc,
+
+            UpdatedAtUtc =
+                membership.UpdatedAtUtc,
+
+            Payment =
+                membership.Payment == null
+                    ? null
+                    : new AdminMembershipPaymentDto
+                    {
+                        Id =
+                            membership.Payment.Id,
+
+                        Amount =
+                            membership.Payment.Amount,
+
+                        Currency =
+                            membership.Payment.Currency,
+
+                        Status =
+                            membership.Payment.Status
+                                .ToString(),
+
+                        StripePaymentIntentId =
+                            membership.Payment
+                                .StripePaymentIntentId,
+
+                        PaidAtUtc =
+                            membership.Payment
+                                .PaidAtUtc,
+
+                        CreatedAtUtc =
+                            membership.Payment
+                                .CreatedAtUtc
+                    },
+
+            Usages =
+                membership.Usages
+                    .OrderByDescending(x =>
+                        x.ReservedAtUtc
+                        ?? x.UsedAtUtc)
+                    .ThenByDescending(x =>
+                        x.Id)
+                    .Select(x =>
+                        new AdminMembershipUsageDto
+                        {
+                            Id =
+                                x.Id,
+
+                            AppointmentId =
+                                x.AppointmentId,
+
+                            AppointmentStatus =
+                                x.Appointment.Status
+                                    .ToString(),
+
+                            AppointmentStartUtc =
+                                x.Appointment.StartUtc,
+
+                            AppointmentEndUtc =
+                                x.Appointment.EndUtc,
+
+                            Status =
+                                x.Status.ToString(),
+
+                            UsedAtUtc =
+                                x.UsedAtUtc,
+
+                            ReservedAtUtc =
+                                x.ReservedAtUtc,
+
+                            ConsumedAtUtc =
+                                x.ConsumedAtUtc,
+
+                            RestoredAtUtc =
+                                x.RestoredAtUtc,
+
+                            ResolutionReason =
+                                x.ResolutionReason,
+
+                            CreatedAtUtc =
+                                x.CreatedAtUtc,
+
+                            UpdatedAtUtc =
+                                x.UpdatedAtUtc
+                        })
+                    .ToList()
+        };
+    }
+
+    private static string
+        GetAdminMembershipStatus(
+            bool isActive,
+            int remainingSessions,
+            string paymentStatus,
+            DateTime? expiresAtUtc,
+            DateTime nowUtc)
+    {
+        if (string.Equals(
+                paymentStatus,
+                PaymentStatus.Pending.ToString(),
+                StringComparison.OrdinalIgnoreCase)
+            || string.Equals(
+                paymentStatus,
+                "NotCreated",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return "PendingPayment";
+        }
+
+        if (expiresAtUtc.HasValue
+            && expiresAtUtc.Value <= nowUtc)
+        {
+            return "Expired";
+        }
+
+        if (remainingSessions <= 0
+            && string.Equals(
+                paymentStatus,
+                PaymentStatus.Paid.ToString(),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return "Depleted";
+        }
+
+        if (isActive
+            && remainingSessions > 0
+            && string.Equals(
+                paymentStatus,
+                PaymentStatus.Paid.ToString(),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return "Active";
+        }
+
+        return "Inactive";
+    }
 }

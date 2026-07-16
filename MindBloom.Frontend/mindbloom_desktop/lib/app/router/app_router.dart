@@ -8,6 +8,7 @@ import '../../features/session/presentation/pages/session_gate_page.dart';
 import '../../features/therapist_verification/presentation/pages/therapist_verification_details_page.dart';
 import '../../features/payment_management/presentation/pages/payment_management_details_page.dart';
 import '../../features/payment_management/presentation/pages/payment_receipt_page.dart';
+import '../../features/membership_management/presentation/pages/membership_management_details_page.dart';
 
 class AppRouter {
   static const String root = '/';
@@ -28,6 +29,8 @@ class AppRouter {
       '/appointments/management/details';
   static const String paymentManagementDetails = '/payments/management/details';
   static const String paymentReceipt = '/payments/receipt';
+  static const String membershipManagementDetails =
+      '/memberships/management/details';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -125,6 +128,14 @@ class AppRouter {
 
         return MaterialPageRoute(
           builder: (_) => PaymentReceiptPage(paymentId: paymentId),
+        );
+
+      case membershipManagementDetails:
+        final membershipId = settings.arguments as int;
+
+        return MaterialPageRoute(
+          builder: (_) =>
+              MembershipManagementDetailsPage(membershipId: membershipId),
         );
 
       default:

@@ -70,6 +70,14 @@ public interface IAdminService
         int paymentId,
         AdminRefundPaymentDto request);
 
+    Task<PagedResponse<AdminMembershipListDto>>
+    GetMembershipsAsync(
+        SearchAdminMembershipsDto request);
+
+    Task<AdminMembershipDetailsDto>
+        GetMembershipDetailsAsync(
+            int membershipId);
+
     Task<AdminDashboardDto>
         GetDashboardAsync();
 }

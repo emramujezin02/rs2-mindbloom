@@ -8,6 +8,7 @@ import '../../../dashboard/presentation/pages/dashboard_page.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../../data/models/admin_section.dart';
 import '../../../payment_management/presentation/pages/payment_management_page.dart';
+import '../../../membership_management/presentation/pages/membership_management_page.dart';
 
 class AdminShellPage extends StatefulWidget {
   final AdminSection initialSection;
@@ -207,11 +208,8 @@ class _AdminShellPageState extends State<AdminShellPage> {
         );
 
       case AdminSection.memberships:
-        return const _SectionPlaceholderPage(
+        return const MembershipManagementPage(
           key: ValueKey(AdminSection.memberships),
-          icon: Icons.card_membership,
-          title: 'Memberships',
-          description: 'Membership plans and purchases will be managed here.',
         );
 
       case AdminSection.workshops:
