@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Admin.DTOs;
 using MindBloom.Application.Features.Admin.Interfaces;
@@ -6,7 +7,7 @@ using MindBloom.Application.Features.Admin.Interfaces;
 namespace MindBloom.API.Controllers;
 
 [ApiController]
-[Route("api/admin")]
+[Route("api/[controller]")]
 [Authorize(Roles = "Admin")]
 public class AdminController : ControllerBase
 {
@@ -16,44 +17,70 @@ public class AdminController : ControllerBase
     public AdminController(
         IAdminService adminService)
     {
-        _adminService = adminService;
+        _adminService =
+            adminService;
     }
 
     [HttpGet("users")]
     public async Task<IActionResult>
-        GetUsers()
+        GetUsers(
+            [FromQuery]
+            SearchAdminUsersDto request)
     {
         var result =
             await _adminService
-                .GetUsersAsync();
+                .GetUsersAsync(request);
 
         return Ok(result);
     }
 
     [HttpPut("users/{userId}/status")]
     public async Task<IActionResult>
-    UpdateUserStatus(
-        int userId,
-        UpdateUserStatusDto request)
+        UpdateUserStatus(
+            int userId,
+            UpdateUserStatusDto request)
     {
+        var authenticatedAdminUserId =
+            GetAuthenticatedUserId();
+
         await _adminService
             .UpdateUserStatusAsync(
+                authenticatedAdminUserId,
                 userId,
                 request);
 
         return Ok(new
         {
             message =
-                "User status updated successfully."
+                request.IsBlocked
+                    ? "User deactivated successfully."
+                    : "User activated successfully."
         });
     }
 
+    [HttpDelete("users/{userId}")]
+    public IActionResult
+        DeleteUser(
+            int userId)
+    {
+        return StatusCode(
+            StatusCodes
+                .Status405MethodNotAllowed,
+            new
+            {
+                message =
+                    "Permanent user deletion is not allowed. "
+                    + "Deactivate the user account instead."
+            });
+    }
+
     [HttpPut(
-    "therapists/{therapistId}/verification")]
+        "therapists/{therapistId}/verification")]
     public async Task<IActionResult>
-    UpdateTherapistVerification(
-        int therapistId,
-        UpdateTherapistVerificationDto request)
+        UpdateTherapistVerification(
+            int therapistId,
+            UpdateTherapistVerificationDto
+                request)
     {
         await _adminService
             .UpdateTherapistVerificationAsync(
@@ -63,13 +90,13 @@ public class AdminController : ControllerBase
         return Ok(new
         {
             message =
-                "Therapist verification updated."
+                "Therapist verification updated successfully."
         });
     }
 
     [HttpGet("dashboard")]
     public async Task<IActionResult>
-    GetDashboard()
+        GetDashboard()
     {
         var result =
             await _adminService
@@ -80,8 +107,8 @@ public class AdminController : ControllerBase
 
     [HttpDelete("reviews/{reviewId}")]
     public async Task<IActionResult>
-    DeleteReview(
-        int reviewId)
+        DeleteReview(
+            int reviewId)
     {
         await _adminService
             .DeleteReviewAsync(
@@ -92,5 +119,23 @@ public class AdminController : ControllerBase
             message =
                 "Review deleted successfully."
         });
+    }
+
+    private int
+        GetAuthenticatedUserId()
+    {
+        var userIdValue =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(
+                userIdValue,
+                out var userId))
+        {
+            throw new UnauthorizedAccessException(
+                "Authenticated user identifier is invalid.");
+        }
+
+        return userId;
     }
 }

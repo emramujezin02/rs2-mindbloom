@@ -12,6 +12,10 @@ import '../../features/session/presentation/viewmodels/session_viewmodel.dart';
 
 import '../../services/session_storage_service.dart';
 
+import '../../features/users/data/repositories/admin_users_repository.dart';
+import '../../features/users/data/services/admin_users_api_service.dart';
+import '../../features/users/presentation/viewmodels/admin_users_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
@@ -43,5 +47,13 @@ class AppInjection {
     final repository = AdminDashboardRepository(apiService: apiService);
 
     return AdminDashboardViewModel(repository: repository);
+  }
+
+  static AdminUsersViewModel createAdminUsersViewModel() {
+    final apiService = AdminUsersApiService(apiClient: apiClient);
+
+    final repository = AdminUsersRepository(apiService: apiService);
+
+    return AdminUsersViewModel(repository: repository);
   }
 }

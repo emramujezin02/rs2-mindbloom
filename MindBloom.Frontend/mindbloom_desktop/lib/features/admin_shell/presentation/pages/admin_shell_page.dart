@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mindbloom_desktop/features/users/presentation/pages/users_page.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../dashboard/presentation/pages/dashboard_page.dart';
@@ -185,13 +186,7 @@ class _AdminShellPageState extends State<AdminShellPage> {
         return const DashboardPage(key: ValueKey(AdminSection.dashboard));
 
       case AdminSection.users:
-        return const _SectionPlaceholderPage(
-          key: ValueKey(AdminSection.users),
-          icon: Icons.people,
-          title: 'Users',
-          description:
-              'User administration will be implemented in the following desktop task.',
-        );
+        return const UsersPage(key: ValueKey(AdminSection.users));
 
       case AdminSection.therapists:
         return const _SectionPlaceholderPage(

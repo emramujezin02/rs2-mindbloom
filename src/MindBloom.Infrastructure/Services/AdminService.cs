@@ -1,76 +1,203 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using MindBloom.Application.Common.Models;
 using MindBloom.Application.Features.Admin.DTOs;
 using MindBloom.Application.Features.Admin.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
-using MindBloom.Application.Common.Interfaces;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.Infrastructure.Services;
 
 public class AdminService : IAdminService
 {
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly UserManager<ApplicationUser>
+        _userManager;
 
-    private readonly ApplicationDbContext _context;
-
-    private readonly IBusinessNotificationService _businessNotificationService;
+    private readonly ApplicationDbContext
+        _context;
 
     public AdminService(
-    UserManager<ApplicationUser>
-        userManager,
-    ApplicationDbContext context,
-    IBusinessNotificationService
-        businessNotificationService)
+        UserManager<ApplicationUser> userManager,
+        ApplicationDbContext context)
     {
-        _userManager =
-            userManager;
-
-        _context =
-            context;
-
-        _businessNotificationService =
-            businessNotificationService;
+        _userManager = userManager;
+        _context = context;
     }
 
-    public async Task<List<UserListDto>>
-        GetUsersAsync()
+    public async Task<PagedResponse<UserListDto>>
+        GetUsersAsync(
+            SearchAdminUsersDto request)
     {
-        var users =
-            await _userManager.Users
-                .OrderByDescending(x =>
-                    x.CreatedAtUtc)
-                .ToListAsync();
+        var query =
+            _context.Users
+                .AsNoTracking()
+                .AsQueryable();
 
-        var result =
-            new List<UserListDto>();
-
-        foreach (var user in users)
+        if (!string.IsNullOrWhiteSpace(
+                request.Search))
         {
-            var roles =
-                await _userManager
-                    .GetRolesAsync(user);
+            var search =
+                request.Search
+                    .Trim()
+                    .ToLower();
 
-            result.Add(new UserListDto
-            {
-                Id = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email!,
-                Role = roles.FirstOrDefault() ?? "No Role",
-                IsEmailVerified = user.IsEmailVerified,
-                CreatedAtUtc = user.CreatedAtUtc,
-                IsBlocked = user.IsBlocked
-            });
+            query = query.Where(user =>
+                user.FirstName
+                    .ToLower()
+                    .Contains(search)
+                || user.LastName
+                    .ToLower()
+                    .Contains(search)
+                || (
+                    user.FirstName
+                    + " "
+                    + user.LastName
+                )
+                .ToLower()
+                .Contains(search)
+                || (
+                    user.Email ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search)
+                || (
+                    user.UserName ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search));
         }
 
-        return result;
+        if (request.IsBlocked.HasValue)
+        {
+            query = query.Where(user =>
+                user.IsBlocked ==
+                request.IsBlocked.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.Role))
+        {
+            var roleName =
+                request.Role.Trim();
+
+            query = query.Where(user =>
+                _context.UserRoles
+                    .Where(userRole =>
+                        userRole.UserId ==
+                        user.Id)
+                    .Join(
+                        _context.Roles,
+                        userRole =>
+                            userRole.RoleId,
+                        role =>
+                            role.Id,
+                        (
+                            userRole,
+                            role
+                        ) =>
+                            role.Name)
+                    .Any(name =>
+                        name == roleName));
+        }
+
+        var totalCount =
+            await query.CountAsync();
+
+        var users =
+            await query
+                .OrderByDescending(user =>
+                    user.CreatedAtUtc)
+                .ThenBy(user =>
+                    user.LastName)
+                .ThenBy(user =>
+                    user.FirstName)
+                .Skip(
+                    (
+                        request.PageNumber - 1
+                    )
+                    * request.PageSize)
+                .Take(request.PageSize)
+                .Select(user =>
+                    new UserListDto
+                    {
+                        Id =
+                            user.Id,
+
+                        FirstName =
+                            user.FirstName,
+
+                        LastName =
+                            user.LastName,
+
+                        FullName =
+                            user.FirstName
+                            + " "
+                            + user.LastName,
+
+                        Email =
+                            user.Email
+                            ?? string.Empty,
+
+                        Role =
+                            _context.UserRoles
+                                .Where(
+                                    userRole =>
+                                        userRole.UserId
+                                        == user.Id)
+                                .Join(
+                                    _context.Roles,
+                                    userRole =>
+                                        userRole.RoleId,
+                                    role =>
+                                        role.Id,
+                                    (
+                                        userRole,
+                                        role
+                                    ) =>
+                                        role.Name)
+                                .FirstOrDefault()
+                            ?? "No Role",
+
+                        IsEmailVerified =
+                            user.IsEmailVerified
+                            || user.EmailConfirmed,
+
+                        IsBlocked =
+                            user.IsBlocked,
+
+                        CreatedAtUtc =
+                            user.CreatedAtUtc
+                    })
+                .ToListAsync();
+
+        return new PagedResponse<UserListDto>
+        {
+            Items = users,
+
+            PageNumber =
+                request.PageNumber,
+
+            PageSize =
+                request.PageSize,
+
+            TotalCount =
+                totalCount,
+
+            TotalPages =
+                totalCount == 0
+                    ? 0
+                    : (int)Math.Ceiling(
+                        totalCount
+                        / (double)request.PageSize)
+        };
     }
 
     public async Task UpdateUserStatusAsync(
-    int userId,
-    UpdateUserStatusDto request)
+        int authenticatedAdminUserId,
+        int userId,
+        UpdateUserStatusDto request)
     {
         var user =
             await _userManager
@@ -83,17 +210,94 @@ public class AdminService : IAdminService
                 "User not found.");
         }
 
+        if (
+            authenticatedAdminUserId ==
+            userId
+            && request.IsBlocked)
+        {
+            throw new Exception(
+                "You cannot deactivate your own administrator account.");
+        }
+
+        var targetUserRoles =
+            await _userManager
+                .GetRolesAsync(user);
+
+        var isAdministrator =
+            targetUserRoles.Contains(
+                RoleConstants.Admin);
+
+        if (
+            request.IsBlocked
+            && isAdministrator)
+        {
+            var activeAdminCount =
+                await (
+                    from adminUser
+                        in _context.Users
+
+                    join userRole
+                        in _context.UserRoles
+                        on adminUser.Id
+                        equals userRole.UserId
+
+                    join role
+                        in _context.Roles
+                        on userRole.RoleId
+                        equals role.Id
+
+                    where
+                        role.Name ==
+                            RoleConstants.Admin
+                        && !adminUser.IsBlocked
+
+                    select adminUser.Id
+                )
+                .Distinct()
+                .CountAsync();
+
+            if (activeAdminCount <= 1)
+            {
+                throw new Exception(
+                    "The last active administrator account cannot be deactivated.");
+            }
+        }
+
+        if (
+            user.IsBlocked ==
+            request.IsBlocked)
+        {
+            return;
+        }
+
         user.IsBlocked =
             request.IsBlocked;
 
-        await _userManager
-            .UpdateAsync(user);
+        user.IsActive =
+            !request.IsBlocked;
+
+        var result =
+            await _userManager
+                .UpdateAsync(user);
+
+        if (!result.Succeeded)
+        {
+            var errorMessage =
+                string.Join(
+                    ", ",
+                    result.Errors.Select(
+                        error =>
+                            error.Description));
+
+            throw new Exception(
+                $"User status could not be updated: {errorMessage}");
+        }
     }
 
     public async Task
-    UpdateTherapistVerificationAsync(
-        int therapistId,
-        UpdateTherapistVerificationDto request)
+        UpdateTherapistVerificationAsync(
+            int therapistId,
+            UpdateTherapistVerificationDto request)
     {
         var therapist =
             await _context.Therapists
@@ -106,64 +310,17 @@ public class AdminService : IAdminService
                 "Therapist not found.");
         }
 
-        if (therapist.VerificationStatus ==
-                request.Status &&
-            string.Equals(
-                therapist.VerificationNotes,
-                request.Notes,
-                StringComparison.Ordinal))
-        {
-            return;
-        }
-
         therapist.VerificationStatus =
             request.Status;
 
         therapist.VerificationNotes =
-            request.Notes?.Trim();
+            request.Notes;
 
         await _context.SaveChangesAsync();
-
-        var title =
-            request.Status switch
-            {
-                TherapistVerificationStatus.Approved =>
-                    "Therapist profile approved",
-
-                TherapistVerificationStatus.Rejected =>
-                    "Therapist profile rejected",
-
-                _ =>
-                    "Therapist verification updated"
-            };
-
-        var message =
-            request.Status switch
-            {
-                TherapistVerificationStatus.Approved =>
-                    "Your therapist profile has been approved. "
-                    + "You can now use therapist features.",
-
-                TherapistVerificationStatus.Rejected =>
-                    string.IsNullOrWhiteSpace(
-                        request.Notes)
-                        ? "Your therapist profile verification was rejected."
-                        : "Your therapist profile verification was rejected. "
-                          + $"Reason: {request.Notes.Trim()}",
-
-                _ =>
-                    "The verification status of your therapist profile has been updated."
-            };
-
-        await _businessNotificationService
-            .PublishAsync(
-                therapist.UserId,
-                title,
-                message);
     }
 
     public async Task<AdminDashboardDto>
-    GetDashboardAsync()
+        GetDashboardAsync()
     {
         return new AdminDashboardDto
         {
@@ -182,22 +339,22 @@ public class AdminService : IAdminService
             PendingTherapists =
                 await _context.Therapists
                     .CountAsync(x =>
-                        x.VerificationStatus
-                        == TherapistVerificationStatus
+                        x.VerificationStatus ==
+                        TherapistVerificationStatus
                             .Pending),
 
             ApprovedTherapists =
                 await _context.Therapists
                     .CountAsync(x =>
-                        x.VerificationStatus
-                        == TherapistVerificationStatus
+                        x.VerificationStatus ==
+                        TherapistVerificationStatus
                             .Approved),
 
             RejectedTherapists =
                 await _context.Therapists
                     .CountAsync(x =>
-                        x.VerificationStatus
-                        == TherapistVerificationStatus
+                        x.VerificationStatus ==
+                        TherapistVerificationStatus
                             .Rejected),
 
             TotalAppointments =
@@ -207,22 +364,22 @@ public class AdminService : IAdminService
             CompletedAppointments =
                 await _context.Appointments
                     .CountAsync(x =>
-                        x.Status
-                        == AppointmentStatus
+                        x.Status ==
+                        AppointmentStatus
                             .Completed),
 
             PendingAppointments =
                 await _context.Appointments
                     .CountAsync(x =>
-                        x.Status
-                        == AppointmentStatus
+                        x.Status ==
+                        AppointmentStatus
                             .Pending),
 
             CancelledAppointments =
                 await _context.Appointments
                     .CountAsync(x =>
-                        x.Status
-                        == AppointmentStatus
+                        x.Status ==
+                        AppointmentStatus
                             .Cancelled),
 
             TotalReviews =
@@ -236,16 +393,16 @@ public class AdminService : IAdminService
             TotalRevenue =
                 await _context.Payments
                     .Where(x =>
-                        x.Status
-                        == PaymentStatus.Paid)
+                        x.Status ==
+                        PaymentStatus.Paid)
                     .SumAsync(x =>
                         (decimal?)x.Amount)
-                    ?? 0
+                ?? 0
         };
     }
 
     public async Task DeleteReviewAsync(
-    int reviewId)
+        int reviewId)
     {
         var review =
             await _context.Reviews
