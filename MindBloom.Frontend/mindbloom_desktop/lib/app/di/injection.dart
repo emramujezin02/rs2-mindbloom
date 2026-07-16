@@ -43,6 +43,11 @@ import '../../features/review_moderation/data/repositories/review_moderation_rep
 import '../../features/review_moderation/data/services/review_moderation_api_service.dart';
 import '../../features/review_moderation/presentation/viewmodels/review_moderation_details_viewmodel.dart';
 
+import '../../features/article_management/data/repositories/article_management_repository.dart';
+import '../../features/article_management/data/services/article_management_api_service.dart';
+import '../../features/article_management/presentation/viewmodels/article_form_viewmodel.dart';
+import '../../features/article_management/presentation/viewmodels/article_management_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
@@ -185,6 +190,24 @@ class AppInjection {
   createMembershipManagementDetailsViewModel() {
     return MembershipManagementDetailsViewModel(
       repository: _createMembershipManagementRepository(),
+    );
+  }
+
+  static ArticleManagementRepository _createArticleManagementRepository() {
+    final apiService = ArticleManagementApiService(apiClient: apiClient);
+
+    return ArticleManagementRepository(apiService: apiService);
+  }
+
+  static ArticleManagementViewModel createArticleManagementViewModel() {
+    return ArticleManagementViewModel(
+      repository: _createArticleManagementRepository(),
+    );
+  }
+
+  static ArticleFormViewModel createArticleFormViewModel() {
+    return ArticleFormViewModel(
+      repository: _createArticleManagementRepository(),
     );
   }
 }

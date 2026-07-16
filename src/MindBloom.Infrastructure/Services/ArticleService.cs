@@ -28,21 +28,18 @@ public class ArticleService : IArticleService
             ArticleQueryDto query)
     {
         var pageNumber =
-            query.PageNumber < 1
-                ? 1
-                : query.PageNumber;
+            NormalizePageNumber(
+                query.PageNumber);
 
         var pageSize =
-            query.PageSize < 1
-                ? 10
-                : Math.Min(
-                    query.PageSize,
-                    50);
+            NormalizePageSize(
+                query.PageSize);
 
         var articles =
             _context.Articles
                 .AsNoTracking()
-                .Include(x => x.AuthorUser)
+                .Include(x =>
+                    x.AuthorUser)
                 .Where(x =>
                     !x.IsDeleted &&
                     x.IsPublished);
@@ -51,72 +48,45 @@ public class ArticleService : IArticleService
                 query.Search))
         {
             var search =
-                query.Search.Trim();
+                query.Search
+                    .Trim()
+                    .ToLower();
 
-            articles = articles.Where(x =>
-                x.Title.Contains(search) ||
-                x.Description.Contains(search) ||
-                x.Content.Contains(search) ||
-                x.AuthorUser.FirstName.Contains(search) ||
-                x.AuthorUser.LastName.Contains(search));
+            articles =
+                articles.Where(x =>
+                    x.Title
+                        .ToLower()
+                        .Contains(search)
+                    ||
+                    x.Description
+                        .ToLower()
+                        .Contains(search)
+                    ||
+                    x.Content
+                        .ToLower()
+                        .Contains(search)
+                    ||
+                    (
+                        x.AuthorUser.FirstName
+                        + " "
+                        + x.AuthorUser.LastName
+                    )
+                    .ToLower()
+                    .Contains(search));
         }
 
         if (query.TherapistId.HasValue)
         {
-            articles = articles.Where(x =>
-                x.TherapistId ==
-                query.TherapistId.Value);
+            articles =
+                articles.Where(x =>
+                    x.TherapistId ==
+                    query.TherapistId.Value);
         }
 
-        var totalCount =
-            await articles.CountAsync();
-
-        var items =
-            await articles
-                .OrderByDescending(x =>
-                    x.PublishedAtUtc)
-                .Skip(
-                    (pageNumber - 1) *
-                    pageSize)
-                .Take(pageSize)
-                .Select(x =>
-                    new ArticleResponseDto
-                    {
-                        Id = x.Id,
-                        Title = x.Title,
-                        Description =
-                            x.Description,
-                        Content = x.Content,
-                        ImageUrl =
-                            x.ImageUrl ??
-                            string.Empty,
-                        AuthorUserId =
-                            x.AuthorUserId,
-                        TherapistId =
-                            x.TherapistId,
-                        AuthorName =
-                            x.AuthorUser.FirstName
-                            + " "
-                            + x.AuthorUser.LastName,
-                        PublishedAtUtc =
-                            x.PublishedAtUtc,
-                        IsPublished =
-                            x.IsPublished
-                    })
-                .ToListAsync();
-
-        return new PagedResponse<
-            ArticleResponseDto>
-        {
-            Items = items,
-            PageNumber = pageNumber,
-            PageSize = pageSize,
-            TotalCount = totalCount,
-            TotalPages =
-                (int)Math.Ceiling(
-                    totalCount /
-                    (double)pageSize)
-        };
+        return await CreatePagedResponseAsync(
+            articles,
+            pageNumber,
+            pageSize);
     }
 
     public async Task<ArticleResponseDto>
@@ -126,11 +96,107 @@ public class ArticleService : IArticleService
         var article =
             await _context.Articles
                 .AsNoTracking()
-                .Include(x => x.AuthorUser)
+                .Include(x =>
+                    x.AuthorUser)
                 .FirstOrDefaultAsync(x =>
-                    x.Id == articleId &&
-                    !x.IsDeleted &&
-                    x.IsPublished);
+                    x.Id == articleId
+                    && !x.IsDeleted
+                    && x.IsPublished);
+
+        if (article == null)
+        {
+            throw new Exception(
+                "Article not found.");
+        }
+
+        return MapToDto(article);
+    }
+
+    public async Task<
+        PagedResponse<ArticleResponseDto>>
+        GetManagementAsync(
+            ArticleManagementQueryDto query)
+    {
+        var pageNumber =
+            NormalizePageNumber(
+                query.PageNumber);
+
+        var pageSize =
+            NormalizePageSize(
+                query.PageSize);
+
+        var articles =
+            _context.Articles
+                .AsNoTracking()
+                .Include(x =>
+                    x.AuthorUser)
+                .Where(x =>
+                    !x.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(
+                query.Search))
+        {
+            var search =
+                query.Search
+                    .Trim()
+                    .ToLower();
+
+            articles =
+                articles.Where(x =>
+                    x.Title
+                        .ToLower()
+                        .Contains(search)
+                    ||
+                    x.Description
+                        .ToLower()
+                        .Contains(search)
+                    ||
+                    x.Content
+                        .ToLower()
+                        .Contains(search)
+                    ||
+                    (
+                        x.AuthorUser.FirstName
+                        + " "
+                        + x.AuthorUser.LastName
+                    )
+                    .ToLower()
+                    .Contains(search)
+                    ||
+                    (
+                        x.AuthorUser.Email
+                        ?? string.Empty
+                    )
+                    .ToLower()
+                    .Contains(search));
+        }
+
+        if (query.IsPublished.HasValue)
+        {
+            articles =
+                articles.Where(x =>
+                    x.IsPublished ==
+                    query.IsPublished.Value);
+        }
+
+        return await CreatePagedResponseAsync(
+            articles,
+            pageNumber,
+            pageSize);
+    }
+
+    public async Task<ArticleResponseDto>
+        GetManagementByIdAsync(
+            int articleId)
+    {
+        var article =
+            await _context.Articles
+                .AsNoTracking()
+                .Include(x =>
+                    x.AuthorUser)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == articleId
+                    && !x.IsDeleted);
 
         if (article == null)
         {
@@ -156,7 +222,9 @@ public class ArticleService : IArticleService
         var user =
             await _context.Users
                 .FirstOrDefaultAsync(x =>
-                    x.Id == authorUserId);
+                    x.Id ==
+                    authorUserId
+                    && !x.IsBlocked);
 
         if (user == null)
         {
@@ -172,7 +240,8 @@ public class ArticleService : IArticleService
                 await _context.Therapists
                     .FirstOrDefaultAsync(x =>
                         x.UserId ==
-                        authorUserId);
+                        authorUserId
+                        && !x.IsDeleted);
 
             if (therapist == null)
             {
@@ -180,37 +249,52 @@ public class ArticleService : IArticleService
                     "Therapist profile not found.");
             }
 
-            therapistId = therapist.Id;
+            therapistId =
+                therapist.Id;
         }
 
-        var article = new Article
-        {
-            Title =
-                request.Title.Trim(),
-            Description =
-                request.Description.Trim(),
-            Content =
-                request.Content.Trim(),
-            ImageUrl =
-                NormalizeImageUrl(
-                    request.ImageUrl),
-            AuthorUserId =
-                authorUserId,
-            TherapistId =
-                therapistId,
-            IsPublished =
-                request.IsPublished,
-            PublishedAtUtc =
-                DateTime.UtcNow
-        };
+        var now =
+            DateTime.UtcNow;
 
-        _context.Articles.Add(article);
+        var article =
+            new Article
+            {
+                Title =
+                    request.Title.Trim(),
+
+                Description =
+                    request.Description.Trim(),
+
+                Content =
+                    request.Content.Trim(),
+
+                ImageUrl =
+                    NormalizeImageUrl(
+                        request.ImageUrl),
+
+                AuthorUserId =
+                    authorUserId,
+
+                TherapistId =
+                    therapistId,
+
+                IsPublished =
+                    request.IsPublished,
+
+                PublishedAtUtc =
+                    now
+            };
+
+        _context.Articles.Add(
+            article);
 
         await _context.SaveChangesAsync();
 
-        article.AuthorUser = user;
+        article.AuthorUser =
+            user;
 
-        return MapToDto(article);
+        return MapToDto(
+            article);
     }
 
     public async Task<ArticleResponseDto>
@@ -228,10 +312,12 @@ public class ArticleService : IArticleService
 
         var article =
             await _context.Articles
-                .Include(x => x.AuthorUser)
+                .Include(x =>
+                    x.AuthorUser)
                 .FirstOrDefaultAsync(x =>
-                    x.Id == articleId &&
-                    !x.IsDeleted);
+                    x.Id ==
+                    articleId
+                    && !x.IsDeleted);
 
         if (article == null)
         {
@@ -239,13 +325,10 @@ public class ArticleService : IArticleService
                 "Article not found.");
         }
 
-        if (!isAdmin &&
-            article.AuthorUserId !=
-            authorUserId)
-        {
-            throw new Exception(
-                "You can update only your own articles.");
-        }
+        EnsureCanManageArticle(
+            article,
+            authorUserId,
+            isAdmin);
 
         article.Title =
             request.Title.Trim();
@@ -260,8 +343,8 @@ public class ArticleService : IArticleService
             NormalizeImageUrl(
                 request.ImageUrl);
 
-        if (!article.IsPublished &&
-            request.IsPublished)
+        if (!article.IsPublished
+            && request.IsPublished)
         {
             article.PublishedAtUtc =
                 DateTime.UtcNow;
@@ -272,7 +355,57 @@ public class ArticleService : IArticleService
 
         await _context.SaveChangesAsync();
 
-        return MapToDto(article);
+        return MapToDto(
+            article);
+    }
+
+    public async Task<ArticleResponseDto>
+        UpdatePublicationAsync(
+            int authorUserId,
+            bool isAdmin,
+            int articleId,
+            UpdateArticlePublicationDto request)
+    {
+        var article =
+            await _context.Articles
+                .Include(x =>
+                    x.AuthorUser)
+                .FirstOrDefaultAsync(x =>
+                    x.Id ==
+                    articleId
+                    && !x.IsDeleted);
+
+        if (article == null)
+        {
+            throw new Exception(
+                "Article not found.");
+        }
+
+        EnsureCanManageArticle(
+            article,
+            authorUserId,
+            isAdmin);
+
+        if (article.IsPublished ==
+            request.IsPublished)
+        {
+            return MapToDto(
+                article);
+        }
+
+        article.IsPublished =
+            request.IsPublished;
+
+        if (request.IsPublished)
+        {
+            article.PublishedAtUtc =
+                DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync();
+
+        return MapToDto(
+            article);
     }
 
     public async Task DeleteAsync(
@@ -283,8 +416,9 @@ public class ArticleService : IArticleService
         var article =
             await _context.Articles
                 .FirstOrDefaultAsync(x =>
-                    x.Id == articleId &&
-                    !x.IsDeleted);
+                    x.Id ==
+                    articleId
+                    && !x.IsDeleted);
 
         if (article == null)
         {
@@ -292,17 +426,134 @@ public class ArticleService : IArticleService
                 "Article not found.");
         }
 
-        if (!isAdmin &&
-            article.AuthorUserId !=
-            authorUserId)
-        {
-            throw new Exception(
-                "You can delete only your own articles.");
-        }
+        EnsureCanManageArticle(
+            article,
+            authorUserId,
+            isAdmin);
 
-        article.IsDeleted = true;
+        article.IsDeleted =
+            true;
+
+        article.IsPublished =
+            false;
 
         await _context.SaveChangesAsync();
+    }
+
+    private static void EnsureCanManageArticle(
+        Article article,
+        int authenticatedUserId,
+        bool isAdmin)
+    {
+        if (!isAdmin &&
+            article.AuthorUserId !=
+            authenticatedUserId)
+        {
+            throw new UnauthorizedAccessException(
+                "You can manage only your own articles.");
+        }
+    }
+
+    private static async Task<
+        PagedResponse<ArticleResponseDto>>
+        CreatePagedResponseAsync(
+            IQueryable<Article> query,
+            int pageNumber,
+            int pageSize)
+    {
+        var totalCount =
+            await query.CountAsync();
+
+        var items =
+            await query
+                .OrderByDescending(x =>
+                    x.PublishedAtUtc)
+                .ThenByDescending(x =>
+                    x.Id)
+                .Skip(
+                    (pageNumber - 1)
+                    * pageSize)
+                .Take(pageSize)
+                .Select(x =>
+                    new ArticleResponseDto
+                    {
+                        Id =
+                            x.Id,
+
+                        Title =
+                            x.Title,
+
+                        Description =
+                            x.Description,
+
+                        Content =
+                            x.Content,
+
+                        ImageUrl =
+                            x.ImageUrl
+                            ?? string.Empty,
+
+                        AuthorUserId =
+                            x.AuthorUserId,
+
+                        TherapistId =
+                            x.TherapistId,
+
+                        AuthorName =
+                            x.AuthorUser.FirstName
+                            + " "
+                            + x.AuthorUser.LastName,
+
+                        PublishedAtUtc =
+                            x.PublishedAtUtc,
+
+                        IsPublished =
+                            x.IsPublished
+                    })
+                .ToListAsync();
+
+        return new PagedResponse<ArticleResponseDto>
+        {
+            Items =
+                items,
+
+            PageNumber =
+                pageNumber,
+
+            PageSize =
+                pageSize,
+
+            TotalCount =
+                totalCount,
+
+            TotalPages =
+                totalCount == 0
+                    ? 0
+                    : (int)Math.Ceiling(
+                        totalCount
+                        / (double)pageSize)
+        };
+    }
+
+    private static int NormalizePageNumber(
+        int pageNumber)
+    {
+        return pageNumber < 1
+            ? 1
+            : pageNumber;
+    }
+
+    private static int NormalizePageSize(
+        int pageSize)
+    {
+        if (pageSize < 1)
+        {
+            return 10;
+        }
+
+        return Math.Min(
+            pageSize,
+            50);
     }
 
     private static void Validate(
@@ -312,16 +563,16 @@ public class ArticleService : IArticleService
         string? imageUrl)
     {
         var normalizedTitle =
-            title?.Trim() ??
-            string.Empty;
+            title?.Trim()
+            ?? string.Empty;
 
         var normalizedDescription =
-            description?.Trim() ??
-            string.Empty;
+            description?.Trim()
+            ?? string.Empty;
 
         var normalizedContent =
-            content?.Trim() ??
-            string.Empty;
+            content?.Trim()
+            ?? string.Empty;
 
         if (normalizedTitle.Length < 3)
         {
@@ -336,8 +587,7 @@ public class ArticleService : IArticleService
                 "Article title may contain at most 200 characters.");
         }
 
-        if (normalizedDescription.Length <
-            10)
+        if (normalizedDescription.Length < 10)
         {
             throw new Exception(
                 "Article description must contain at least 10 characters.");
@@ -384,10 +634,11 @@ public class ArticleService : IArticleService
                 Uri.TryCreate(
                     normalizedImageUrl,
                     UriKind.Absolute,
-                    out var uri) &&
-                (
+                    out var uri)
+                && (
                     uri.Scheme ==
-                    Uri.UriSchemeHttp ||
+                    Uri.UriSchemeHttp
+                    ||
                     uri.Scheme ==
                     Uri.UriSchemeHttps
                 );
@@ -417,24 +668,36 @@ public class ArticleService : IArticleService
     {
         return new ArticleResponseDto
         {
-            Id = article.Id,
-            Title = article.Title,
+            Id =
+                article.Id,
+
+            Title =
+                article.Title,
+
             Description =
                 article.Description,
-            Content = article.Content,
+
+            Content =
+                article.Content,
+
             ImageUrl =
-                article.ImageUrl ??
-                string.Empty,
+                article.ImageUrl
+                ?? string.Empty,
+
             AuthorUserId =
                 article.AuthorUserId,
+
             TherapistId =
                 article.TherapistId,
+
             AuthorName =
                 article.AuthorUser.FirstName
                 + " "
                 + article.AuthorUser.LastName,
+
             PublishedAtUtc =
                 article.PublishedAtUtc,
+
             IsPublished =
                 article.IsPublished
         };

@@ -23,24 +23,58 @@ public class ArticlesController : ControllerBase
 
     [AllowAnonymous]
     [HttpGet]
-    public async Task<IActionResult> GetPublic(
-        [FromQuery] ArticleQueryDto query)
+    public async Task<IActionResult>
+        GetPublic(
+            [FromQuery]
+            ArticleQueryDto query)
     {
         var result =
             await _articleService
-                .GetPublicAsync(query);
+                .GetPublicAsync(
+                    query);
 
         return Ok(result);
     }
 
     [AllowAnonymous]
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(
-        int id)
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult>
+        GetById(
+            int id)
     {
         var result =
             await _articleService
-                .GetByIdAsync(id);
+                .GetByIdAsync(
+                    id);
+
+        return Ok(result);
+    }
+
+    [Authorize(Roles = RoleConstants.Admin)]
+    [HttpGet("management")]
+    public async Task<IActionResult>
+        GetManagement(
+            [FromQuery]
+            ArticleManagementQueryDto query)
+    {
+        var result =
+            await _articleService
+                .GetManagementAsync(
+                    query);
+
+        return Ok(result);
+    }
+
+    [Authorize(Roles = RoleConstants.Admin)]
+    [HttpGet("management/{id:int}")]
+    public async Task<IActionResult>
+        GetManagementById(
+            int id)
+    {
+        var result =
+            await _articleService
+                .GetManagementByIdAsync(
+                    id);
 
         return Ok(result);
     }
@@ -50,8 +84,9 @@ public class ArticlesController : ControllerBase
         + ","
         + RoleConstants.Therapist)]
     [HttpPost]
-    public async Task<IActionResult> Create(
-        CreateArticleDto request)
+    public async Task<IActionResult>
+        Create(
+            CreateArticleDto request)
     {
         var userId =
             GetAuthenticatedUserId();
@@ -74,10 +109,11 @@ public class ArticlesController : ControllerBase
         Roles = RoleConstants.Admin
         + ","
         + RoleConstants.Therapist)]
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(
-        int id,
-        UpdateArticleDto request)
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult>
+        Update(
+            int id,
+            UpdateArticleDto request)
     {
         var userId =
             GetAuthenticatedUserId();
@@ -101,9 +137,38 @@ public class ArticlesController : ControllerBase
         Roles = RoleConstants.Admin
         + ","
         + RoleConstants.Therapist)]
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(
-        int id)
+    [HttpPut("{id:int}/publication")]
+    public async Task<IActionResult>
+        UpdatePublication(
+            int id,
+            UpdateArticlePublicationDto request)
+    {
+        var userId =
+            GetAuthenticatedUserId();
+
+        var isAdmin =
+            User.IsInRole(
+                RoleConstants.Admin);
+
+        var result =
+            await _articleService
+                .UpdatePublicationAsync(
+                    userId,
+                    isAdmin,
+                    id,
+                    request);
+
+        return Ok(result);
+    }
+
+    [Authorize(
+        Roles = RoleConstants.Admin
+        + ","
+        + RoleConstants.Therapist)]
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult>
+        Delete(
+            int id)
     {
         var userId =
             GetAuthenticatedUserId();

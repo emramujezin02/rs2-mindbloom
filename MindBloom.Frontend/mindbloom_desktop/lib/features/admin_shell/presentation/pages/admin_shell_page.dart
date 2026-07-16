@@ -9,6 +9,7 @@ import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../../data/models/admin_section.dart';
 import '../../../payment_management/presentation/pages/payment_management_page.dart';
 import '../../../membership_management/presentation/pages/membership_management_page.dart';
+import '../../../article_management/presentation/pages/article_management_page.dart';
 
 class AdminShellPage extends StatefulWidget {
   final AdminSection initialSection;
@@ -222,13 +223,7 @@ class _AdminShellPageState extends State<AdminShellPage> {
         );
 
       case AdminSection.articles:
-        return const _SectionPlaceholderPage(
-          key: ValueKey(AdminSection.articles),
-          icon: Icons.article,
-          title: 'Articles',
-          description:
-              'Article CRUD and publication administration will be available here.',
-        );
+        return const ArticleManagementPage();
 
       case AdminSection.reviews:
         return const ReviewModerationPage(key: ValueKey(AdminSection.reviews));

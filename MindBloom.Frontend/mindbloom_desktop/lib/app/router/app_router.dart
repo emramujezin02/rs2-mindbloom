@@ -9,6 +9,7 @@ import '../../features/therapist_verification/presentation/pages/therapist_verif
 import '../../features/payment_management/presentation/pages/payment_management_details_page.dart';
 import '../../features/payment_management/presentation/pages/payment_receipt_page.dart';
 import '../../features/membership_management/presentation/pages/membership_management_details_page.dart';
+import '../../features/article_management/presentation/pages/article_form_page.dart';
 
 class AppRouter {
   static const String root = '/';
@@ -31,7 +32,7 @@ class AppRouter {
   static const String paymentReceipt = '/payments/receipt';
   static const String membershipManagementDetails =
       '/memberships/management/details';
-
+  static const String articleManagementForm = '/articles/management/form';
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case root:
@@ -136,6 +137,13 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) =>
               MembershipManagementDetailsPage(membershipId: membershipId),
+        );
+
+      case articleManagementForm:
+        final articleId = settings.arguments as int?;
+
+        return MaterialPageRoute(
+          builder: (_) => ArticleFormPage(articleId: articleId),
         );
 
       default:
