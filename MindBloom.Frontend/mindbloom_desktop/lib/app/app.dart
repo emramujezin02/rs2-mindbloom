@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../features/session/session_scope.dart';
-import '../features/session/session_viewmodel.dart';
+import '../features/session/presentation/viewmodels/session_scope.dart';
+import '../features/session/presentation/viewmodels/session_viewmodel.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 

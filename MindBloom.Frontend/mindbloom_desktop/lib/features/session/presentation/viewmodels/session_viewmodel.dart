@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 
-import '../auth/data/models/current_user_model.dart';
-import '../auth/data/repositories/auth_repository.dart';
-import '../../services/session_storage_service.dart';
+import '../../../auth/data/models/current_user_model.dart';
+import '../../../auth/data/repositories/auth_repository.dart';
+import '../../../../services/session_storage_service.dart';
 
 class SessionViewModel extends ChangeNotifier {
   final SessionStorageService sessionStorage;
