@@ -39,6 +39,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ConversationParticipant> ConversationParticipants => Set<ConversationParticipant>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<TherapistVerificationAudit> TherapistVerificationAudits=> Set<TherapistVerificationAudit>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -489,6 +490,29 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                         x.SentAtUtc
                     });
             });
+
+        builder.Entity<TherapistVerificationAudit>(
+    entity =>
+    {
+        entity.Property(x => x.Notes)
+            .HasMaxLength(1000);
+
+        entity.HasOne(x => x.Therapist)
+            .WithMany(x => x.VerificationAudits)
+            .HasForeignKey(x => x.TherapistId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(x => x.AdminUser)
+            .WithMany()
+            .HasForeignKey(x => x.AdminUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasIndex(x => new
+        {
+            x.TherapistId,
+            x.ChangedAtUtc
+        });
+    });
 
     }
 

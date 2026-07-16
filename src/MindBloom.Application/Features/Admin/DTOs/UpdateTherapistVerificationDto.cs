@@ -4,8 +4,7 @@ namespace MindBloom.Application.Features.Admin.DTOs;
 
 public class UpdateTherapistVerificationDto
 {
-    public TherapistVerificationStatus
-        Status
+    public TherapistVerificationStatus Status
     {
         get;
         set;

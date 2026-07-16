@@ -16,6 +16,11 @@ import '../../features/users/data/repositories/admin_users_repository.dart';
 import '../../features/users/data/services/admin_users_api_service.dart';
 import '../../features/users/presentation/viewmodels/admin_users_viewmodel.dart';
 
+import '../../features/therapist_verification/data/repositories/therapist_verification_repository.dart';
+import '../../features/therapist_verification/data/services/therapist_verification_api_service.dart';
+import '../../features/therapist_verification/presentation/viewmodels/therapist_verification_details_viewmodel.dart';
+import '../../features/therapist_verification/presentation/viewmodels/therapist_verification_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
@@ -55,5 +60,25 @@ class AppInjection {
     final repository = AdminUsersRepository(apiService: apiService);
 
     return AdminUsersViewModel(repository: repository);
+  }
+
+  static TherapistVerificationRepository
+  _createTherapistVerificationRepository() {
+    final apiService = TherapistVerificationApiService(apiClient: apiClient);
+
+    return TherapistVerificationRepository(apiService: apiService);
+  }
+
+  static TherapistVerificationViewModel createTherapistVerificationViewModel() {
+    return TherapistVerificationViewModel(
+      repository: _createTherapistVerificationRepository(),
+    );
+  }
+
+  static TherapistVerificationDetailsViewModel
+  createTherapistVerificationDetailsViewModel() {
+    return TherapistVerificationDetailsViewModel(
+      repository: _createTherapistVerificationRepository(),
+    );
   }
 }

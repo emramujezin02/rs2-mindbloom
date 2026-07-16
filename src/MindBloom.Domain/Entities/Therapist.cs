@@ -33,4 +33,5 @@ public class Therapist : BaseEntity
     public ICollection<TherapistUnavailableDate>UnavailableDates{ get; set; } = new List<TherapistUnavailableDate>();
     public ICollection<TherapistDocument>Documents { get; set; } = new List<TherapistDocument>();
     public ICollection<Workshop> Workshops { get; set; } = new List<Workshop>();
+    public ICollection<TherapistVerificationAudit> VerificationAudits{ get; set; } = new List<TherapistVerificationAudit>();
 }

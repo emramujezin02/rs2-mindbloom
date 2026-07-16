@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mindbloom_desktop/features/therapist_verification/presentation/pages/therapist_verification_page.dart';
 import 'package:mindbloom_desktop/features/users/presentation/pages/users_page.dart';
 
 import '../../../../app/router/app_router.dart';
@@ -189,12 +190,8 @@ class _AdminShellPageState extends State<AdminShellPage> {
         return const UsersPage(key: ValueKey(AdminSection.users));
 
       case AdminSection.therapists:
-        return const _SectionPlaceholderPage(
+        return const TherapistVerificationPage(
           key: ValueKey(AdminSection.therapists),
-          icon: Icons.psychology,
-          title: 'Therapists',
-          description:
-              'Therapist verification and management will be available here.',
         );
 
       case AdminSection.appointments:

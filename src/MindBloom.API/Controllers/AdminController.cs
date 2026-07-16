@@ -74,23 +74,59 @@ public class AdminController : ControllerBase
             });
     }
 
+    [HttpGet("therapists/pending")]
+    public async Task<IActionResult>
+    GetPendingTherapists(
+        [FromQuery]
+        SearchTherapistVerificationDto request)
+    {
+        var result =
+            await _adminService
+                .GetPendingTherapistsAsync(
+                    request);
+
+        return Ok(result);
+    }
+
+    [HttpGet(
+        "therapists/{therapistId}/verification")]
+    public async Task<IActionResult>
+        GetTherapistVerificationDetails(
+            int therapistId)
+    {
+        var result =
+            await _adminService
+                .GetTherapistVerificationDetailsAsync(
+                    therapistId);
+
+        return Ok(result);
+    }
+
     [HttpPut(
         "therapists/{therapistId}/verification")]
     public async Task<IActionResult>
         UpdateTherapistVerification(
             int therapistId,
-            UpdateTherapistVerificationDto
-                request)
+            UpdateTherapistVerificationDto request)
     {
+        var adminUserId =
+            GetAuthenticatedUserId();
+
         await _adminService
             .UpdateTherapistVerificationAsync(
+                adminUserId,
                 therapistId,
                 request);
 
         return Ok(new
         {
             message =
-                "Therapist verification updated successfully."
+                request.Status ==
+                MindBloom.Domain.Enums
+                    .TherapistVerificationStatus
+                    .Approved
+                    ? "Therapist approved successfully."
+                    : "Therapist rejected successfully."
         });
     }
 
