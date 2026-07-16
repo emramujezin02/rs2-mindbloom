@@ -1,3 +1,5 @@
+import 'package:mindbloom_desktop/features/review_moderation/presentation/viewmodels/review_moderation_viremodel.dart';
+
 import '../../core/network/api_client.dart';
 
 import '../../features/auth/data/repositories/auth_repository.dart';
@@ -20,6 +22,10 @@ import '../../features/therapist_verification/data/repositories/therapist_verifi
 import '../../features/therapist_verification/data/services/therapist_verification_api_service.dart';
 import '../../features/therapist_verification/presentation/viewmodels/therapist_verification_details_viewmodel.dart';
 import '../../features/therapist_verification/presentation/viewmodels/therapist_verification_viewmodel.dart';
+
+import '../../features/review_moderation/data/repositories/review_moderation_repository.dart';
+import '../../features/review_moderation/data/services/review_moderation_api_service.dart';
+import '../../features/review_moderation/presentation/viewmodels/review_moderation_details_viewmodel.dart';
 
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
@@ -79,6 +85,25 @@ class AppInjection {
   createTherapistVerificationDetailsViewModel() {
     return TherapistVerificationDetailsViewModel(
       repository: _createTherapistVerificationRepository(),
+    );
+  }
+
+  static ReviewModerationRepository _createReviewModerationRepository() {
+    final apiService = ReviewModerationApiService(apiClient: apiClient);
+
+    return ReviewModerationRepository(apiService: apiService);
+  }
+
+  static ReviewModerationViewModel createReviewModerationViewModel() {
+    return ReviewModerationViewModel(
+      repository: _createReviewModerationRepository(),
+    );
+  }
+
+  static ReviewModerationDetailsViewModel
+  createReviewModerationDetailsViewModel() {
+    return ReviewModerationDetailsViewModel(
+      repository: _createReviewModerationRepository(),
     );
   }
 }

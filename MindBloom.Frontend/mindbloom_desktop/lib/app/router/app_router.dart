@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../../features/review_moderation/presentation/pages/review_moderation_details_page.dart';
 import '../../features/admin_shell/data/models/admin_section.dart';
 import '../../features/admin_shell/presentation/pages/admin_shell_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -20,6 +20,7 @@ class AppRouter {
   static const String reviews = '/reviews';
   static const String therapistVerificationDetails =
       '/therapists/verification/details';
+  static const String reviewModerationDetails = '/reviews/moderation/details';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -89,6 +90,13 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) =>
               TherapistVerificationDetailsPage(therapistId: therapistId),
+        );
+
+      case reviewModerationDetails:
+        final reviewId = settings.arguments as int;
+
+        return MaterialPageRoute(
+          builder: (_) => ReviewModerationDetailsPage(reviewId: reviewId),
         );
 
       default:

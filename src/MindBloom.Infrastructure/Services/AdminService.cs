@@ -8,8 +8,6 @@ using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Shared.Constants;
 using MindBloom.Application.Common.Interfaces;
-using MindBloom.Application.Common.Models;
-using MindBloom.Shared.Constants;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -601,23 +599,198 @@ public class AdminService : IAdminService
         };
     }
 
-    public async Task DeleteReviewAsync(
-        int reviewId)
+    public async Task<PagedResponse<AdminReviewListDto>>
+        GetReviewsAsync(
+            SearchAdminReviewsDto request)
     {
-        var review =
-            await _context.Reviews
-                .FirstOrDefaultAsync(x =>
-                    x.Id == reviewId);
-
-        if (review == null)
+        if (request.Rating.HasValue &&
+            (
+                request.Rating.Value < 1 ||
+                request.Rating.Value > 5
+            ))
         {
             throw new Exception(
-                "Review not found.");
+                "Rating filter must be between 1 and 5.");
         }
 
-        _context.Reviews.Remove(review);
+        var query =
+            _context.Reviews
+                .AsNoTracking()
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Therapist)
+                    .ThenInclude(x => x.User)
+                .AsQueryable();
 
-        await _context.SaveChangesAsync();
+        if (request.IsDeleted.HasValue)
+        {
+            query = query.Where(x =>
+                x.IsDeleted ==
+                request.IsDeleted.Value);
+        }
+        else
+        {
+            query = query.Where(x =>
+                !x.IsDeleted);
+        }
+
+        if (request.Rating.HasValue)
+        {
+            query = query.Where(x =>
+                x.Rating ==
+                request.Rating.Value);
+        }
+
+        if (request.HasTherapistReply.HasValue)
+        {
+            if (request.HasTherapistReply.Value)
+            {
+                query = query.Where(x =>
+                    x.TherapistReply != null &&
+                    x.TherapistReply != string.Empty);
+            }
+            else
+            {
+                query = query.Where(x =>
+                    x.TherapistReply == null ||
+                    x.TherapistReply == string.Empty);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.Search))
+        {
+            var search =
+                request.Search
+                    .Trim()
+                    .ToLower();
+
+            query = query.Where(x =>
+                (
+                    x.Client.User.FirstName
+                    + " "
+                    + x.Client.User.LastName
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Client.User.Email
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Therapist.User.FirstName
+                    + " "
+                    + x.Therapist.User.LastName
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Therapist.User.Email
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                x.Comment
+                    .ToLower()
+                    .Contains(search)
+                ||
+                (
+                    x.TherapistReply
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search));
+        }
+
+        var totalCount =
+            await query.CountAsync();
+
+        var items =
+            await query
+                .OrderByDescending(x =>
+                    x.CreatedAtUtc)
+                .ThenByDescending(x =>
+                    x.Id)
+                .Skip(
+                    (request.PageNumber - 1)
+                    * request.PageSize)
+                .Take(request.PageSize)
+                .Select(x =>
+                    new AdminReviewListDto
+                    {
+                        Id =
+                            x.Id,
+
+                        AppointmentId =
+                            x.AppointmentId,
+
+                        ClientName =
+                            x.Client.User.FirstName
+                            + " "
+                            + x.Client.User.LastName,
+
+                        ClientEmail =
+                            x.Client.User.Email
+                            ?? string.Empty,
+
+                        TherapistName =
+                            x.Therapist.User.FirstName
+                            + " "
+                            + x.Therapist.User.LastName,
+
+                        TherapistEmail =
+                            x.Therapist.User.Email
+                            ?? string.Empty,
+
+                        Rating =
+                            x.Rating,
+
+                        Comment =
+                            x.Comment,
+
+                        HasTherapistReply =
+                            x.TherapistReply != null
+                            && x.TherapistReply !=
+                                string.Empty,
+
+                        IsDeleted =
+                            x.IsDeleted,
+
+                        CreatedAtUtc =
+                            x.CreatedAtUtc,
+
+                        ModeratedAtUtc =
+                            x.ModeratedAtUtc
+                    })
+                .ToListAsync();
+
+        return new PagedResponse<AdminReviewListDto>
+        {
+            Items =
+                items,
+
+            PageNumber =
+                request.PageNumber,
+
+            PageSize =
+                request.PageSize,
+
+            TotalCount =
+                totalCount,
+
+            TotalPages =
+                totalCount == 0
+                    ? 0
+                    : (int)Math.Ceiling(
+                        totalCount /
+                        (double)request.PageSize)
+        };
     }
 
     public async Task<
@@ -871,5 +1044,271 @@ public class AdminService : IAdminService
                         })
                     .ToList()
         };
+    }
+
+    public async Task<AdminReviewDetailsDto>
+    GetReviewDetailsAsync(
+        int reviewId)
+    {
+        var review =
+            await _context.Reviews
+                .AsNoTracking()
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Therapist)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.ModeratedByUser)
+                .Include(x => x.ModerationAudits)
+                    .ThenInclude(x => x.AdminUser)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == reviewId);
+
+        if (review == null)
+        {
+            throw new Exception(
+                "Review not found.");
+        }
+
+        return new AdminReviewDetailsDto
+        {
+            Id =
+                review.Id,
+
+            AppointmentId =
+                review.AppointmentId,
+
+            ClientId =
+                review.ClientId,
+
+            ClientName =
+                review.Client.User.FirstName
+                + " "
+                + review.Client.User.LastName,
+
+            ClientEmail =
+                review.Client.User.Email
+                ?? string.Empty,
+
+            TherapistId =
+                review.TherapistId,
+
+            TherapistName =
+                review.Therapist.User.FirstName
+                + " "
+                + review.Therapist.User.LastName,
+
+            TherapistEmail =
+                review.Therapist.User.Email
+                ?? string.Empty,
+
+            Rating =
+                review.Rating,
+
+            Comment =
+                review.Comment,
+
+            CreatedAtUtc =
+                review.CreatedAtUtc,
+
+            TherapistReply =
+                review.TherapistReply,
+
+            TherapistReplyCreatedAtUtc =
+                review.TherapistReplyCreatedAtUtc,
+
+            IsDeleted =
+                review.IsDeleted,
+
+            ModerationReason =
+                review.ModerationReason,
+
+            ModeratedAtUtc =
+                review.ModeratedAtUtc,
+
+            ModeratedByAdminName =
+                review.ModeratedByUser == null
+                    ? null
+                    : review.ModeratedByUser.FirstName
+                      + " "
+                      + review.ModeratedByUser.LastName,
+
+            AuditHistory =
+                review.ModerationAudits
+                    .OrderByDescending(x =>
+                        x.PerformedAtUtc)
+                    .Select(x =>
+                        new ReviewModerationAuditDto
+                        {
+                            Id =
+                                x.Id,
+
+                            Action =
+                                x.Action.ToString(),
+
+                            AdminName =
+                                x.AdminUser.FirstName
+                                + " "
+                                + x.AdminUser.LastName,
+
+                            AdminEmail =
+                                x.AdminUser.Email
+                                ?? string.Empty,
+
+                            Reason =
+                                x.Reason,
+
+                            PerformedAtUtc =
+                                x.PerformedAtUtc
+                        })
+                    .ToList()
+        };
+    }
+
+    public async Task DeleteReviewAsync(
+    int authenticatedAdminUserId,
+    int reviewId,
+    DeleteAdminReviewDto request)
+    {
+        var reason =
+            request.Reason?.Trim()
+            ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(
+                reason))
+        {
+            throw new Exception(
+                "Moderation reason is required.");
+        }
+
+        if (reason.Length < 5)
+        {
+            throw new Exception(
+                "Moderation reason must contain at least 5 characters.");
+        }
+
+        if (reason.Length > 1000)
+        {
+            throw new Exception(
+                "Moderation reason may contain at most 1000 characters.");
+        }
+
+        var admin =
+            await _context.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Id ==
+                    authenticatedAdminUserId);
+
+        if (admin == null)
+        {
+            throw new Exception(
+                "Administrator not found.");
+        }
+
+        var review =
+            await _context.Reviews
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == reviewId);
+
+        if (review == null)
+        {
+            throw new Exception(
+                "Review not found.");
+        }
+
+        if (review.IsDeleted)
+        {
+            return;
+        }
+
+        var now =
+            DateTime.UtcNow;
+
+        await using var transaction =
+            await _context.Database
+                .BeginTransactionAsync();
+
+        try
+        {
+            review.IsDeleted =
+                true;
+
+            review.ModerationReason =
+                reason;
+
+            review.ModeratedByUserId =
+                authenticatedAdminUserId;
+
+            review.ModeratedAtUtc =
+                now;
+
+            review.UpdatedAtUtc =
+                now;
+
+            var audit =
+                new ReviewModerationAudit
+                {
+                    ReviewId =
+                        review.Id,
+
+                    AdminUserId =
+                        authenticatedAdminUserId,
+
+                    Action =
+                        ReviewModerationAction
+                            .Deleted,
+
+                    Reason =
+                        reason,
+
+                    PerformedAtUtc =
+                        now
+                };
+
+            _context
+                .ReviewModerationAudits
+                .Add(audit);
+
+            _context.Notifications.Add(
+                new Notification
+                {
+                    UserId =
+                        review.Client.UserId,
+
+                    AppointmentId =
+                        review.AppointmentId,
+
+                    Title =
+                        "Review removed",
+
+                    Message =
+                        "Your review was removed by an administrator. "
+                        + $"Reason: {reason}",
+
+                    IsRead =
+                        false,
+
+                    SentAtUtc =
+                        now
+                });
+
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+
+            throw;
+        }
+
+        await _notificationSender
+            .SendToUserAsync(
+                review.Client.UserId,
+                "Review removed",
+                "Your review was removed by an administrator. "
+                + $"Reason: {reason}");
     }
 }

@@ -41,6 +41,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<TherapistVerificationAudit> TherapistVerificationAudits=> Set<TherapistVerificationAudit>();
 
+    public DbSet<ReviewModerationAudit> ReviewModerationAudits => Set<ReviewModerationAudit>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -511,6 +512,55 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         {
             x.TherapistId,
             x.ChangedAtUtc
+        });
+    });
+
+        builder.Entity<Review>(entity =>
+        {
+            entity.Property(x => x.Comment)
+                .IsRequired()
+                .HasMaxLength(1000);
+
+            entity.Property(x => x.TherapistReply)
+                .HasMaxLength(1000);
+
+            entity.Property(x => x.ModerationReason)
+                .HasMaxLength(1000);
+
+            entity.HasOne(x => x.ModeratedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.ModeratedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => new
+            {
+                x.IsDeleted,
+                x.Rating,
+                x.CreatedAtUtc
+            });
+        });
+
+        builder.Entity<ReviewModerationAudit>(
+    entity =>
+    {
+        entity.Property(x => x.Reason)
+            .IsRequired()
+            .HasMaxLength(1000);
+
+        entity.HasOne(x => x.Review)
+            .WithMany(x => x.ModerationAudits)
+            .HasForeignKey(x => x.ReviewId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(x => x.AdminUser)
+            .WithMany()
+            .HasForeignKey(x => x.AdminUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasIndex(x => new
+        {
+            x.ReviewId,
+            x.PerformedAtUtc
         });
     });
 

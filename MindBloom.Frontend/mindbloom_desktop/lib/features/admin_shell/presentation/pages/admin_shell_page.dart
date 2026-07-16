@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mindbloom_desktop/features/therapist_verification/presentation/pages/therapist_verification_page.dart';
 import 'package:mindbloom_desktop/features/users/presentation/pages/users_page.dart';
-
+import '../../../review_moderation/presentation/pages/review_moderation_page.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../dashboard/presentation/pages/dashboard_page.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
@@ -239,12 +239,7 @@ class _AdminShellPageState extends State<AdminShellPage> {
         );
 
       case AdminSection.reviews:
-        return const _SectionPlaceholderPage(
-          key: ValueKey(AdminSection.reviews),
-          icon: Icons.reviews,
-          title: 'Reviews',
-          description: 'Review moderation and deletion will be available here.',
-        );
+        return const ReviewModerationPage(key: ValueKey(AdminSection.reviews));
     }
   }
 }

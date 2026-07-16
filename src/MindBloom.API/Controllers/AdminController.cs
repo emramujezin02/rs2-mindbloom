@@ -141,19 +141,52 @@ public class AdminController : ControllerBase
         return Ok(result);
     }
 
-    [HttpDelete("reviews/{reviewId}")]
+    [HttpGet("reviews")]
     public async Task<IActionResult>
-        DeleteReview(
+    GetReviews(
+        [FromQuery]
+        SearchAdminReviewsDto request)
+    {
+        var result =
+            await _adminService
+                .GetReviewsAsync(
+                    request);
+
+        return Ok(result);
+    }
+
+    [HttpGet("reviews/{reviewId}")]
+    public async Task<IActionResult>
+        GetReviewDetails(
             int reviewId)
     {
+        var result =
+            await _adminService
+                .GetReviewDetailsAsync(
+                    reviewId);
+
+        return Ok(result);
+    }
+
+    [HttpPut("reviews/{reviewId}/delete")]
+    public async Task<IActionResult>
+        DeleteReview(
+            int reviewId,
+            DeleteAdminReviewDto request)
+    {
+        var adminUserId =
+            GetAuthenticatedUserId();
+
         await _adminService
             .DeleteReviewAsync(
-                reviewId);
+                adminUserId,
+                reviewId,
+                request);
 
         return Ok(new
         {
             message =
-                "Review deleted successfully."
+                "Review removed successfully."
         });
     }
 

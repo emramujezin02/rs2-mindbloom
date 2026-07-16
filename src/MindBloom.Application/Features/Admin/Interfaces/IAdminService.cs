@@ -27,9 +27,19 @@ public interface IAdminService
         int therapistId,
         UpdateTherapistVerificationDto request);
 
-    Task<AdminDashboardDto>
-        GetDashboardAsync();
+    Task<PagedResponse<AdminReviewListDto>>
+        GetReviewsAsync(
+            SearchAdminReviewsDto request);
+
+    Task<AdminReviewDetailsDto>
+        GetReviewDetailsAsync(
+            int reviewId);
 
     Task DeleteReviewAsync(
-        int reviewId);
+        int authenticatedAdminUserId,
+        int reviewId,
+        DeleteAdminReviewDto request);
+
+    Task<AdminDashboardDto>
+        GetDashboardAsync();
 }

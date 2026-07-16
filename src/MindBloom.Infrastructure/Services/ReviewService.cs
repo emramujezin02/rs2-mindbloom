@@ -115,7 +115,7 @@ public class ReviewService : IReviewService
         return await _context.Reviews
             .Include(x => x.Client)
             .ThenInclude(x => x.User)
-            .Where(x => x.TherapistId == therapistId)
+            .Where(x => x.TherapistId == therapistId && !x.IsDeleted)
             .OrderByDescending(x => x.CreatedAtUtc)
             .Select(x => new ReviewResponseDto
             {
@@ -144,7 +144,7 @@ public class ReviewService : IReviewService
     {
         var reviews =
             await _context.Reviews
-                .Where(x => x.TherapistId == therapistId)
+                .Where(x => x.TherapistId == therapistId && !x.IsDeleted)
                 .ToListAsync();
 
         if (!reviews.Any())
@@ -171,13 +171,14 @@ public class ReviewService : IReviewService
     }
 
     public async Task DeleteAsync(
-    int clientUserId,
-    int reviewId)
+     int clientUserId,
+     int reviewId)
     {
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == clientUserId);
+                    x.UserId ==
+                    clientUserId);
 
         if (client == null)
         {
@@ -189,7 +190,9 @@ public class ReviewService : IReviewService
             await _context.Reviews
                 .FirstOrDefaultAsync(x =>
                     x.Id == reviewId
-                    && x.ClientId == client.Id);
+                    && x.ClientId ==
+                        client.Id
+                    && !x.IsDeleted);
 
         if (review == null)
         {
@@ -197,7 +200,14 @@ public class ReviewService : IReviewService
                 "Review not found.");
         }
 
-        _context.Reviews.Remove(review);
+        review.IsDeleted =
+            true;
+
+        review.ModerationReason =
+            "Deleted by the review author.";
+
+        review.ModeratedAtUtc =
+            DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
     }
@@ -218,10 +228,11 @@ public class ReviewService : IReviewService
         }
 
         var review =
-            await _context.Reviews
-                .FirstOrDefaultAsync(x =>
-                    x.Id == reviewId
-                    && x.ClientId == client.Id);
+    await _context.Reviews
+        .FirstOrDefaultAsync(x =>
+            x.Id == reviewId
+            && x.ClientId == client.Id
+            && !x.IsDeleted);
 
         if (review == null)
         {
@@ -255,7 +266,7 @@ public class ReviewService : IReviewService
             .Include(x => x.Therapist)
                 .ThenInclude(x => x.User)
             .Where(x =>
-                x.ClientId == client.Id)
+                x.ClientId == client.Id && !x.IsDeleted)
             .OrderByDescending(x =>
                 x.CreatedAtUtc)
             .Select(x => new ClientReviewDto
@@ -321,7 +332,7 @@ public class ReviewService : IReviewService
                     x.Id ==
                         reviewId &&
                     x.TherapistId ==
-                        therapist.Id);
+                        therapist.Id && !x.IsDeleted);
 
         if (review == null)
         {
@@ -363,7 +374,7 @@ public class ReviewService : IReviewService
                 .Include(x => x.Client)
                     .ThenInclude(x => x.User)
                 .Where(x =>
-                    x.TherapistId == therapistId);
+                    x.TherapistId == therapistId && !x.IsDeleted);
 
         query = filter.SortBy switch
         {
