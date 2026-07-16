@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mindbloom_desktop/features/appointment_management/presentation/pages/appointment_managemenet_details_page.dart';
 import '../../features/review_moderation/presentation/pages/review_moderation_details_page.dart';
 import '../../features/admin_shell/data/models/admin_section.dart';
 import '../../features/admin_shell/presentation/pages/admin_shell_page.dart';
@@ -21,6 +22,8 @@ class AppRouter {
   static const String therapistVerificationDetails =
       '/therapists/verification/details';
   static const String reviewModerationDetails = '/reviews/moderation/details';
+  static const String appointmentManagementDetails =
+      '/appointments/management/details';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -98,7 +101,13 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => ReviewModerationDetailsPage(reviewId: reviewId),
         );
+      case appointmentManagementDetails:
+        final appointmentId = settings.arguments as int;
 
+        return MaterialPageRoute(
+          builder: (_) =>
+              AppointmentManagementDetailsPage(appointmentId: appointmentId),
+        );
       default:
         return MaterialPageRoute(builder: (_) => const SessionGatePage());
     }

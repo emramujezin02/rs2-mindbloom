@@ -190,8 +190,62 @@ public class AdminController : ControllerBase
         });
     }
 
+
+
+   
+
+    [HttpGet("appointments")]
+    public async Task<IActionResult>
+    GetAppointments(
+        [FromQuery]
+        SearchAdminAppointmentsDto request)
+    {
+        var result =
+            await _adminService
+                .GetAppointmentsAsync(
+                    request);
+
+        return Ok(result);
+    }
+
+    [HttpGet("appointments/{appointmentId}")]
+    public async Task<IActionResult>
+        GetAppointmentDetails(
+            int appointmentId)
+    {
+        var result =
+            await _adminService
+                .GetAppointmentDetailsAsync(
+                    appointmentId);
+
+        return Ok(result);
+    }
+
+    [HttpPut(
+        "appointments/{appointmentId}/cancel")]
+    public async Task<IActionResult>
+        CancelAppointment(
+            int appointmentId,
+            AdminCancelAppointmentDto request)
+    {
+        var adminUserId =
+            GetAuthenticatedUserId();
+
+        await _adminService
+            .CancelAppointmentAsync(
+                adminUserId,
+                appointmentId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                "Appointment cancelled successfully."
+        });
+    }
+
     private int
-        GetAuthenticatedUserId()
+       GetAuthenticatedUserId()
     {
         var userIdValue =
             User.FindFirstValue(

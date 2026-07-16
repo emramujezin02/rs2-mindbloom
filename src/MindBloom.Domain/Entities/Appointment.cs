@@ -40,6 +40,6 @@ public class Appointment : BaseEntity
 
     public AppointmentNote? AppointmentNote { get; set; }
 
-    public ICollection<Notification> Notifications { get; set; }
-        = new List<Notification>();
+    public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+    public ICollection<AppointmentStatusAudit> StatusAudits { get; set; } = new List<AppointmentStatusAudit>();
 }

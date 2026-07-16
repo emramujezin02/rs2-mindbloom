@@ -40,6 +40,19 @@ public interface IAdminService
         int reviewId,
         DeleteAdminReviewDto request);
 
+    Task<PagedResponse<AdminAppointmentListDto>>
+        GetAppointmentsAsync(
+            SearchAdminAppointmentsDto request);
+
+    Task<AdminAppointmentDetailsDto>
+        GetAppointmentDetailsAsync(
+            int appointmentId);
+
+    Task CancelAppointmentAsync(
+        int authenticatedAdminUserId,
+        int appointmentId,
+        AdminCancelAppointmentDto request);
+
     Task<AdminDashboardDto>
         GetDashboardAsync();
 }

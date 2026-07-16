@@ -184,6 +184,33 @@ public class AppointmentService : IAppointmentService
 
         await _context.SaveChangesAsync();
 
+        _context.AppointmentStatusAudits.Add(
+    new AppointmentStatusAudit
+    {
+        AppointmentId =
+            appointment.Id,
+
+        ChangedByUserId =
+            clientUserId,
+
+        PreviousStatus =
+            null,
+
+        NewStatus =
+            AppointmentStatus.Pending,
+
+        Action =
+            "Created",
+
+        Reason =
+            "Appointment created by client.",
+
+        ChangedAtUtc =
+            DateTime.UtcNow
+    });
+
+        await _context.SaveChangesAsync();
+
         await _businessNotificationService
             .PublishAsync(
                 therapist.UserId,
@@ -391,9 +418,49 @@ public class AppointmentService : IAppointmentService
                     appointment.Id,
                     "Membership session consumed after the appointment was completed.");
         }
+        var previousStatus =
+    appointment.Status;
 
         appointment.Status =
     request.Status;
+
+        _context.AppointmentStatusAudits.Add(
+    new AppointmentStatusAudit
+    {
+        AppointmentId =
+            appointment.Id,
+
+        ChangedByUserId =
+            therapistUserId,
+
+        PreviousStatus =
+            previousStatus,
+
+        NewStatus =
+            request.Status,
+
+        Action =
+            "TherapistStatusChange",
+
+        Reason =
+            request.Status switch
+            {
+                AppointmentStatus.Accepted =>
+                    "Appointment accepted by therapist.",
+
+                AppointmentStatus.Rejected =>
+                    "Appointment rejected by therapist.",
+
+                AppointmentStatus.Completed =>
+                    "Appointment completed by therapist.",
+
+                _ =>
+                    "Appointment status changed by therapist."
+            },
+
+        ChangedAtUtc =
+            DateTime.UtcNow
+    });
 
         await _context.SaveChangesAsync();
 
@@ -555,9 +622,36 @@ public class AppointmentService : IAppointmentService
                     appointmentId,
                     reason);
         }
+        var previousStatus =
+    appointment.Status;
 
         appointment.Status =
     AppointmentStatus.Cancelled;
+
+        _context.AppointmentStatusAudits.Add(
+    new AppointmentStatusAudit
+    {
+        AppointmentId =
+            appointment.Id,
+
+        ChangedByUserId =
+            clientUserId,
+
+        PreviousStatus =
+            previousStatus,
+
+        NewStatus =
+            AppointmentStatus.Cancelled,
+
+        Action =
+            "ClientCancellation",
+
+        Reason =
+            reason,
+
+        ChangedAtUtc =
+            DateTime.UtcNow
+    });
 
         await _context.SaveChangesAsync();
 

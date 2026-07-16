@@ -6,6 +6,11 @@ import '../../features/auth/data/repositories/auth_repository.dart';
 import '../../features/auth/data/services/auth_api_service.dart';
 import '../../features/auth/presentation/viewmodels/auth_viewmodel.dart';
 
+import '../../features/appointment_management/data/repositories/appointment_management_repository.dart';
+import '../../features/appointment_management/data/services/appointment_management_api_service.dart';
+import '../../features/appointment_management/presentation/viewmodels/appointment_management_details_viewmodel.dart';
+import '../../features/appointment_management/presentation/viewmodels/appointment_management_viewmodel.dart';
+
 import '../../features/dashboard/data/repositories/admin_dashboard_repository.dart';
 import '../../features/dashboard/data/services/admin_dashboard_api_service.dart';
 import '../../features/dashboard/presentation/viewmodels/admin_dashboard_viewmodel.dart';
@@ -104,6 +109,26 @@ class AppInjection {
   createReviewModerationDetailsViewModel() {
     return ReviewModerationDetailsViewModel(
       repository: _createReviewModerationRepository(),
+    );
+  }
+
+  static AppointmentManagementRepository
+  _createAppointmentManagementRepository() {
+    final apiService = AppointmentManagementApiService(apiClient: apiClient);
+
+    return AppointmentManagementRepository(apiService: apiService);
+  }
+
+  static AppointmentManagementViewModel createAppointmentManagementViewModel() {
+    return AppointmentManagementViewModel(
+      repository: _createAppointmentManagementRepository(),
+    );
+  }
+
+  static AppointmentManagementDetailsViewModel
+  createAppointmentManagementDetailsViewModel() {
+    return AppointmentManagementDetailsViewModel(
+      repository: _createAppointmentManagementRepository(),
     );
   }
 }

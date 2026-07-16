@@ -8,6 +8,8 @@ using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Shared.Constants;
 using MindBloom.Application.Common.Interfaces;
+using MindBloom.Application.Features.Memberships.Interfaces;
+using MindBloom.Application.Features.Payments.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -19,17 +21,30 @@ public class AdminService : IAdminService
 
     private readonly INotificationSender _notificationSender;
 
+    private readonly IPaymentService _paymentService;
+
+    private readonly IMembershipService _membershipService;
     public AdminService(
     UserManager<ApplicationUser> userManager,
     ApplicationDbContext context,
-    INotificationSender notificationSender)
+    INotificationSender notificationSender,
+    IPaymentService paymentService,
+    IMembershipService membershipService)
     {
-        _userManager = userManager;
+        _userManager =
+            userManager;
 
-        _context = context;
+        _context =
+            context;
 
         _notificationSender =
             notificationSender;
+
+        _paymentService =
+            paymentService;
+
+        _membershipService =
+            membershipService;
     }
 
     public async Task<PagedResponse<UserListDto>>
@@ -1310,5 +1325,613 @@ public class AdminService : IAdminService
                 "Review removed",
                 "Your review was removed by an administrator. "
                 + $"Reason: {reason}");
+    }
+
+    public async Task<
+    PagedResponse<AdminAppointmentListDto>>
+    GetAppointmentsAsync(
+        SearchAdminAppointmentsDto request)
+    {
+        if (request.DateFromUtc.HasValue &&
+            request.DateToUtc.HasValue &&
+            request.DateFromUtc.Value >
+            request.DateToUtc.Value)
+        {
+            throw new Exception(
+                "Start date cannot be later than end date.");
+        }
+
+        var query =
+            _context.Appointments
+                .AsNoTracking()
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Therapist)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Payment)
+                .Where(x => !x.IsDeleted)
+                .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(
+                request.Search))
+        {
+            var search =
+                request.Search
+                    .Trim()
+                    .ToLower();
+
+            query = query.Where(x =>
+                (
+                    x.Client.User.FirstName
+                    + " "
+                    + x.Client.User.LastName
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Client.User.Email
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Therapist.User.FirstName
+                    + " "
+                    + x.Therapist.User.LastName
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Therapist.User.Email
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                x.Id.ToString()
+                    .Contains(search));
+        }
+
+        if (request.Status.HasValue)
+        {
+            query = query.Where(x =>
+                x.Status ==
+                request.Status.Value);
+        }
+
+        if (request.Type.HasValue)
+        {
+            query = query.Where(x =>
+                x.Type ==
+                request.Type.Value);
+        }
+
+        if (request.IsPaid.HasValue)
+        {
+            query = query.Where(x =>
+                x.IsPaid ==
+                request.IsPaid.Value);
+        }
+
+        if (request.DateFromUtc.HasValue)
+        {
+            query = query.Where(x =>
+                x.StartUtc >=
+                request.DateFromUtc.Value);
+        }
+
+        if (request.DateToUtc.HasValue)
+        {
+            var exclusiveEnd =
+                request.DateToUtc.Value.Date
+                    .AddDays(1);
+
+            query = query.Where(x =>
+                x.StartUtc <
+                exclusiveEnd);
+        }
+
+        var totalCount =
+            await query.CountAsync();
+
+        var items =
+            await query
+                .OrderByDescending(x =>
+                    x.StartUtc)
+                .ThenByDescending(x =>
+                    x.Id)
+                .Skip(
+                    (request.PageNumber - 1)
+                    * request.PageSize)
+                .Take(request.PageSize)
+                .Select(x =>
+                    new AdminAppointmentListDto
+                    {
+                        Id =
+                            x.Id,
+
+                        ClientName =
+                            x.Client.User.FirstName
+                            + " "
+                            + x.Client.User.LastName,
+
+                        ClientEmail =
+                            x.Client.User.Email
+                            ?? string.Empty,
+
+                        TherapistName =
+                            x.Therapist.User.FirstName
+                            + " "
+                            + x.Therapist.User.LastName,
+
+                        TherapistEmail =
+                            x.Therapist.User.Email
+                            ?? string.Empty,
+
+                        StartUtc =
+                            x.StartUtc,
+
+                        EndUtc =
+                            x.EndUtc,
+
+                        Status =
+                            x.Status.ToString(),
+
+                        Type =
+                            x.Type.ToString(),
+
+                        Price =
+                            x.Price,
+
+                        IsPaid =
+                            x.IsPaid,
+
+                        PaymentStatus =
+                            x.Payment == null
+                                ? null
+                                : x.Payment.Status
+                                    .ToString(),
+
+                        CreatedAtUtc =
+                            x.CreatedAtUtc,
+
+                        CanAdminCancel =
+                            x.Status ==
+                                AppointmentStatus.Pending
+                            || x.Status ==
+                                AppointmentStatus.Accepted
+                    })
+                .ToListAsync();
+
+        return new PagedResponse<
+            AdminAppointmentListDto>
+        {
+            Items =
+                items,
+
+            PageNumber =
+                request.PageNumber,
+
+            PageSize =
+                request.PageSize,
+
+            TotalCount =
+                totalCount,
+
+            TotalPages =
+                totalCount == 0
+                    ? 0
+                    : (int)Math.Ceiling(
+                        totalCount /
+                        (double)request.PageSize)
+        };
+    }
+
+    public async Task<AdminAppointmentDetailsDto>
+        GetAppointmentDetailsAsync(
+            int appointmentId)
+    {
+        var appointment =
+            await _context.Appointments
+                .AsNoTracking()
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Therapist)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Payment)
+                .Include(x => x.StatusAudits)
+                    .ThenInclude(x =>
+                        x.ChangedByUser)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == appointmentId &&
+                    !x.IsDeleted);
+
+        if (appointment == null)
+        {
+            throw new Exception(
+                "Appointment not found.");
+        }
+
+        var membershipUsage =
+            await _context.MembershipUsages
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.AppointmentId ==
+                    appointment.Id);
+
+        return new AdminAppointmentDetailsDto
+        {
+            Id =
+                appointment.Id,
+
+            ClientId =
+                appointment.ClientId,
+
+            ClientUserId =
+                appointment.Client.UserId,
+
+            ClientName =
+                appointment.Client.User.FirstName
+                + " "
+                + appointment.Client.User.LastName,
+
+            ClientEmail =
+                appointment.Client.User.Email
+                ?? string.Empty,
+
+            TherapistId =
+                appointment.TherapistId,
+
+            TherapistUserId =
+                appointment.Therapist.UserId,
+
+            TherapistName =
+                appointment.Therapist.User.FirstName
+                + " "
+                + appointment.Therapist.User.LastName,
+
+            TherapistEmail =
+                appointment.Therapist.User.Email
+                ?? string.Empty,
+
+            StartUtc =
+                appointment.StartUtc,
+
+            EndUtc =
+                appointment.EndUtc,
+
+            Status =
+                appointment.Status.ToString(),
+
+            Type =
+                appointment.Type.ToString(),
+
+            Price =
+                appointment.Price,
+
+            IsPaid =
+                appointment.IsPaid,
+
+            PaymentStatus =
+                appointment.Payment?.Status
+                    .ToString(),
+
+            PaymentAmount =
+                appointment.Payment?.Amount,
+
+            StripePaymentIntentId =
+                appointment.Payment?
+                    .StripePaymentIntentId,
+
+            RefundStatus =
+                appointment.Payment == null
+                    ? null
+                    : appointment.Payment.Status
+                        .ToString(),
+
+            RefundReason =
+                appointment.Payment?
+                    .RefundReason,
+
+            MeetingLink =
+                appointment.MeetingLink,
+
+            Location =
+                appointment.Location,
+
+            Notes =
+                appointment.Notes,
+
+            HasMembershipUsage =
+                membershipUsage != null,
+
+            MembershipUsageStatus =
+                membershipUsage?.Status
+                    .ToString(),
+
+            CreatedAtUtc =
+                appointment.CreatedAtUtc,
+
+            UpdatedAtUtc =
+                appointment.UpdatedAtUtc,
+
+            CanAdminCancel =
+                appointment.Status ==
+                    AppointmentStatus.Pending
+                || appointment.Status ==
+                    AppointmentStatus.Accepted,
+
+            AuditHistory =
+                appointment.StatusAudits
+                    .OrderByDescending(x =>
+                        x.ChangedAtUtc)
+                    .Select(x =>
+                        new AdminAppointmentAuditDto
+                        {
+                            Id =
+                                x.Id,
+
+                            PreviousStatus =
+                                x.PreviousStatus
+                                    .HasValue
+                                    ? x.PreviousStatus
+                                        .Value
+                                        .ToString()
+                                    : null,
+
+                            NewStatus =
+                                x.NewStatus
+                                    .ToString(),
+
+                            Action =
+                                x.Action,
+
+                            Reason =
+                                x.Reason,
+
+                            ChangedByUserId =
+                                x.ChangedByUserId,
+
+                            ChangedByUserName =
+                                x.ChangedByUser
+                                    .FirstName
+                                + " "
+                                + x.ChangedByUser
+                                    .LastName,
+
+                            ChangedByUserEmail =
+                                x.ChangedByUser.Email
+                                ?? string.Empty,
+
+                            ChangedAtUtc =
+                                x.ChangedAtUtc
+                        })
+                    .ToList()
+        };
+    }
+
+    public async Task CancelAppointmentAsync(
+        int authenticatedAdminUserId,
+        int appointmentId,
+        AdminCancelAppointmentDto request)
+    {
+        var reason =
+            request.Reason?.Trim()
+            ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(
+                reason))
+        {
+            throw new Exception(
+                "Cancellation reason is required.");
+        }
+
+        if (reason.Length < 5)
+        {
+            throw new Exception(
+                "Cancellation reason must contain at least 5 characters.");
+        }
+
+        if (reason.Length > 1000)
+        {
+            throw new Exception(
+                "Cancellation reason may contain at most 1000 characters.");
+        }
+
+        var admin =
+            await _context.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Id ==
+                    authenticatedAdminUserId
+                    && !x.IsBlocked);
+
+        if (admin == null)
+        {
+            throw new Exception(
+                "Administrator not found.");
+        }
+
+        var appointment =
+            await _context.Appointments
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Therapist)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Payment)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == appointmentId &&
+                    !x.IsDeleted);
+
+        if (appointment == null)
+        {
+            throw new Exception(
+                "Appointment not found.");
+        }
+
+        if (appointment.Status ==
+            AppointmentStatus.Cancelled)
+        {
+            return;
+        }
+
+        if (appointment.Status ==
+                AppointmentStatus.Completed ||
+            appointment.Status ==
+                AppointmentStatus.Rejected)
+        {
+            throw new Exception(
+                "A completed or rejected appointment cannot be cancelled.");
+        }
+
+        if (appointment.Status !=
+                AppointmentStatus.Pending &&
+            appointment.Status !=
+                AppointmentStatus.Accepted)
+        {
+            throw new Exception(
+                "Appointment is not in a cancellable state.");
+        }
+
+        var previousStatus =
+            appointment.Status;
+
+        /*
+         * Administrator otkazuje termin zbog
+         * administrativnog ili poslovnog razloga.
+         * Membership sesija se zato vraća bez
+         * primjene roka od 24 sata.
+         */
+        await _membershipService
+            .HandleAppointmentCancellationAsync(
+                appointment.Id,
+                reason,
+                forceRestore: true);
+
+        if (appointment.Payment != null &&
+            (
+                appointment.Payment.Status ==
+                    PaymentStatus.Paid
+                || appointment.Payment.Status ==
+                    PaymentStatus.RefundPending
+                || appointment.Payment.Status ==
+                    PaymentStatus.RefundFailed
+                || appointment.Payment.Status ==
+                    PaymentStatus.Refunded
+            ))
+        {
+            await _paymentService
+                .RefundAppointmentPaymentAsync(
+                    appointment.Client.UserId,
+                    appointment.Id,
+                    reason);
+        }
+
+        var now =
+            DateTime.UtcNow;
+
+        appointment.Status =
+            AppointmentStatus.Cancelled;
+
+        appointment.UpdatedAtUtc =
+            now;
+
+        var audit =
+            new AppointmentStatusAudit
+            {
+                AppointmentId =
+                    appointment.Id,
+
+                ChangedByUserId =
+                    authenticatedAdminUserId,
+
+                PreviousStatus =
+                    previousStatus,
+
+                NewStatus =
+                    AppointmentStatus.Cancelled,
+
+                Action =
+                    "AdminCancellation",
+
+                Reason =
+                    reason,
+
+                ChangedAtUtc =
+                    now
+            };
+
+        _context.AppointmentStatusAudits.Add(
+            audit);
+
+        _context.Notifications.AddRange(
+            new Notification
+            {
+                UserId =
+                    appointment.Client.UserId,
+
+                AppointmentId =
+                    appointment.Id,
+
+                Title =
+                    "Appointment cancelled by administrator",
+
+                Message =
+                    "Your appointment was cancelled "
+                    + "by an administrator. "
+                    + $"Reason: {reason}",
+
+                IsRead =
+                    false,
+
+                SentAtUtc =
+                    now
+            },
+            new Notification
+            {
+                UserId =
+                    appointment.Therapist.UserId,
+
+                AppointmentId =
+                    appointment.Id,
+
+                Title =
+                    "Appointment cancelled by administrator",
+
+                Message =
+                    "An appointment was cancelled "
+                    + "by an administrator. "
+                    + $"Reason: {reason}",
+
+                IsRead =
+                    false,
+
+                SentAtUtc =
+                    now
+            });
+
+        await _context.SaveChangesAsync();
+
+        await _notificationSender
+            .SendToUserAsync(
+                appointment.Client.UserId,
+                "Appointment cancelled by administrator",
+                "Your appointment was cancelled "
+                + "by an administrator. "
+                + $"Reason: {reason}");
+
+        if (appointment.Therapist.UserId !=
+            appointment.Client.UserId)
+        {
+            await _notificationSender
+                .SendToUserAsync(
+                    appointment.Therapist.UserId,
+                    "Appointment cancelled by administrator",
+                    "An appointment was cancelled "
+                    + "by an administrator. "
+                    + $"Reason: {reason}");
+        }
     }
 }

@@ -40,7 +40,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ConversationParticipant> ConversationParticipants => Set<ConversationParticipant>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<TherapistVerificationAudit> TherapistVerificationAudits=> Set<TherapistVerificationAudit>();
-
+    public DbSet<AppointmentStatusAudit> AppointmentStatusAudits => Set<AppointmentStatusAudit>();
     public DbSet<ReviewModerationAudit> ReviewModerationAudits => Set<ReviewModerationAudit>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -561,6 +561,33 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         {
             x.ReviewId,
             x.PerformedAtUtc
+        });
+    });
+
+        builder.Entity<AppointmentStatusAudit>(
+    entity =>
+    {
+        entity.Property(x => x.Action)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        entity.Property(x => x.Reason)
+            .HasMaxLength(1000);
+
+        entity.HasOne(x => x.Appointment)
+            .WithMany(x => x.StatusAudits)
+            .HasForeignKey(x => x.AppointmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(x => x.ChangedByUser)
+            .WithMany()
+            .HasForeignKey(x => x.ChangedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasIndex(x => new
+        {
+            x.AppointmentId,
+            x.ChangedAtUtc
         });
     });
 
