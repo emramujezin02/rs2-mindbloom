@@ -12,10 +12,8 @@ class SessionScope extends InheritedNotifier<SessionViewModel> {
   static SessionViewModel of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<SessionScope>();
 
-    if (scope == null) {
-      throw Exception('SessionScope not found.');
-    }
+    assert(scope != null, 'SessionScope was not found in the widget tree.');
 
-    return scope.notifier!;
+    return scope!.notifier!;
   }
 }

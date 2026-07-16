@@ -516,7 +516,7 @@ public class AuthService : IAuthService
         {
             Token = newJwtToken,
             RefreshToken = newRefreshToken,
-            Id=refreshToken.Id,
+            Id=refreshToken.UserId,
             FirstName=refreshToken.User.FirstName,
             LastName=refreshToken.User.LastName,
             Email=refreshToken.User.Email,

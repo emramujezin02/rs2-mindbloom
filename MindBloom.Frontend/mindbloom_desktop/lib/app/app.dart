@@ -19,7 +19,7 @@ class MindBloomDesktopApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         onGenerateRoute: AppRouter.generateRoute,
-        initialRoute: AppRouter.dashboard,
+        initialRoute: AppRouter.root,
       ),
     );
   }

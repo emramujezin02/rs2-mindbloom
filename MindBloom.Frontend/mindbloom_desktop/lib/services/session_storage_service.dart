@@ -1,25 +1,79 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SessionStorageService {
-  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  static const String _accessTokenKey = 'mindbloom_desktop_access_token';
 
-  Future<void> saveToken(String token) async {
-    await _storage.write(key: 'access_token', value: token);
+  static const String _refreshTokenKey = 'mindbloom_desktop_refresh_token';
+
+  static const String _roleKey = 'mindbloom_desktop_role';
+
+  final FlutterSecureStorage _storage;
+
+  SessionStorageService({FlutterSecureStorage? storage})
+    : _storage = storage ?? const FlutterSecureStorage();
+
+  Future<void> saveSession({
+    required String accessToken,
+    required String refreshToken,
+    required String role,
+  }) async {
+    await Future.wait([
+      _storage.write(key: _accessTokenKey, value: accessToken),
+      _storage.write(key: _refreshTokenKey, value: refreshToken),
+      _storage.write(key: _roleKey, value: role),
+    ]);
   }
 
-  Future<String?> getToken() async {
-    return await _storage.read(key: 'access_token');
+  Future<void> saveTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    await Future.wait([
+      _storage.write(key: _accessTokenKey, value: accessToken),
+      _storage.write(key: _refreshTokenKey, value: refreshToken),
+    ]);
   }
 
-  Future<void> saveRefreshToken(String refreshToken) async {
-    await _storage.write(key: 'refresh_token', value: refreshToken);
+  Future<String?> getAccessToken() {
+    return _storage.read(key: _accessTokenKey);
   }
 
-  Future<String?> getRefreshToken() async {
-    return await _storage.read(key: 'refresh_token');
+  Future<String?> getToken() {
+    return getAccessToken();
   }
 
-  Future<void> clear() async {
-    await _storage.deleteAll();
+  Future<String?> getRefreshToken() {
+    return _storage.read(key: _refreshTokenKey);
+  }
+
+  Future<String?> getRole() {
+    return _storage.read(key: _roleKey);
+  }
+
+  Future<bool> hasAdminSession() async {
+    final accessToken = await getAccessToken();
+
+    final refreshToken = await getRefreshToken();
+
+    final role = await getRole();
+
+    return accessToken != null &&
+        accessToken.trim().isNotEmpty &&
+        refreshToken != null &&
+        refreshToken.trim().isNotEmpty &&
+        role != null &&
+        role.toLowerCase() == 'admin';
+  }
+
+  Future<void> clearSession() async {
+    await Future.wait([
+      _storage.delete(key: _accessTokenKey),
+      _storage.delete(key: _refreshTokenKey),
+      _storage.delete(key: _roleKey),
+    ]);
+  }
+
+  Future<void> clear() {
+    return clearSession();
   }
 }
