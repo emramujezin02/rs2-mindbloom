@@ -11,6 +11,12 @@ import '../../features/appointment_management/data/services/appointment_manageme
 import '../../features/appointment_management/presentation/viewmodels/appointment_management_details_viewmodel.dart';
 import '../../features/appointment_management/presentation/viewmodels/appointment_management_viewmodel.dart';
 
+import '../../features/payment_management/data/repositories/payment_management_repository.dart';
+import '../../features/payment_management/data/services/payment_management_api_service.dart';
+import '../../features/payment_management/presentation/viewmodels/payment_management_details_viewmodel.dart';
+import '../../features/payment_management/presentation/viewmodels/payment_management_viewmodel.dart';
+import '../../features/payment_management/presentation/viewmodels/payment_receipt_viewmodel.dart';
+
 import '../../features/dashboard/data/repositories/admin_dashboard_repository.dart';
 import '../../features/dashboard/data/services/admin_dashboard_api_service.dart';
 import '../../features/dashboard/presentation/viewmodels/admin_dashboard_viewmodel.dart';
@@ -129,6 +135,31 @@ class AppInjection {
   createAppointmentManagementDetailsViewModel() {
     return AppointmentManagementDetailsViewModel(
       repository: _createAppointmentManagementRepository(),
+    );
+  }
+
+  static PaymentManagementRepository _createPaymentManagementRepository() {
+    final apiService = PaymentManagementApiService(apiClient: apiClient);
+
+    return PaymentManagementRepository(apiService: apiService);
+  }
+
+  static PaymentManagementViewModel createPaymentManagementViewModel() {
+    return PaymentManagementViewModel(
+      repository: _createPaymentManagementRepository(),
+    );
+  }
+
+  static PaymentManagementDetailsViewModel
+  createPaymentManagementDetailsViewModel() {
+    return PaymentManagementDetailsViewModel(
+      repository: _createPaymentManagementRepository(),
+    );
+  }
+
+  static PaymentReceiptViewModel createPaymentReceiptViewModel() {
+    return PaymentReceiptViewModel(
+      repository: _createPaymentManagementRepository(),
     );
   }
 }

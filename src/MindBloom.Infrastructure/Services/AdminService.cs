@@ -1934,4 +1934,605 @@ public class AdminService : IAdminService
                     + $"Reason: {reason}");
         }
     }
+
+    public async Task<
+    PagedResponse<AdminPaymentListDto>>
+    GetPaymentsAsync(
+        SearchAdminPaymentsDto request)
+    {
+        if (request.DateFromUtc.HasValue &&
+            request.DateToUtc.HasValue &&
+            request.DateFromUtc.Value >
+            request.DateToUtc.Value)
+        {
+            throw new Exception(
+                "Start date cannot be later than end date.");
+        }
+
+        if (request.MinimumAmount.HasValue &&
+            request.MinimumAmount.Value < 0)
+        {
+            throw new Exception(
+                "Minimum amount cannot be negative.");
+        }
+
+        if (request.MaximumAmount.HasValue &&
+            request.MaximumAmount.Value < 0)
+        {
+            throw new Exception(
+                "Maximum amount cannot be negative.");
+        }
+
+        if (request.MinimumAmount.HasValue &&
+            request.MaximumAmount.HasValue &&
+            request.MinimumAmount.Value >
+            request.MaximumAmount.Value)
+        {
+            throw new Exception(
+                "Minimum amount cannot be greater than maximum amount.");
+        }
+
+        var query =
+            _context.Payments
+                .AsNoTracking()
+                .Include(x => x.Appointment)
+                    .ThenInclude(x => x.Client)
+                        .ThenInclude(x => x.User)
+                .Include(x => x.Appointment)
+                    .ThenInclude(x => x.Therapist)
+                        .ThenInclude(x => x.User)
+                .Where(x => !x.IsDeleted)
+                .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(
+                request.Search))
+        {
+            var search =
+                request.Search
+                    .Trim()
+                    .ToLower();
+
+            query = query.Where(x =>
+                x.Id.ToString()
+                    .Contains(search)
+                ||
+                x.AppointmentId.ToString()
+                    .Contains(search)
+                ||
+                x.StripePaymentIntentId
+                    .ToLower()
+                    .Contains(search)
+                ||
+                (
+                    x.StripeRefundId
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Appointment
+                        .Client
+                        .User
+                        .FirstName
+                    + " "
+                    + x.Appointment
+                        .Client
+                        .User
+                        .LastName
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Appointment
+                        .Client
+                        .User
+                        .Email
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Appointment
+                        .Therapist
+                        .User
+                        .FirstName
+                    + " "
+                    + x.Appointment
+                        .Therapist
+                        .User
+                        .LastName
+                )
+                .ToLower()
+                .Contains(search));
+        }
+
+        if (request.Status.HasValue)
+        {
+            query = query.Where(x =>
+                x.Status ==
+                request.Status.Value);
+        }
+
+        if (request.DateFromUtc.HasValue)
+        {
+            query = query.Where(x =>
+                x.CreatedAtUtc >=
+                request.DateFromUtc.Value);
+        }
+
+        if (request.DateToUtc.HasValue)
+        {
+            var exclusiveEnd =
+                request.DateToUtc.Value
+                    .Date
+                    .AddDays(1);
+
+            query = query.Where(x =>
+                x.CreatedAtUtc <
+                exclusiveEnd);
+        }
+
+        if (request.MinimumAmount.HasValue)
+        {
+            query = query.Where(x =>
+                x.Amount >=
+                request.MinimumAmount.Value);
+        }
+
+        if (request.MaximumAmount.HasValue)
+        {
+            query = query.Where(x =>
+                x.Amount <=
+                request.MaximumAmount.Value);
+        }
+
+        var totalCount =
+            await query.CountAsync();
+
+        var items =
+            await query
+                .OrderByDescending(x =>
+                    x.CreatedAtUtc)
+                .ThenByDescending(x =>
+                    x.Id)
+                .Skip(
+                    (request.PageNumber - 1)
+                    * request.PageSize)
+                .Take(request.PageSize)
+                .Select(x =>
+                    new AdminPaymentListDto
+                    {
+                        Id =
+                            x.Id,
+
+                        AppointmentId =
+                            x.AppointmentId,
+
+                        ClientName =
+                            x.Appointment
+                                .Client
+                                .User
+                                .FirstName
+                            + " "
+                            + x.Appointment
+                                .Client
+                                .User
+                                .LastName,
+
+                        ClientEmail =
+                            x.Appointment
+                                .Client
+                                .User
+                                .Email
+                            ?? string.Empty,
+
+                        TherapistName =
+                            x.Appointment
+                                .Therapist
+                                .User
+                                .FirstName
+                            + " "
+                            + x.Appointment
+                                .Therapist
+                                .User
+                                .LastName,
+
+                        Amount =
+                            x.Amount,
+
+                        Currency =
+                            "USD",
+
+                        Status =
+                            x.Status.ToString(),
+
+                        AppointmentStatus =
+                            x.Appointment
+                                .Status
+                                .ToString(),
+
+                        CreatedAtUtc =
+                            x.CreatedAtUtc,
+
+                        PaidAtUtc =
+                            x.PaidAtUtc,
+
+                        RefundedAtUtc =
+                            x.RefundedAtUtc,
+
+                        CanRefund =
+                            x.Status ==
+                                PaymentStatus.Paid
+                            || x.Status ==
+                                PaymentStatus
+                                    .RefundFailed
+                    })
+                .ToListAsync();
+
+        return new PagedResponse<
+            AdminPaymentListDto>
+        {
+            Items =
+                items,
+
+            PageNumber =
+                request.PageNumber,
+
+            PageSize =
+                request.PageSize,
+
+            TotalCount =
+                totalCount,
+
+            TotalPages =
+                totalCount == 0
+                    ? 0
+                    : (int)Math.Ceiling(
+                        totalCount /
+                        (double)request.PageSize)
+        };
+    }
+
+    public async Task<AdminPaymentDetailsDto>
+        GetPaymentDetailsAsync(
+            int paymentId)
+    {
+        var payment =
+            await _context.Payments
+                .AsNoTracking()
+                .Include(x => x.Appointment)
+                    .ThenInclude(x => x.Client)
+                        .ThenInclude(x => x.User)
+                .Include(x => x.Appointment)
+                    .ThenInclude(x => x.Therapist)
+                        .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == paymentId &&
+                    !x.IsDeleted);
+
+        if (payment == null)
+        {
+            throw new Exception(
+                "Payment not found.");
+        }
+
+        return new AdminPaymentDetailsDto
+        {
+            Id =
+                payment.Id,
+
+            AppointmentId =
+                payment.AppointmentId,
+
+            ClientId =
+                payment.Appointment
+                    .ClientId,
+
+            ClientUserId =
+                payment.Appointment
+                    .Client
+                    .UserId,
+
+            ClientName =
+                payment.Appointment
+                    .Client
+                    .User
+                    .FirstName
+                + " "
+                + payment.Appointment
+                    .Client
+                    .User
+                    .LastName,
+
+            ClientEmail =
+                payment.Appointment
+                    .Client
+                    .User
+                    .Email
+                ?? string.Empty,
+
+            TherapistId =
+                payment.Appointment
+                    .TherapistId,
+
+            TherapistName =
+                payment.Appointment
+                    .Therapist
+                    .User
+                    .FirstName
+                + " "
+                + payment.Appointment
+                    .Therapist
+                    .User
+                    .LastName,
+
+            TherapistEmail =
+                payment.Appointment
+                    .Therapist
+                    .User
+                    .Email
+                ?? string.Empty,
+
+            Amount =
+                payment.Amount,
+
+            Currency =
+                "USD",
+
+            Status =
+                payment.Status
+                    .ToString(),
+
+            AppointmentStatus =
+                payment.Appointment
+                    .Status
+                    .ToString(),
+
+            AppointmentStartUtc =
+                payment.Appointment
+                    .StartUtc,
+
+            AppointmentEndUtc =
+                payment.Appointment
+                    .EndUtc,
+
+            AppointmentType =
+                payment.Appointment
+                    .Type
+                    .ToString(),
+
+            StripePaymentIntentId =
+                payment.StripePaymentIntentId,
+
+            CreatedAtUtc =
+                payment.CreatedAtUtc,
+
+            PaidAtUtc =
+                payment.PaidAtUtc,
+
+            StripeRefundId =
+                payment.StripeRefundId,
+
+            RefundReason =
+                payment.RefundReason,
+
+            RefundRequestedAtUtc =
+                payment
+                    .RefundRequestedAtUtc,
+
+            RefundedAtUtc =
+                payment.RefundedAtUtc,
+
+            RefundFailureReason =
+                payment
+                    .RefundFailureReason,
+
+            AppointmentIsPaid =
+                payment.Appointment
+                    .IsPaid,
+
+            CanRefund =
+                payment.Status ==
+                    PaymentStatus.Paid
+                || payment.Status ==
+                    PaymentStatus
+                        .RefundFailed
+        };
+    }
+
+    public async Task<AdminPaymentReceiptDto>
+        GetPaymentReceiptAsync(
+            int paymentId)
+    {
+        var payment =
+            await _context.Payments
+                .AsNoTracking()
+                .Include(x => x.Appointment)
+                    .ThenInclude(x => x.Client)
+                        .ThenInclude(x => x.User)
+                .Include(x => x.Appointment)
+                    .ThenInclude(x => x.Therapist)
+                        .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == paymentId &&
+                    !x.IsDeleted);
+
+        if (payment == null)
+        {
+            throw new Exception(
+                "Payment not found.");
+        }
+
+        return new AdminPaymentReceiptDto
+        {
+            InvoiceNumber =
+                $"INV-{payment.Id:D6}",
+
+            PaymentId =
+                payment.Id,
+
+            AppointmentId =
+                payment.AppointmentId,
+
+            ClientName =
+                payment.Appointment
+                    .Client
+                    .User
+                    .FirstName
+                + " "
+                + payment.Appointment
+                    .Client
+                    .User
+                    .LastName,
+
+            ClientEmail =
+                payment.Appointment
+                    .Client
+                    .User
+                    .Email
+                ?? string.Empty,
+
+            TherapistName =
+                payment.Appointment
+                    .Therapist
+                    .User
+                    .FirstName
+                + " "
+                + payment.Appointment
+                    .Therapist
+                    .User
+                    .LastName,
+
+            Amount =
+                payment.Amount,
+
+            Currency =
+                "USD",
+
+            Status =
+                payment.Status
+                    .ToString(),
+
+            PaymentDateUtc =
+                payment.PaidAtUtc
+                ?? payment.CreatedAtUtc,
+
+            AppointmentStartUtc =
+                payment.Appointment
+                    .StartUtc,
+
+            AppointmentEndUtc =
+                payment.Appointment
+                    .EndUtc,
+
+            StripePaymentIntentId =
+                payment
+                    .StripePaymentIntentId,
+
+            StripeRefundId =
+                payment.StripeRefundId,
+
+            RefundReason =
+                payment.RefundReason,
+
+            RefundedAtUtc =
+                payment.RefundedAtUtc
+        };
+    }
+
+    public async Task RefundPaymentAsync(
+        int authenticatedAdminUserId,
+        int paymentId,
+        AdminRefundPaymentDto request)
+    {
+        var normalizedReason =
+            request.Reason?.Trim()
+            ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(
+                normalizedReason))
+        {
+            throw new Exception(
+                "Refund reason is required.");
+        }
+
+        if (normalizedReason.Length < 5)
+        {
+            throw new Exception(
+                "Refund reason must contain at least 5 characters.");
+        }
+
+        if (normalizedReason.Length > 500)
+        {
+            throw new Exception(
+                "Refund reason may contain at most 500 characters.");
+        }
+
+        var admin =
+            await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.Id ==
+                        authenticatedAdminUserId
+                    && !x.IsBlocked);
+
+        if (admin == null)
+        {
+            throw new Exception(
+                "Administrator not found.");
+        }
+
+        var payment =
+            await _context.Payments
+                .AsNoTracking()
+                .Include(x => x.Appointment)
+                    .ThenInclude(x => x.Client)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == paymentId &&
+                    !x.IsDeleted);
+
+        if (payment == null)
+        {
+            throw new Exception(
+                "Payment not found.");
+        }
+
+        if (payment.Status ==
+            PaymentStatus.Refunded)
+        {
+            return;
+        }
+
+        if (payment.Status ==
+            PaymentStatus.RefundPending)
+        {
+            throw new Exception(
+                "A refund for this payment is already being processed.");
+        }
+
+        if (payment.Status !=
+                PaymentStatus.Paid &&
+            payment.Status !=
+                PaymentStatus.RefundFailed)
+        {
+            throw new Exception(
+                "Only a paid payment or a failed refund may be refunded.");
+        }
+
+        var completeReason =
+            $"Admin {admin.FirstName} "
+            + $"{admin.LastName}: "
+            + normalizedReason;
+
+        await _paymentService
+            .RefundAppointmentPaymentAsync(
+                payment.Appointment
+                    .Client
+                    .UserId,
+                payment.AppointmentId,
+                completeReason);
+    }
 }

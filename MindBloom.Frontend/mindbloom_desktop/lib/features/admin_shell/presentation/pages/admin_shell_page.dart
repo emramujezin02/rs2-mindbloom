@@ -7,6 +7,7 @@ import '../../../../app/router/app_router.dart';
 import '../../../dashboard/presentation/pages/dashboard_page.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../../data/models/admin_section.dart';
+import '../../../payment_management/presentation/pages/payment_management_page.dart';
 
 class AdminShellPage extends StatefulWidget {
   final AdminSection initialSection;
@@ -201,12 +202,8 @@ class _AdminShellPageState extends State<AdminShellPage> {
         );
 
       case AdminSection.payments:
-        return const _SectionPlaceholderPage(
+        return const PaymentManagementPage(
           key: ValueKey(AdminSection.payments),
-          icon: Icons.payments,
-          title: 'Payments',
-          description:
-              'Payment, refund and receipt administration will be available here.',
         );
 
       case AdminSection.memberships:

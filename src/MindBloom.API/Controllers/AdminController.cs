@@ -243,6 +243,69 @@ public class AdminController : ControllerBase
                 "Appointment cancelled successfully."
         });
     }
+    [HttpGet("payments")]
+    public async Task<IActionResult>
+    GetPayments(
+        [FromQuery]
+        SearchAdminPaymentsDto request)
+    {
+        var result =
+            await _adminService
+                .GetPaymentsAsync(
+                    request);
+
+        return Ok(result);
+    }
+
+    [HttpGet("payments/{paymentId}")]
+    public async Task<IActionResult>
+        GetPaymentDetails(
+            int paymentId)
+    {
+        var result =
+            await _adminService
+                .GetPaymentDetailsAsync(
+                    paymentId);
+
+        return Ok(result);
+    }
+
+    [HttpGet(
+        "payments/{paymentId}/receipt")]
+    public async Task<IActionResult>
+        GetPaymentReceipt(
+            int paymentId)
+    {
+        var result =
+            await _adminService
+                .GetPaymentReceiptAsync(
+                    paymentId);
+
+        return Ok(result);
+    }
+
+    [HttpPut(
+        "payments/{paymentId}/refund")]
+    public async Task<IActionResult>
+        RefundPayment(
+            int paymentId,
+            AdminRefundPaymentDto request)
+    {
+        var adminUserId =
+            GetAuthenticatedUserId();
+
+        await _adminService
+            .RefundPaymentAsync(
+                adminUserId,
+                paymentId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                "Refund request processed successfully."
+        });
+    }
 
     private int
        GetAuthenticatedUserId()

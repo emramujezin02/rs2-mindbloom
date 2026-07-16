@@ -53,6 +53,23 @@ public interface IAdminService
         int appointmentId,
         AdminCancelAppointmentDto request);
 
+    Task<PagedResponse<AdminPaymentListDto>>
+        GetPaymentsAsync(
+            SearchAdminPaymentsDto request);
+
+    Task<AdminPaymentDetailsDto>
+        GetPaymentDetailsAsync(
+            int paymentId);
+
+    Task<AdminPaymentReceiptDto>
+        GetPaymentReceiptAsync(
+            int paymentId);
+
+    Task RefundPaymentAsync(
+        int authenticatedAdminUserId,
+        int paymentId,
+        AdminRefundPaymentDto request);
+
     Task<AdminDashboardDto>
         GetDashboardAsync();
 }

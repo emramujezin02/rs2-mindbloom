@@ -6,6 +6,8 @@ import '../../features/admin_shell/presentation/pages/admin_shell_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/session/presentation/pages/session_gate_page.dart';
 import '../../features/therapist_verification/presentation/pages/therapist_verification_details_page.dart';
+import '../../features/payment_management/presentation/pages/payment_management_details_page.dart';
+import '../../features/payment_management/presentation/pages/payment_receipt_page.dart';
 
 class AppRouter {
   static const String root = '/';
@@ -24,6 +26,8 @@ class AppRouter {
   static const String reviewModerationDetails = '/reviews/moderation/details';
   static const String appointmentManagementDetails =
       '/appointments/management/details';
+  static const String paymentManagementDetails = '/payments/management/details';
+  static const String paymentReceipt = '/payments/receipt';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -108,6 +112,21 @@ class AppRouter {
           builder: (_) =>
               AppointmentManagementDetailsPage(appointmentId: appointmentId),
         );
+
+      case paymentManagementDetails:
+        final paymentId = settings.arguments as int;
+
+        return MaterialPageRoute(
+          builder: (_) => PaymentManagementDetailsPage(paymentId: paymentId),
+        );
+
+      case paymentReceipt:
+        final paymentId = settings.arguments as int;
+
+        return MaterialPageRoute(
+          builder: (_) => PaymentReceiptPage(paymentId: paymentId),
+        );
+
       default:
         return MaterialPageRoute(builder: (_) => const SessionGatePage());
     }
