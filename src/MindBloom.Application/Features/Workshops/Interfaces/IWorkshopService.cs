@@ -10,9 +10,10 @@ public interface IWorkshopService
             WorkshopQueryDto query,
             int? clientUserId);
 
-    Task<WorkshopResponseDto> GetByIdAsync(
-        int workshopId,
-        int? clientUserId);
+    Task<WorkshopResponseDto>
+        GetByIdAsync(
+            int workshopId,
+            int? clientUserId);
 
     Task<PagedResponse<WorkshopResponseDto>>
         GetManageListAsync(
@@ -20,22 +21,25 @@ public interface IWorkshopService
             bool isAdmin,
             WorkshopQueryDto query);
 
-    Task<WorkshopResponseDto> CreateAsync(
-        int userId,
-        bool isAdmin,
-        CreateWorkshopDto request);
+    Task<WorkshopResponseDto>
+        CreateAsync(
+            int userId,
+            bool isAdmin,
+            CreateWorkshopDto request);
 
-    Task<WorkshopResponseDto> UpdateAsync(
-        int userId,
-        bool isAdmin,
-        int workshopId,
-        UpdateWorkshopDto request);
+    Task<WorkshopResponseDto>
+        UpdateAsync(
+            int userId,
+            bool isAdmin,
+            int workshopId,
+            UpdateWorkshopDto request);
 
-    Task<WorkshopResponseDto> UpdateStatusAsync(
-        int userId,
-        bool isAdmin,
-        int workshopId,
-        UpdateWorkshopStatusDto request);
+    Task<WorkshopResponseDto>
+        UpdateStatusAsync(
+            int userId,
+            bool isAdmin,
+            int workshopId,
+            UpdateWorkshopStatusDto request);
 
     Task DeleteAsync(
         int userId,
@@ -53,6 +57,14 @@ public interface IWorkshopService
     Task<PagedResponse<WorkshopResponseDto>>
         GetMyRegistrationsAsync(
             int clientUserId,
+            int pageNumber,
+            int pageSize);
+
+    Task<PagedResponse<WorkshopRegistrationResponseDto>>
+        GetRegistrationsAsync(
+            int userId,
+            bool isAdmin,
+            int workshopId,
             int pageNumber,
             int pageSize);
 }

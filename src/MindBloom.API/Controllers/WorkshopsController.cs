@@ -22,8 +22,10 @@ public class WorkshopsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetPublic(
-        [FromQuery] WorkshopQueryDto query)
+    public async Task<IActionResult>
+        GetPublic(
+            [FromQuery]
+            WorkshopQueryDto query)
     {
         var clientUserId =
             TryGetAuthenticatedUserId();
@@ -38,8 +40,9 @@ public class WorkshopsController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(
-        int id)
+    public async Task<IActionResult>
+        GetById(
+            int id)
     {
         var clientUserId =
             TryGetAuthenticatedUserId();
@@ -54,9 +57,10 @@ public class WorkshopsController : ControllerBase
     }
 
     [Authorize(
-        Roles = RoleConstants.Admin
-        + ","
-        + RoleConstants.Therapist)]
+        Roles =
+            RoleConstants.Admin
+            + ","
+            + RoleConstants.Therapist)]
     [HttpGet("manage")]
     public async Task<IActionResult>
         GetManageList(
@@ -81,12 +85,47 @@ public class WorkshopsController : ControllerBase
     }
 
     [Authorize(
-        Roles = RoleConstants.Admin
-        + ","
-        + RoleConstants.Therapist)]
+        Roles =
+            RoleConstants.Admin
+            + ","
+            + RoleConstants.Therapist)]
+    [HttpGet("{id}/registrations")]
+    public async Task<IActionResult>
+        GetRegistrations(
+            int id,
+            [FromQuery]
+            int pageNumber = 1,
+            [FromQuery]
+            int pageSize = 10)
+    {
+        var userId =
+            GetAuthenticatedUserId();
+
+        var isAdmin =
+            User.IsInRole(
+                RoleConstants.Admin);
+
+        var result =
+            await _workshopService
+                .GetRegistrationsAsync(
+                    userId,
+                    isAdmin,
+                    id,
+                    pageNumber,
+                    pageSize);
+
+        return Ok(result);
+    }
+
+    [Authorize(
+        Roles =
+            RoleConstants.Admin
+            + ","
+            + RoleConstants.Therapist)]
     [HttpPost]
-    public async Task<IActionResult> Create(
-        CreateWorkshopDto request)
+    public async Task<IActionResult>
+        Create(
+            CreateWorkshopDto request)
     {
         var userId =
             GetAuthenticatedUserId();
@@ -106,13 +145,15 @@ public class WorkshopsController : ControllerBase
     }
 
     [Authorize(
-        Roles = RoleConstants.Admin
-        + ","
-        + RoleConstants.Therapist)]
+        Roles =
+            RoleConstants.Admin
+            + ","
+            + RoleConstants.Therapist)]
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(
-        int id,
-        UpdateWorkshopDto request)
+    public async Task<IActionResult>
+        Update(
+            int id,
+            UpdateWorkshopDto request)
     {
         var userId =
             GetAuthenticatedUserId();
@@ -133,9 +174,10 @@ public class WorkshopsController : ControllerBase
     }
 
     [Authorize(
-        Roles = RoleConstants.Admin
-        + ","
-        + RoleConstants.Therapist)]
+        Roles =
+            RoleConstants.Admin
+            + ","
+            + RoleConstants.Therapist)]
     [HttpPut("{id}/status")]
     public async Task<IActionResult>
         UpdateStatus(
@@ -161,12 +203,14 @@ public class WorkshopsController : ControllerBase
     }
 
     [Authorize(
-        Roles = RoleConstants.Admin
-        + ","
-        + RoleConstants.Therapist)]
+        Roles =
+            RoleConstants.Admin
+            + ","
+            + RoleConstants.Therapist)]
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(
-        int id)
+    public async Task<IActionResult>
+        Delete(
+            int id)
     {
         var userId =
             GetAuthenticatedUserId();
@@ -188,10 +232,12 @@ public class WorkshopsController : ControllerBase
         });
     }
 
-    [Authorize(Roles = RoleConstants.Client)]
+    [Authorize(
+        Roles = RoleConstants.Client)]
     [HttpPost("{id}/register")]
-    public async Task<IActionResult> Register(
-        int id)
+    public async Task<IActionResult>
+        Register(
+            int id)
     {
         var userId =
             GetAuthenticatedUserId();
@@ -208,7 +254,8 @@ public class WorkshopsController : ControllerBase
         });
     }
 
-    [Authorize(Roles = RoleConstants.Client)]
+    [Authorize(
+        Roles = RoleConstants.Client)]
     [HttpDelete("{id}/registration")]
     public async Task<IActionResult>
         CancelRegistration(
@@ -229,7 +276,8 @@ public class WorkshopsController : ControllerBase
         });
     }
 
-    [Authorize(Roles = RoleConstants.Client)]
+    [Authorize(
+        Roles = RoleConstants.Client)]
     [HttpGet("mine")]
     public async Task<IActionResult>
         GetMyRegistrations(
@@ -251,7 +299,8 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
-    private int GetAuthenticatedUserId()
+    private int
+        GetAuthenticatedUserId()
     {
         var value =
             User.FindFirstValue(
@@ -268,7 +317,8 @@ public class WorkshopsController : ControllerBase
         return userId;
     }
 
-    private int? TryGetAuthenticatedUserId()
+    private int?
+        TryGetAuthenticatedUserId()
     {
         var value =
             User.FindFirstValue(

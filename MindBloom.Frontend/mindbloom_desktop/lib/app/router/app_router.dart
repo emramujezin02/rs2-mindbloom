@@ -10,6 +10,8 @@ import '../../features/payment_management/presentation/pages/payment_management_
 import '../../features/payment_management/presentation/pages/payment_receipt_page.dart';
 import '../../features/membership_management/presentation/pages/membership_management_details_page.dart';
 import '../../features/article_management/presentation/pages/article_form_page.dart';
+import '../../features/workshop_management/presentation/pages/workshop_details_page.dart';
+import '../../features/workshop_management/presentation/pages/workshop_form_page.dart';
 
 class AppRouter {
   static const String root = '/';
@@ -33,6 +35,10 @@ class AppRouter {
   static const String membershipManagementDetails =
       '/memberships/management/details';
   static const String articleManagementForm = '/articles/management/form';
+  static const String workshopManagementForm = '/workshops/management/form';
+  static const String workshopManagementDetails =
+      '/workshops/management/details';
+
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case root:
@@ -144,6 +150,20 @@ class AppRouter {
 
         return MaterialPageRoute(
           builder: (_) => ArticleFormPage(articleId: articleId),
+        );
+
+      case workshopManagementForm:
+        final workshopId = settings.arguments as int?;
+
+        return MaterialPageRoute(
+          builder: (_) => WorkshopFormPage(workshopId: workshopId),
+        );
+
+      case workshopManagementDetails:
+        final workshopId = settings.arguments as int;
+
+        return MaterialPageRoute(
+          builder: (_) => WorkshopDetailsPage(workshopId: workshopId),
         );
 
       default:

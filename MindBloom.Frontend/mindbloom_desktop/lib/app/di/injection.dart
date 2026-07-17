@@ -1,4 +1,5 @@
 import 'package:mindbloom_desktop/features/review_moderation/presentation/viewmodels/review_moderation_viremodel.dart';
+import 'package:mindbloom_desktop/features/workshop_management/presentation/pages/workshop_details_viewmodel.dart';
 
 import '../../core/network/api_client.dart';
 
@@ -47,6 +48,11 @@ import '../../features/article_management/data/repositories/article_management_r
 import '../../features/article_management/data/services/article_management_api_service.dart';
 import '../../features/article_management/presentation/viewmodels/article_form_viewmodel.dart';
 import '../../features/article_management/presentation/viewmodels/article_management_viewmodel.dart';
+
+import '../../features/workshop_management/data/repositories/workshop_management_repository.dart';
+import '../../features/workshop_management/data/services/workshop_management_api_service.dart';
+import '../../features/workshop_management/presentation/viewmodels/workshop_form_viewmodel.dart';
+import '../../features/workshop_management/presentation/viewmodels/workshop_management_viewmodel.dart';
 
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
@@ -208,6 +214,30 @@ class AppInjection {
   static ArticleFormViewModel createArticleFormViewModel() {
     return ArticleFormViewModel(
       repository: _createArticleManagementRepository(),
+    );
+  }
+
+  static WorkshopManagementRepository _createWorkshopManagementRepository() {
+    final apiService = WorkshopManagementApiService(apiClient: apiClient);
+
+    return WorkshopManagementRepository(apiService: apiService);
+  }
+
+  static WorkshopManagementViewModel createWorkshopManagementViewModel() {
+    return WorkshopManagementViewModel(
+      repository: _createWorkshopManagementRepository(),
+    );
+  }
+
+  static WorkshopFormViewModel createWorkshopFormViewModel() {
+    return WorkshopFormViewModel(
+      repository: _createWorkshopManagementRepository(),
+    );
+  }
+
+  static WorkshopDetailsViewModel createWorkshopDetailsViewModel() {
+    return WorkshopDetailsViewModel(
+      repository: _createWorkshopManagementRepository(),
     );
   }
 }

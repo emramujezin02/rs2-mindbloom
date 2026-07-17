@@ -1090,6 +1090,93 @@ public class WorkshopService : IWorkshopService
             totalCount);
     }
 
+    public async Task<
+    PagedResponse<WorkshopRegistrationResponseDto>>
+    GetRegistrationsAsync(
+        int userId,
+        bool isAdmin,
+        int workshopId,
+        int pageNumber,
+        int pageSize)
+    {
+        pageNumber =
+            pageNumber < 1
+                ? 1
+                : pageNumber;
+
+        pageSize =
+            pageSize < 1
+                ? 10
+                : Math.Min(
+                    pageSize,
+                    MaximumPageSize);
+
+        await GetWorkshopForManagementAsync(
+            userId,
+            isAdmin,
+            workshopId);
+
+        var query =
+            _context.WorkshopRegistrations
+                .AsNoTracking()
+                .Where(x =>
+                    x.WorkshopId ==
+                        workshopId &&
+                    !x.IsDeleted);
+
+        var totalCount =
+            await query.CountAsync();
+
+        var items =
+            await query
+                .OrderByDescending(x =>
+                    x.RegisteredAtUtc)
+                .Skip(
+                    (pageNumber - 1) *
+                    pageSize)
+                .Take(pageSize)
+                .Select(x =>
+                    new WorkshopRegistrationResponseDto
+                    {
+                        Id =
+                            x.Id,
+
+                        WorkshopId =
+                            x.WorkshopId,
+
+                        ClientId =
+                            x.ClientId,
+
+                        ClientUserId =
+                            x.Client.UserId,
+
+                        ClientName =
+                            x.Client.User.FirstName
+                            + " "
+                            + x.Client.User.LastName,
+
+                        ClientEmail =
+                            x.Client.User.Email
+                            ?? string.Empty,
+
+                        Status =
+                            x.Status.ToString(),
+
+                        RegisteredAtUtc =
+                            x.RegisteredAtUtc,
+
+                        CancelledAtUtc =
+                            x.CancelledAtUtc
+                    })
+                .ToListAsync();
+
+        return CreatePagedResponse(
+            items,
+            pageNumber,
+            pageSize,
+            totalCount);
+    }
+
     private async Task<Workshop>
         GetWorkshopForManagementAsync(
             int userId,

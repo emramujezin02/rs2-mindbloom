@@ -10,6 +10,7 @@ import '../../data/models/admin_section.dart';
 import '../../../payment_management/presentation/pages/payment_management_page.dart';
 import '../../../membership_management/presentation/pages/membership_management_page.dart';
 import '../../../article_management/presentation/pages/article_management_page.dart';
+import '../../../workshop_management/presentation/pages/workshop_management_page.dart';
 
 class AdminShellPage extends StatefulWidget {
   final AdminSection initialSection;
@@ -214,12 +215,8 @@ class _AdminShellPageState extends State<AdminShellPage> {
         );
 
       case AdminSection.workshops:
-        return const _SectionPlaceholderPage(
+        return const WorkshopManagementPage(
           key: ValueKey(AdminSection.workshops),
-          icon: Icons.groups,
-          title: 'Workshops',
-          description:
-              'Workshop CRUD and registration administration will be available here.',
         );
 
       case AdminSection.articles:
@@ -497,63 +494,6 @@ class _AdminTopbar extends StatelessWidget {
             },
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SectionPlaceholderPage extends StatelessWidget {
-  final IconData icon;
-
-  final String title;
-
-  final String description;
-
-  const _SectionPlaceholderPage({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 620),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(40),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    icon,
-                    size: 72,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    description,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16, height: 1.5),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

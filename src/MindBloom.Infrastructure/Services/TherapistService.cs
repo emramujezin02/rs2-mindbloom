@@ -65,7 +65,10 @@ public class TherapistService : ITherapistService
     {
         return await _context.Therapists
             .Include(x => x.User)
-            .Where(x =>x.VerificationStatus == TherapistVerificationStatus.Approved)
+            .Where(x =>
+    !x.IsDeleted &&
+    x.VerificationStatus ==
+        TherapistVerificationStatus.Approved)
             .Select(x => new TherapistResponseDto
             {
                 Id = x.Id,
