@@ -42,6 +42,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<TherapistVerificationAudit> TherapistVerificationAudits=> Set<TherapistVerificationAudit>();
     public DbSet<AppointmentStatusAudit> AppointmentStatusAudits => Set<AppointmentStatusAudit>();
     public DbSet<ReviewModerationAudit> ReviewModerationAudits => Set<ReviewModerationAudit>();
+    public DbSet<TherapistSpecialization> TherapistSpecializations => Set<TherapistSpecialization>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -564,6 +565,36 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         });
     });
 
+        builder.Entity<TherapistSpecialization>(
+    entity =>
+    {
+        entity.Property(x => x.Name)
+            .IsRequired()
+            .HasMaxLength(150);
+
+        entity.Property(x => x.Description)
+            .HasMaxLength(500);
+
+        entity.Property(x => x.IsActive)
+            .HasDefaultValue(true);
+
+        entity.HasIndex(x => x.Name)
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
+
+        entity.HasIndex(x => new
+        {
+            x.IsActive,
+            x.IsDeleted
+        });
+    });
+
+        builder.Entity<Therapist>()
+            .HasOne(x => x.SpecializationReference)
+            .WithMany(x => x.Therapists)
+            .HasForeignKey(x => x.SpecializationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Entity<AppointmentStatusAudit>(
     entity =>
     {
@@ -590,6 +621,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             x.ChangedAtUtc
         });
     });
+
+        builder.Entity<Therapist>()
+    .Property(x => x.Specialization)
+    .IsRequired()
+    .HasMaxLength(150);
 
     }
 

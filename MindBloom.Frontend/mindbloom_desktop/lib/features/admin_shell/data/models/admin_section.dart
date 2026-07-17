@@ -10,6 +10,7 @@ enum AdminSection {
   workshops,
   articles,
   reviews,
+  referenceData,
 }
 
 extension AdminSectionExtension on AdminSection {
@@ -41,6 +42,9 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.reviews:
         return 'Reviews';
+
+      case AdminSection.referenceData:
+        return 'Reference Data';
     }
   }
 
@@ -72,6 +76,9 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.reviews:
         return Icons.reviews_outlined;
+
+      case AdminSection.referenceData:
+        return Icons.list_alt_outlined;
     }
   }
 
@@ -103,6 +110,9 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.reviews:
         return Icons.reviews;
+
+      case AdminSection.referenceData:
+        return Icons.list_alt;
     }
   }
 }

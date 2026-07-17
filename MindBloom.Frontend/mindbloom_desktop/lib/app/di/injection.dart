@@ -54,6 +54,10 @@ import '../../features/workshop_management/data/services/workshop_management_api
 import '../../features/workshop_management/presentation/viewmodels/workshop_form_viewmodel.dart';
 import '../../features/workshop_management/presentation/viewmodels/workshop_management_viewmodel.dart';
 
+import '../../features/reference_data/data/repositories/reference_data_repository.dart';
+import '../../features/reference_data/data/services/reference_data_api_service.dart';
+import '../../features/reference_data/presentation/viewmodels/reference_data_management_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
@@ -238,6 +242,19 @@ class AppInjection {
   static WorkshopDetailsViewModel createWorkshopDetailsViewModel() {
     return WorkshopDetailsViewModel(
       repository: _createWorkshopManagementRepository(),
+    );
+  }
+
+  static ReferenceDataRepository _createReferenceDataRepository() {
+    final apiService = ReferenceDataApiService(apiClient: apiClient);
+
+    return ReferenceDataRepository(apiService: apiService);
+  }
+
+  static ReferenceDataManagementViewModel
+  createReferenceDataManagementViewModel() {
+    return ReferenceDataManagementViewModel(
+      repository: _createReferenceDataRepository(),
     );
   }
 }

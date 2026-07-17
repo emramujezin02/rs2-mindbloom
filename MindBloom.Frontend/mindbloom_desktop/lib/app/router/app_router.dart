@@ -38,6 +38,7 @@ class AppRouter {
   static const String workshopManagementForm = '/workshops/management/form';
   static const String workshopManagementDetails =
       '/workshops/management/details';
+  static const String referenceData = '/reference-data';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -164,6 +165,12 @@ class AppRouter {
 
         return MaterialPageRoute(
           builder: (_) => WorkshopDetailsPage(workshopId: workshopId),
+        );
+
+      case referenceData:
+        return MaterialPageRoute(
+          builder: (_) =>
+              const AdminShellPage(initialSection: AdminSection.referenceData),
         );
 
       default:

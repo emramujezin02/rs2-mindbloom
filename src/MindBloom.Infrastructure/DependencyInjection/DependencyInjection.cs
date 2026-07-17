@@ -27,6 +27,7 @@ using MindBloom.Application.Features.Articles.Interfaces;
 using MindBloom.Application.Features.Workshops.Interfaces;
 using MindBloom.Infrastructure.Payments;
 using MindBloom.Application.Features.Chat.Interfaces;
+using MindBloom.Application.Features.ReferenceData.Interfaces;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -131,6 +132,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
 
         services.AddScoped<ITherapistService, TherapistService>();
+        services.AddScoped<IReferenceDataService, ReferenceDataService>();
 
         services.AddScoped<IAppointmentService, AppointmentService>();
 

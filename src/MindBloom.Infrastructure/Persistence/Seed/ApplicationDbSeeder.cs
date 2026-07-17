@@ -16,6 +16,117 @@ public static class ApplicationDbSeeder
     {
         await context.Database.MigrateAsync();
 
+        if (!await context.TherapistSpecializations.AnyAsync())
+        {
+            context.TherapistSpecializations.AddRange(
+                new TherapistSpecialization
+                {
+                    Name = "Anxiety Disorders",
+                    Description =
+                        "Support and treatment for anxiety, panic attacks and related disorders.",
+                    IsActive = true
+                },
+                new TherapistSpecialization
+                {
+                    Name = "Depression",
+                    Description =
+                        "Assessment and treatment of depressive symptoms and mood difficulties.",
+                    IsActive = true
+                },
+                new TherapistSpecialization
+                {
+                    Name = "Trauma and PTSD",
+                    Description =
+                        "Therapeutic support for trauma-related difficulties and post-traumatic stress.",
+                    IsActive = true
+                },
+                new TherapistSpecialization
+                {
+                    Name = "Couples Therapy",
+                    Description =
+                        "Support for relationship difficulties, communication and conflict resolution.",
+                    IsActive = true
+                },
+                new TherapistSpecialization
+                {
+                    Name = "Child and Adolescent Psychology",
+                    Description =
+                        "Psychological support for children, adolescents and their families.",
+                    IsActive = true
+                },
+                new TherapistSpecialization
+                {
+                    Name = "Stress and Burnout",
+                    Description =
+                        "Support for chronic stress, professional burnout and work-life balance.",
+                    IsActive = true
+                },
+                new TherapistSpecialization
+                {
+                    Name = "Grief and Loss",
+                    Description =
+                        "Support during bereavement, major loss and difficult life transitions.",
+                    IsActive = true
+                },
+                new TherapistSpecialization
+                {
+                    Name = "Personal Development",
+                    Description =
+                        "Support for self-confidence, emotional awareness and personal growth.",
+                    IsActive = true
+                });
+
+            await context.SaveChangesAsync();
+        }
+
+        var specializations =
+    await context.TherapistSpecializations
+        .Where(x => !x.IsDeleted)
+        .ToListAsync();
+
+        var therapistsWithoutReference =
+            await context.Therapists
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.SpecializationId == null &&
+                    x.Specialization != null &&
+                    x.Specialization != string.Empty)
+                .ToListAsync();
+
+        foreach (var therapist in therapistsWithoutReference)
+        {
+            var existingSpecialization =
+                specializations.FirstOrDefault(x =>
+                    x.Name.ToLower() ==
+                    therapist.Specialization.Trim().ToLower());
+
+            if (existingSpecialization == null)
+            {
+                existingSpecialization =
+                    new TherapistSpecialization
+                    {
+                        Name = therapist.Specialization.Trim(),
+                        Description =
+                            "Specialization migrated from an existing therapist profile.",
+                        IsActive = true
+                    };
+
+                context.TherapistSpecializations.Add(
+                    existingSpecialization);
+
+                specializations.Add(
+                    existingSpecialization);
+            }
+
+            therapist.SpecializationReference =
+                existingSpecialization;
+        }
+
+        if (therapistsWithoutReference.Count > 0)
+        {
+            await context.SaveChangesAsync();
+        }
+
         if (!await roleManager.RoleExistsAsync(RoleConstants.Admin))
         {
             await roleManager.CreateAsync(

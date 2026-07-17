@@ -11,6 +11,7 @@ import '../../../payment_management/presentation/pages/payment_management_page.d
 import '../../../membership_management/presentation/pages/membership_management_page.dart';
 import '../../../article_management/presentation/pages/article_management_page.dart';
 import '../../../workshop_management/presentation/pages/workshop_management_page.dart';
+import '../../../reference_data/presentation/pages/reference_data_management_page.dart';
 
 class AdminShellPage extends StatefulWidget {
   final AdminSection initialSection;
@@ -224,6 +225,11 @@ class _AdminShellPageState extends State<AdminShellPage> {
 
       case AdminSection.reviews:
         return const ReviewModerationPage(key: ValueKey(AdminSection.reviews));
+
+      case AdminSection.referenceData:
+        return const ReferenceDataManagementPage(
+          key: ValueKey(AdminSection.referenceData),
+        );
     }
   }
 }
