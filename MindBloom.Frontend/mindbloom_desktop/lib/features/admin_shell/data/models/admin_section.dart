@@ -12,6 +12,7 @@ enum AdminSection {
   reviews,
   referenceData,
   appointmentRevenueReport,
+  therapistPerformanceReport,
 }
 
 extension AdminSectionExtension on AdminSection {
@@ -49,6 +50,9 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.appointmentRevenueReport:
         return 'Revenue Report';
+
+      case AdminSection.therapistPerformanceReport:
+        return 'Therapist Report';
     }
   }
 
@@ -86,6 +90,9 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.appointmentRevenueReport:
         return Icons.picture_as_pdf_outlined;
+
+      case AdminSection.therapistPerformanceReport:
+        return Icons.assessment_outlined;
     }
   }
 
@@ -123,6 +130,9 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.appointmentRevenueReport:
         return Icons.picture_as_pdf;
+
+      case AdminSection.therapistPerformanceReport:
+        return Icons.assessment;
     }
   }
 }

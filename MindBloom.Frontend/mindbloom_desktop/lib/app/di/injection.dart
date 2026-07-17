@@ -63,6 +63,9 @@ import '../../features/reports/data/repositories/admin_report_repository.dart';
 import '../../features/reports/data/services/admin_report_api_service.dart';
 import '../../features/reports/presentation/viewmodels/appointment_revenue_report_viewmodel.dart';
 
+import '../../features/reports/data/services/therapist_performance_pdf_service.dart';
+import '../../features/reports/presentation/viewmodels/therapist_performance_report_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
@@ -274,6 +277,14 @@ class AppInjection {
     return AppointmentRevenueReportViewModel(
       repository: _createAdminReportRepository(),
       pdfService: AppointmentRevenuePdfService(),
+    );
+  }
+
+  static TherapistPerformanceReportViewModel
+  createTherapistPerformanceReportViewModel() {
+    return TherapistPerformanceReportViewModel(
+      _createAdminReportRepository(),
+      TherapistPerformancePdfService(),
     );
   }
 }

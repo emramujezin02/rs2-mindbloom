@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mindbloom_desktop/features/appointment_management/presentation/pages/appointment_managemenet_page.dart';
 import 'package:mindbloom_desktop/features/reports/presentation/pages/appointment_revenue_report_page.dart';
+import 'package:mindbloom_desktop/features/reports/presentation/pages/therapist_performance_report_page.dart';
 import 'package:mindbloom_desktop/features/therapist_verification/presentation/pages/therapist_verification_page.dart';
 import 'package:mindbloom_desktop/features/users/presentation/pages/users_page.dart';
 import '../../../review_moderation/presentation/pages/review_moderation_page.dart';
@@ -235,6 +236,11 @@ class _AdminShellPageState extends State<AdminShellPage> {
       case AdminSection.appointmentRevenueReport:
         return const AppointmentRevenueReportPage(
           key: ValueKey(AdminSection.appointmentRevenueReport),
+        );
+
+      case AdminSection.therapistPerformanceReport:
+        return const TherapistPerformanceReportPage(
+          key: ValueKey(AdminSection.therapistPerformanceReport),
         );
     }
   }
