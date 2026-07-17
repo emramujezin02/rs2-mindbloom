@@ -11,6 +11,7 @@ enum AdminSection {
   articles,
   reviews,
   referenceData,
+  appointmentRevenueReport,
 }
 
 extension AdminSectionExtension on AdminSection {
@@ -45,6 +46,9 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.referenceData:
         return 'Reference Data';
+
+      case AdminSection.appointmentRevenueReport:
+        return 'Revenue Report';
     }
   }
 
@@ -79,6 +83,9 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.referenceData:
         return Icons.list_alt_outlined;
+
+      case AdminSection.appointmentRevenueReport:
+        return Icons.picture_as_pdf_outlined;
     }
   }
 
@@ -113,6 +120,9 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.referenceData:
         return Icons.list_alt;
+
+      case AdminSection.appointmentRevenueReport:
+        return Icons.picture_as_pdf;
     }
   }
 }

@@ -1,3 +1,4 @@
+import 'package:mindbloom_desktop/features/reports/data/services/appointment_revenue_pdf_service.dart';
 import 'package:mindbloom_desktop/features/review_moderation/presentation/viewmodels/review_moderation_viremodel.dart';
 import 'package:mindbloom_desktop/features/workshop_management/presentation/pages/workshop_details_viewmodel.dart';
 
@@ -57,6 +58,10 @@ import '../../features/workshop_management/presentation/viewmodels/workshop_mana
 import '../../features/reference_data/data/repositories/reference_data_repository.dart';
 import '../../features/reference_data/data/services/reference_data_api_service.dart';
 import '../../features/reference_data/presentation/viewmodels/reference_data_management_viewmodel.dart';
+
+import '../../features/reports/data/repositories/admin_report_repository.dart';
+import '../../features/reports/data/services/admin_report_api_service.dart';
+import '../../features/reports/presentation/viewmodels/appointment_revenue_report_viewmodel.dart';
 
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
@@ -255,6 +260,20 @@ class AppInjection {
   createReferenceDataManagementViewModel() {
     return ReferenceDataManagementViewModel(
       repository: _createReferenceDataRepository(),
+    );
+  }
+
+  static AdminReportRepository _createAdminReportRepository() {
+    final apiService = AdminReportApiService(apiClient: apiClient);
+
+    return AdminReportRepository(apiService: apiService);
+  }
+
+  static AppointmentRevenueReportViewModel
+  createAppointmentRevenueReportViewModel() {
+    return AppointmentRevenueReportViewModel(
+      repository: _createAdminReportRepository(),
+      pdfService: AppointmentRevenuePdfService(),
     );
   }
 }
