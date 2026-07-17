@@ -28,6 +28,7 @@ using MindBloom.Application.Features.Workshops.Interfaces;
 using MindBloom.Infrastructure.Payments;
 using MindBloom.Application.Features.Chat.Interfaces;
 using MindBloom.Application.Features.ReferenceData.Interfaces;
+using MindBloom.Application.Features.AdminReports.Interfaces;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -166,6 +167,8 @@ public static class DependencyInjection
         services.AddScoped<IChatService,ChatService>();
 
         services.AddScoped<IBusinessNotificationService, BusinessNotificationService>();
+
+        services.AddScoped<IAdminReportService, AdminReportService>();
 
         return services;
     }
