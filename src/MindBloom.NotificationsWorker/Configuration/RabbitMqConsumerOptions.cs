@@ -24,7 +24,21 @@ public sealed class RabbitMqConsumerOptions
     public string EmailRoutingKey { get; set; } =
         "notification.email";
 
+    public string RetryExchange { get; set; } =
+        "mindbloom.notifications.retry";
+
+    public string DeadLetterExchange { get; set; } =
+        "mindbloom.notifications.dead-letter";
+
+    public string DeadLetterQueue { get; set; } =
+        "mindbloom.notifications.email.dlq";
+
+    public string DeadLetterRoutingKey { get; set; } =
+        "notification.email.dead";
+
     public ushort PrefetchCount { get; set; } = 1;
+
+    public int MaximumRetryCount { get; set; } = 4;
 
     public bool AutomaticRecoveryEnabled { get; set; } = true;
 

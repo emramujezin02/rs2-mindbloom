@@ -1,8 +1,10 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Messaging.Contracts.Notifications;
 using MindBloom.NotificationsWorker.Configuration;
+using MindBloom.NotificationsWorker.Messaging;
 using MindBloom.NotificationsWorker.Services;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -26,18 +28,24 @@ public sealed class EmailNotificationConsumer :
 
     private IConnection? _connection;
     private IChannel? _channel;
+    private RabbitMqTopology? _topology;
     private bool _disposed;
 
     public EmailNotificationConsumer(
         IOptions<RabbitMqConsumerOptions> options,
         IEmailService emailService,
         EmailMessageBodyBuilder bodyBuilder,
-        ILogger<EmailNotificationConsumer> logger)
+        ILogger<EmailNotificationConsumer> logger,
+        ILogger<RabbitMqTopology> topologyLogger)
     {
         _options = options.Value;
         _emailService = emailService;
         _bodyBuilder = bodyBuilder;
         _logger = logger;
+
+        _topology = new RabbitMqTopology(
+            _options,
+            topologyLogger);
     }
 
     protected override async Task ExecuteAsync(
@@ -47,20 +55,23 @@ public sealed class EmailNotificationConsumer :
         {
             await InitializeRabbitMqAsync(stoppingToken);
 
-            var consumer = new AsyncEventingBasicConsumer(_channel!);
+            var consumer =
+                new AsyncEventingBasicConsumer(_channel!);
 
             consumer.ReceivedAsync += HandleMessageAsync;
 
-            var consumerTag = await _channel!.BasicConsumeAsync(
-                queue: _options.EmailQueue,
-                autoAck: false,
-                consumer: consumer,
-                cancellationToken: stoppingToken);
+            var consumerTag =
+                await _channel!.BasicConsumeAsync(
+                    queue: _options.EmailQueue,
+                    autoAck: false,
+                    consumer: consumer,
+                    cancellationToken: stoppingToken);
 
             _logger.LogInformation(
-                "Notifications worker started consuming RabbitMQ queue {Queue}. Consumer tag: {ConsumerTag}.",
+                "Notifications worker started consuming queue {Queue}. Consumer tag: {ConsumerTag}. Maximum retries: {MaximumRetryCount}.",
                 _options.EmailQueue,
-                consumerTag);
+                consumerTag,
+                _options.MaximumRetryCount);
 
             await Task.Delay(
                 Timeout.InfiniteTimeSpan,
@@ -76,7 +87,7 @@ public sealed class EmailNotificationConsumer :
         {
             _logger.LogCritical(
                 exception,
-                "Notifications worker stopped because RabbitMQ consumer initialization failed.");
+                "Notifications worker stopped because consumer initialization failed.");
 
             throw;
         }
@@ -101,11 +112,13 @@ public sealed class EmailNotificationConsumer :
 
             TopologyRecoveryEnabled = true,
 
-            NetworkRecoveryInterval = TimeSpan.FromSeconds(
-                _options.NetworkRecoveryIntervalSeconds),
+            NetworkRecoveryInterval =
+                TimeSpan.FromSeconds(
+                    _options.NetworkRecoveryIntervalSeconds),
 
-            RequestedHeartbeat = TimeSpan.FromSeconds(
-                _options.RequestedHeartbeatSeconds),
+            RequestedHeartbeat =
+                TimeSpan.FromSeconds(
+                    _options.RequestedHeartbeatSeconds),
 
             ConsumerDispatchConcurrency = 1
         };
@@ -115,9 +128,10 @@ public sealed class EmailNotificationConsumer :
             _options.HostName,
             _options.Port);
 
-        _connection = await factory.CreateConnectionAsync(
-            _options.ClientProvidedName,
-            cancellationToken);
+        _connection =
+            await factory.CreateConnectionAsync(
+                _options.ClientProvidedName,
+                cancellationToken);
 
         _connection.ConnectionShutdownAsync +=
             OnConnectionShutdownAsync;
@@ -128,10 +142,11 @@ public sealed class EmailNotificationConsumer :
         _connection.RecoverySucceededAsync +=
             OnRecoverySucceededAsync;
 
-        _channel = await _connection.CreateChannelAsync(
-            cancellationToken: cancellationToken);
+        _channel =
+            await _connection.CreateChannelAsync(
+                cancellationToken: cancellationToken);
 
-        await DeclareTopologyAsync(
+        await _topology!.DeclareAsync(
             _channel,
             cancellationToken);
 
@@ -145,40 +160,6 @@ public sealed class EmailNotificationConsumer :
             "Notifications worker connected to RabbitMQ successfully.");
     }
 
-    private async Task DeclareTopologyAsync(
-        IChannel channel,
-        CancellationToken cancellationToken)
-    {
-        await channel.ExchangeDeclareAsync(
-            exchange: _options.NotificationExchange,
-            type: ExchangeType.Direct,
-            durable: true,
-            autoDelete: false,
-            arguments: null,
-            cancellationToken: cancellationToken);
-
-        await channel.QueueDeclareAsync(
-            queue: _options.EmailQueue,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            arguments: null,
-            cancellationToken: cancellationToken);
-
-        await channel.QueueBindAsync(
-            queue: _options.EmailQueue,
-            exchange: _options.NotificationExchange,
-            routingKey: _options.EmailRoutingKey,
-            arguments: null,
-            cancellationToken: cancellationToken);
-
-        _logger.LogInformation(
-            "RabbitMQ topology declared. Exchange: {Exchange}, queue: {Queue}, routing key: {RoutingKey}.",
-            _options.NotificationExchange,
-            _options.EmailQueue,
-            _options.EmailRoutingKey);
-    }
-
     private async Task HandleMessageAsync(
         object sender,
         BasicDeliverEventArgs eventArgs)
@@ -186,7 +167,7 @@ public sealed class EmailNotificationConsumer :
         if (_channel is null || !_channel.IsOpen)
         {
             _logger.LogError(
-                "RabbitMQ channel is unavailable while processing delivery {DeliveryTag}.",
+                "RabbitMQ channel is unavailable for delivery {DeliveryTag}.",
                 eventArgs.DeliveryTag);
 
             return;
@@ -194,112 +175,367 @@ public sealed class EmailNotificationConsumer :
 
         EmailNotificationMessage? message = null;
 
+        var retryCount =
+            GetRetryCount(eventArgs.BasicProperties.Headers);
+
         try
         {
-            message = JsonSerializer.Deserialize<EmailNotificationMessage>(
-                eventArgs.Body.Span,
-                JsonOptions);
+            message =
+                JsonSerializer.Deserialize<EmailNotificationMessage>(
+                    eventArgs.Body.Span,
+                    JsonOptions);
 
             if (message is null)
             {
                 throw new JsonException(
-                    "RabbitMQ email notification message could not be deserialized.");
+                    "Email notification message could not be deserialized.");
             }
 
             ValidateMessage(message);
 
+            var currentAttempt = retryCount + 1;
+            var maximumAttempts =
+                _options.MaximumRetryCount + 1;
+
             _logger.LogInformation(
-                "Processing email notification {MessageId}. Event: {EventType}, recipient: {RecipientEmail}, correlation ID: {CorrelationId}.",
+                "Processing email notification {MessageId}. Recipient: {RecipientEmail}. Attempt {CurrentAttempt}/{MaximumAttempts}. Correlation ID: {CorrelationId}.",
                 message.MessageId,
-                message.EventType,
                 message.RecipientEmail,
+                currentAttempt,
+                maximumAttempts,
                 message.CorrelationId);
 
-            var emailBody = _bodyBuilder.Build(message);
+            var emailBody =
+                _bodyBuilder.Build(message);
 
+            /*
+             * Stvarno SMTP slanje.
+             */
             await _emailService.SendAsync(
                 message.RecipientEmail,
                 message.Subject,
                 emailBody);
 
             /*
-             * ACK se šalje tek nakon što SendAsync uspješno završi.
-             * Ako slanje emaila baci exception, ovaj dio se ne izvršava.
+             * ACK tek nakon uspješnog slanja emaila.
              */
-            await _channel.BasicAckAsync(
-                deliveryTag: eventArgs.DeliveryTag,
-                multiple: false,
-                cancellationToken: CancellationToken.None);
+            await AcknowledgeAsync(
+                eventArgs.DeliveryTag);
 
             _logger.LogInformation(
-                "Email notification {MessageId} sent successfully and acknowledged.",
-                message.MessageId);
+                "Email notification {MessageId} sent successfully on attempt {Attempt} and acknowledged.",
+                message.MessageId,
+                currentAttempt);
         }
         catch (JsonException exception)
         {
             _logger.LogError(
                 exception,
-                "RabbitMQ message with delivery tag {DeliveryTag} contains invalid JSON and cannot be processed.",
+                "Delivery {DeliveryTag} contains invalid JSON and will be moved directly to the dead-letter queue.",
                 eventArgs.DeliveryTag);
 
-            /*
-             * Neispravan JSON se ne vraća u isti red jer ga ponovno
-             * preuzimanje ne bi moglo popraviti.
-             */
-            await RejectMessageAsync(
-                eventArgs.DeliveryTag,
-                requeue: false);
+            await MoveToDeadLetterQueueAsync(
+                eventArgs,
+                retryCount,
+                exception.Message,
+                message?.MessageId);
         }
         catch (ArgumentException exception)
         {
             _logger.LogError(
                 exception,
-                "RabbitMQ email message {MessageId} contains invalid data.",
+                "Email notification {MessageId} contains invalid data and will be moved directly to the dead-letter queue.",
                 message?.MessageId);
 
-            await RejectMessageAsync(
-                eventArgs.DeliveryTag,
-                requeue: false);
+            await MoveToDeadLetterQueueAsync(
+                eventArgs,
+                retryCount,
+                exception.Message,
+                message?.MessageId);
         }
         catch (InvalidOperationException exception)
         {
             _logger.LogError(
                 exception,
-                "RabbitMQ email message {MessageId} could not be rendered.",
+                "Email notification {MessageId} cannot be processed and will be moved directly to the dead-letter queue.",
                 message?.MessageId);
 
-            await RejectMessageAsync(
-                eventArgs.DeliveryTag,
-                requeue: false);
+            await MoveToDeadLetterQueueAsync(
+                eventArgs,
+                retryCount,
+                exception.Message,
+                message?.MessageId);
         }
         catch (Exception exception)
         {
             _logger.LogError(
                 exception,
-                "Sending email notification {MessageId} failed. The message will be returned to the queue.",
+                "Sending email notification {MessageId} failed on attempt {Attempt}.",
+                message?.MessageId,
+                retryCount + 1);
+
+            await HandleTransientFailureAsync(
+                eventArgs,
+                retryCount,
+                exception,
                 message?.MessageId);
+        }
+    }
+
+    private async Task HandleTransientFailureAsync(
+        BasicDeliverEventArgs eventArgs,
+        int retryCount,
+        Exception exception,
+        Guid? messageId)
+    {
+        if (retryCount >= _options.MaximumRetryCount)
+        {
+            _logger.LogError(
+                "Email notification {MessageId} exhausted all {MaximumAttempts} attempts and will be moved to DLQ.",
+                messageId,
+                _options.MaximumRetryCount + 1);
+
+            await MoveToDeadLetterQueueAsync(
+                eventArgs,
+                retryCount,
+                exception.Message,
+                messageId);
+
+            return;
+        }
+
+        var delayMilliseconds =
+            _topology!.RetryDelays[retryCount];
+
+        var nextRetryCount =
+            retryCount + 1;
+
+        var retryRoutingKey =
+            _topology.GetRetryRoutingKey(
+                delayMilliseconds);
+
+        try
+        {
+            var properties =
+                CreateForwardProperties(
+                    eventArgs.BasicProperties,
+                    nextRetryCount,
+                    exception.Message);
+
+            await _channel!.BasicPublishAsync(
+                exchange: _options.RetryExchange,
+                routingKey: retryRoutingKey,
+                mandatory: true,
+                basicProperties: properties,
+                body: eventArgs.Body,
+                cancellationToken: CancellationToken.None);
 
             /*
-             * SMTP ili druga privremena greška:
-             * poruka se trenutno vraća u queue.
-             *
-             * Kontrolirani retry i dead-letter queue će se obično
-             * implementirati u narednom tasku.
+             * Originalna poruka dobija ACK tek nakon što je kopija
+             * uspješno objavljena u odgovarajući retry queue.
              */
-            await RejectMessageAsync(
+            await AcknowledgeAsync(
+                eventArgs.DeliveryTag);
+
+            _logger.LogWarning(
+                "Email notification {MessageId} scheduled for retry {RetryCount}/{MaximumRetryCount} after {DelayMilliseconds} ms.",
+                messageId,
+                nextRetryCount,
+                _options.MaximumRetryCount,
+                delayMilliseconds);
+        }
+        catch (Exception publishException)
+        {
+            _logger.LogCritical(
+                publishException,
+                "Email notification {MessageId} could not be published to retry exchange. Original delivery will be requeued.",
+                messageId);
+
+            /*
+             * Nismo uspjeli sigurno proslijediti poruku u retry queue.
+             * Zato originalnu poruku vraćamo u glavni queue.
+             */
+            await NegativeAcknowledgeAsync(
                 eventArgs.DeliveryTag,
                 requeue: true);
         }
     }
 
-    private async Task RejectMessageAsync(
+    private async Task MoveToDeadLetterQueueAsync(
+        BasicDeliverEventArgs eventArgs,
+        int retryCount,
+        string failureReason,
+        Guid? messageId)
+    {
+        try
+        {
+            var properties =
+                CreateForwardProperties(
+                    eventArgs.BasicProperties,
+                    retryCount,
+                    failureReason);
+
+            await _channel!.BasicPublishAsync(
+                exchange: _options.DeadLetterExchange,
+                routingKey: _options.DeadLetterRoutingKey,
+                mandatory: true,
+                basicProperties: properties,
+                body: eventArgs.Body,
+                cancellationToken: CancellationToken.None);
+
+            /*
+             * ACK originala šaljemo tek kada je poruka objavljena u DLQ.
+             */
+            await AcknowledgeAsync(
+                eventArgs.DeliveryTag);
+
+            _logger.LogError(
+                "Email notification {MessageId} moved to dead-letter queue {DeadLetterQueue}. Retry count: {RetryCount}.",
+                messageId,
+                _options.DeadLetterQueue,
+                retryCount);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogCritical(
+                exception,
+                "Email notification {MessageId} could not be moved to DLQ. Original delivery will be requeued.",
+                messageId);
+
+            await NegativeAcknowledgeAsync(
+                eventArgs.DeliveryTag,
+                requeue: true);
+        }
+    }
+
+    private BasicProperties CreateForwardProperties(
+        IReadOnlyBasicProperties originalProperties,
+        int retryCount,
+        string failureReason)
+    {
+        var headers =
+            CloneHeaders(originalProperties.Headers);
+
+        headers[RabbitMqHeaders.RetryCount] =
+            retryCount;
+
+        headers[RabbitMqHeaders.LastFailureReason] =
+            Truncate(failureReason, 500);
+
+        headers[RabbitMqHeaders.LastFailureAtUtc] =
+            DateTime.UtcNow.ToString("O");
+
+        headers[RabbitMqHeaders.OriginalQueue] =
+            _options.EmailQueue;
+
+        return new BasicProperties
+        {
+            Persistent = true,
+
+            ContentType =
+                originalProperties.ContentType
+                ?? "application/json",
+
+            ContentEncoding =
+                originalProperties.ContentEncoding
+                ?? "utf-8",
+
+            MessageId =
+                originalProperties.MessageId,
+
+            CorrelationId =
+                originalProperties.CorrelationId,
+
+            Type =
+                originalProperties.Type,
+
+            AppId =
+                originalProperties.AppId
+                ?? "MindBloom.NotificationsWorker",
+
+            Headers = headers
+        };
+    }
+
+    private static Dictionary<string, object?> CloneHeaders(
+        IDictionary<string, object?>? originalHeaders)
+    {
+        if (originalHeaders is null)
+        {
+            return new Dictionary<string, object?>();
+        }
+
+        return originalHeaders.ToDictionary(
+            item => item.Key,
+            item => item.Value);
+    }
+
+    private static int GetRetryCount(
+        IDictionary<string, object?>? headers)
+    {
+        if (headers is null ||
+            !headers.TryGetValue(
+                RabbitMqHeaders.RetryCount,
+                out var value) ||
+            value is null)
+        {
+            return 0;
+        }
+
+        return value switch
+        {
+            byte byteValue =>
+                byteValue,
+
+            short shortValue =>
+                shortValue,
+
+            int intValue =>
+                intValue,
+
+            long longValue when
+                longValue <= int.MaxValue =>
+                (int)longValue,
+
+            byte[] bytes when
+                int.TryParse(
+                    Encoding.UTF8.GetString(bytes),
+                    out var parsedValue) =>
+                parsedValue,
+
+            string stringValue when
+                int.TryParse(
+                    stringValue,
+                    out var parsedValue) =>
+                parsedValue,
+
+            _ => 0
+        };
+    }
+
+    private async Task AcknowledgeAsync(
+        ulong deliveryTag)
+    {
+        if (_channel is null || !_channel.IsOpen)
+        {
+            throw new InvalidOperationException(
+                "RabbitMQ channel is not available for acknowledgment.");
+        }
+
+        await _channel.BasicAckAsync(
+            deliveryTag: deliveryTag,
+            multiple: false,
+            cancellationToken: CancellationToken.None);
+    }
+
+    private async Task NegativeAcknowledgeAsync(
         ulong deliveryTag,
         bool requeue)
     {
         if (_channel is null || !_channel.IsOpen)
         {
             _logger.LogError(
-                "RabbitMQ channel is closed and delivery {DeliveryTag} could not be rejected.",
+                "RabbitMQ channel is closed. Delivery {DeliveryTag} could not be negatively acknowledged.",
                 deliveryTag);
 
             return;
@@ -317,7 +553,7 @@ public sealed class EmailNotificationConsumer :
         {
             _logger.LogError(
                 exception,
-                "RabbitMQ delivery {DeliveryTag} could not be negatively acknowledged.",
+                "Delivery {DeliveryTag} could not be negatively acknowledged.",
                 deliveryTag);
         }
     }
@@ -337,19 +573,22 @@ public sealed class EmailNotificationConsumer :
                 "Email notification CorrelationId cannot be empty.");
         }
 
-        if (message.EventType == NotificationEventType.Unknown)
+        if (message.EventType ==
+            NotificationEventType.Unknown)
         {
             throw new ArgumentException(
                 "Email notification EventType cannot be Unknown.");
         }
 
-        if (string.IsNullOrWhiteSpace(message.RecipientEmail))
+        if (string.IsNullOrWhiteSpace(
+                message.RecipientEmail))
         {
             throw new ArgumentException(
                 "Email notification recipient is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(message.Subject))
+        if (string.IsNullOrWhiteSpace(
+                message.Subject))
         {
             throw new ArgumentException(
                 "Email notification subject is required.");
@@ -359,19 +598,28 @@ public sealed class EmailNotificationConsumer :
             !string.IsNullOrWhiteSpace(message.Body);
 
         var hasTemplate =
-            !string.IsNullOrWhiteSpace(message.TemplateName);
+            !string.IsNullOrWhiteSpace(
+                message.TemplateName);
 
         if (!hasBody && !hasTemplate)
         {
             throw new ArgumentException(
                 "Email notification must contain either Body or TemplateName.");
         }
+    }
 
-        if (message.RetryCount < 0)
+    private static string Truncate(
+        string value,
+        int maximumLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
         {
-            throw new ArgumentException(
-                "Email notification RetryCount cannot be negative.");
+            return "Unknown failure.";
         }
+
+        return value.Length <= maximumLength
+            ? value
+            : value[..maximumLength];
     }
 
     private Task OnConnectionShutdownAsync(

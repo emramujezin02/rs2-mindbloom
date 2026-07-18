@@ -54,6 +54,32 @@ builder.Services
                 "RABBITMQ_EMAIL_ROUTING_KEY"]
             ?? "notification.email";
 
+        options.RetryExchange =
+    builder.Configuration[
+        "RABBITMQ_RETRY_EXCHANGE"]
+    ?? "mindbloom.notifications.retry";
+
+        options.DeadLetterExchange =
+            builder.Configuration[
+                "RABBITMQ_DEAD_LETTER_EXCHANGE"]
+            ?? "mindbloom.notifications.dead-letter";
+
+        options.DeadLetterQueue =
+            builder.Configuration[
+                "RABBITMQ_EMAIL_DEAD_LETTER_QUEUE"]
+            ?? "mindbloom.notifications.email.dlq";
+
+        options.DeadLetterRoutingKey =
+            builder.Configuration[
+                "RABBITMQ_EMAIL_DEAD_LETTER_ROUTING_KEY"]
+            ?? "notification.email.dead";
+
+        options.MaximumRetryCount =
+            GetIntValue(
+                builder.Configuration,
+                "RABBITMQ_MAXIMUM_RETRY_COUNT",
+                4);
+
         options.PrefetchCount = GetUShortValue(
             builder.Configuration,
             "RABBITMQ_PREFETCH_COUNT",
@@ -114,12 +140,32 @@ builder.Services
     .Validate(
         options => options.PrefetchCount > 0,
         "RabbitMQ prefetch count must be greater than zero.")
+    .Validate(
+    options =>
+        !string.IsNullOrWhiteSpace(
+            options.RetryExchange),
+    "RabbitMQ retry exchange is required.")
+.Validate(
+    options =>
+        !string.IsNullOrWhiteSpace(
+            options.DeadLetterExchange),
+    "RabbitMQ dead-letter exchange is required.")
+.Validate(
+    options =>
+        !string.IsNullOrWhiteSpace(
+            options.DeadLetterQueue),
+    "RabbitMQ dead-letter queue is required.")
+.Validate(
+    options =>
+        !string.IsNullOrWhiteSpace(
+            options.DeadLetterRoutingKey),
+    "RabbitMQ dead-letter routing key is required.")
+.Validate(
+    options =>
+        options.MaximumRetryCount == 4,
+    "RabbitMQ maximum retry count must be 4 because the configured delays are 1s, 2s, 4s and 8s.")
     .ValidateOnStart();
 
-/*
- * Worker koristi već postojeći EmailService iz Infrastructure projekta.
- * Ne pravimo novi SMTP servis.
- */
 builder.Services.AddSingleton<IEmailService, EmailService>();
 
 builder.Services.AddSingleton<EmailMessageBodyBuilder>();
