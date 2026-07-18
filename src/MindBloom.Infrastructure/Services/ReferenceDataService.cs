@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.ReferenceData.DTOs;
 using MindBloom.Application.Features.ReferenceData.Interfaces;
 using MindBloom.Domain.Entities;
@@ -140,7 +141,7 @@ public class ReferenceDataService : IReferenceDataService
 
         if (exists)
         {
-            throw new InvalidOperationException(
+            throw new BusinessException(
                 "A therapist specialization with the same name already exists.");
         }
 
@@ -185,7 +186,7 @@ public class ReferenceDataService : IReferenceDataService
 
         if (duplicateExists)
         {
-            throw new InvalidOperationException(
+            throw new BusinessException(
                 "A therapist specialization with the same name already exists.");
         }
 
@@ -310,7 +311,7 @@ public class ReferenceDataService : IReferenceDataService
 
         if (specialization == null)
         {
-            throw new KeyNotFoundException(
+            throw new NotFoundException(
                 "Therapist specialization was not found.");
         }
 

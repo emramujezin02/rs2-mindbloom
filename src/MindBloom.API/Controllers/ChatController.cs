@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Chat.DTOs;
 using MindBloom.Application.Features.Chat.Interfaces;
 
@@ -109,7 +110,7 @@ public class ChatController : ControllerBase
                 userIdValue,
                 out var userId))
         {
-            throw new UnauthorizedAccessException(
+            throw new UnauthorizedException(
                 "Authenticated user identifier is invalid.");
         }
 

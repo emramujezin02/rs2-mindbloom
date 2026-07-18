@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.Models;
 using MindBloom.Application.Features.Articles.DTOs;
 using MindBloom.Application.Features.Articles.Interfaces;
@@ -105,7 +106,7 @@ public class ArticleService : IArticleService
 
         if (article == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Article not found.");
         }
 
@@ -200,7 +201,7 @@ public class ArticleService : IArticleService
 
         if (article == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Article not found.");
         }
 
@@ -228,7 +229,7 @@ public class ArticleService : IArticleService
 
         if (user == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Author not found.");
         }
 
@@ -245,7 +246,7 @@ public class ArticleService : IArticleService
 
             if (therapist == null)
             {
-                throw new Exception(
+                throw new NotFoundException(
                     "Therapist profile not found.");
             }
 
@@ -321,7 +322,7 @@ public class ArticleService : IArticleService
 
         if (article == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Article not found.");
         }
 
@@ -377,7 +378,7 @@ public class ArticleService : IArticleService
 
         if (article == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Article not found.");
         }
 
@@ -422,7 +423,7 @@ public class ArticleService : IArticleService
 
         if (article == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Article not found.");
         }
 

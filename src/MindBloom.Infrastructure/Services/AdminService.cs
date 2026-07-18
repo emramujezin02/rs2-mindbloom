@@ -10,6 +10,7 @@ using MindBloom.Shared.Constants;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Features.Memberships.Interfaces;
 using MindBloom.Application.Features.Payments.Interfaces;
+using MindBloom.Application.Common.Exceptions;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -227,7 +228,7 @@ public class AdminService : IAdminService
 
         if (user == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "User not found.");
         }
 
@@ -356,7 +357,7 @@ public class AdminService : IAdminService
 
         if (admin == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Administrator not found.");
         }
 
@@ -396,7 +397,7 @@ public class AdminService : IAdminService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -946,7 +947,7 @@ public class AdminService : IAdminService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -1080,7 +1081,7 @@ public class AdminService : IAdminService
 
         if (review == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Review not found.");
         }
 
@@ -1215,7 +1216,7 @@ public class AdminService : IAdminService
 
         if (admin == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Administrator not found.");
         }
 
@@ -1228,7 +1229,7 @@ public class AdminService : IAdminService
 
         if (review == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Review not found.");
         }
 
@@ -1551,7 +1552,7 @@ public class AdminService : IAdminService
 
         if (appointment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Appointment not found.");
         }
 
@@ -1725,7 +1726,7 @@ public class AdminService : IAdminService
         if (string.IsNullOrWhiteSpace(
                 reason))
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Cancellation reason is required.");
         }
 
@@ -1750,7 +1751,7 @@ public class AdminService : IAdminService
 
         if (admin == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Administrator not found.");
         }
 
@@ -1767,7 +1768,7 @@ public class AdminService : IAdminService
 
         if (appointment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Appointment not found.");
         }
 
@@ -2215,7 +2216,7 @@ public class AdminService : IAdminService
 
         if (payment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Payment not found.");
         }
 
@@ -2362,7 +2363,7 @@ public class AdminService : IAdminService
 
         if (payment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Payment not found.");
         }
 
@@ -2481,7 +2482,7 @@ public class AdminService : IAdminService
 
         if (admin == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Administrator not found.");
         }
 
@@ -2496,7 +2497,7 @@ public class AdminService : IAdminService
 
         if (payment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Payment not found.");
         }
 
@@ -2509,7 +2510,7 @@ public class AdminService : IAdminService
         if (payment.Status ==
             PaymentStatus.RefundPending)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "A refund for this payment is already being processed.");
         }
 
@@ -2903,7 +2904,7 @@ public class AdminService : IAdminService
 
         if (membership == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Membership not found.");
         }
 

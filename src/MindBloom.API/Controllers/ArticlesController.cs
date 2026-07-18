@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Articles.DTOs;
 using MindBloom.Application.Features.Articles.Interfaces;
 using MindBloom.Shared.Constants;
@@ -200,7 +201,7 @@ public class ArticlesController : ControllerBase
                 value,
                 out var userId))
         {
-            throw new UnauthorizedAccessException(
+            throw new UnauthorizedException(
                 "Invalid authenticated user.");
         }
 

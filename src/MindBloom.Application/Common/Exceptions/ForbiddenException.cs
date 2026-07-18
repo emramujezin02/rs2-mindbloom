@@ -6,4 +6,9 @@ public class ForbiddenException : Exception
         : base(message)
     {
     }
+
+    public ForbiddenException()
+        : base("You do not have permission to perform this action.")
+    {
+    }
 }

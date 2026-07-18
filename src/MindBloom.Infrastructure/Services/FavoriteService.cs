@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Favorites.DTOs;
 using MindBloom.Application.Features.Favorites.Interfaces;
 using MindBloom.Domain.Entities;
@@ -27,7 +28,7 @@ public class FavoriteService : IFavoriteService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -38,7 +39,7 @@ public class FavoriteService : IFavoriteService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -51,7 +52,7 @@ public class FavoriteService : IFavoriteService
 
         if (existingFavorite)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Therapist is already in favorites.");
         }
 
@@ -77,7 +78,7 @@ public class FavoriteService : IFavoriteService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -89,7 +90,7 @@ public class FavoriteService : IFavoriteService
 
         if (favorite == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Favorite not found.");
         }
 
@@ -108,7 +109,7 @@ public class FavoriteService : IFavoriteService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 

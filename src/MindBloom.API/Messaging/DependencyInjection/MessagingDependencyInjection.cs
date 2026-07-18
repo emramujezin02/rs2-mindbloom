@@ -1,6 +1,7 @@
 ﻿using MindBloom.API.Messaging.Abstractions;
 using MindBloom.API.Messaging.Configuration;
 using MindBloom.API.Messaging.RabbitMq;
+using MindBloom.Application.Common.Exceptions;
 
 namespace MindBloom.API.Messaging.DependencyInjection;
 
@@ -122,7 +123,7 @@ public static class MessagingDependencyInjection
 
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new InvalidOperationException(
+            throw new BadRequestException(
                 $"Environment variable '{key}' is required.");
         }
 

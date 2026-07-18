@@ -5,6 +5,7 @@ using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Application.Common.Interfaces;
+using MindBloom.Application.Common.Exceptions;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -57,7 +58,7 @@ public class ReviewService : IReviewService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -69,7 +70,7 @@ public class ReviewService : IReviewService
 
         if (appointment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Appointment not found or does not belong to the current client.");
         }
 
@@ -88,7 +89,7 @@ public class ReviewService : IReviewService
 
         if (existingReview)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "A review has already been submitted for this appointment.");
         }
 
@@ -182,7 +183,7 @@ public class ReviewService : IReviewService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -196,7 +197,7 @@ public class ReviewService : IReviewService
 
         if (review == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Review not found.");
         }
 
@@ -224,7 +225,7 @@ public class ReviewService : IReviewService
 
         if (client == null)
         {
-            throw new Exception("Client not found.");
+            throw new NotFoundException("Client not found.");
         }
 
         var review =
@@ -236,7 +237,7 @@ public class ReviewService : IReviewService
 
         if (review == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Review not found.");
         }
 
@@ -258,7 +259,7 @@ public class ReviewService : IReviewService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -319,7 +320,7 @@ public class ReviewService : IReviewService
 
         if (therapist == null)
         {
-            throw new Exception("Therapist not found.");
+            throw new NotFoundException("Therapist not found.");
         }
 
         var review =
@@ -336,7 +337,7 @@ public class ReviewService : IReviewService
 
         if (review == null)
         {
-            throw new Exception("Review not found.");
+            throw new NotFoundException("Review not found.");
         }
 
         var isSameReply =

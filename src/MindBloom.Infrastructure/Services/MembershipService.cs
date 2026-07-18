@@ -8,6 +8,7 @@ using MindBloom.Infrastructure.Persistence.Context;
 using Stripe;
 using System.Data;
 using MindBloom.Application.Common.Interfaces;
+using MindBloom.Application.Common.Exceptions;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -47,7 +48,7 @@ public class MembershipService : IMembershipService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -98,7 +99,7 @@ public class MembershipService : IMembershipService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -111,7 +112,7 @@ public class MembershipService : IMembershipService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -133,7 +134,7 @@ public class MembershipService : IMembershipService
 
         if (activeMembershipExists)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "You already have an active membership for this therapist.");
         }
 
@@ -389,7 +390,7 @@ public class MembershipService : IMembershipService
         }
         catch (DbUpdateException exception)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "A membership payment already exists for this purchase.",
                 exception);
         }
@@ -433,7 +434,7 @@ public class MembershipService : IMembershipService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -451,7 +452,7 @@ public class MembershipService : IMembershipService
 
         if (membershipPayment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Membership payment not found.");
         }
 
@@ -551,7 +552,7 @@ public class MembershipService : IMembershipService
 
         if (duplicateActiveMembership)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "You already have another active membership for this therapist.");
         }
 
@@ -613,7 +614,7 @@ public class MembershipService : IMembershipService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -690,7 +691,7 @@ public class MembershipService : IMembershipService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -706,7 +707,7 @@ public class MembershipService : IMembershipService
 
         if (membership == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Membership not found.");
         }
 
@@ -796,7 +797,7 @@ public class MembershipService : IMembershipService
 
             if (client == null)
             {
-                throw new Exception(
+                throw new NotFoundException(
                     "Client not found.");
             }
 
@@ -816,7 +817,7 @@ public class MembershipService : IMembershipService
 
             if (appointment == null)
             {
-                throw new Exception(
+                throw new NotFoundException(
                     "Appointment not found.");
             }
 
@@ -830,13 +831,13 @@ public class MembershipService : IMembershipService
             if (appointment.StartUtc <=
                 DateTime.UtcNow)
             {
-                throw new Exception(
+                throw new BusinessException(
                     "Membership cannot be used for an appointment that has already started.");
             }
 
             if (appointment.IsPaid)
             {
-                throw new Exception(
+                throw new BusinessException(
                     "This appointment has already been paid.");
             }
 
@@ -848,7 +849,7 @@ public class MembershipService : IMembershipService
                  appointment.Payment.Status ==
                      PaymentStatus.Refunded))
             {
-                throw new Exception(
+                throw new BusinessException(
                     "A Stripe payment already exists for this appointment.");
             }
 
@@ -863,11 +864,11 @@ public class MembershipService : IMembershipService
                 switch (existingUsage.Status)
                 {
                     case MembershipUsageStatus.Reserved:
-                        throw new Exception(
+                        throw new BusinessException(
                             "A membership session is already reserved for this appointment.");
 
                     case MembershipUsageStatus.Consumed:
-                        throw new Exception(
+                        throw new BusinessException(
                             "A membership session has already been consumed for this appointment.");
 
                     case MembershipUsageStatus.Restored:
@@ -875,7 +876,7 @@ public class MembershipService : IMembershipService
                             "A previously restored membership session cannot be reserved again for the same appointment.");
 
                     default:
-                        throw new Exception(
+                        throw new BusinessException(
                             "Membership usage already exists for this appointment.");
                 }
             }
@@ -959,7 +960,7 @@ public class MembershipService : IMembershipService
             }
             catch (DbUpdateException exception)
             {
-                throw new Exception(
+                throw new BusinessException(
                     "A membership session has already been reserved for this appointment.",
                     exception);
             }

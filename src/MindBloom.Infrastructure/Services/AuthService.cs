@@ -10,6 +10,7 @@ using MindBloom.Application.Features.Auth.DTOs;
 using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Features.Auth.DTOs;
 using System.Security.Cryptography;
+using MindBloom.Application.Common.Exceptions;
 
 
 namespace MindBloom.Infrastructure.Services;
@@ -65,7 +66,7 @@ public class AuthService : IAuthService
 
         if (existingEmailUser != null)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "A user with this email already exists.");
         }
 
@@ -75,7 +76,7 @@ public class AuthService : IAuthService
 
         if (existingUsernameUser != null)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "A user with this username already exists.");
         }
 
@@ -274,7 +275,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new Exception("User not found.");
+            throw new NotFoundException("User not found.");
         }
 
         var code =
@@ -317,7 +318,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new Exception("User not found.");
+            throw new NotFoundException("User not found.");
         }
 
         var resetCode =
@@ -370,7 +371,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new Exception("User not found.");
+            throw new NotFoundException("User not found.");
         }
 
         var result =
@@ -395,7 +396,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new Exception("User not found.");
+            throw new NotFoundException("User not found.");
         }
 
         var token =
@@ -429,7 +430,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new Exception("User not found.");
+            throw new NotFoundException("User not found.");
         }
 
         var result =
@@ -535,7 +536,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new Exception("User not found.");
+            throw new NotFoundException("User not found.");
         }
 
         var isPasswordCorrect =
@@ -678,7 +679,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "User not found.");
         }
 
@@ -778,7 +779,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new Exception("User not found.");
+            throw new NotFoundException("User not found.");
         }
 
         user.TwoFactorEnabledCustom = true;
@@ -796,7 +797,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new Exception("User not found.");
+            throw new NotFoundException("User not found.");
         }
 
         user.TwoFactorEnabledCustom = false;
@@ -814,7 +815,7 @@ public class AuthService : IAuthService
 
         if (!userExists)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "User not found.");
         }
 
@@ -850,7 +851,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "User not found.");
         }
 
@@ -870,14 +871,14 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "User not found.");
         }
 
         if (user.IsEmailVerified ||
             user.EmailConfirmed)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Email is already verified.");
         }
 
@@ -945,7 +946,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "User not found.");
         }
 

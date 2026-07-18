@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.Models;
 using MindBloom.Application.Features.Chat.DTOs;
 using MindBloom.Application.Features.Chat.Interfaces;
@@ -179,7 +180,7 @@ public sealed class ChatService : IChatService
 
         if (appointment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Appointment not found.");
         }
 
@@ -429,7 +430,7 @@ public sealed class ChatService : IChatService
 
         if (conversation == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Conversation not found.");
         }
 

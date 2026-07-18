@@ -7,6 +7,7 @@ using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
+using MindBloom.Application.Common.Exceptions;
 
 
 namespace MindBloom.Infrastructure.Services;
@@ -30,7 +31,7 @@ public class TherapistService : ITherapistService
 
         if (user == null)
         {
-            throw new Exception("User not found.");
+            throw new NotFoundException("User not found.");
         }
 
         var therapist = new Therapist
@@ -323,7 +324,7 @@ public class TherapistService : ITherapistService
 
         if (therapist == null)
         {
-            throw new Exception("Therapist not found.");
+            throw new NotFoundException("Therapist not found.");
         }
 
         therapist.Biography = request.Biography;
@@ -357,7 +358,7 @@ public class TherapistService : ITherapistService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found or is not publicly available.");
         }
 
@@ -430,7 +431,7 @@ public class TherapistService : ITherapistService
 
         if (therapist == null)
         {
-            throw new Exception("Therapist not found.");
+            throw new NotFoundException("Therapist not found.");
         }
 
         var availability =
@@ -441,7 +442,7 @@ public class TherapistService : ITherapistService
 
         if (availability == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Availability not found.");
         }
 
@@ -463,7 +464,7 @@ public class TherapistService : ITherapistService
 
         if (therapist == null)
         {
-            throw new Exception("Therapist not found.");
+            throw new NotFoundException("Therapist not found.");
         }
 
         var completedAppointments =
@@ -511,7 +512,7 @@ public class TherapistService : ITherapistService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -583,7 +584,7 @@ public class TherapistService : ITherapistService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -596,7 +597,7 @@ public class TherapistService : ITherapistService
 
         if (unavailableDate == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Unavailable date not found.");
         }
 
@@ -618,7 +619,7 @@ public class TherapistService : ITherapistService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -739,7 +740,7 @@ public class TherapistService : ITherapistService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -753,7 +754,7 @@ public class TherapistService : ITherapistService
 
         if (document == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Document not found.");
         }
 

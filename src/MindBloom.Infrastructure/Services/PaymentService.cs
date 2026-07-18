@@ -8,6 +8,7 @@ using MindBloom.Infrastructure.Payments;
 using MindBloom.Infrastructure.Persistence.Context;
 using Stripe;
 using MindBloom.Application.Common.Interfaces;
+using MindBloom.Application.Common.Exceptions;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -51,7 +52,7 @@ public class PaymentService : IPaymentService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -63,7 +64,7 @@ public class PaymentService : IPaymentService
 
         if (appointment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Appointment not found.");
         }
 
@@ -82,7 +83,7 @@ public class PaymentService : IPaymentService
 
         if (appointment.IsPaid)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "This appointment is already paid.");
         }
 
@@ -97,7 +98,7 @@ public class PaymentService : IPaymentService
             if (existingPayment.Status ==
                 PaymentStatus.Paid)
             {
-                throw new Exception(
+                throw new BusinessException(
                     "Appointment has already been paid.");
             }
 
@@ -276,7 +277,7 @@ public class PaymentService : IPaymentService
         }
         catch (DbUpdateException exception)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "A payment already exists for this appointment or Stripe PaymentIntent.",
                 exception);
         }
@@ -310,7 +311,7 @@ public class PaymentService : IPaymentService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -324,7 +325,7 @@ public class PaymentService : IPaymentService
 
         if (payment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Payment not found.");
         }
 
@@ -338,7 +339,7 @@ public class PaymentService : IPaymentService
         if (payment.Status ==
             PaymentStatus.Refunded)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "This payment has already been refunded.");
         }
 
@@ -367,7 +368,7 @@ public class PaymentService : IPaymentService
 
         if (anotherPaidPaymentExists)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Appointment already has a completed payment.");
         }
 
@@ -489,7 +490,7 @@ public class PaymentService : IPaymentService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -547,7 +548,7 @@ public class PaymentService : IPaymentService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -566,7 +567,7 @@ public class PaymentService : IPaymentService
 
         if (payment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Payment not found.");
         }
 
@@ -648,7 +649,7 @@ public class PaymentService : IPaymentService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Notifications.DTOs;
 using MindBloom.Application.Features.Notifications.Interfaces;
 using MindBloom.Infrastructure.Persistence.Context;
@@ -64,7 +65,7 @@ public sealed class NotificationService
 
         if (notification == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Notification not found.");
         }
 

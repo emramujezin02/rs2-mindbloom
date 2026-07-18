@@ -6,4 +6,9 @@ public class UnauthorizedException : Exception
         : base(message)
     {
     }
+
+    public UnauthorizedException()
+        : base("Authentication is required.")
+    {
+    }
 }

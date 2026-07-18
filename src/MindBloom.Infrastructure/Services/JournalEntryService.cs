@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.Models;
 using MindBloom.Application.Features.JournalEntries.DTOs;
 using MindBloom.Application.Features.JournalEntries.Interfaces;
@@ -147,7 +148,7 @@ public class JournalEntryService
 
         if (entry == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Journal entry not found.");
         }
 
@@ -178,7 +179,7 @@ public class JournalEntryService
 
         if (entry == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Journal entry not found.");
         }
 
@@ -213,7 +214,7 @@ public class JournalEntryService
 
         if (entry == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Journal entry not found.");
         }
 
@@ -234,7 +235,7 @@ public class JournalEntryService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 

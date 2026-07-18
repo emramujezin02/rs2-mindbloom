@@ -12,6 +12,7 @@ using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Features.Memberships.Interfaces;
 using MindBloom.Application.Features.Payments.Interfaces;
+using MindBloom.Application.Common.Exceptions;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -59,7 +60,7 @@ public class AppointmentService : IAppointmentService
 
         if (therapist == null)
         {
-            throw new Exception("Therapist not found.");
+            throw new NotFoundException("Therapist not found.");
         }
 
         var dayOfWeek =
@@ -136,7 +137,7 @@ public class AppointmentService : IAppointmentService
 
         if (overlappingAppointment)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Selected appointment time is already booked.");
         }
 
@@ -145,7 +146,7 @@ public class AppointmentService : IAppointmentService
 
         if (client == null)
         {
-            throw new Exception("Client profile not found.");
+            throw new NotFoundException("Client profile not found.");
         }
 
         if (request.Type
@@ -282,7 +283,7 @@ public class AppointmentService : IAppointmentService
 
         if (client == null)
         {
-            throw new Exception("Client profile not found.");
+            throw new NotFoundException("Client profile not found.");
         }
 
         return await _context.Appointments
@@ -322,7 +323,7 @@ public class AppointmentService : IAppointmentService
 
         if (therapist == null)
         {
-            throw new Exception("Therapist not found.");
+            throw new NotFoundException("Therapist not found.");
         }
 
         return await _context.Appointments
@@ -361,7 +362,7 @@ public class AppointmentService : IAppointmentService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -379,7 +380,7 @@ public class AppointmentService : IAppointmentService
 
         if (appointment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Appointment not found.");
         }
 
@@ -541,7 +542,7 @@ public class AppointmentService : IAppointmentService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -561,7 +562,7 @@ public class AppointmentService : IAppointmentService
 
         if (appointment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Appointment not found.");
         }
 
@@ -675,7 +676,7 @@ public class AppointmentService : IAppointmentService
 
         if (therapist == null)
         {
-            throw new Exception("Therapist not found.");
+            throw new NotFoundException("Therapist not found.");
         }
 
         var appointments =
@@ -721,7 +722,7 @@ public class AppointmentService : IAppointmentService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -733,7 +734,7 @@ public class AppointmentService : IAppointmentService
 
         if (appointment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Appointment not found.");
         }
 
@@ -752,7 +753,7 @@ public class AppointmentService : IAppointmentService
 
         if (existingNote != null)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Appointment note already exists.");
         }
 
@@ -796,7 +797,7 @@ public class AppointmentService : IAppointmentService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -841,7 +842,7 @@ public class AppointmentService : IAppointmentService
 
         if (client == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Client not found.");
         }
 
@@ -924,7 +925,7 @@ public class AppointmentService : IAppointmentService
 
         if (therapist == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found.");
         }
 
@@ -937,7 +938,7 @@ public class AppointmentService : IAppointmentService
 
         if (appointment == null)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Appointment not found.");
         }
 
@@ -968,7 +969,7 @@ public class AppointmentService : IAppointmentService
 
         if (!therapistExists)
         {
-            throw new Exception(
+            throw new NotFoundException(
                 "Therapist not found or is not available.");
         }
 

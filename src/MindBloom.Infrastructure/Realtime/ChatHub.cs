@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Chat.DTOs;
 using MindBloom.Application.Features.Chat.Interfaces;
 
@@ -33,7 +34,7 @@ public sealed class ChatHub : Hub
 
         if (!isParticipant)
         {
-            throw new HubException(
+            throw new ForbiddenException(
                 "You are not allowed to join this conversation.");
         }
 
