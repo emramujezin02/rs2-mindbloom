@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../app/router/app_router.dart';
 import '../viewmodels/client_dashboard_viewmodel.dart';
 
 class ClientDashboardPage extends StatefulWidget {
@@ -57,6 +58,13 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
               padding: const EdgeInsets.all(16),
               child: ListView(
                 children: [
+                  _RecommendationCard(
+                    onTap: () {
+                      Navigator.of(
+                        context,
+                      ).pushNamed(AppRouter.recommendations);
+                    },
+                  ),
                   _DashboardCard(
                     icon: Icons.calendar_month,
                     title: 'Total appointments',
@@ -114,6 +122,58 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _RecommendationCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _RecommendationCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.auto_awesome, size: 28),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Recommended therapists',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text('View therapists recommended specifically for you.'),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.arrow_forward_ios, size: 18),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

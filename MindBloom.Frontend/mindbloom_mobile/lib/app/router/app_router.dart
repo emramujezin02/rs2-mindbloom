@@ -55,6 +55,8 @@ import '../../features/favorite/presentation/pages/my_favorites_page.dart';
 import '../../features/chat/presentation/pages/chat_details_page.dart';
 import '../../features/chat/presentation/pages/chat_list_page.dart';
 
+import '../../features/recommendation/presentation/pages/recommendation_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String login = '/login';
@@ -93,6 +95,7 @@ class AppRouter {
   static const String myWorkshopRegistrations = '/workshops/mine';
   static const String chats = '/chat';
   static const String chatDetails = '/chat/details';
+  static const String recommendations = '/recommendations';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -265,6 +268,9 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => ChatDetailsPage(appointmentId: appointmentId),
         );
+      case recommendations:
+        return MaterialPageRoute(builder: (_) => const RecommendationPage());
+
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
 

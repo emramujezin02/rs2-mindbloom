@@ -68,6 +68,10 @@ import '../../features/chat/data/services/chat_realtime_service.dart';
 import '../../features/chat/presentation/viewmodels/chat_details_viewmodel.dart';
 import '../../features/chat/presentation/viewmodels/chat_list_viewmodel.dart';
 
+import '../../features/recommendation/data/repositories/recommendation_repository.dart';
+import '../../features/recommendation/data/services/recommendation_api_service.dart';
+import '../../features/recommendation/presentation/viewmodels/recommendation_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
@@ -302,6 +306,22 @@ class AppInjection {
               onReconnected: onReconnected,
             );
           },
+    );
+  }
+
+  static RecommendationApiService createRecommendationApiService() {
+    return RecommendationApiService(apiClient: apiClient);
+  }
+
+  static RecommendationRepository createRecommendationRepository() {
+    return RecommendationRepository(
+      apiService: createRecommendationApiService(),
+    );
+  }
+
+  static RecommendationViewModel createRecommendationViewModel() {
+    return RecommendationViewModel(
+      repository: createRecommendationRepository(),
     );
   }
 }
