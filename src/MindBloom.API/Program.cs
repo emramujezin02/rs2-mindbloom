@@ -7,9 +7,9 @@ using MindBloom.Infrastructure.DependencyInjection;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Persistence.Seed;
 using MindBloom.Infrastructure.Realtime;
-using DotNetEnv;
 using MindBloom.API.Messaging.DependencyInjection;
-
+using MindBloom.Application.Recommendations.Services;
+using MindBloom.Infrastructure.Recommendations;
 
 Env.Load("../../.env");
 
@@ -28,6 +28,8 @@ builder.Services.AddNotificationMessaging(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddScoped<IRecommendationService,RecommendationService>();
 
 builder.Services.AddCors(options =>
 {
