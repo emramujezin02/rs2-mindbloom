@@ -22,6 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\MindBloom.Messaging.Contracts\MindBloom.Messaging.Contracts.csproj" />
+    <ProjectReference Include="..\MindBloom.Application\MindBloom.Application.csproj" />
     <ProjectReference Include="..\MindBloom.Infrastructure\MindBloom.Infrastructure.csproj" />
     <ProjectReference Include="..\MindBloom.Shared\MindBloom.Shared.csproj" />
   </ItemGroup>
@@ -29,6 +31,5 @@
   <ItemGroup>
     <Folder Include="Consumers\" />
     <Folder Include="Messaging\" />
-    <Folder Include="Services\" />
   </ItemGroup>
 </Project>
