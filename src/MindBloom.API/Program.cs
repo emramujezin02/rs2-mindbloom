@@ -21,6 +21,8 @@ builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddControllers();
 
+builder.Services.AddHealthChecks();
+
 builder.Services.AddNotificationMessaging(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
@@ -119,6 +121,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHealthChecks("/health");
 
 app.MapHub<NotificationHub>("/hubs/notifications").RequireAuthorization();
 

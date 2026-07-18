@@ -1,0 +1,2 @@
+RABBITMQ_HOST=rabbitmq
+Server=sql-server,1433
