@@ -7,19 +7,25 @@ using MindBloom.Infrastructure.DependencyInjection;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Persistence.Seed;
 using MindBloom.Infrastructure.Realtime;
-using MindBloom.Infrastructure.Realtime;
+using DotNetEnv;
+using MindBloom.API.Messaging.DependencyInjection;
+
 
 Env.Load("../../.env");
 
-var builder =
-    WebApplication.CreateBuilder(args);
+Env.TraversePath().Load();
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddControllers();
 
+builder.Services.AddNotificationMessaging(builder.Configuration);
+
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddInfrastructure(
-    builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddCors(options =>
 {

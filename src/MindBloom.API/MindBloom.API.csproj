@@ -26,6 +26,8 @@
 			</IncludeAssets>
 		</PackageReference>
 
+		<PackageReference Include="RabbitMQ.Client" Version="7.2.1" />
+
 		<PackageReference Include="Stripe.net" Version="51.1.0" />
 
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="7.0.0" />
