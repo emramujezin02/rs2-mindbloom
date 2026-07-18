@@ -32,6 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\MindBloom.Messaging.Contracts\MindBloom.Messaging.Contracts.csproj" />
 		<ProjectReference Include="..\MindBloom.Application\MindBloom.Application.csproj" />
 
 		<ProjectReference Include="..\MindBloom.Infrastructure\MindBloom.Infrastructure.csproj" />

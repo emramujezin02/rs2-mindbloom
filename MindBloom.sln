@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MindBloom.Shared", "src\Min
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MindBloom.Worker", "src\MindBloom.NotificationsWorker\MindBloom.Worker.csproj", "{D5544BDA-E3FB-4630-94E0-AEA63C845349}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MindBloom.Messaging.Contracts", "MindBloom.Messaging.Contracts\MindBloom.Messaging.Contracts.csproj", "{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -99,6 +101,18 @@ Global
 		{D5544BDA-E3FB-4630-94E0-AEA63C845349}.Release|x64.Build.0 = Release|Any CPU
 		{D5544BDA-E3FB-4630-94E0-AEA63C845349}.Release|x86.ActiveCfg = Release|Any CPU
 		{D5544BDA-E3FB-4630-94E0-AEA63C845349}.Release|x86.Build.0 = Release|Any CPU
+		{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}.Debug|x64.Build.0 = Debug|Any CPU
+		{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}.Debug|x86.Build.0 = Debug|Any CPU
+		{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}.Release|x64.ActiveCfg = Release|Any CPU
+		{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}.Release|x64.Build.0 = Release|Any CPU
+		{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}.Release|x86.ActiveCfg = Release|Any CPU
+		{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
