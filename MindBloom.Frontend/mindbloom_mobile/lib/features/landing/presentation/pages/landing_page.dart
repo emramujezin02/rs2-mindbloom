@@ -1435,16 +1435,32 @@ class _FooterLinks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _FooterColumn(
+    return _FooterColumn(
       title: 'Useful links',
       children: [
-        Text('About us', style: _footerTextStyle),
-        SizedBox(height: 10),
-        Text('Terms of use', style: _footerTextStyle),
-        SizedBox(height: 10),
-        Text('Privacy policy', style: _footerTextStyle),
-        SizedBox(height: 10),
-        Text('Articles', style: _footerTextStyle),
+        InkWell(
+          onTap: () {
+            Navigator.of(context).pushNamed(AppRouter.about);
+          },
+          child: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 4),
+            child: Text('About us', style: _footerTextStyle),
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text('Terms of use', style: _footerTextStyle),
+        const SizedBox(height: 10),
+        const Text('Privacy policy', style: _footerTextStyle),
+        const SizedBox(height: 10),
+        InkWell(
+          onTap: () {
+            Navigator.of(context).pushNamed(AppRouter.articles);
+          },
+          child: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 4),
+            child: Text('Articles', style: _footerTextStyle),
+          ),
+        ),
       ],
     );
   }

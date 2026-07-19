@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mindbloom_mobile/features/about/presentation/page/about_page.dart';
 import '../../screens/home_screen.dart';
 
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -96,6 +97,7 @@ class AppRouter {
   static const String chats = '/chat';
   static const String chatDetails = '/chat/details';
   static const String recommendations = '/recommendations';
+  static const about = '/about';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -270,6 +272,9 @@ class AppRouter {
         );
       case recommendations:
         return MaterialPageRoute(builder: (_) => const RecommendationPage());
+
+      case about:
+        return MaterialPageRoute(builder: (_) => const AboutPage());
 
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
