@@ -4,7 +4,9 @@ import '../models/appointment_create_request.dart';
 import '../models/appointment_model.dart';
 import '../models/cancel_appointment_request.dart';
 import '../models/occupied_slot_model.dart';
+import '../models/therapist_appointment_status.dart';
 import '../models/unavailable_date_model.dart';
+import '../models/update_appointment_status_request.dart';
 
 class AppointmentApiService {
   final ApiClient apiClient;
@@ -18,9 +20,25 @@ class AppointmentApiService {
   Future<List<AppointmentModel>> getMyAppointments() async {
     final response = await apiClient.get('/Appointments/mine');
 
-    return (response as List)
-        .map((item) => AppointmentModel.fromJson(item as Map<String, dynamic>))
-        .toList();
+    return _mapAppointments(response);
+  }
+
+  Future<List<AppointmentModel>> getTherapistAppointments() async {
+    final response = await apiClient.get('/Appointments/therapist');
+
+    return _mapAppointments(response);
+  }
+
+  Future<void> updateTherapistAppointmentStatus({
+    required int appointmentId,
+    required TherapistAppointmentStatus status,
+  }) async {
+    final request = UpdateAppointmentStatusRequest(
+      appointmentId: appointmentId,
+      status: status,
+    );
+
+    await apiClient.put('/Appointments/status', body: request.toJson());
   }
 
   Future<void> cancelAppointment({
@@ -79,6 +97,31 @@ class AppointmentApiService {
 
     return (response as List)
         .map((item) => OccupiedSlotModel.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  List<AppointmentModel> _mapAppointments(dynamic response) {
+    if (response == null) {
+      return [];
+    }
+
+    final dynamic items;
+
+    if (response is Map<String, dynamic>) {
+      items = response['items'] ?? response['data'] ?? [];
+    } else {
+      items = response;
+    }
+
+    if (items is! List) {
+      return [];
+    }
+
+    return items
+        .whereType<Map>()
+        .map(
+          (item) => AppointmentModel.fromJson(Map<String, dynamic>.from(item)),
+        )
         .toList();
   }
 }

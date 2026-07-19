@@ -42,7 +42,7 @@ class _TherapistDashboardPageState extends State<TherapistDashboardPage> {
   }
 
   void _openAppointments() {
-    Navigator.of(context).pushNamed(AppRouter.myAppointments);
+    Navigator.of(context).pushNamed(AppRouter.therapistAppointments);
   }
 
   void _openChat() {

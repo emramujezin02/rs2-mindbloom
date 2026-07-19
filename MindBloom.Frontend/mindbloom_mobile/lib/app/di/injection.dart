@@ -1,3 +1,4 @@
+import 'package:mindbloom_mobile/features/appointment/presentation/viewmodels/therapist_appointments_viewmodel.dart';
 import 'package:mindbloom_mobile/features/therapist/presentation/viewmodels/therapist_dashboard_viewmodel.dart';
 
 import '../../core/network/api_client.dart';
@@ -357,5 +358,13 @@ class AppInjection {
     final repository = TherapistRepository(therapistApiService: apiService);
 
     return TherapistDashboardViewModel(repository: repository);
+  }
+
+  static TherapistAppointmentsViewModel createTherapistAppointmentsViewModel() {
+    final apiService = AppointmentApiService(apiClient: apiClient);
+
+    final repository = AppointmentRepository(apiService: apiService);
+
+    return TherapistAppointmentsViewModel(repository: repository);
   }
 }

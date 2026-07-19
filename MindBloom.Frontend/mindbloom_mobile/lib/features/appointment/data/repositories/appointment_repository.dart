@@ -3,6 +3,7 @@ import '../models/appointment_create_request.dart';
 import '../models/appointment_model.dart';
 import '../models/cancel_appointment_request.dart';
 import '../models/occupied_slot_model.dart';
+import '../models/therapist_appointment_status.dart';
 import '../models/unavailable_date_model.dart';
 import '../services/appointment_api_service.dart';
 
@@ -17,6 +18,20 @@ class AppointmentRepository {
 
   Future<List<AppointmentModel>> getMyAppointments() {
     return apiService.getMyAppointments();
+  }
+
+  Future<List<AppointmentModel>> getTherapistAppointments() {
+    return apiService.getTherapistAppointments();
+  }
+
+  Future<void> updateTherapistAppointmentStatus({
+    required int appointmentId,
+    required TherapistAppointmentStatus status,
+  }) {
+    return apiService.updateTherapistAppointmentStatus(
+      appointmentId: appointmentId,
+      status: status,
+    );
   }
 
   Future<void> cancelAppointment({
