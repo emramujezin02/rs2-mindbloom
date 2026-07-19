@@ -2,6 +2,7 @@ import '../../../../core/network/api_client.dart';
 import '../models/therapist_details_model.dart';
 import '../models/therapist_filter_request.dart';
 import '../models/therapist_model.dart';
+import '../models/therapist_dashboard_model.dart';
 
 class TherapistApiService {
   final ApiClient apiClient;
@@ -39,5 +40,11 @@ class TherapistApiService {
     final response = await apiClient.get('/Therapists/$therapistId');
 
     return TherapistDetailsModel.fromJson(response as Map<String, dynamic>);
+  }
+
+  Future<TherapistDashboardModel> getDashboard() async {
+    final response = await apiClient.get('/Therapists/dashboard');
+
+    return TherapistDashboardModel.fromJson(response as Map<String, dynamic>);
   }
 }

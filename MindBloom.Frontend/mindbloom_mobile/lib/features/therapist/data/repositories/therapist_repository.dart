@@ -2,6 +2,7 @@ import '../models/therapist_details_model.dart';
 import '../models/therapist_filter_request.dart';
 import '../models/therapist_model.dart';
 import '../services/therapist_api_service.dart';
+import '../models/therapist_dashboard_model.dart';
 
 class TherapistRepository {
   final TherapistApiService therapistApiService;
@@ -20,5 +21,9 @@ class TherapistRepository {
 
   Future<TherapistDetailsModel> getTherapistById(int therapistId) {
     return therapistApiService.getTherapistById(therapistId);
+  }
+
+  Future<TherapistDashboardModel> getDashboard() {
+    return therapistApiService.getDashboard();
   }
 }

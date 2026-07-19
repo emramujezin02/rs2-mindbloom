@@ -58,6 +58,8 @@ import '../../features/chat/presentation/pages/chat_list_page.dart';
 
 import '../../features/recommendation/presentation/pages/recommendation_page.dart';
 
+import '../../features/therapist/presentation/pages/therapist_dashboard_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String login = '/login';
@@ -98,6 +100,7 @@ class AppRouter {
   static const String chatDetails = '/chat/details';
   static const String recommendations = '/recommendations';
   static const about = '/about';
+  static const String therapistDashboard = '/therapist-dashboard';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -272,6 +275,11 @@ class AppRouter {
         );
       case recommendations:
         return MaterialPageRoute(builder: (_) => const RecommendationPage());
+
+      case therapistDashboard:
+        return MaterialPageRoute(
+          builder: (_) => const TherapistDashboardPage(),
+        );
 
       case about:
         return MaterialPageRoute(builder: (_) => const AboutPage());

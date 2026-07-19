@@ -177,6 +177,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey, fontSize: 16),
                 ),
+                _HomeMenuCard(
+                  icon: Icons.psychology_alt_outlined,
+                  title: 'Therapist dashboard',
+                  description:
+                      'Review statistics, appointments, clients and communication.',
+                  onTap: () {
+                    Navigator.of(
+                      context,
+                    ).pushNamed(AppRouter.therapistDashboard);
+                  },
+                ),
+
                 const SizedBox(height: 30),
                 _HomeMenuCard(
                   icon: Icons.dashboard_outlined,

@@ -1,3 +1,5 @@
+import 'package:mindbloom_mobile/features/therapist/presentation/viewmodels/therapist_dashboard_viewmodel.dart';
+
 import '../../core/network/api_client.dart';
 import '../../features/session/presentation/viewmodels/session_viewmodel.dart';
 import '../../services/session_storage_service.dart';
@@ -347,5 +349,13 @@ class AppInjection {
       articleRepository: articleRepository,
       reviewRepository: reviewRepository,
     );
+  }
+
+  static TherapistDashboardViewModel createTherapistDashboardViewModel() {
+    final apiService = TherapistApiService(apiClient: apiClient);
+
+    final repository = TherapistRepository(therapistApiService: apiService);
+
+    return TherapistDashboardViewModel(repository: repository);
   }
 }
