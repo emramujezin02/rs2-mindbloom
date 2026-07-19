@@ -72,6 +72,8 @@ import '../../features/recommendation/data/repositories/recommendation_repositor
 import '../../features/recommendation/data/services/recommendation_api_service.dart';
 import '../../features/recommendation/presentation/viewmodels/recommendation_viewmodel.dart';
 
+import '../../features/landing/presentation/viewmodels/landing_page_view_model.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
@@ -322,6 +324,28 @@ class AppInjection {
   static RecommendationViewModel createRecommendationViewModel() {
     return RecommendationViewModel(
       repository: createRecommendationRepository(),
+    );
+  }
+
+  static LandingPageViewModel createLandingPageViewModel() {
+    final therapistApiService = TherapistApiService(apiClient: apiClient);
+
+    final therapistRepository = TherapistRepository(
+      therapistApiService: therapistApiService,
+    );
+
+    final articleApiService = ArticleApiService(apiClient: apiClient);
+
+    final articleRepository = ArticleRepository(apiService: articleApiService);
+
+    final reviewApiService = ReviewApiService(apiClient: apiClient);
+
+    final reviewRepository = ReviewRepository(apiService: reviewApiService);
+
+    return LandingPageViewModel(
+      therapistRepository: therapistRepository,
+      articleRepository: articleRepository,
+      reviewRepository: reviewRepository,
     );
   }
 }
