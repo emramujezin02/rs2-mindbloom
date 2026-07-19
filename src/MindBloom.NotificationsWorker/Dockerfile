@@ -17,6 +17,7 @@ RUN dotnet publish \
     -o /app/publish \
     /p:UseAppHost=false
 
+
 # ============================================
 # RUNTIME STAGE
 # ============================================
@@ -27,4 +28,6 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
-ENTRYPOINT ["dotnet","MindBloom.NotificationsWorker.dll"]
+ENV DOTNET_ENVIRONMENT=Production
+
+ENTRYPOINT ["dotnet", "MindBloom.NotificationsWorker.dll"]
