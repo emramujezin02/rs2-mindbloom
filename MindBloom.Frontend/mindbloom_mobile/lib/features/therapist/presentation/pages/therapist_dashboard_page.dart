@@ -45,6 +45,12 @@ class _TherapistDashboardPageState extends State<TherapistDashboardPage> {
     Navigator.of(context).pushNamed(AppRouter.therapistAppointments);
   }
 
+  void _openClients() {
+  Navigator.of(context).pushNamed(
+    AppRouter.therapistClients,
+  );
+}
+
   void _openChat() {
     Navigator.of(context).pushNamed(AppRouter.chats);
   }
@@ -177,11 +183,10 @@ class _TherapistDashboardPageState extends State<TherapistDashboardPage> {
                         ),
                         const SizedBox(height: 20),
                         _ClientsSection(
-                          totalAppointments: dashboard.totalAppointments,
-                          completedAppointments:
-                              dashboard.completedAppointments,
-                          onOpenClients: _openAppointments,
-                        ),
+  totalAppointments: dashboard.totalAppointments,
+  completedAppointments: dashboard.completedAppointments,
+  onOpenClients: _openClients,
+),
                       ],
                     );
                   },

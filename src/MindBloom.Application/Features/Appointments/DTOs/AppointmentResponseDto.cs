@@ -20,4 +20,11 @@ public class AppointmentResponseDto
     public string? MeetingLink { get; set; }
 
     public string? Location { get; set; }
+    public int? PaymentId { get; set; }
+
+    public int ClientId { get; set; }
+
+    public string ClientName { get; set; } = string.Empty;
+
+    public string ClientEmail { get; set; } = string.Empty;
 }

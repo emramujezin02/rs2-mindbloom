@@ -775,4 +775,335 @@ public class TherapistService : ITherapistService
 
         await _context.SaveChangesAsync();
     }
+
+    public async Task<List<TherapistClientListDto>>
+    GetClientsAsync(
+        int therapistUserId,
+        string? search)
+    {
+        var therapist =
+            await _context.Therapists
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist not found.");
+        }
+
+        var normalizedSearch =
+            search?.Trim().ToLower();
+
+        var appointments =
+            _context.Appointments
+                .AsNoTracking()
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .Where(x =>
+                    x.TherapistId == therapist.Id);
+
+        if (!string.IsNullOrWhiteSpace(
+                normalizedSearch))
+        {
+            appointments =
+                appointments.Where(x =>
+                    (
+                        x.Client.User.FirstName
+                        + " "
+                        + x.Client.User.LastName
+                    )
+                    .ToLower()
+                    .Contains(normalizedSearch)
+                    ||
+                    (
+                        x.Client.User.Email
+                        ?? string.Empty
+                    )
+                    .ToLower()
+                    .Contains(normalizedSearch)
+                    ||
+                    (
+                        x.Client.User.PhoneNumber
+                        ?? string.Empty
+                    )
+                    .ToLower()
+                    .Contains(normalizedSearch));
+        }
+
+        var clients =
+            await appointments
+                .GroupBy(x => new
+                {
+                    ClientId =
+                        x.ClientId,
+
+                    x.Client.UserId,
+
+                    x.Client.User.FirstName,
+
+                    x.Client.User.LastName,
+
+                    x.Client.User.Email,
+
+                    x.Client.User.PhoneNumber
+                })
+                .Select(group =>
+                    new TherapistClientListDto
+                    {
+                        ClientId =
+                            group.Key.ClientId,
+
+                        UserId =
+                            group.Key.UserId,
+
+                        FullName =
+                            group.Key.FirstName
+                            + " "
+                            + group.Key.LastName,
+
+                        Email =
+                            group.Key.Email
+                            ?? string.Empty,
+
+                        PhoneNumber =
+                            group.Key.PhoneNumber,
+
+                        TotalAppointments =
+                            group.Count(),
+
+                        CompletedAppointments =
+                            group.Count(x =>
+                                x.Status ==
+                                AppointmentStatus
+                                    .Completed),
+
+                        LastAppointmentDate =
+                            group
+                                .Where(x =>
+                                    x.EndUtc <
+                                    DateTime.UtcNow)
+                                .OrderByDescending(x =>
+                                    x.EndUtc)
+                                .Select(x =>
+                                    (DateTime?)x.EndUtc)
+                                .FirstOrDefault(),
+
+                        NextAppointmentDate =
+                            group
+                                .Where(x =>
+                                    x.StartUtc >
+                                    DateTime.UtcNow &&
+                                    (
+                                        x.Status ==
+                                        AppointmentStatus
+                                            .Pending
+                                        ||
+                                        x.Status ==
+                                        AppointmentStatus
+                                            .Accepted
+                                    ))
+                                .OrderBy(x =>
+                                    x.StartUtc)
+                                .Select(x =>
+                                    (DateTime?)x.StartUtc)
+                                .FirstOrDefault()
+                    })
+                .OrderByDescending(x =>
+                    x.NextAppointmentDate
+                    != null)
+                .ThenBy(x =>
+                    x.NextAppointmentDate)
+                .ThenByDescending(x =>
+                    x.LastAppointmentDate)
+                .ThenBy(x =>
+                    x.FullName)
+                .ToListAsync();
+
+        return clients;
+    }
+
+    public async Task<TherapistClientDetailsDto>
+    GetClientDetailsAsync(
+        int therapistUserId,
+        int clientId)
+    {
+        var therapist =
+            await _context.Therapists
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist not found.");
+        }
+
+        var appointments =
+            await _context.Appointments
+                .AsNoTracking()
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .Where(x =>
+                    x.TherapistId == therapist.Id &&
+                    x.ClientId == clientId)
+                .OrderByDescending(x =>
+                    x.StartUtc)
+                .ToListAsync();
+
+        if (appointments.Count == 0)
+        {
+            throw new NotFoundException(
+                "Client not found or does not belong to this therapist.");
+        }
+
+        var client =
+            appointments[0].Client;
+
+        var appointmentIds =
+            appointments
+                .Select(x => x.Id)
+                .ToList();
+
+        var appointmentIdsWithNotes =
+            await _context.AppointmentNotes
+                .AsNoTracking()
+                .Where(x =>
+                    x.TherapistId == therapist.Id &&
+                    appointmentIds.Contains(
+                        x.AppointmentId))
+                .Select(x =>
+                    x.AppointmentId)
+                .ToHashSetAsync();
+
+        var now =
+            DateTime.UtcNow;
+
+        var firstAppointmentDate =
+            appointments
+                .OrderBy(x =>
+                    x.StartUtc)
+                .Select(x =>
+                    (DateTime?)x.StartUtc)
+                .FirstOrDefault();
+
+        var lastAppointmentDate =
+            appointments
+                .Where(x =>
+                    x.EndUtc < now)
+                .OrderByDescending(x =>
+                    x.EndUtc)
+                .Select(x =>
+                    (DateTime?)x.EndUtc)
+                .FirstOrDefault();
+
+        var nextAppointmentDate =
+            appointments
+                .Where(x =>
+                    x.StartUtc > now &&
+                    (
+                        x.Status ==
+                        AppointmentStatus.Pending
+                        ||
+                        x.Status ==
+                        AppointmentStatus.Accepted
+                    ))
+                .OrderBy(x =>
+                    x.StartUtc)
+                .Select(x =>
+                    (DateTime?)x.StartUtc)
+                .FirstOrDefault();
+
+        return new TherapistClientDetailsDto
+        {
+            ClientId =
+                client.Id,
+
+            UserId =
+                client.UserId,
+
+            FullName =
+                client.User.FirstName
+                + " "
+                + client.User.LastName,
+
+            Email =
+                client.User.Email
+                ?? string.Empty,
+
+            PhoneNumber =
+                client.User.PhoneNumber,
+
+            TotalAppointments =
+                appointments.Count,
+
+            PendingAppointments =
+                appointments.Count(x =>
+                    x.Status ==
+                    AppointmentStatus.Pending),
+
+            AcceptedAppointments =
+                appointments.Count(x =>
+                    x.Status ==
+                    AppointmentStatus.Accepted),
+
+            CompletedAppointments =
+                appointments.Count(x =>
+                    x.Status ==
+                    AppointmentStatus.Completed),
+
+            CancelledAppointments =
+                appointments.Count(x =>
+                    x.Status ==
+                    AppointmentStatus.Cancelled
+                    ||
+                    x.Status ==
+                    AppointmentStatus.Rejected),
+
+            FirstAppointmentDate =
+                firstAppointmentDate,
+
+            LastAppointmentDate =
+                lastAppointmentDate,
+
+            NextAppointmentDate =
+                nextAppointmentDate,
+
+            AppointmentHistory =
+                appointments
+                    .Select(x =>
+                        new TherapistClientAppointmentDto
+                        {
+                            AppointmentId =
+                                x.Id,
+
+                            StartUtc =
+                                x.StartUtc,
+
+                            EndUtc =
+                                x.EndUtc,
+
+                            Status =
+                                x.Status.ToString(),
+
+                            Type =
+                                x.Type.ToString(),
+
+                            MeetingLink =
+                                x.MeetingLink,
+
+                            Location =
+                                x.Location,
+
+                            HasNote =
+                                appointmentIdsWithNotes
+                                    .Contains(x.Id)
+                        })
+                    .ToList()
+        };
+    }
 }

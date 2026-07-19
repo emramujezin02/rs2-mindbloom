@@ -77,6 +77,9 @@ import '../../features/recommendation/presentation/viewmodels/recommendation_vie
 
 import '../../features/landing/presentation/viewmodels/landing_page_view_model.dart';
 
+import '../../features/therapist/presentation/viewmodels/therapist_clients_viewmodel.dart';
+import '../../features/therapist/presentation/viewmodels/therapist_client_details_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
@@ -367,4 +370,32 @@ class AppInjection {
 
     return TherapistAppointmentsViewModel(repository: repository);
   }
+
+  static TherapistRepository
+_createTherapistRepository() {
+  final apiService =
+      TherapistApiService(
+        apiClient: apiClient,
+      );
+
+  return TherapistRepository(
+    therapistApiService: apiService,
+  );
+}
+
+static TherapistClientsViewModel
+createTherapistClientsViewModel() {
+  return TherapistClientsViewModel(
+    repository:
+        _createTherapistRepository(),
+  );
+}
+
+static TherapistClientDetailsViewModel
+createTherapistClientDetailsViewModel() {
+  return TherapistClientDetailsViewModel(
+    repository:
+        _createTherapistRepository(),
+  );
+}
 }

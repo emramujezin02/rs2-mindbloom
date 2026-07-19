@@ -63,6 +63,9 @@ import '../../features/therapist/presentation/pages/therapist_dashboard_page.dar
 import '../../features/appointment/presentation/pages/therapist_appointments_page.dart';
 import '../../features/appointment/presentation/pages/therapist_appointment_details_page.dart';
 
+import '../../features/therapist/presentation/pages/therapist_client_details_page.dart';
+import '../../features/therapist/presentation/pages/therapist_clients_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String login = '/login';
@@ -107,6 +110,10 @@ class AppRouter {
   static const String therapistAppointments = '/therapist/appointments';
   static const String therapistAppointmentDetails =
       '/therapist/appointments/details';
+static const String therapistClients =
+    '/therapist/clients';
+static const String therapistClientDetails =
+    '/therapist/clients/details';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -303,6 +310,35 @@ class AppRouter {
       case about:
         return MaterialPageRoute(builder: (_) => const AboutPage());
 
+case therapistClients:
+  return MaterialPageRoute(
+    builder: (_) => const TherapistClientsPage(),
+    settings: settings,
+  );
+
+case therapistClientDetails:
+  final clientId = settings.arguments;
+
+  if (clientId is! int) {
+    return MaterialPageRoute(
+      builder: (_) => const Scaffold(
+        body: Center(
+          child: Text(
+            'Client identifier is missing.',
+          ),
+        ),
+      ),
+      settings: settings,
+    );
+  }
+
+  return MaterialPageRoute(
+    builder: (_) => TherapistClientDetailsPage(
+      clientId: clientId,
+    ),
+    settings: settings,
+  );
+  
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
 

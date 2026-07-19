@@ -285,4 +285,44 @@ public class TherapistsController : ControllerBase
                 "Document deleted successfully."
         });
     }
+
+    [Authorize(Roles = "Therapist")]
+    [HttpGet("clients")]
+    public async Task<IActionResult>
+    GetClients(
+        [FromQuery] string? search)
+    {
+        var therapistUserId =
+            int.Parse(
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier)!);
+
+        var result =
+            await _therapistService
+                .GetClientsAsync(
+                    therapistUserId,
+                    search);
+
+        return Ok(result);
+    }
+
+    [Authorize(Roles = "Therapist")]
+    [HttpGet("clients/{clientId:int}")]
+    public async Task<IActionResult>
+        GetClientDetails(
+            int clientId)
+    {
+        var therapistUserId =
+            int.Parse(
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier)!);
+
+        var result =
+            await _therapistService
+                .GetClientDetailsAsync(
+                    therapistUserId,
+                    clientId);
+
+        return Ok(result);
+    }
 }

@@ -37,4 +37,14 @@ public interface ITherapistService
         int therapistUserId,
         int documentId);
     Task DeleteUnavailableDateAsync(int therapistUserId, int unavailableDateId);
+
+    Task<List<TherapistClientListDto>>
+        GetClientsAsync(
+            int therapistUserId,
+            string? search);
+
+    Task<TherapistClientDetailsDto>
+        GetClientDetailsAsync(
+            int therapistUserId,
+            int clientId);
 }

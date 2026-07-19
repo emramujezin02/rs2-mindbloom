@@ -337,15 +337,33 @@ public class AppointmentService : IAppointmentService
                 TherapistId = therapist.Id,
 
                 TherapistName =
-                    x.Therapist.User.FirstName
-                    + " "
-                    + x.Therapist.User.LastName,
+        x.Therapist.User.FirstName
+        + " "
+        + x.Therapist.User.LastName,
+
+                ClientId = x.ClientId,
+
+                ClientName =
+        x.Client.User.FirstName
+        + " "
+        + x.Client.User.LastName,
+
+                ClientEmail =
+        x.Client.User.Email
+        ?? string.Empty,
 
                 StartUtc = x.StartUtc,
 
                 EndUtc = x.EndUtc,
 
-                Status = x.Status.ToString()
+                Status = x.Status.ToString(),
+
+                Type = x.Type.ToString(),
+
+                MeetingLink = x.MeetingLink,
+
+                Location = x.Location,
+
             })
             .ToListAsync();
     }
