@@ -6,30 +6,25 @@ public class TherapistResponseDto
 
     public int UserId { get; set; }
 
-    public string FullName { get; set; } = null!;
+    public string FullName { get; set; } = string.Empty;
 
-    public string Email { get; set; } = null!;
+    public string Email { get; set; } = string.Empty;
 
-    public string Specialization { get; set; } = null!;
+    public string Specialization { get; set; } = string.Empty;
 
-    public string Biography { get; set; } = null!;
+    public string Biography { get; set; } = string.Empty;
 
     public decimal HourlyRate { get; set; }
 
     public int ExperienceYears { get; set; }
+
     public double AverageRating { get; set; }
 
     public int TotalReviews { get; set; }
 
-    public string VerificationStatus
-    {
-        get;
-        set;
-    } = string.Empty;
+    public string VerificationStatus { get; set; } = string.Empty;
 
-    public string? VerificationNotes
-    {
-        get;
-        set;
-    }
+    public string? VerificationNotes { get; set; }
+
+    public string? ProfileImageUrl { get; set; }
 }

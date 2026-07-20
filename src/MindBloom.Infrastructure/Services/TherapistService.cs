@@ -57,7 +57,8 @@ public class TherapistService : ITherapistService
             Specialization = therapist.Specialization,
             Biography = therapist.Biography,
             HourlyRate = therapist.HourlyRate,
-            ExperienceYears = therapist.ExperienceYears
+            ExperienceYears = therapist.ExperienceYears,
+            ProfileImageUrl = therapist.ProfileImagePath,
         };
     }
 
@@ -81,7 +82,8 @@ public class TherapistService : ITherapistService
                 HourlyRate = x.HourlyRate,
                 ExperienceYears = x.ExperienceYears,
                 VerificationStatus = x.VerificationStatus.ToString(),
-                VerificationNotes = x.VerificationNotes
+                VerificationNotes = x.VerificationNotes,
+                ProfileImageUrl = x.ProfileImagePath,
             })
             .ToListAsync();
     }
@@ -206,7 +208,9 @@ public class TherapistService : ITherapistService
                         x.Reviews.Any()
                             ? x.Reviews.Average(
                                 r => r.Rating)
-                            : 0
+                            : 0,
+
+                    ProfileImageUrl = x.ProfileImagePath,
                 })
                 .ToListAsync();
 
@@ -298,7 +302,10 @@ public class TherapistService : ITherapistService
                             : 0,
 
                     TotalReviews =
-                        x.Reviews.Count
+                        x.Reviews.Count,
+
+                    ProfileImageUrl = x.ProfileImagePath,
+
                 })
                 .ToListAsync();
 
@@ -763,7 +770,8 @@ public class TherapistService : ITherapistService
                             EndTime =
                                 x.EndTime
                         })
-                    .ToList()
+                    .ToList(),
+            ProfileImageUrl = therapist.ProfileImagePath,
         };
     }
 

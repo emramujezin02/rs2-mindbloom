@@ -11,9 +11,10 @@ class TherapistDetailsModel {
   final int experienceYears;
   final double averageRating;
   final int totalReviews;
+  final String? profileImageUrl;
   final List<TherapistAvailabilityModel> availabilities;
 
-  TherapistDetailsModel({
+  const TherapistDetailsModel({
     required this.id,
     required this.fullName,
     required this.email,
@@ -24,6 +25,7 @@ class TherapistDetailsModel {
     required this.averageRating,
     required this.totalReviews,
     required this.availabilities,
+    this.profileImageUrl,
   });
 
   factory TherapistDetailsModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class TherapistDetailsModel {
       experienceYears: json['experienceYears'] ?? 0,
       averageRating: (json['averageRating'] ?? 0).toDouble(),
       totalReviews: json['totalReviews'] ?? 0,
+      profileImageUrl: _nullableString(json['profileImageUrl']),
       availabilities: availabilityJson is List
           ? availabilityJson
                 .whereType<Map<String, dynamic>>()
@@ -59,6 +62,17 @@ class TherapistDetailsModel {
       hourlyRate: hourlyRate,
       experienceYears: experienceYears,
       averageRating: averageRating,
+      profileImageUrl: profileImageUrl,
     );
+  }
+
+  static String? _nullableString(dynamic value) {
+    if (value is! String) {
+      return null;
+    }
+
+    final normalizedValue = value.trim();
+
+    return normalizedValue.isEmpty ? null : normalizedValue;
   }
 }

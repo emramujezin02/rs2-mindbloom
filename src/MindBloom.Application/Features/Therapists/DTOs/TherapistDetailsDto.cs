@@ -20,8 +20,7 @@ public class TherapistDetailsDto
 
     public int TotalReviews { get; set; }
 
-    public List<AvailabilityResponseDto>
-        Availabilities
-    { get; set; }
-            = new();
+    public string? ProfileImageUrl { get; set; }
+
+    public List<AvailabilityResponseDto> Availabilities { get; set; } = [];
 }

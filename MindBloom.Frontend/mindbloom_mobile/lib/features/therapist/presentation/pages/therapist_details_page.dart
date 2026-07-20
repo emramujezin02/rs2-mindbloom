@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../widgets/therapist_profile_image.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../viewmodels/therapist_details_viewmodel.dart';
@@ -133,14 +133,10 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          CircleAvatar(
-            radius: 45,
-            child: Text(
-              therapist.fullName.isNotEmpty
-                  ? therapist.fullName[0].toUpperCase()
-                  : '?',
-              style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold),
-            ),
+          TherapistProfileImage(
+            fullName: therapist.fullName,
+            profileImageUrl: therapist.profileImageUrl,
+            radius: 54,
           ),
 
           const SizedBox(height: 20),

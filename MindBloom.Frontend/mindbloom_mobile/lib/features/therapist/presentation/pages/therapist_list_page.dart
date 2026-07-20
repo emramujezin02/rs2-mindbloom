@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../widgets/therapist_profile_image.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../viewmodels/therapist_list_viewmodel.dart';
@@ -222,6 +222,15 @@ class _TherapistListPageState extends State<TherapistListPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Center(
+                    child: TherapistProfileImage(
+                      fullName: therapist.fullName,
+                      profileImageUrl: therapist.profileImageUrl,
+                      radius: 42,
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
                   Row(
                     children: [
                       Expanded(

@@ -8,8 +8,9 @@ class TherapistModel {
   final double hourlyRate;
   final int experienceYears;
   final double averageRating;
+  final String? profileImageUrl;
 
-  TherapistModel({
+  const TherapistModel({
     required this.id,
     required this.userId,
     required this.fullName,
@@ -19,6 +20,7 @@ class TherapistModel {
     required this.hourlyRate,
     required this.experienceYears,
     required this.averageRating,
+    this.profileImageUrl,
   });
 
   factory TherapistModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,17 @@ class TherapistModel {
       hourlyRate: (json['hourlyRate'] ?? 0).toDouble(),
       experienceYears: json['experienceYears'] ?? 0,
       averageRating: (json['averageRating'] ?? 0).toDouble(),
+      profileImageUrl: _nullableString(json['profileImageUrl']),
     );
+  }
+
+  static String? _nullableString(dynamic value) {
+    if (value is! String) {
+      return null;
+    }
+
+    final normalizedValue = value.trim();
+
+    return normalizedValue.isEmpty ? null : normalizedValue;
   }
 }
