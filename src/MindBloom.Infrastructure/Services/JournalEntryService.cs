@@ -296,25 +296,22 @@ public class JournalEntryService
     }
 
     public async Task<
-        TherapistMoodTrendResponseDto>
-        GetClientTrendForTherapistAsync(
-            int therapistUserId,
-            int clientId,
-            int days)
+     TherapistMoodTrendResponseDto>
+     GetClientTrendForTherapistAsync(
+         int therapistUserId,
+         int clientId,
+         int days)
     {
         await EnsureTherapistOwnsClientAsync(
             therapistUserId,
             clientId);
 
-        if (days < 1)
-        {
-            days = 7;
-        }
+        days = NormalizeAnalyticsPeriod(days);
 
-        if (days > 365)
-        {
-            days = 365;
-        }
+        var toUtc =
+            DateTime.UtcNow.Date
+                .AddDays(1)
+                .AddTicks(-1);
 
         var fromUtc =
             DateTime.UtcNow.Date
@@ -326,20 +323,23 @@ public class JournalEntryService
                 .Where(x =>
                     x.ClientId == clientId &&
                     !x.IsDeleted &&
-                    x.CreatedAtUtc >= fromUtc)
+                    x.CreatedAtUtc >= fromUtc &&
+                    x.CreatedAtUtc <= toUtc)
                 .Select(x => new
                 {
                     x.CreatedAtUtc,
                     x.MoodScore,
                     x.Emotion
                 })
+                .OrderBy(x => x.CreatedAtUtc)
                 .ToListAsync();
 
         var points =
             entries
                 .GroupBy(x =>
                     x.CreatedAtUtc.Date)
-                .OrderBy(x => x.Key)
+                .OrderBy(group =>
+                    group.Key)
                 .Select(group =>
                     new MoodTrendPointDto
                     {
@@ -347,36 +347,80 @@ public class JournalEntryService
                             DateTime.SpecifyKind(
                                 group.Key,
                                 DateTimeKind.Utc),
+
                         AverageMood =
                             Math.Round(
                                 group.Average(x =>
                                     x.MoodScore),
                                 2),
+
                         EntryCount =
                             group.Count()
                     })
                 .ToList();
 
-        var mostFrequentEmotion =
+        var emotionGroups =
             entries
                 .Where(x =>
                     !string.IsNullOrWhiteSpace(
                         x.Emotion))
-                .GroupBy(x =>
-                    x.Emotion.Trim(),
-                    StringComparer.OrdinalIgnoreCase)
-                .OrderByDescending(group =>
-                    group.Count())
-                .ThenBy(group =>
-                    group.Key)
-                .Select(group =>
-                    group.Key)
+                .GroupBy(
+                    x => x.Emotion.Trim(),
+                    StringComparer
+                        .OrdinalIgnoreCase)
+                .Select(group => new
+                {
+                    Emotion = group.Key,
+                    Count = group.Count()
+                })
+                .OrderByDescending(x =>
+                    x.Count)
+                .ThenBy(x =>
+                    x.Emotion)
+                .ToList();
+
+        var emotionEntryCount =
+            emotionGroups.Sum(x => x.Count);
+
+        var emotionAnalytics =
+            emotionGroups
+                .Select(item =>
+                    new EmotionAnalyticsItemDto
+                    {
+                        Emotion =
+                            item.Emotion,
+
+                        Count =
+                            item.Count,
+
+                        Percentage =
+                            emotionEntryCount == 0
+                                ? 0
+                                : Math.Round(
+                                    item.Count * 100.0 /
+                                    emotionEntryCount,
+                                    2)
+                    })
+                .ToList();
+
+        var mostFrequentEmotion =
+            emotionGroups
+                .Select(x => x.Emotion)
                 .FirstOrDefault();
+
+        var trendResult =
+            CalculateMoodTrend(points);
 
         return new TherapistMoodTrendResponseDto
         {
             ClientId = clientId,
+
             Days = days,
+
+            FromUtc = fromUtc,
+
+            ToUtc = toUtc,
+
             AverageMood =
                 entries.Count == 0
                     ? null
@@ -384,13 +428,157 @@ public class JournalEntryService
                         entries.Average(x =>
                             x.MoodScore),
                         2),
+
             MostFrequentEmotion =
                 mostFrequentEmotion,
+
             TotalEntries =
                 entries.Count,
+
+            Trend =
+                trendResult.Trend,
+
+            TrendDifference =
+                trendResult.Difference,
+
+            PreviousAverageMood =
+                trendResult.PreviousAverage,
+
+            RecentAverageMood =
+                trendResult.RecentAverage,
+
             Points =
-                points
+                points,
+
+            Emotions =
+                emotionAnalytics
         };
+    }
+
+    private static int NormalizeAnalyticsPeriod(
+    int days)
+    {
+        return days switch
+        {
+            7 => 7,
+            14 => 14,
+            30 => 30,
+            90 => 90,
+            180 => 180,
+            365 => 365,
+            _ => 30
+        };
+    }
+
+    private static MoodTrendCalculation
+        CalculateMoodTrend(
+            IReadOnlyList<MoodTrendPointDto>
+                points)
+    {
+        if (points.Count < 2)
+        {
+            return new MoodTrendCalculation
+            {
+                Trend =
+                    "InsufficientData"
+            };
+        }
+
+        var midpoint =
+            points.Count / 2;
+
+        if (midpoint < 1)
+        {
+            return new MoodTrendCalculation
+            {
+                Trend =
+                    "InsufficientData"
+            };
+        }
+
+        var previousPoints =
+            points
+                .Take(midpoint)
+                .ToList();
+
+        var recentPoints =
+            points
+                .Skip(midpoint)
+                .ToList();
+
+        if (previousPoints.Count == 0 ||
+            recentPoints.Count == 0)
+        {
+            return new MoodTrendCalculation
+            {
+                Trend =
+                    "InsufficientData"
+            };
+        }
+
+        var previousAverage =
+            Math.Round(
+                previousPoints
+                    .Average(x =>
+                        x.AverageMood),
+                2);
+
+        var recentAverage =
+            Math.Round(
+                recentPoints
+                    .Average(x =>
+                        x.AverageMood),
+                2);
+
+        var difference =
+            Math.Round(
+                recentAverage -
+                previousAverage,
+                2);
+
+        const double stableThreshold =
+            0.15;
+
+        var trend =
+            difference > stableThreshold
+                ? "Improving"
+                : difference <
+                  -stableThreshold
+                    ? "Declining"
+                    : "Stable";
+
+        return new MoodTrendCalculation
+        {
+            Trend = trend,
+
+            Difference = difference,
+
+            PreviousAverage =
+                previousAverage,
+
+            RecentAverage =
+                recentAverage
+        };
+    }
+
+    private sealed class MoodTrendCalculation
+    {
+        public string Trend { get; set; }
+            = "InsufficientData";
+
+        public double? Difference { get; set; }
+
+        public double? PreviousAverage
+        {
+            get;
+            set;
+        }
+
+        public double? RecentAverage
+        {
+            get;
+            set;
+        }
     }
 
     private async Task<Client>

@@ -147,12 +147,36 @@ public class JournalEntriesController
 
     [Authorize(
         Roles = RoleConstants.Therapist)]
-    [HttpGet("clients/{clientId:int}/trend")]
+    [HttpGet(
+        "clients/{clientId:int}/trend")]
     public async Task<IActionResult>
         GetClientTrend(
             int clientId,
             [FromQuery]
-            int days = 30)
+        int days = 30)
+    {
+        var therapistUserId =
+            GetAuthenticatedUserId();
+
+        var result =
+            await _journalEntryService
+                .GetClientTrendForTherapistAsync(
+                    therapistUserId,
+                    clientId,
+                    days);
+
+        return Ok(result);
+    }
+
+    [Authorize(
+        Roles = RoleConstants.Therapist)]
+    [HttpGet(
+        "clients/{clientId:int}/analytics")]
+    public async Task<IActionResult>
+        GetClientAnalytics(
+            int clientId,
+            [FromQuery]
+        int days = 30)
     {
         var therapistUserId =
             GetAuthenticatedUserId();
@@ -183,4 +207,6 @@ public class JournalEntriesController
 
         return userId;
     }
+
+
 }

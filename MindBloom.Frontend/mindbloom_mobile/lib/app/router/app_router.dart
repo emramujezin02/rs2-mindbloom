@@ -65,9 +65,11 @@ import '../../features/appointment/presentation/pages/therapist_appointment_deta
 
 import '../../features/therapist/presentation/pages/therapist_client_details_page.dart';
 import '../../features/therapist/presentation/pages/therapist_clients_page.dart';
-
+import '../../features/therapist/data/models/therapist_emotional_analytics_arguments.dart';
 import '../../features/therapist/data/models/therapist_profile_model.dart';
 import '../../features/therapist/presentation/pages/therapist_edit_profile_page.dart';
+
+import '../../features/therapist/presentation/pages/therapist_emotional_analytics_page.dart';
 
 class AppRouter {
   static const String home = '/';
@@ -116,6 +118,8 @@ class AppRouter {
   static const String therapistClients = '/therapist/clients';
   static const String therapistClientDetails = '/therapist/clients/details';
   static const String therapistEditProfile = '/therapist/edit-profile';
+  static const String therapistEmotionalAnalytics =
+      '/therapist/clients/emotional-analytics';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -340,6 +344,31 @@ class AppRouter {
 
         return MaterialPageRoute(
           builder: (_) => TherapistClientDetailsPage(clientId: clientId),
+          settings: settings,
+        );
+
+      case therapistEmotionalAnalytics:
+        final arguments = settings.arguments;
+
+        if (arguments is! TherapistEmotionalAnalyticsArguments) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text(
+                  'Client analytics information '
+                  'is missing.',
+                ),
+              ),
+            ),
+            settings: settings,
+          );
+        }
+
+        return MaterialPageRoute(
+          builder: (_) => TherapistEmotionalAnalyticsPage(
+            clientId: arguments.clientId,
+            clientName: arguments.clientName,
+          ),
           settings: settings,
         );
 

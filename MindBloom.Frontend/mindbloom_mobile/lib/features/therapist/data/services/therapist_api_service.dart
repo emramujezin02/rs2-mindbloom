@@ -175,10 +175,52 @@ class TherapistApiService {
         .toList();
   }
 
+  Future<TherapistMoodTrendModel> getClientEmotionalAnalytics({
+    required int clientId,
+    required int days,
+  }) async {
+    final normalizedDays = _normalizeAnalyticsPeriod(days);
+
+    final response = await apiClient.get(
+      '/JournalEntries/clients/'
+      '$clientId/analytics'
+      '?days=$normalizedDays',
+    );
+
+    if (response is! Map) {
+      throw const FormatException(
+        'The server returned an invalid '
+        'emotional analytics response.',
+      );
+    }
+
+    return TherapistMoodTrendModel.fromJson(
+      Map<String, dynamic>.from(response),
+    );
+  }
+
+  int _normalizeAnalyticsPeriod(int days) {
+    const allowedPeriods = {7, 14, 30, 90, 180, 365};
+
+    if (allowedPeriods.contains(days)) {
+      return days;
+    }
+
+    return 30;
+  }
+
   Future<TherapistMoodTrendModel> getClientMoodTrend(int clientId) async {
     final response = await apiClient.get(
-      '/JournalEntries/clients/$clientId/trend',
+      '/JournalEntries/clients/'
+      '$clientId/trend',
     );
+
+    if (response is! Map) {
+      throw const FormatException(
+        'The server returned an invalid '
+        'mood trend response.',
+      );
+    }
 
     return TherapistMoodTrendModel.fromJson(
       Map<String, dynamic>.from(response),

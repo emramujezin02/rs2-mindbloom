@@ -77,4 +77,14 @@ class TherapistRepository {
   Future<TherapistMoodTrendModel> getClientMoodTrend(int clientId) {
     return therapistApiService.getClientMoodTrend(clientId);
   }
+
+  Future<TherapistMoodTrendModel> getClientEmotionalAnalytics({
+    required int clientId,
+    required int days,
+  }) {
+    return therapistApiService.getClientEmotionalAnalytics(
+      clientId: clientId,
+      days: days,
+    );
+  }
 }

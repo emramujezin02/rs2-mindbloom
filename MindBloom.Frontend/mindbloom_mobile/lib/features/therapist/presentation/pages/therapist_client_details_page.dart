@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mindbloom_mobile/features/therapist/data/models/therapist_emotional_analytics_arguments.dart';
 import '../../../../app/di/injection.dart';
 import '../../data/models/therapist_client_appointment_model.dart';
 import '../../data/models/therapist_client_details_model.dart';
@@ -6,6 +7,7 @@ import '../viewmodels/therapist_client_details_viewmodel.dart';
 import '../../data/models/mood_trend_point_model.dart';
 import '../../data/models/therapist_mood_entry_model.dart';
 import '../../data/models/therapist_mood_trend_model.dart';
+import '../../../../app/router/app_router.dart';
 
 class TherapistClientDetailsPage extends StatefulWidget {
   final int clientId;
@@ -130,6 +132,21 @@ class _TherapistClientDetailsPageState
                 _ClientProfileCard(client: client),
                 const SizedBox(height: 18),
                 _StatisticsSection(client: client),
+
+                const SizedBox(height: 18),
+
+                _EmotionalAnalyticsNavigationCard(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(
+                      AppRouter.therapistEmotionalAnalytics,
+                      arguments: TherapistEmotionalAnalyticsArguments(
+                        clientId: widget.clientId,
+                        clientName: client.fullName,
+                      ),
+                    );
+                  },
+                ),
+
                 const SizedBox(height: 26),
 
                 _MoodTrackerSection(
@@ -699,6 +716,78 @@ class _StatisticData {
     required this.value,
     required this.icon,
   });
+}
+
+class _EmotionalAnalyticsNavigationCard extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _EmotionalAnalyticsNavigationCard({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(21),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(21),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(21),
+            border: Border.all(color: const Color(0xFFE5DBEF)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE5FA),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.analytics_outlined,
+                  color: Color(0xFF72559A),
+                  size: 29,
+                ),
+              ),
+              const SizedBox(width: 15),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Emotional Analytics',
+                      style: TextStyle(
+                        color: Color(0xFF40334D),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      'View mood graphs, emotional '
+                      'distribution, averages and '
+                      'period-based trends.',
+                      style: TextStyle(color: Color(0xFF756D79), height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Icon(
+                Icons.arrow_forward_ios,
+                size: 18,
+                color: Color(0xFF8063A4),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _MoodTrackerSection extends StatelessWidget {

@@ -81,6 +81,8 @@ import '../../features/landing/presentation/viewmodels/landing_page_view_model.d
 import '../../features/therapist/presentation/viewmodels/therapist_clients_viewmodel.dart';
 import '../../features/therapist/presentation/viewmodels/therapist_client_details_viewmodel.dart';
 
+import '../../features/therapist/presentation/viewmodels/therapist_emotional_analytics_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
@@ -395,5 +397,12 @@ class AppInjection {
     final repository = TherapistRepository(therapistApiService: apiService);
 
     return TherapistProfileViewModel(repository: repository);
+  }
+
+  static TherapistEmotionalAnalyticsViewModel
+  createTherapistEmotionalAnalyticsViewModel() {
+    return TherapistEmotionalAnalyticsViewModel(
+      repository: _createTherapistRepository(),
+    );
   }
 }
