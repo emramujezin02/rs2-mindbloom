@@ -10,6 +10,8 @@ import '../models/create_therapist_availability_request.dart';
 import '../models/therapist_profile_image_model.dart';
 import '../models/therapist_profile_model.dart';
 import '../models/update_therapist_profile_request.dart';
+import '../models/therapist_mood_entry_model.dart';
+import '../models/therapist_mood_trend_model.dart';
 
 class TherapistRepository {
   final TherapistApiService therapistApiService;
@@ -66,5 +68,13 @@ class TherapistRepository {
 
   Future<void> deleteTherapistAvailability(int availabilityId) {
     return therapistApiService.deleteTherapistAvailability(availabilityId);
+  }
+
+  Future<List<TherapistMoodEntryModel>> getClientMoodHistory(int clientId) {
+    return therapistApiService.getClientMoodHistory(clientId);
+  }
+
+  Future<TherapistMoodTrendModel> getClientMoodTrend(int clientId) {
+    return therapistApiService.getClientMoodTrend(clientId);
   }
 }

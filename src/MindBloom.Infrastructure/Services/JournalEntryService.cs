@@ -223,6 +223,176 @@ public class JournalEntryService
         await _context.SaveChangesAsync();
     }
 
+    public async Task<
+    PagedResponse<TherapistMoodEntryResponseDto>>
+    GetClientHistoryForTherapistAsync(
+        int therapistUserId,
+        int clientId,
+        int pageNumber,
+        int pageSize)
+    {
+        await EnsureTherapistOwnsClientAsync(
+            therapistUserId,
+            clientId);
+
+        if (pageNumber < 1)
+        {
+            pageNumber = 1;
+        }
+
+        if (pageSize < 1)
+        {
+            pageSize = 10;
+        }
+
+        if (pageSize > 50)
+        {
+            pageSize = 50;
+        }
+
+        var query =
+            _context.MoodEntries
+                .AsNoTracking()
+                .Where(x =>
+                    x.ClientId == clientId &&
+                    !x.IsDeleted);
+
+        var totalCount =
+            await query.CountAsync();
+
+        var items =
+            await query
+                .OrderByDescending(x =>
+                    x.CreatedAtUtc)
+                .Skip(
+                    (pageNumber - 1) *
+                    pageSize)
+                .Take(pageSize)
+                .Select(x =>
+                    new TherapistMoodEntryResponseDto
+                    {
+                        Id = x.Id,
+                        CreatedAtUtc =
+                            x.CreatedAtUtc,
+                        Mood =
+                            x.MoodScore,
+                        Emotion =
+                            x.Emotion
+                    })
+                .ToListAsync();
+
+        return new PagedResponse<
+            TherapistMoodEntryResponseDto>
+        {
+            Items = items,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages =
+                (int)Math.Ceiling(
+                    totalCount /
+                    (double)pageSize)
+        };
+    }
+
+    public async Task<
+        TherapistMoodTrendResponseDto>
+        GetClientTrendForTherapistAsync(
+            int therapistUserId,
+            int clientId,
+            int days)
+    {
+        await EnsureTherapistOwnsClientAsync(
+            therapistUserId,
+            clientId);
+
+        if (days < 1)
+        {
+            days = 7;
+        }
+
+        if (days > 365)
+        {
+            days = 365;
+        }
+
+        var fromUtc =
+            DateTime.UtcNow.Date
+                .AddDays(-(days - 1));
+
+        var entries =
+            await _context.MoodEntries
+                .AsNoTracking()
+                .Where(x =>
+                    x.ClientId == clientId &&
+                    !x.IsDeleted &&
+                    x.CreatedAtUtc >= fromUtc)
+                .Select(x => new
+                {
+                    x.CreatedAtUtc,
+                    x.MoodScore,
+                    x.Emotion
+                })
+                .ToListAsync();
+
+        var points =
+            entries
+                .GroupBy(x =>
+                    x.CreatedAtUtc.Date)
+                .OrderBy(x => x.Key)
+                .Select(group =>
+                    new MoodTrendPointDto
+                    {
+                        DateUtc =
+                            DateTime.SpecifyKind(
+                                group.Key,
+                                DateTimeKind.Utc),
+                        AverageMood =
+                            Math.Round(
+                                group.Average(x =>
+                                    x.MoodScore),
+                                2),
+                        EntryCount =
+                            group.Count()
+                    })
+                .ToList();
+
+        var mostFrequentEmotion =
+            entries
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(
+                        x.Emotion))
+                .GroupBy(x =>
+                    x.Emotion.Trim(),
+                    StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(group =>
+                    group.Count())
+                .ThenBy(group =>
+                    group.Key)
+                .Select(group =>
+                    group.Key)
+                .FirstOrDefault();
+
+        return new TherapistMoodTrendResponseDto
+        {
+            ClientId = clientId,
+            Days = days,
+            AverageMood =
+                entries.Count == 0
+                    ? null
+                    : Math.Round(
+                        entries.Average(x =>
+                            x.MoodScore),
+                        2),
+            MostFrequentEmotion =
+                mostFrequentEmotion,
+            TotalEntries =
+                entries.Count,
+            Points =
+                points
+        };
+    }
+
     private async Task<Client>
         GetClientAsync(
             int clientUserId)
@@ -302,5 +472,52 @@ public class JournalEntryService
             Note =
                 entry.Notes
         };
+    }
+
+    private async Task
+    EnsureTherapistOwnsClientAsync(
+        int therapistUserId,
+        int clientId)
+    {
+        var therapist =
+            await _context.Therapists
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.UserId ==
+                    therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist not found.");
+        }
+
+        var clientExists =
+            await _context.Clients
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.Id == clientId);
+
+        if (!clientExists)
+        {
+            throw new NotFoundException(
+                "Client not found.");
+        }
+
+        var hasClientRelationship =
+            await _context.Appointments
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.TherapistId ==
+                        therapist.Id &&
+                    x.ClientId ==
+                        clientId &&
+                    !x.IsDeleted);
+
+        if (!hasClientRelationship)
+        {
+            throw new UnauthorizedAccessException(
+                "You do not have permission to access this client's emotional tracker.");
+        }
     }
 }

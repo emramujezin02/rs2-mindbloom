@@ -1,15 +1,14 @@
 import 'package:flutter/foundation.dart';
 
 import '../../data/models/therapist_client_details_model.dart';
+import '../../data/models/therapist_mood_entry_model.dart';
+import '../../data/models/therapist_mood_trend_model.dart';
 import '../../data/repositories/therapist_repository.dart';
 
-class TherapistClientDetailsViewModel
-    extends ChangeNotifier {
+class TherapistClientDetailsViewModel extends ChangeNotifier {
   final TherapistRepository repository;
 
-  TherapistClientDetailsViewModel({
-    required this.repository,
-  });
+  TherapistClientDetailsViewModel({required this.repository});
 
   bool isLoading = false;
 
@@ -17,9 +16,11 @@ class TherapistClientDetailsViewModel
 
   TherapistClientDetailsModel? client;
 
-  Future<void> loadClientDetails(
-    int clientId,
-  ) async {
+  List<TherapistMoodEntryModel> moodHistory = [];
+
+  TherapistMoodTrendModel? moodTrend;
+
+  Future<void> loadClientDetails(int clientId) async {
     if (isLoading) {
       return;
     }
@@ -29,11 +30,17 @@ class TherapistClientDetailsViewModel
     notifyListeners();
 
     try {
-      client =
-          await repository
-              .getTherapistClientDetails(
-                clientId,
-              );
+      final results = await Future.wait([
+        repository.getTherapistClientDetails(clientId),
+        repository.getClientMoodHistory(clientId),
+        repository.getClientMoodTrend(clientId),
+      ]);
+
+      client = results[0] as TherapistClientDetailsModel;
+
+      moodHistory = results[1] as List<TherapistMoodEntryModel>;
+
+      moodTrend = results[2] as TherapistMoodTrendModel;
     } catch (error) {
       errorMessage = _cleanError(error);
     } finally {
@@ -49,9 +56,7 @@ class TherapistClientDetailsViewModel
       return;
     }
 
-    await loadClientDetails(
-      currentClient.clientId,
-    );
+    await loadClientDetails(currentClient.clientId);
   }
 
   void clearError() {
@@ -62,14 +67,8 @@ class TherapistClientDetailsViewModel
   String _cleanError(Object error) {
     return error
         .toString()
-        .replaceFirst(
-          'Exception: ',
-          '',
-        )
-        .replaceFirst(
-          'AppException: ',
-          '',
-        )
+        .replaceFirst('Exception: ', '')
+        .replaceFirst('AppException: ', '')
         .trim();
   }
 }

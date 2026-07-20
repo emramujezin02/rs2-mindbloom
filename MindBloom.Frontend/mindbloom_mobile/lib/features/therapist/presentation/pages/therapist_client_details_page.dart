@@ -3,6 +3,9 @@ import '../../../../app/di/injection.dart';
 import '../../data/models/therapist_client_appointment_model.dart';
 import '../../data/models/therapist_client_details_model.dart';
 import '../viewmodels/therapist_client_details_viewmodel.dart';
+import '../../data/models/mood_trend_point_model.dart';
+import '../../data/models/therapist_mood_entry_model.dart';
+import '../../data/models/therapist_mood_trend_model.dart';
 
 class TherapistClientDetailsPage extends StatefulWidget {
   final int clientId;
@@ -127,6 +130,13 @@ class _TherapistClientDetailsPageState
                 _ClientProfileCard(client: client),
                 const SizedBox(height: 18),
                 _StatisticsSection(client: client),
+                const SizedBox(height: 26),
+
+                _MoodTrackerSection(
+                  history: viewModel.moodHistory,
+                  trend: viewModel.moodTrend,
+                ),
+
                 const SizedBox(height: 26),
                 _buildHistoryHeader(client),
                 const SizedBox(height: 14),
@@ -689,4 +699,734 @@ class _StatisticData {
     required this.value,
     required this.icon,
   });
+}
+
+class _MoodTrackerSection extends StatelessWidget {
+  final List<TherapistMoodEntryModel> history;
+
+  final TherapistMoodTrendModel? trend;
+
+  const _MoodTrackerSection({required this.history, required this.trend});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _MoodTrackerHeader(),
+        const SizedBox(height: 14),
+        if (history.isEmpty)
+          const _EmptyMoodTrackerState()
+        else ...[
+          _MoodSummarySection(history: history, trend: trend),
+          const SizedBox(height: 14),
+          _MoodTrendCard(trend: trend),
+          const SizedBox(height: 14),
+          _MoodHistoryCard(history: history),
+          const SizedBox(height: 12),
+          const _MoodPrivacyNotice(),
+        ],
+      ],
+    );
+  }
+}
+
+class _MoodTrackerHeader extends StatelessWidget {
+  const _MoodTrackerHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Emotional Tracker',
+            style: TextStyle(
+              color: Color(0xFF40334D),
+              fontSize: 21,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        _MoodPrivacyBadge(),
+      ],
+    );
+  }
+}
+
+class _MoodPrivacyBadge extends StatelessWidget {
+  const _MoodPrivacyBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE9F5ED),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.lock_outline, size: 15, color: Color(0xFF34734A)),
+          SizedBox(width: 5),
+          Text(
+            'Protected',
+            style: TextStyle(
+              color: Color(0xFF34734A),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MoodSummarySection extends StatelessWidget {
+  final List<TherapistMoodEntryModel> history;
+
+  final TherapistMoodTrendModel? trend;
+
+  const _MoodSummarySection({required this.history, required this.trend});
+
+  @override
+  Widget build(BuildContext context) {
+    final latestEntry = history.first;
+
+    final averageMood = trend?.averageMood;
+
+    final mostFrequentEmotion = trend?.mostFrequentEmotion;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 720 ? 3 : 1;
+
+        const spacing = 12.0;
+
+        final width =
+            (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
+
+        final cards = [
+          _MoodSummaryCard(
+            icon: _moodIcon(latestEntry.mood),
+            title: 'Latest mood',
+            value: '${latestEntry.mood}/5',
+            description: _moodLabel(latestEntry.mood),
+          ),
+          _MoodSummaryCard(
+            icon: Icons.insights_outlined,
+            title: 'Average mood',
+            value: averageMood == null
+                ? '—'
+                : '${averageMood.toStringAsFixed(1)}/5',
+            description: 'Last 30 days',
+          ),
+          _MoodSummaryCard(
+            icon: Icons.favorite_outline,
+            title: 'Main emotion',
+            value: mostFrequentEmotion?.trim().isNotEmpty == true
+                ? mostFrequentEmotion!
+                : 'Not available',
+            description:
+                '${trend?.totalEntries ?? history.length} recorded entries',
+          ),
+        ];
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: cards.map((card) {
+            return SizedBox(width: width, child: card);
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+class _MoodSummaryCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final String description;
+
+  const _MoodSummaryCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(color: const Color(0xFFE6DCEF)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDE5FA),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: const Color(0xFF72559A)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Color(0xFF756D79),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF40334D),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: Color(0xFF756D79),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MoodTrendCard extends StatelessWidget {
+  final TherapistMoodTrendModel? trend;
+
+  const _MoodTrendCard({required this.trend});
+
+  @override
+  Widget build(BuildContext context) {
+    final points = trend?.points ?? <MoodTrendPointModel>[];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(color: const Color(0xFFE5DBEF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.show_chart, color: Color(0xFF72559A)),
+              SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  'Mood Trend',
+                  style: TextStyle(
+                    color: Color(0xFF40334D),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 7),
+          const Text(
+            'Average daily mood during the selected period.',
+            style: TextStyle(color: Color(0xFF756D79), height: 1.4),
+          ),
+          const SizedBox(height: 22),
+          if (points.isEmpty)
+            const SizedBox(
+              height: 170,
+              child: Center(
+                child: Text(
+                  'There is not enough data to display a mood trend.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFF756D79)),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: 210,
+              width: double.infinity,
+              child: CustomPaint(painter: _MoodTrendPainter(points: points)),
+            ),
+          if (points.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '1 – Very low',
+                  style: TextStyle(color: Color(0xFF756D79), fontSize: 12),
+                ),
+                Text(
+                  '5 – Very good',
+                  style: TextStyle(color: Color(0xFF756D79), fontSize: 12),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MoodTrendPainter extends CustomPainter {
+  final List<MoodTrendPointModel> points;
+
+  const _MoodTrendPainter({required this.points});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const leftPadding = 34.0;
+    const rightPadding = 12.0;
+    const topPadding = 12.0;
+    const bottomPadding = 28.0;
+
+    final chartWidth = size.width - leftPadding - rightPadding;
+
+    final chartHeight = size.height - topPadding - bottomPadding;
+
+    final gridPaint = Paint()
+      ..color = const Color(0xFFE9E1F0)
+      ..strokeWidth = 1;
+
+    final linePaint = Paint()
+      ..color = const Color(0xFF72559A)
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final pointPaint = Paint()
+      ..color = const Color(0xFF72559A)
+      ..style = PaintingStyle.fill;
+
+    final pointBorderPaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    for (var mood = 1; mood <= 5; mood++) {
+      final y = topPadding + chartHeight * (1 - ((mood - 1) / 4));
+
+      canvas.drawLine(
+        Offset(leftPadding, y),
+        Offset(size.width - rightPadding, y),
+        gridPaint,
+      );
+
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: mood.toString(),
+          style: const TextStyle(color: Color(0xFF756D79), fontSize: 11),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      textPainter.paint(
+        canvas,
+        Offset(leftPadding - textPainter.width - 9, y - textPainter.height / 2),
+      );
+    }
+
+    if (points.isEmpty) {
+      return;
+    }
+
+    final path = Path();
+
+    final positions = <Offset>[];
+
+    for (var index = 0; index < points.length; index++) {
+      final point = points[index];
+
+      final x = points.length == 1
+          ? leftPadding + chartWidth / 2
+          : leftPadding + chartWidth * (index / (points.length - 1));
+
+      final normalizedMood = ((point.averageMood - 1) / 4).clamp(0.0, 1.0);
+
+      final y = topPadding + chartHeight * (1 - normalizedMood);
+
+      final position = Offset(x, y);
+
+      positions.add(position);
+
+      if (index == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    if (positions.length > 1) {
+      canvas.drawPath(path, linePaint);
+    }
+
+    for (final position in positions) {
+      canvas.drawCircle(position, 6, pointPaint);
+
+      canvas.drawCircle(position, 6, pointBorderPaint);
+    }
+
+    final firstDate = points.first.dateUtc.toLocal();
+
+    final lastDate = points.last.dateUtc.toLocal();
+
+    _paintDate(
+      canvas,
+      _formatChartDate(firstDate),
+      leftPadding,
+      size.height - bottomPadding + 8,
+      TextAlign.left,
+    );
+
+    if (points.length > 1) {
+      _paintDate(
+        canvas,
+        _formatChartDate(lastDate),
+        size.width - rightPadding,
+        size.height - bottomPadding + 8,
+        TextAlign.right,
+      );
+    }
+  }
+
+  void _paintDate(
+    Canvas canvas,
+    String value,
+    double x,
+    double y,
+    TextAlign alignment,
+  ) {
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: value,
+        style: const TextStyle(color: Color(0xFF756D79), fontSize: 11),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: alignment,
+    )..layout();
+
+    final offsetX = alignment == TextAlign.right ? x - textPainter.width : x;
+
+    textPainter.paint(canvas, Offset(offsetX, y));
+  }
+
+  String _formatChartDate(DateTime value) {
+    return '${value.day.toString().padLeft(2, '0')}.'
+        '${value.month.toString().padLeft(2, '0')}.';
+  }
+
+  @override
+  bool shouldRepaint(covariant _MoodTrendPainter oldDelegate) {
+    return oldDelegate.points != points;
+  }
+}
+
+class _MoodHistoryCard extends StatelessWidget {
+  final List<TherapistMoodEntryModel> history;
+
+  const _MoodHistoryCard({required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleEntries = history.take(10).toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(color: const Color(0xFFE5DBEF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.history_outlined, color: Color(0xFF72559A)),
+              const SizedBox(width: 9),
+              const Expanded(
+                child: Text(
+                  'Mood History',
+                  style: TextStyle(
+                    color: Color(0xFF40334D),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE5FA),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Text(
+                  '${history.length} entries',
+                  style: const TextStyle(
+                    color: Color(0xFF72559A),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          ...visibleEntries.asMap().entries.map((item) {
+            final index = item.key;
+            final entry = item.value;
+
+            return Column(
+              children: [
+                _MoodHistoryItem(entry: entry),
+                if (index < visibleEntries.length - 1)
+                  const Divider(height: 25, color: Color(0xFFE9E1F0)),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _MoodHistoryItem extends StatelessWidget {
+  final TherapistMoodEntryModel entry;
+
+  const _MoodHistoryItem({required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    final date = entry.createdAtUtc.toLocal();
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF4EEFA),
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Icon(_moodIcon(entry.mood), color: const Color(0xFF72559A)),
+        ),
+        const SizedBox(width: 13),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      entry.emotion.trim().isEmpty
+                          ? 'Emotion not specified'
+                          : entry.emotion,
+                      style: const TextStyle(
+                        color: Color(0xFF40334D),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  _MoodScoreBadge(mood: entry.mood),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${_formatMoodDate(date)} at ${_formatMoodTime(date)}',
+                style: const TextStyle(color: Color(0xFF756D79), fontSize: 13),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _moodLabel(entry.mood),
+                style: const TextStyle(
+                  color: Color(0xFF72559A),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MoodScoreBadge extends StatelessWidget {
+  final int mood;
+
+  const _MoodScoreBadge({required this.mood});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDE5FA),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Text(
+        '$mood/5',
+        style: const TextStyle(
+          color: Color(0xFF72559A),
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _MoodPrivacyNotice extends StatelessWidget {
+  const _MoodPrivacyNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F7F3),
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: const Color(0xFFD6E8DB)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.privacy_tip_outlined, color: Color(0xFF34734A)),
+          SizedBox(width: 11),
+          Expanded(
+            child: Text(
+              'Only mood scores and emotions are displayed. Private journal notes are not shared with the therapist.',
+              style: TextStyle(color: Color(0xFF42634C), height: 1.45),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyMoodTrackerState extends StatelessWidget {
+  const _EmptyMoodTrackerState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 45),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE5DBEF)),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.mood_outlined, size: 62, color: Color(0xFF8063A4)),
+          SizedBox(height: 16),
+          Text(
+            'No emotional tracker entries',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF40334D),
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          SizedBox(height: 9),
+          Text(
+            'This client has not recorded any mood or emotion entries yet.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Color(0xFF756D79), height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+IconData _moodIcon(int mood) {
+  switch (mood) {
+    case 1:
+      return Icons.sentiment_very_dissatisfied;
+    case 2:
+      return Icons.sentiment_dissatisfied;
+    case 3:
+      return Icons.sentiment_neutral;
+    case 4:
+      return Icons.sentiment_satisfied;
+    case 5:
+      return Icons.sentiment_very_satisfied;
+    default:
+      return Icons.mood_outlined;
+  }
+}
+
+String _moodLabel(int mood) {
+  switch (mood) {
+    case 1:
+      return 'Very low';
+    case 2:
+      return 'Low';
+    case 3:
+      return 'Neutral';
+    case 4:
+      return 'Good';
+    case 5:
+      return 'Very good';
+    default:
+      return 'Unknown';
+  }
+}
+
+String _formatMoodDate(DateTime date) {
+  return '${date.day.toString().padLeft(2, '0')}.'
+      '${date.month.toString().padLeft(2, '0')}.'
+      '${date.year}.';
+}
+
+String _formatMoodTime(DateTime date) {
+  return '${date.hour.toString().padLeft(2, '0')}:'
+      '${date.minute.toString().padLeft(2, '0')}';
 }

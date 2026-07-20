@@ -10,6 +10,8 @@ import '../models/create_therapist_availability_request.dart';
 import '../models/therapist_profile_image_model.dart';
 import '../models/therapist_profile_model.dart';
 import '../models/update_therapist_profile_request.dart';
+import '../models/therapist_mood_entry_model.dart';
+import '../models/therapist_mood_trend_model.dart';
 
 class TherapistApiService {
   final ApiClient apiClient;
@@ -154,5 +156,32 @@ class TherapistApiService {
 
   Future<void> deleteTherapistAvailability(int availabilityId) async {
     await apiClient.delete('/Therapists/availability/$availabilityId');
+  }
+
+  Future<List<TherapistMoodEntryModel>> getClientMoodHistory(
+    int clientId,
+  ) async {
+    final response = await apiClient.get(
+      '/JournalEntries/clients/$clientId/history',
+    );
+
+    final items = response['items'] as List? ?? [];
+
+    return items
+        .whereType<Map>()
+        .map(
+          (e) => TherapistMoodEntryModel.fromJson(Map<String, dynamic>.from(e)),
+        )
+        .toList();
+  }
+
+  Future<TherapistMoodTrendModel> getClientMoodTrend(int clientId) async {
+    final response = await apiClient.get(
+      '/JournalEntries/clients/$clientId/trend',
+    );
+
+    return TherapistMoodTrendModel.fromJson(
+      Map<String, dynamic>.from(response),
+    );
   }
 }

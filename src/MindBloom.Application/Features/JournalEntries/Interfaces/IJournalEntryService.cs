@@ -27,4 +27,17 @@ public interface IJournalEntryService
     Task DeleteAsync(
         int clientUserId,
         int journalEntryId);
+
+    Task<PagedResponse<TherapistMoodEntryResponseDto>>
+        GetClientHistoryForTherapistAsync(
+            int therapistUserId,
+            int clientId,
+            int pageNumber,
+            int pageSize);
+
+    Task<TherapistMoodTrendResponseDto>
+        GetClientTrendForTherapistAsync(
+            int therapistUserId,
+            int clientId,
+            int days);
 }

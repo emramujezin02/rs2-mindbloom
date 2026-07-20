@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.JournalEntries.DTOs;
 using MindBloom.Application.Features.JournalEntries.Interfaces;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Client")]
+[Authorize]
 public class JournalEntriesController
     : ControllerBase
 {
@@ -22,6 +23,8 @@ public class JournalEntriesController
             journalEntryService;
     }
 
+    [Authorize(
+        Roles = RoleConstants.Client)]
     [HttpPost]
     public async Task<IActionResult> Create(
         CreateJournalEntryDto request)
@@ -38,6 +41,8 @@ public class JournalEntriesController
         return Ok(result);
     }
 
+    [Authorize(
+        Roles = RoleConstants.Client)]
     [HttpGet("mine")]
     public async Task<IActionResult> Mine(
         [FromQuery] int pageNumber = 1,
@@ -56,7 +61,9 @@ public class JournalEntriesController
         return Ok(result);
     }
 
-    [HttpGet("{id}")]
+    [Authorize(
+        Roles = RoleConstants.Client)]
+    [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(
         int id)
     {
@@ -72,7 +79,9 @@ public class JournalEntriesController
         return Ok(result);
     }
 
-    [HttpPut("{id}")]
+    [Authorize(
+        Roles = RoleConstants.Client)]
+    [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
         int id,
         UpdateJournalEntryDto request)
@@ -90,7 +99,9 @@ public class JournalEntriesController
         return Ok(result);
     }
 
-    [HttpDelete("{id}")]
+    [Authorize(
+        Roles = RoleConstants.Client)]
+    [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(
         int id)
     {
@@ -107,6 +118,53 @@ public class JournalEntriesController
             message =
                 "Journal entry deleted successfully."
         });
+    }
+
+    [Authorize(
+        Roles = RoleConstants.Therapist)]
+    [HttpGet("clients/{clientId:int}/history")]
+    public async Task<IActionResult>
+        GetClientHistory(
+            int clientId,
+            [FromQuery]
+            int pageNumber = 1,
+            [FromQuery]
+            int pageSize = 10)
+    {
+        var therapistUserId =
+            GetAuthenticatedUserId();
+
+        var result =
+            await _journalEntryService
+                .GetClientHistoryForTherapistAsync(
+                    therapistUserId,
+                    clientId,
+                    pageNumber,
+                    pageSize);
+
+        return Ok(result);
+    }
+
+    [Authorize(
+        Roles = RoleConstants.Therapist)]
+    [HttpGet("clients/{clientId:int}/trend")]
+    public async Task<IActionResult>
+        GetClientTrend(
+            int clientId,
+            [FromQuery]
+            int days = 30)
+    {
+        var therapistUserId =
+            GetAuthenticatedUserId();
+
+        var result =
+            await _journalEntryService
+                .GetClientTrendForTherapistAsync(
+                    therapistUserId,
+                    clientId,
+                    days);
+
+        return Ok(result);
     }
 
     private int GetAuthenticatedUserId()
