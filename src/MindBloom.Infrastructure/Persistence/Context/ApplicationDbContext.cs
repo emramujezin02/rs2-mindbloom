@@ -627,6 +627,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     .IsRequired()
     .HasMaxLength(150);
 
+        builder.Entity<Therapist>()
+    .Property(x => x.Location)
+    .HasMaxLength(200);
+
+        builder.Entity<Therapist>()
+            .Property(x => x.Languages)
+            .HasMaxLength(1000);
     }
 
     public override async Task<int> SaveChangesAsync(

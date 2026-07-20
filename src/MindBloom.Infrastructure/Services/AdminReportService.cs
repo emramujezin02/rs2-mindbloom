@@ -188,8 +188,7 @@ public class AdminReportService : IAdminReportService
         var therapists = await _context.Therapists
             .AsNoTracking()
             .Where(x =>
-                !x.IsDeleted &&
-                !x.User.IsDeleted)
+                !x.IsDeleted)
             .Select(x => new TherapistReportRecord
             {
                 TherapistId = x.Id,

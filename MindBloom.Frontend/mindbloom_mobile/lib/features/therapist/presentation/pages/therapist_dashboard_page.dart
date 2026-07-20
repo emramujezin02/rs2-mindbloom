@@ -46,10 +46,8 @@ class _TherapistDashboardPageState extends State<TherapistDashboardPage> {
   }
 
   void _openClients() {
-  Navigator.of(context).pushNamed(
-    AppRouter.therapistClients,
-  );
-}
+    Navigator.of(context).pushNamed(AppRouter.therapistClients);
+  }
 
   void _openChat() {
     Navigator.of(context).pushNamed(AppRouter.chats);
@@ -59,9 +57,9 @@ class _TherapistDashboardPageState extends State<TherapistDashboardPage> {
     Navigator.of(context).pushNamed(AppRouter.notifications);
   }
 
-  void _openProfile() {
-    Navigator.of(context).pushNamed(AppRouter.profile);
-  }
+  /* void _openProfile() {
+    Navigator.of(context).pushNamed(AppRouter.therapistProfile);
+  }*/
 
   void _openReviews() {
     Navigator.of(context).pushNamed(AppRouter.myReviews);
@@ -89,7 +87,7 @@ class _TherapistDashboardPageState extends State<TherapistDashboardPage> {
           ),
           IconButton(
             tooltip: 'Profile',
-            onPressed: _openProfile,
+            onPressed: () {},
             icon: const Icon(Icons.person_outline),
           ),
         ],
@@ -183,10 +181,11 @@ class _TherapistDashboardPageState extends State<TherapistDashboardPage> {
                         ),
                         const SizedBox(height: 20),
                         _ClientsSection(
-  totalAppointments: dashboard.totalAppointments,
-  completedAppointments: dashboard.completedAppointments,
-  onOpenClients: _openClients,
-),
+                          totalAppointments: dashboard.totalAppointments,
+                          completedAppointments:
+                              dashboard.completedAppointments,
+                          onOpenClients: _openClients,
+                        ),
                       ],
                     );
                   },
@@ -201,7 +200,7 @@ class _TherapistDashboardPageState extends State<TherapistDashboardPage> {
                   onAppointments: _openAppointments,
                   onChat: _openChat,
                   onNotifications: _openNotifications,
-                  onProfile: _openProfile,
+                  onProfile: () {},
                   onReviews: _openReviews,
                 ),
                 const SizedBox(height: 30),

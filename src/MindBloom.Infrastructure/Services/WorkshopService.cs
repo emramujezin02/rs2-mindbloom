@@ -7,7 +7,7 @@ using MindBloom.Application.Features.Workshops.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
-using MindBloom.Shared.Exceptions;
+//using MindBloom.Shared.Exceptions;
 using MindBloom.Application.Common.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;

@@ -313,31 +313,378 @@ public class TherapistService : ITherapistService
         return therapists;
     }
 
+    public async Task<TherapistProfileDto> GetProfileAsync(
+    int therapistUserId)
+    {
+        var therapist =
+            await _context.Therapists
+                .AsNoTracking()
+                .Include(x => x.User)
+                .Include(x => x.Availabilities)
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist profile not found.");
+        }
+
+        var languages =
+            string.IsNullOrWhiteSpace(therapist.Languages)
+                ? new List<string>()
+                : therapist.Languages
+                    .Split(
+                        ',',
+                        StringSplitOptions.RemoveEmptyEntries |
+                        StringSplitOptions.TrimEntries)
+                    .Where(x =>
+                        !string.IsNullOrWhiteSpace(x))
+                    .Distinct(
+                        StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+        return new TherapistProfileDto
+        {
+            TherapistId =
+                therapist.Id,
+
+            UserId =
+                therapist.UserId,
+
+            FirstName =
+                therapist.User.FirstName
+                ?? string.Empty,
+
+            LastName =
+                therapist.User.LastName
+                ?? string.Empty,
+
+            FullName =
+                string.Join(
+                    " ",
+                    new[]
+                    {
+                    therapist.User.FirstName,
+                    therapist.User.LastName
+                    }
+                    .Where(x =>
+                        !string.IsNullOrWhiteSpace(x))),
+
+            Email =
+                therapist.User.Email
+                ?? string.Empty,
+
+            PhoneNumber =
+                therapist.User.PhoneNumber,
+
+            Biography =
+                therapist.Biography,
+
+            Specialization =
+                therapist.Specialization,
+
+            ExperienceYears =
+                therapist.ExperienceYears,
+
+            HourlyRate =
+                therapist.HourlyRate,
+
+            Location =
+                therapist.Location
+                ?? string.Empty,
+
+            Languages =
+                languages,
+
+            ProfileImageUrl =
+                therapist.User.ProfileImageUrl
+                ?? therapist.ProfileImagePath,
+
+            VerificationStatus =
+                therapist.VerificationStatus
+                    .ToString(),
+
+            Availabilities =
+                therapist.Availabilities
+                    .OrderBy(x =>
+                        x.DayOfWeek)
+                    .ThenBy(x =>
+                        x.StartTime)
+                    .Select(x =>
+                        new AvailabilityResponseDto
+                        {
+                            Id =
+                                x.Id,
+
+                            DayOfWeek =
+                                x.DayOfWeek,
+
+                            StartTime =
+                                x.StartTime,
+
+                            EndTime =
+                                x.EndTime
+                        })
+                    .ToList()
+        };
+    }
+
     public async Task UpdateProfileAsync(
-    int therapistUserId,
-    UpdateTherapistProfileDto request)
+     int therapistUserId,
+     UpdateTherapistProfileDto request)
     {
         var therapist =
             await _context.Therapists
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == therapistUserId);
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
 
         if (therapist == null)
         {
-            throw new NotFoundException("Therapist not found.");
+            throw new NotFoundException(
+                "Therapist profile not found.");
         }
 
-        therapist.Biography = request.Biography;
+        var biography =
+            request.Biography.Trim();
 
-        therapist.Specialization = request.Specialization;
+        var specialization =
+            request.Specialization.Trim();
 
-        therapist.ExperienceYears = request.ExperienceYears;
+        var location =
+            request.Location.Trim();
 
-        Console.WriteLine(therapist.Biography);
-        Console.WriteLine(therapist.Specialization);
-        Console.WriteLine(therapist.ExperienceYears);
+        var languages =
+            request.Languages
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(x))
+                .Select(x =>
+                    x.Trim())
+                .Distinct(
+                    StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+        if (string.IsNullOrWhiteSpace(biography))
+        {
+            throw new ArgumentException(
+                "Biography is required.");
+        }
+
+        if (biography.Length > 2000)
+        {
+            throw new ArgumentException(
+                "Biography cannot contain more than 2000 characters.");
+        }
+
+        if (string.IsNullOrWhiteSpace(specialization))
+        {
+            throw new ArgumentException(
+                "Specialization is required.");
+        }
+
+        if (specialization.Length > 150)
+        {
+            throw new ArgumentException(
+                "Specialization cannot contain more than 150 characters.");
+        }
+
+        if (request.ExperienceYears < 0 ||
+            request.ExperienceYears > 70)
+        {
+            throw new ArgumentException(
+                "Experience must be between 0 and 70 years.");
+        }
+
+        if (request.HourlyRate <= 0 ||
+            request.HourlyRate > 10000)
+        {
+            throw new ArgumentException(
+                "Hourly rate must be greater than zero and cannot exceed 10000.");
+        }
+
+        if (string.IsNullOrWhiteSpace(location))
+        {
+            throw new ArgumentException(
+                "Location is required.");
+        }
+
+        if (location.Length > 200)
+        {
+            throw new ArgumentException(
+                "Location cannot contain more than 200 characters.");
+        }
+
+        if (languages.Count == 0)
+        {
+            throw new ArgumentException(
+                "At least one language is required.");
+        }
+
+        if (languages.Any(x =>
+                x.Length > 100))
+        {
+            throw new ArgumentException(
+                "A language cannot contain more than 100 characters.");
+        }
+
+        var serializedLanguages =
+            string.Join(",", languages);
+
+        if (serializedLanguages.Length > 1000)
+        {
+            throw new ArgumentException(
+                "The complete language list is too long.");
+        }
+
+        therapist.Biography =
+            biography;
+
+        therapist.Specialization =
+            specialization;
+
+        therapist.ExperienceYears =
+            request.ExperienceYears;
+
+        therapist.HourlyRate =
+            request.HourlyRate;
+
+        therapist.Location =
+            location;
+
+        therapist.Languages =
+            serializedLanguages;
 
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<TherapistProfileImageDto>
+    UploadProfileImageAsync(
+        int therapistUserId,
+        IFormFile file)
+    {
+        var therapist =
+            await _context.Therapists
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist profile not found.");
+        }
+
+        if (file == null || file.Length == 0)
+        {
+            throw new ArgumentException(
+                "Profile image is required.");
+        }
+
+        const long maximumFileSize =
+            5 * 1024 * 1024;
+
+        if (file.Length > maximumFileSize)
+        {
+            throw new ArgumentException(
+                "Profile image cannot be larger than 5 MB.");
+        }
+
+        var allowedContentTypes =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+            };
+
+        if (!allowedContentTypes.Contains(
+                file.ContentType))
+        {
+            throw new ArgumentException(
+                "Only JPG, PNG and WEBP images are allowed.");
+        }
+
+        var extension =
+            Path.GetExtension(file.FileName)
+                .ToLowerInvariant();
+
+        var allowedExtensions =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+            };
+
+        if (!allowedExtensions.Contains(extension))
+        {
+            throw new ArgumentException(
+                "Unsupported profile image extension.");
+        }
+
+        var webRootPath =
+            _environment.WebRootPath
+            ?? Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot");
+
+        var uploadsFolder =
+            Path.Combine(
+                webRootPath,
+                "uploads",
+                "profiles",
+                "therapists");
+
+        Directory.CreateDirectory(
+            uploadsFolder);
+
+        var uniqueFileName =
+            $"{Guid.NewGuid():N}{extension}";
+
+        var physicalFilePath =
+            Path.Combine(
+                uploadsFolder,
+                uniqueFileName);
+
+        await using (var stream =
+            new FileStream(
+                physicalFilePath,
+                FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var oldImageUrl =
+            therapist.User.ProfileImageUrl
+            ?? therapist.ProfileImagePath;
+
+        var profileImageUrl =
+            $"/uploads/profiles/therapists/{uniqueFileName}";
+
+        therapist.User.ProfileImageUrl =
+            profileImageUrl;
+
+        therapist.ProfileImagePath =
+            profileImageUrl;
+
+        await _context.SaveChangesAsync();
+
+        DeleteOldProfileImage(
+            oldImageUrl,
+            profileImageUrl,
+            webRootPath);
+
+        return new TherapistProfileImageDto
+        {
+            ProfileImageUrl =
+                profileImageUrl
+        };
     }
 
     public async Task<TherapistDetailsDto>
@@ -1105,5 +1452,48 @@ public class TherapistService : ITherapistService
                         })
                     .ToList()
         };
+    }
+
+    private static void DeleteOldProfileImage(
+    string? oldImageUrl,
+    string newImageUrl,
+    string webRootPath)
+    {
+        if (string.IsNullOrWhiteSpace(
+                oldImageUrl) ||
+            string.Equals(
+                oldImageUrl,
+                newImageUrl,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        const string managedFolder =
+            "/uploads/profiles/therapists/";
+
+        if (!oldImageUrl.StartsWith(
+                managedFolder,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var relativePath =
+            oldImageUrl
+                .TrimStart('/')
+                .Replace(
+                    '/',
+                    Path.DirectorySeparatorChar);
+
+        var physicalPath =
+            Path.Combine(
+                webRootPath,
+                relativePath);
+
+        if (File.Exists(physicalPath))
+        {
+            File.Delete(physicalPath);
+        }
     }
 }

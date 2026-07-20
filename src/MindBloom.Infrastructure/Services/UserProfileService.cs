@@ -6,7 +6,7 @@ using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Users.DTOs;
 using MindBloom.Application.Features.Users.Interfaces;
 using MindBloom.Domain.Entities;
-using MindBloom.Shared.Exceptions;
+//using MindBloom.Shared.Exceptions;
 
 namespace MindBloom.Infrastructure.Services;
 

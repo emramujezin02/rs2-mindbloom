@@ -47,4 +47,11 @@ public interface ITherapistService
         GetClientDetailsAsync(
             int therapistUserId,
             int clientId);
+
+    Task<TherapistProfileDto> GetProfileAsync(
+    int therapistUserId);
+
+    Task<TherapistProfileImageDto> UploadProfileImageAsync(
+        int therapistUserId,
+        IFormFile file);
 }

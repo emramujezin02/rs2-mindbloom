@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
+import '../../../therapist/data/models/therapist_profile_model.dart';
+import '../../../therapist/presentation/viewmodels/therapist_profile_viewmodel.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/constants/api_constants.dart';
@@ -15,7 +16,8 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final ProfileViewModel _viewModel = AppInjection.createProfileViewModel();
-
+  final TherapistProfileViewModel _therapistProfileViewModel =
+      AppInjection.createTherapistProfileViewModel();
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
@@ -23,12 +25,20 @@ class _ProfilePageState extends State<ProfilePage> {
     super.initState();
 
     _viewModel.addListener(_refresh);
+    _therapistProfileViewModel.addListener(_refresh);
+
     _viewModel.loadProfile();
+    _therapistProfileViewModel.loadProfile();
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
+    _therapistProfileViewModel.removeListener(_refresh);
+
+    _viewModel.dispose();
+    _therapistProfileViewModel.dispose();
+
     super.dispose();
   }
 
@@ -49,6 +59,26 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (result == true) {
       await _viewModel.loadProfile();
+    }
+  }
+
+  Future<void> _openTherapistEditProfile() async {
+    final therapistProfile = _therapistProfileViewModel.profile;
+
+    if (therapistProfile == null) {
+      return;
+    }
+
+    final result = await Navigator.of(
+      context,
+    ).pushNamed(AppRouter.therapistEditProfile, arguments: therapistProfile);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (result == true) {
+      await _therapistProfileViewModel.loadProfile();
     }
   }
 
@@ -137,7 +167,12 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _viewModel.loadProfile,
+        onRefresh: () async {
+          await Future.wait([
+            _viewModel.loadProfile(),
+            _therapistProfileViewModel.loadProfile(),
+          ]);
+        },
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
@@ -217,6 +252,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
 
+            if (_therapistProfileViewModel.profile != null) ...[
+              const SizedBox(height: 20),
+
+              _buildTherapistProfileSection(
+                _therapistProfileViewModel.profile!,
+              ),
+            ],
+
             if (_viewModel.error != null) ...[
               const SizedBox(height: 12),
               Text(
@@ -266,6 +309,148 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTherapistProfileSection(TherapistProfileModel therapistProfile) {
+    final languages = therapistProfile.languages
+        .map((language) => language.trim())
+        .where((language) => language.isNotEmpty)
+        .toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE7DDF0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Professional profile',
+                  style: TextStyle(
+                    color: Color(0xFF40334D),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Edit professional profile',
+                onPressed: _openTherapistEditProfile,
+                icon: const Icon(Icons.edit_outlined),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          _buildTherapistInfoRow(
+            icon: Icons.psychology_outlined,
+            title: 'Specialization',
+            value: therapistProfile.specialization,
+          ),
+
+          _buildTherapistInfoRow(
+            icon: Icons.work_outline,
+            title: 'Experience',
+            value: '${therapistProfile.experienceYears} years',
+          ),
+
+          _buildTherapistInfoRow(
+            icon: Icons.payments_outlined,
+            title: 'Hourly rate',
+            value: '${therapistProfile.hourlyRate.toStringAsFixed(2)} KM',
+          ),
+
+          _buildTherapistInfoRow(
+            icon: Icons.location_on_outlined,
+            title: 'Location',
+            value: therapistProfile.location,
+          ),
+
+          if (therapistProfile.biography.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Biography',
+              style: TextStyle(
+                color: Color(0xFF40334D),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              therapistProfile.biography.trim(),
+              style: const TextStyle(color: Color(0xFF68616D), height: 1.5),
+            ),
+          ],
+
+          if (languages.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            const Text(
+              'Languages',
+              style: TextStyle(
+                color: Color(0xFF40334D),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: languages
+                  .map((language) => Chip(label: Text(language)))
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTherapistInfoRow({
+    required IconData icon,
+    required String title,
+    required String? value,
+  }) {
+    final normalizedValue = value?.trim();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFF72559A)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Color(0xFF40334D),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  normalizedValue == null || normalizedValue.isEmpty
+                      ? 'Not added'
+                      : normalizedValue,
+                  style: const TextStyle(color: Color(0xFF756D79)),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -66,6 +66,9 @@ import '../../features/appointment/presentation/pages/therapist_appointment_deta
 import '../../features/therapist/presentation/pages/therapist_client_details_page.dart';
 import '../../features/therapist/presentation/pages/therapist_clients_page.dart';
 
+import '../../features/therapist/data/models/therapist_profile_model.dart';
+import '../../features/therapist/presentation/pages/therapist_edit_profile_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String login = '/login';
@@ -110,10 +113,9 @@ class AppRouter {
   static const String therapistAppointments = '/therapist/appointments';
   static const String therapistAppointmentDetails =
       '/therapist/appointments/details';
-static const String therapistClients =
-    '/therapist/clients';
-static const String therapistClientDetails =
-    '/therapist/clients/details';
+  static const String therapistClients = '/therapist/clients';
+  static const String therapistClientDetails = '/therapist/clients/details';
+  static const String therapistEditProfile = '/therapist/edit-profile';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -307,38 +309,40 @@ static const String therapistClientDetails =
           builder: (_) => const TherapistDashboardPage(),
         );
 
+      case therapistEditProfile:
+        final profile = settings.arguments as TherapistProfileModel;
+
+        return MaterialPageRoute(
+          builder: (_) => TherapistEditProfilePage(profile: profile),
+          settings: settings,
+        );
+
       case about:
         return MaterialPageRoute(builder: (_) => const AboutPage());
 
-case therapistClients:
-  return MaterialPageRoute(
-    builder: (_) => const TherapistClientsPage(),
-    settings: settings,
-  );
+      case therapistClients:
+        return MaterialPageRoute(
+          builder: (_) => const TherapistClientsPage(),
+          settings: settings,
+        );
 
-case therapistClientDetails:
-  final clientId = settings.arguments;
+      case therapistClientDetails:
+        final clientId = settings.arguments;
 
-  if (clientId is! int) {
-    return MaterialPageRoute(
-      builder: (_) => const Scaffold(
-        body: Center(
-          child: Text(
-            'Client identifier is missing.',
-          ),
-        ),
-      ),
-      settings: settings,
-    );
-  }
+        if (clientId is! int) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(child: Text('Client identifier is missing.')),
+            ),
+            settings: settings,
+          );
+        }
 
-  return MaterialPageRoute(
-    builder: (_) => TherapistClientDetailsPage(
-      clientId: clientId,
-    ),
-    settings: settings,
-  );
-  
+        return MaterialPageRoute(
+          builder: (_) => TherapistClientDetailsPage(clientId: clientId),
+          settings: settings,
+        );
+
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
 

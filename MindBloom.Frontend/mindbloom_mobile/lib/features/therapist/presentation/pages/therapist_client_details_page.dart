@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../../app/di/injection.dart';
 import '../../data/models/therapist_client_appointment_model.dart';
 import '../../data/models/therapist_client_details_model.dart';
@@ -8,10 +7,7 @@ import '../viewmodels/therapist_client_details_viewmodel.dart';
 class TherapistClientDetailsPage extends StatefulWidget {
   final int clientId;
 
-  const TherapistClientDetailsPage({
-    super.key,
-    required this.clientId,
-  });
+  const TherapistClientDetailsPage({super.key, required this.clientId});
 
   @override
   State<TherapistClientDetailsPage> createState() =>
@@ -26,8 +22,7 @@ class _TherapistClientDetailsPageState
   void initState() {
     super.initState();
 
-    viewModel =
-        AppInjection.createTherapistClientDetailsViewModel();
+    viewModel = AppInjection.createTherapistClientDetailsViewModel();
 
     viewModel.addListener(_onViewModelChanged);
 
@@ -77,10 +72,7 @@ class _TherapistClientDetailsPageState
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: _buildBody(),
-      ),
+      body: RefreshIndicator(onRefresh: _refresh, child: _buildBody()),
     );
   }
 
@@ -90,24 +82,18 @@ class _TherapistClientDetailsPageState
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
           SizedBox(height: 240),
-          Center(
-            child: CircularProgressIndicator(),
-          ),
+          Center(child: CircularProgressIndicator()),
         ],
       );
     }
 
-    if (viewModel.errorMessage != null &&
-        viewModel.client == null) {
+    if (viewModel.errorMessage != null && viewModel.client == null) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(24),
         children: [
           const SizedBox(height: 130),
-          _ErrorState(
-            message: viewModel.errorMessage!,
-            onRetry: _refresh,
-          ),
+          _ErrorState(message: viewModel.errorMessage!, onRetry: _refresh),
         ],
       );
     }
@@ -134,37 +120,25 @@ class _TherapistClientDetailsPageState
       children: [
         Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 1000,
-            ),
+            constraints: const BoxConstraints(maxWidth: 1000),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ClientProfileCard(
-                  client: client,
-                ),
+                _ClientProfileCard(client: client),
                 const SizedBox(height: 18),
-                _StatisticsSection(
-                  client: client,
-                ),
+                _StatisticsSection(client: client),
                 const SizedBox(height: 26),
                 _buildHistoryHeader(client),
                 const SizedBox(height: 14),
-                if (client.appointments.isEmpty)
+                if (client.appointmentHistory.isEmpty)
                   const _EmptyHistoryState()
                 else
-                  ...client.appointments.map(
-                    (appointment) {
-                      return Padding(
-                        padding: const EdgeInsets.only(
-                          bottom: 14,
-                        ),
-                        child: _AppointmentHistoryCard(
-                          appointment: appointment,
-                        ),
-                      );
-                    },
-                  ),
+                  ...client.appointmentHistory.map((appointment) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _AppointmentHistoryCard(appointment: appointment),
+                    );
+                  }),
               ],
             ),
           ),
@@ -173,10 +147,8 @@ class _TherapistClientDetailsPageState
     );
   }
 
-  Widget _buildHistoryHeader(
-    TherapistClientDetailsModel client,
-  ) {
-    final appointmentCount = client.appointments.length;
+  Widget _buildHistoryHeader(TherapistClientDetailsModel client) {
+    final appointmentCount = client.appointmentHistory.length;
 
     final countText = appointmentCount == 1
         ? '1 appointment'
@@ -195,10 +167,7 @@ class _TherapistClientDetailsPageState
           ),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 7,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
             color: const Color(0xFFEDE5FA),
             borderRadius: BorderRadius.circular(30),
@@ -220,9 +189,7 @@ class _TherapistClientDetailsPageState
 class _ClientProfileCard extends StatelessWidget {
   final TherapistClientDetailsModel client;
 
-  const _ClientProfileCard({
-    required this.client,
-  });
+  const _ClientProfileCard({required this.client});
 
   @override
   Widget build(BuildContext context) {
@@ -232,9 +199,7 @@ class _ClientProfileCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: const Color(0xFFE5DBEF),
-        ),
+        border: Border.all(color: const Color(0xFFE5DBEF)),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -244,16 +209,9 @@ class _ClientProfileCard extends StatelessWidget {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ClientAvatar(
-                  fullName: client.fullName,
-                  size: 76,
-                ),
+                _ClientAvatar(fullName: client.fullName, size: 76),
                 const SizedBox(width: 20),
-                Expanded(
-                  child: _ClientInformation(
-                    client: client,
-                  ),
-                ),
+                Expanded(child: _ClientInformation(client: client)),
               ],
             );
           }
@@ -261,14 +219,9 @@ class _ClientProfileCard extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _ClientAvatar(
-                fullName: client.fullName,
-                size: 70,
-              ),
+              _ClientAvatar(fullName: client.fullName, size: 70),
               const SizedBox(height: 18),
-              _ClientInformation(
-                client: client,
-              ),
+              _ClientInformation(client: client),
             ],
           );
         },
@@ -280,9 +233,7 @@ class _ClientProfileCard extends StatelessWidget {
 class _ClientInformation extends StatelessWidget {
   final TherapistClientDetailsModel client;
 
-  const _ClientInformation({
-    required this.client,
-  });
+  const _ClientInformation({required this.client});
 
   @override
   Widget build(BuildContext context) {
@@ -298,10 +249,7 @@ class _ClientInformation extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 15),
-        _InformationRow(
-          icon: Icons.email_outlined,
-          value: client.email,
-        ),
+        _InformationRow(icon: Icons.email_outlined, value: client.email),
         if (client.phoneNumber != null &&
             client.phoneNumber!.trim().isNotEmpty) ...[
           const SizedBox(height: 11),
@@ -310,22 +258,8 @@ class _ClientInformation extends StatelessWidget {
             value: client.phoneNumber!,
           ),
         ],
-        if (client.dateOfBirth != null) ...[
-          const SizedBox(height: 11),
-          _InformationRow(
-            icon: Icons.cake_outlined,
-            value:
-                'Date of birth: ${_formatDate(client.dateOfBirth!.toLocal())}',
-          ),
-        ],
       ],
     );
-  }
-
-  static String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}.'
-        '${date.month.toString().padLeft(2, '0')}.'
-        '${date.year}.';
   }
 }
 
@@ -333,10 +267,7 @@ class _ClientAvatar extends StatelessWidget {
   final String fullName;
   final double size;
 
-  const _ClientAvatar({
-    required this.fullName,
-    required this.size,
-  });
+  const _ClientAvatar({required this.fullName, required this.size});
 
   @override
   Widget build(BuildContext context) {
@@ -381,9 +312,7 @@ class _ClientAvatar extends StatelessWidget {
 class _StatisticsSection extends StatelessWidget {
   final TherapistClientDetailsModel client;
 
-  const _StatisticsSection({
-    required this.client,
-  });
+  const _StatisticsSection({required this.client});
 
   @override
   Widget build(BuildContext context) {
@@ -400,7 +329,7 @@ class _StatisticsSection extends StatelessWidget {
       ),
       _StatisticData(
         label: 'Upcoming',
-        value: client.upcomingAppointments,
+        value: client.pendingAppointments + client.acceptedAppointments,
         icon: Icons.upcoming_outlined,
       ),
     ];
@@ -411,8 +340,7 @@ class _StatisticsSection extends StatelessWidget {
         const spacing = 12.0;
 
         final width =
-            (constraints.maxWidth - ((columns - 1) * spacing)) /
-                columns;
+            (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
 
         return Wrap(
           spacing: spacing,
@@ -420,9 +348,7 @@ class _StatisticsSection extends StatelessWidget {
           children: statistics.map((statistic) {
             return SizedBox(
               width: width,
-              child: _StatisticCard(
-                data: statistic,
-              ),
+              child: _StatisticCard(data: statistic),
             );
           }).toList(),
         );
@@ -434,9 +360,7 @@ class _StatisticsSection extends StatelessWidget {
 class _StatisticCard extends StatelessWidget {
   final _StatisticData data;
 
-  const _StatisticCard({
-    required this.data,
-  });
+  const _StatisticCard({required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -445,9 +369,7 @@ class _StatisticCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(19),
-        border: Border.all(
-          color: const Color(0xFFE6DCEF),
-        ),
+        border: Border.all(color: const Color(0xFFE6DCEF)),
       ),
       child: Row(
         children: [
@@ -458,10 +380,7 @@ class _StatisticCard extends StatelessWidget {
               color: const Color(0xFFEDE5FA),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(
-              data.icon,
-              color: const Color(0xFF72559A),
-            ),
+            child: Icon(data.icon, color: const Color(0xFF72559A)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -496,9 +415,7 @@ class _StatisticCard extends StatelessWidget {
 class _AppointmentHistoryCard extends StatelessWidget {
   final TherapistClientAppointmentModel appointment;
 
-  const _AppointmentHistoryCard({
-    required this.appointment,
-  });
+  const _AppointmentHistoryCard({required this.appointment});
 
   @override
   Widget build(BuildContext context) {
@@ -511,9 +428,7 @@ class _AppointmentHistoryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(21),
-        border: Border.all(
-          color: const Color(0xFFE5DBEF),
-        ),
+        border: Border.all(color: const Color(0xFFE5DBEF)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -549,17 +464,13 @@ class _AppointmentHistoryCard extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                       '${_formatTime(start)} – ${_formatTime(end)}',
-                      style: const TextStyle(
-                        color: Color(0xFF756D79),
-                      ),
+                      style: const TextStyle(color: Color(0xFF756D79)),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 10),
-              _AppointmentStatusBadge(
-                status: appointment.status,
-              ),
+              _AppointmentStatusBadge(status: appointment.status),
             ],
           ),
           if (appointment.type.trim().isNotEmpty) ...[
@@ -569,12 +480,11 @@ class _AppointmentHistoryCard extends StatelessWidget {
               value: appointment.type,
             ),
           ],
-          if (appointment.notes != null &&
-              appointment.notes!.trim().isNotEmpty) ...[
+          if (appointment.hasNote) ...[
             const SizedBox(height: 11),
-            _InformationRow(
+            const _InformationRow(
               icon: Icons.notes_outlined,
-              value: appointment.notes!,
+              value: 'A therapist note exists for this appointment.',
             ),
           ],
         ],
@@ -597,9 +507,7 @@ class _AppointmentHistoryCard extends StatelessWidget {
 class _AppointmentStatusBadge extends StatelessWidget {
   final String status;
 
-  const _AppointmentStatusBadge({
-    required this.status,
-  });
+  const _AppointmentStatusBadge({required this.status});
 
   @override
   Widget build(BuildContext context) {
@@ -641,10 +549,7 @@ class _AppointmentStatusBadge extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 7,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(30),
@@ -652,11 +557,7 @@ class _AppointmentStatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 16,
-            color: foregroundColor,
-          ),
+          Icon(icon, size: 16, color: foregroundColor),
           const SizedBox(width: 5),
           Text(
             status.trim().isEmpty ? 'Pending' : status,
@@ -676,29 +577,19 @@ class _InformationRow extends StatelessWidget {
   final IconData icon;
   final String value;
 
-  const _InformationRow({
-    required this.icon,
-    required this.value,
-  });
+  const _InformationRow({required this.icon, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: const Color(0xFF8063A4),
-        ),
+        Icon(icon, size: 20, color: const Color(0xFF8063A4)),
         const SizedBox(width: 9),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              color: Color(0xFF625B68),
-              height: 1.4,
-            ),
+            style: const TextStyle(color: Color(0xFF625B68), height: 1.4),
           ),
         ),
       ],
@@ -713,24 +604,15 @@ class _EmptyHistoryState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 25,
-        vertical: 52,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 52),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: const Color(0xFFE5DBEF),
-        ),
+        border: Border.all(color: const Color(0xFFE5DBEF)),
       ),
       child: const Column(
         children: [
-          Icon(
-            Icons.history_outlined,
-            size: 64,
-            color: Color(0xFF8063A4),
-          ),
+          Icon(Icons.history_outlined, size: 64, color: Color(0xFF8063A4)),
           SizedBox(height: 17),
           Text(
             'No appointment history',
@@ -744,9 +626,7 @@ class _EmptyHistoryState extends StatelessWidget {
           Text(
             'There are no appointments recorded for this client.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFF756D79),
-            ),
+            style: TextStyle(color: Color(0xFF756D79)),
           ),
         ],
       ),
@@ -758,33 +638,22 @@ class _ErrorState extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
-  const _ErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorState({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        constraints: const BoxConstraints(
-          maxWidth: 520,
-        ),
+        constraints: const BoxConstraints(maxWidth: 520),
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: const Color(0xFFE5DBEF),
-          ),
+          border: Border.all(color: const Color(0xFFE5DBEF)),
         ),
         child: Column(
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 58,
-              color: Colors.redAccent,
-            ),
+            const Icon(Icons.error_outline, size: 58, color: Colors.redAccent),
             const SizedBox(height: 17),
             const Text(
               'Client details could not be loaded',
@@ -796,10 +665,7 @@ class _ErrorState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-            ),
+            Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: onRetry,

@@ -1,5 +1,6 @@
 import 'package:mindbloom_mobile/features/appointment/presentation/viewmodels/therapist_appointments_viewmodel.dart';
 import 'package:mindbloom_mobile/features/therapist/presentation/viewmodels/therapist_dashboard_viewmodel.dart';
+import 'package:mindbloom_mobile/features/therapist/presentation/viewmodels/therapist_profile_viewmodel.dart';
 
 import '../../core/network/api_client.dart';
 import '../../features/session/presentation/viewmodels/session_viewmodel.dart';
@@ -371,31 +372,28 @@ class AppInjection {
     return TherapistAppointmentsViewModel(repository: repository);
   }
 
-  static TherapistRepository
-_createTherapistRepository() {
-  final apiService =
-      TherapistApiService(
-        apiClient: apiClient,
-      );
+  static TherapistRepository _createTherapistRepository() {
+    final apiService = TherapistApiService(apiClient: apiClient);
 
-  return TherapistRepository(
-    therapistApiService: apiService,
-  );
-}
+    return TherapistRepository(therapistApiService: apiService);
+  }
 
-static TherapistClientsViewModel
-createTherapistClientsViewModel() {
-  return TherapistClientsViewModel(
-    repository:
-        _createTherapistRepository(),
-  );
-}
+  static TherapistClientsViewModel createTherapistClientsViewModel() {
+    return TherapistClientsViewModel(repository: _createTherapistRepository());
+  }
 
-static TherapistClientDetailsViewModel
-createTherapistClientDetailsViewModel() {
-  return TherapistClientDetailsViewModel(
-    repository:
-        _createTherapistRepository(),
-  );
-}
+  static TherapistClientDetailsViewModel
+  createTherapistClientDetailsViewModel() {
+    return TherapistClientDetailsViewModel(
+      repository: _createTherapistRepository(),
+    );
+  }
+
+  static TherapistProfileViewModel createTherapistProfileViewModel() {
+    final apiService = TherapistApiService(apiClient: apiClient);
+
+    final repository = TherapistRepository(therapistApiService: apiService);
+
+    return TherapistProfileViewModel(repository: repository);
+  }
 }

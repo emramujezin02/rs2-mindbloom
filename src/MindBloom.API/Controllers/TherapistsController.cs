@@ -91,29 +91,6 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPut("profile")]
-    [Authorize(Roles = "Therapist")]
-    public async Task<IActionResult>
-    UpdateProfile(
-        UpdateTherapistProfileDto request)
-    {
-        var therapistUserId =
-            int.Parse(
-                User.FindFirstValue(
-                    ClaimTypes.NameIdentifier)!);
-
-        await _therapistService
-            .UpdateProfileAsync(
-                therapistUserId,
-                request);
-
-        return Ok(new
-        {
-            message =
-                "Therapist profile updated successfully."
-        });
-    }
-
     [HttpGet("{id}")]
     public async Task<IActionResult>
     GetById(int id)
@@ -125,6 +102,7 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize(Roles = "Therapist")]
     [HttpDelete("availability/{availabilityId}")]
     public async Task<IActionResult>
     DeleteAvailability(
@@ -324,5 +302,75 @@ public class TherapistsController : ControllerBase
                     clientId);
 
         return Ok(result);
+    }
+
+    [Authorize(Roles = "Therapist")]
+    [HttpGet("profile")]
+    public async Task<ActionResult<TherapistProfileDto>>
+    GetProfile()
+    {
+        var userId =
+            GetCurrentUserId();
+
+        var profile =
+            await _therapistService
+                .GetProfileAsync(userId);
+
+        return Ok(profile);
+    }
+
+    [Authorize(Roles = "Therapist")]
+    [HttpPut("profile")]
+    public async Task<IActionResult>
+    UpdateProfile(
+        [FromBody]
+        UpdateTherapistProfileDto request)
+    {
+        var userId =
+            GetCurrentUserId();
+
+        await _therapistService
+            .UpdateProfileAsync(
+                userId,
+                request);
+
+        return NoContent();
+    }
+
+    [Authorize(Roles = "Therapist")]
+    [HttpPost("profile/image")]
+    [Consumes("multipart/form-data")]
+    public async Task<
+    ActionResult<TherapistProfileImageDto>>
+    UploadProfileImage(
+        [FromForm] IFormFile file)
+    {
+        var userId =
+            GetCurrentUserId();
+
+        var result =
+            await _therapistService
+                .UploadProfileImageAsync(
+                    userId,
+                    file);
+
+        return Ok(result);
+    }
+
+    private int GetCurrentUserId()
+    {
+        var userIdValue =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(
+                userIdValue,
+                out var userId))
+        {
+            throw new UnauthorizedAccessException(
+                "Authenticated user identifier is missing or invalid.");
+        }
+
+        return userId;
     }
 }

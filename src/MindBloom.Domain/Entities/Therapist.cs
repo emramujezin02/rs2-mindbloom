@@ -28,6 +28,10 @@ public class Therapist : BaseEntity
 
     public string? ProfileImagePath { get; set; }
 
+    public string? Location { get; set; }
+
+    public string? Languages { get; set; }
+
     public ICollection<AppointmentNote> AppointmentNotes { get; set; } =
         new List<AppointmentNote>();
 

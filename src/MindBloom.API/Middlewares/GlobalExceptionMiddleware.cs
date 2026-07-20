@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 using MindBloom.Application.Common.Exceptions;
-using MindBloom.Shared.Exceptions;
+//using MindBloom.Shared.Exceptions;
 
 namespace MindBloom.API.Middlewares;
 
