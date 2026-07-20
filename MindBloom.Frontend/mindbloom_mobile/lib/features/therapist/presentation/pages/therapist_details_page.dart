@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import '../widgets/therapist_profile_image.dart';
+
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../data/models/therapist_map_data.dart';
 import '../viewmodels/therapist_details_viewmodel.dart';
+import '../widgets/therapist_location_map.dart';
+import '../widgets/therapist_profile_image.dart';
 import '../widgets/therapist_session_modes.dart';
 
 class TherapistDetailsPage extends StatefulWidget {
@@ -23,13 +26,13 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
     super.initState();
 
     _viewModel.addListener(_onViewModelChanged);
-
     _viewModel.loadTherapist(widget.therapistId);
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
 
     super.dispose();
   }
@@ -132,6 +135,7 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
     return RefreshIndicator(
       onRefresh: _reload,
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
         children: [
           TherapistProfileImage(
@@ -188,71 +192,110 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                     label: 'Email',
                     value: therapist.email,
                   ),
-                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
 
-                  const Text(
-                    'Location and session type',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          const SizedBox(height: 20),
+
+          const Text(
+            'Location and session type',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 8),
+
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _InfoRow(
+                    icon: Icons.public,
+                    label: 'Country',
+                    value: therapist.country.trim().isEmpty
+                        ? 'Not specified'
+                        : therapist.country,
                   ),
 
-                  const SizedBox(height: 8),
+                  const Divider(),
 
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _InfoRow(
-                            icon: Icons.public,
-                            label: 'Country',
-                            value: therapist.country.isEmpty
-                                ? 'Not specified'
-                                : therapist.country,
-                          ),
+                  _InfoRow(
+                    icon: Icons.location_city,
+                    label: 'City',
+                    value: therapist.city.trim().isEmpty
+                        ? 'Not specified'
+                        : therapist.city,
+                  ),
 
-                          const Divider(),
-
-                          _InfoRow(
-                            icon: Icons.location_city,
-                            label: 'City',
-                            value: therapist.city.isEmpty
-                                ? 'Not specified'
-                                : therapist.city,
-                          ),
-
-                          if (therapist.offersInPerson) ...[
-                            const Divider(),
-                            _InfoRow(
-                              icon: Icons.location_on_outlined,
-                              label: 'Address',
-                              value: therapist.address.isEmpty
-                                  ? 'Not specified'
-                                  : therapist.address,
-                            ),
-                          ],
-
-                          const Divider(),
-
-                          const Text(
-                            'Available session types',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-
-                          const SizedBox(height: 10),
-
-                          TherapistSessionModes(
-                            offersOnline: therapist.offersOnline,
-                            offersInPerson: therapist.offersInPerson,
-                          ),
-                        ],
-                      ),
+                  if (therapist.offersInPerson) ...[
+                    const Divider(),
+                    _InfoRow(
+                      icon: Icons.location_on_outlined,
+                      label: 'Address',
+                      value: therapist.address.trim().isEmpty
+                          ? 'Not specified'
+                          : therapist.address,
                     ),
+                  ],
+
+                  const Divider(),
+
+                  const Text(
+                    'Available session types',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  TherapistSessionModes(
+                    offersOnline: therapist.offersOnline,
+                    offersInPerson: therapist.offersInPerson,
                   ),
                 ],
               ),
             ),
           ),
+
+          if (therapist.offersInPerson) ...[
+            const SizedBox(height: 20),
+
+            const Text(
+              'Therapist location',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 8),
+
+            TherapistLocationMap(
+              mapData: TherapistMapData(
+                therapistName: therapist.fullName,
+                address: therapist.formattedAddress,
+                latitude: therapist.latitude ?? 0,
+                longitude: therapist.longitude ?? 0,
+              ),
+              height: 250,
+              interactive: true,
+            ),
+
+            const SizedBox(height: 8),
+
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.location_on_outlined, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    therapist.formattedAddress,
+                    style: const TextStyle(fontSize: 14, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ],
 
           const SizedBox(height: 20),
 
@@ -264,7 +307,7 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
           const SizedBox(height: 8),
 
           Text(
-            therapist.biography.isEmpty
+            therapist.biography.trim().isEmpty
                 ? 'No biography added.'
                 : therapist.biography,
             style: const TextStyle(fontSize: 15, height: 1.4),

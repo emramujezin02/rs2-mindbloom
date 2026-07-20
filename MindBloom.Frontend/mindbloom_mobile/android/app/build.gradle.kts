@@ -1,8 +1,34 @@
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def mapsApiKey =
+        localProperties.getProperty('MAPS_API_KEY') ?: ''
+
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use {
+        localProperties.load(it)
+    }
+}
+
+val mapsApiKey =
+    localProperties.getProperty("MAPS_API_KEY") ?: ""
 
 android {
     namespace = "com.example.mindbloom_mobile"
@@ -19,10 +45,13 @@ android {
         applicationId = "com.example.mindbloom_mobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk=flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+   manifestPlaceholders = [
+        MAPS_API_KEY: mapsApiKey
+]
     }
 
     buildTypes {

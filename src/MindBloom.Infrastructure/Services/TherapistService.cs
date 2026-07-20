@@ -8,7 +8,8 @@ using MindBloom.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using MindBloom.Application.Common.Exceptions;
-
+using MindBloom.Application.Common.Interfaces;
+using System.Threading;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -16,11 +17,13 @@ public class TherapistService : ITherapistService
 {
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _environment;
+    private readonly IGeocodingService _geocodingService;
 
-    public TherapistService(ApplicationDbContext context, IWebHostEnvironment environment)
+    public TherapistService(ApplicationDbContext context, IWebHostEnvironment environment, IGeocodingService geocodingService)
     {
         _context = context;
         _environment = environment;
+        _geocodingService = geocodingService;
 
     }
     public async Task<TherapistResponseDto> CreateAsync(int userId, CreateTherapistDto request)
@@ -49,6 +52,10 @@ public class TherapistService : ITherapistService
             OffersInPerson = request.OffersInPerson,
         };
 
+        await UpdateCoordinatesAsync(
+            therapist,
+            CancellationToken.None);
+
         _context.Therapists.Add(therapist);
 
         await _context.SaveChangesAsync();
@@ -69,6 +76,8 @@ public class TherapistService : ITherapistService
             Address = therapist.Address,
             OffersOnline = therapist.OffersOnline,
             OffersInPerson = therapist.OffersInPerson,
+            Latitude = therapist.Latitude,
+            Longitude = therapist.Longitude,
         };
     }
 
@@ -99,6 +108,8 @@ public class TherapistService : ITherapistService
                 Address = x.Address,
                 OffersOnline = x.OffersOnline,
                 OffersInPerson = x.OffersInPerson,
+                Latitude = x.Latitude,
+                Longitude = x.Longitude,
             })
             .ToListAsync();
     }
@@ -232,6 +243,8 @@ public class TherapistService : ITherapistService
                     Address = x.Address,
                     OffersOnline = x.OffersOnline,
                     OffersInPerson = x.OffersInPerson,
+                    Latitude = x.Latitude,
+                    Longitude = x.Longitude,
                 })
                 .ToListAsync();
 
@@ -332,6 +345,8 @@ public class TherapistService : ITherapistService
                     Address = x.Address,
                     OffersOnline = x.OffersOnline,
                     OffersInPerson = x.OffersInPerson,
+                    Latitude = x.Latitude,
+                    Longitude = x.Longitude,
 
                 })
                 .ToListAsync();
@@ -468,6 +483,8 @@ public class TherapistService : ITherapistService
             Address = therapist.Address,
             OffersOnline = therapist.OffersOnline,
             OffersInPerson = therapist.OffersInPerson,
+            Latitude = therapist.Latitude,
+            Longitude = therapist.Longitude,
         };
     }
 
@@ -601,6 +618,10 @@ public class TherapistService : ITherapistService
         therapist.Address = request.Address.Trim();
         therapist.OffersOnline = request.OffersOnline;
         therapist.OffersInPerson = request.OffersInPerson;
+
+        await UpdateCoordinatesAsync(
+            therapist,
+            CancellationToken.None);
 
         await _context.SaveChangesAsync();
     }
@@ -816,6 +837,8 @@ public class TherapistService : ITherapistService
             Address = therapist.Address,
             OffersOnline = therapist.OffersOnline,
             OffersInPerson = therapist.OffersInPerson,
+            Latitude = therapist.Latitude,
+            Longitude = therapist.Longitude,
         };
     }
 
@@ -1547,5 +1570,43 @@ public class TherapistService : ITherapistService
         {
             File.Delete(physicalPath);
         }
+    }
+
+    private async Task UpdateCoordinatesAsync(
+    Therapist therapist,
+    CancellationToken cancellationToken)
+    {
+        if (!therapist.OffersInPerson)
+        {
+            therapist.Latitude = null;
+            therapist.Longitude = null;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(therapist.Country) ||
+            string.IsNullOrWhiteSpace(therapist.City))
+        {
+            therapist.Latitude = null;
+            therapist.Longitude = null;
+            return;
+        }
+
+        var result = await _geocodingService.GeocodeAddressAsync(
+            therapist.Country,
+            therapist.City,
+            therapist.Address,
+            cancellationToken);
+
+        if (!result.IsSuccessful ||
+            result.Latitude is null ||
+            result.Longitude is null)
+        {
+            therapist.Latitude = null;
+            therapist.Longitude = null;
+            return;
+        }
+
+        therapist.Latitude = result.Latitude;
+        therapist.Longitude = result.Longitude;
     }
 }

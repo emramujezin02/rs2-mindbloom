@@ -29,6 +29,10 @@ using MindBloom.Infrastructure.Payments;
 using MindBloom.Application.Features.Chat.Interfaces;
 using MindBloom.Application.Features.ReferenceData.Interfaces;
 using MindBloom.Application.Features.AdminReports.Interfaces;
+using MindBloom.Application.Common.Interfaces;
+using MindBloom.Infrastructure.Services.Geocoding;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -70,6 +74,16 @@ public static class DependencyInjection
             options.Audience = jwtSettings.Audience;
             options.ExpirationInMinutes = jwtSettings.ExpirationInMinutes;
         });
+
+
+        services.AddHttpClient<IGeocodingService, GoogleGeocodingService>(client =>
+        {
+            client.BaseAddress =
+                new Uri("https://maps.googleapis.com/maps/api/geocode/");
+
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+
 
         var key = Encoding.UTF8.GetBytes(jwtSettings.SecretKey);
 
