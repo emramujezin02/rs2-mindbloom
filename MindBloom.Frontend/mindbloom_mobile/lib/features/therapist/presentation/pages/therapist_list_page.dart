@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mindbloom_mobile/features/therapist/presentation/widgets/therapist_session_modes.dart';
 import '../widgets/therapist_profile_image.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
@@ -286,7 +287,29 @@ class _TherapistListPageState extends State<TherapistListPage> {
                   ),
 
                   const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.location_on_outlined, size: 19),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          therapist.formattedLocation,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
 
+                  const SizedBox(height: 10),
+
+                  TherapistSessionModes(
+                    offersOnline: therapist.offersOnline,
+                    offersInPerson: therapist.offersInPerson,
+                    compact: true,
+                  ),
+
+                  const SizedBox(height: 10),
                   Text(
                     therapist.biography.isEmpty
                         ? 'No biography added.'

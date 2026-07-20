@@ -27,4 +27,14 @@ public class TherapistResponseDto
     public string? VerificationNotes { get; set; }
 
     public string? ProfileImageUrl { get; set; }
+
+    public string Country { get; set; } = string.Empty;
+
+    public string City { get; set; } = string.Empty;
+
+    public string Address { get; set; } = string.Empty;
+
+    public bool OffersOnline { get; set; }
+
+    public bool OffersInPerson { get; set; }
 }

@@ -12,6 +12,11 @@ class TherapistDetailsModel {
   final double averageRating;
   final int totalReviews;
   final String? profileImageUrl;
+  final String country;
+  final String city;
+  final String address;
+  final bool offersOnline;
+  final bool offersInPerson;
   final List<TherapistAvailabilityModel> availabilities;
 
   const TherapistDetailsModel({
@@ -24,6 +29,11 @@ class TherapistDetailsModel {
     required this.experienceYears,
     required this.averageRating,
     required this.totalReviews,
+    required this.country,
+    required this.city,
+    required this.address,
+    required this.offersOnline,
+    required this.offersInPerson,
     required this.availabilities,
     this.profileImageUrl,
   });
@@ -42,6 +52,11 @@ class TherapistDetailsModel {
       averageRating: (json['averageRating'] ?? 0).toDouble(),
       totalReviews: json['totalReviews'] ?? 0,
       profileImageUrl: _nullableString(json['profileImageUrl']),
+      country: json['country'] ?? '',
+      city: json['city'] ?? '',
+      address: json['address'] ?? '',
+      offersOnline: json['offersOnline'] == true,
+      offersInPerson: json['offersInPerson'] == true,
       availabilities: availabilityJson is List
           ? availabilityJson
                 .whereType<Map<String, dynamic>>()
@@ -49,6 +64,19 @@ class TherapistDetailsModel {
                 .toList()
           : [],
     );
+  }
+
+  String get formattedLocation {
+    final locationParts = <String>[
+      city.trim(),
+      country.trim(),
+    ].where((part) => part.isNotEmpty).toList();
+
+    if (locationParts.isEmpty) {
+      return 'Location not specified';
+    }
+
+    return locationParts.join(', ');
   }
 
   TherapistModel toTherapistModel() {
@@ -63,6 +91,11 @@ class TherapistDetailsModel {
       experienceYears: experienceYears,
       averageRating: averageRating,
       profileImageUrl: profileImageUrl,
+      country: country,
+      city: city,
+      address: address,
+      offersOnline: offersOnline,
+      offersInPerson: offersInPerson,
     );
   }
 

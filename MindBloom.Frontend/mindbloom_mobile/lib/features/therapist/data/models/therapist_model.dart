@@ -9,6 +9,11 @@ class TherapistModel {
   final int experienceYears;
   final double averageRating;
   final String? profileImageUrl;
+  final String country;
+  final String city;
+  final String address;
+  final bool offersOnline;
+  final bool offersInPerson;
 
   const TherapistModel({
     required this.id,
@@ -20,6 +25,11 @@ class TherapistModel {
     required this.hourlyRate,
     required this.experienceYears,
     required this.averageRating,
+    required this.country,
+    required this.city,
+    required this.address,
+    required this.offersOnline,
+    required this.offersInPerson,
     this.profileImageUrl,
   });
 
@@ -35,7 +45,25 @@ class TherapistModel {
       experienceYears: json['experienceYears'] ?? 0,
       averageRating: (json['averageRating'] ?? 0).toDouble(),
       profileImageUrl: _nullableString(json['profileImageUrl']),
+      country: json['country'] ?? '',
+      city: json['city'] ?? '',
+      address: json['address'] ?? '',
+      offersOnline: json['offersOnline'] == true,
+      offersInPerson: json['offersInPerson'] == true,
     );
+  }
+
+  String get formattedLocation {
+    final locationParts = <String>[
+      city.trim(),
+      country.trim(),
+    ].where((part) => part.isNotEmpty).toList();
+
+    if (locationParts.isEmpty) {
+      return 'Location not specified';
+    }
+
+    return locationParts.join(', ');
   }
 
   static String? _nullableString(dynamic value) {

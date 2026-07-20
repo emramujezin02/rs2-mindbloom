@@ -3,6 +3,7 @@ import '../widgets/therapist_profile_image.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../viewmodels/therapist_details_viewmodel.dart';
+import '../widgets/therapist_session_modes.dart';
 
 class TherapistDetailsPage extends StatefulWidget {
   final int therapistId;
@@ -186,6 +187,67 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                     icon: Icons.email,
                     label: 'Email',
                     value: therapist.email,
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'Location and session type',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _InfoRow(
+                            icon: Icons.public,
+                            label: 'Country',
+                            value: therapist.country.isEmpty
+                                ? 'Not specified'
+                                : therapist.country,
+                          ),
+
+                          const Divider(),
+
+                          _InfoRow(
+                            icon: Icons.location_city,
+                            label: 'City',
+                            value: therapist.city.isEmpty
+                                ? 'Not specified'
+                                : therapist.city,
+                          ),
+
+                          if (therapist.offersInPerson) ...[
+                            const Divider(),
+                            _InfoRow(
+                              icon: Icons.location_on_outlined,
+                              label: 'Address',
+                              value: therapist.address.isEmpty
+                                  ? 'Not specified'
+                                  : therapist.address,
+                            ),
+                          ],
+
+                          const Divider(),
+
+                          const Text(
+                            'Available session types',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          TherapistSessionModes(
+                            offersOnline: therapist.offersOnline,
+                            offersInPerson: therapist.offersInPerson,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),

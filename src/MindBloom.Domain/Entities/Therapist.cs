@@ -30,6 +30,16 @@ public class Therapist : BaseEntity
 
     public string? Location { get; set; }
 
+    public string Country { get; set; } = string.Empty;
+
+    public string City { get; set; } = string.Empty;
+
+    public string Address { get; set; } = string.Empty;
+
+    public bool OffersOnline { get; set; }
+
+    public bool OffersInPerson { get; set; }
+
     public string? Languages { get; set; }
 
     public ICollection<AppointmentNote> AppointmentNotes { get; set; } =

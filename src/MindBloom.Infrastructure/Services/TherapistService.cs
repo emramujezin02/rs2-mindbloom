@@ -42,6 +42,11 @@ public class TherapistService : ITherapistService
             HourlyRate = request.HourlyRate,
             ExperienceYears = request.ExperienceYears,
             VerificationStatus = TherapistVerificationStatus.Pending,
+            Country = request.Country.Trim(),
+            City = request.City.Trim(),
+            Address = request.Address.Trim(),
+            OffersOnline = request.OffersOnline,
+            OffersInPerson = request.OffersInPerson,
         };
 
         _context.Therapists.Add(therapist);
@@ -59,6 +64,11 @@ public class TherapistService : ITherapistService
             HourlyRate = therapist.HourlyRate,
             ExperienceYears = therapist.ExperienceYears,
             ProfileImageUrl = therapist.ProfileImagePath,
+            Country = therapist.Country,
+            City = therapist.City,
+            Address = therapist.Address,
+            OffersOnline = therapist.OffersOnline,
+            OffersInPerson = therapist.OffersInPerson,
         };
     }
 
@@ -84,6 +94,11 @@ public class TherapistService : ITherapistService
                 VerificationStatus = x.VerificationStatus.ToString(),
                 VerificationNotes = x.VerificationNotes,
                 ProfileImageUrl = x.ProfileImagePath,
+                Country = x.Country,
+                City = x.City,
+                Address = x.Address,
+                OffersOnline = x.OffersOnline,
+                OffersInPerson = x.OffersInPerson,
             })
             .ToListAsync();
     }
@@ -211,6 +226,12 @@ public class TherapistService : ITherapistService
                             : 0,
 
                     ProfileImageUrl = x.ProfileImagePath,
+
+                    Country = x.Country,
+                    City = x.City,
+                    Address = x.Address,
+                    OffersOnline = x.OffersOnline,
+                    OffersInPerson = x.OffersInPerson,
                 })
                 .ToListAsync();
 
@@ -305,6 +326,12 @@ public class TherapistService : ITherapistService
                         x.Reviews.Count,
 
                     ProfileImageUrl = x.ProfileImagePath,
+
+                    Country = x.Country,
+                    City = x.City,
+                    Address = x.Address,
+                    OffersOnline = x.OffersOnline,
+                    OffersInPerson = x.OffersInPerson,
 
                 })
                 .ToListAsync();
@@ -434,7 +461,13 @@ public class TherapistService : ITherapistService
                             EndTime =
                                 x.EndTime
                         })
-                    .ToList()
+                    .ToList(),
+
+            Country = therapist.Country,
+            City = therapist.City,
+            Address = therapist.Address,
+            OffersOnline = therapist.OffersOnline,
+            OffersInPerson = therapist.OffersInPerson,
         };
     }
 
@@ -562,6 +595,12 @@ public class TherapistService : ITherapistService
 
         therapist.Languages =
             serializedLanguages;
+
+        therapist.Country = request.Country.Trim();
+        therapist.City = request.City.Trim();
+        therapist.Address = request.Address.Trim();
+        therapist.OffersOnline = request.OffersOnline;
+        therapist.OffersInPerson = request.OffersInPerson;
 
         await _context.SaveChangesAsync();
     }
@@ -772,6 +811,11 @@ public class TherapistService : ITherapistService
                         })
                     .ToList(),
             ProfileImageUrl = therapist.ProfileImagePath,
+            Country = therapist.Country,
+            City = therapist.City,
+            Address = therapist.Address,
+            OffersOnline = therapist.OffersOnline,
+            OffersInPerson = therapist.OffersInPerson,
         };
     }
 

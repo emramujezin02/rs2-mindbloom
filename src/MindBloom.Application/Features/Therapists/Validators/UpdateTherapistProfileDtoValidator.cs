@@ -57,5 +57,34 @@ public class UpdateTherapistProfileDtoValidator
             .MaximumLength(100)
             .WithMessage(
                 "Language cannot contain more than 100 characters.");
+
+        RuleFor(x => x.Country)
+        .NotEmpty()
+        .WithMessage("Country is required.")
+        .MaximumLength(100)
+        .WithMessage("Country cannot contain more than 100 characters.");
+
+        RuleFor(x => x.City)
+            .NotEmpty()
+            .WithMessage("City is required.")
+            .MaximumLength(100)
+            .WithMessage("City cannot contain more than 100 characters.");
+
+        RuleFor(x => x.Address)
+            .MaximumLength(250)
+            .WithMessage("Address cannot contain more than 250 characters.");
+
+        RuleFor(x => x)
+            .Must(x => x.OffersOnline || x.OffersInPerson)
+            .WithMessage(
+                "The therapist must offer online or in-person appointments.");
+
+
+            RuleFor(x => x.Address)
+    .NotEmpty()
+    .When(x => x.OffersInPerson)
+    .WithMessage(
+        "Address is required when in-person appointments are offered.");
+
     }
 }
