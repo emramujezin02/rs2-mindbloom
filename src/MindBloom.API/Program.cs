@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DotNetEnv;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
@@ -61,13 +62,23 @@ builder.Services
                                             : error.ErrorMessage)
                                     .Distinct()
                                     .ToArray(),
-                            StringComparer
-                                .OrdinalIgnoreCase);
+                            StringComparer.OrdinalIgnoreCase);
 
                 return new BadRequestObjectResult(
-                    new ValidationErrorResponse
+                    new ApiErrorResponse
                     {
-                        Errors = errors
+                        StatusCode =
+                            StatusCodes
+                                .Status400BadRequest,
+
+                        Title =
+                            "Validation failed",
+
+                        Detail =
+                            "One or more validation errors occurred.",
+
+                        ValidationErrors =
+                            errors
                     });
             };
     });
@@ -153,6 +164,109 @@ var app =
 
 app.UseMiddleware<
     GlobalExceptionMiddleware>();
+
+app.UseStatusCodePages(
+    async statusCodeContext =>
+    {
+        var response =
+            statusCodeContext
+                .HttpContext
+                .Response;
+
+        if (response.HasStarted ||
+            response.ContentLength.HasValue ||
+            !string.IsNullOrWhiteSpace(
+                response.ContentType))
+        {
+            return;
+        }
+
+        var error =
+            response.StatusCode switch
+            {
+                StatusCodes.Status400BadRequest =>
+                    new ApiErrorResponse
+                    {
+                        StatusCode =
+                            StatusCodes
+                                .Status400BadRequest,
+                        Title = "Bad request",
+                        Detail =
+                            "The request is invalid."
+                    },
+
+                StatusCodes.Status401Unauthorized =>
+                    new ApiErrorResponse
+                    {
+                        StatusCode =
+                            StatusCodes
+                                .Status401Unauthorized,
+                        Title = "Unauthorized",
+                        Detail =
+                            "Authentication is required."
+                    },
+
+                StatusCodes.Status403Forbidden =>
+                    new ApiErrorResponse
+                    {
+                        StatusCode =
+                            StatusCodes
+                                .Status403Forbidden,
+                        Title = "Forbidden",
+                        Detail =
+                            "You do not have permission to access this resource."
+                    },
+
+                StatusCodes.Status404NotFound =>
+                    new ApiErrorResponse
+                    {
+                        StatusCode =
+                            StatusCodes
+                                .Status404NotFound,
+                        Title =
+                            "Resource not found",
+                        Detail =
+                            "The requested resource was not found."
+                    },
+
+                StatusCodes.Status405MethodNotAllowed =>
+                    new ApiErrorResponse
+                    {
+                        StatusCode =
+                            StatusCodes
+                                .Status405MethodNotAllowed,
+                        Title =
+                            "Method not allowed",
+                        Detail =
+                            "The HTTP method is not allowed for this endpoint."
+                    },
+
+                _ =>
+                    new ApiErrorResponse
+                    {
+                        StatusCode =
+                            response.StatusCode,
+                        Title =
+                            "Request failed",
+                        Detail =
+                            "The request could not be completed."
+                    }
+            };
+
+        response.ContentType =
+            "application/problem+json";
+
+        var json =
+            JsonSerializer.Serialize(
+                error,
+                new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy =
+                        JsonNamingPolicy.CamelCase
+                });
+
+        await response.WriteAsync(json);
+    });
 
 app.UseSwagger();
 

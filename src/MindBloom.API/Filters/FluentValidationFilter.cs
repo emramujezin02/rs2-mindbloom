@@ -8,12 +8,14 @@ namespace MindBloom.API.Filters;
 public sealed class FluentValidationFilter
     : IAsyncActionFilter
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceProvider
+        _serviceProvider;
 
     public FluentValidationFilter(
         IServiceProvider serviceProvider)
     {
-        _serviceProvider = serviceProvider;
+        _serviceProvider =
+            serviceProvider;
     }
 
     public async Task OnActionExecutionAsync(
@@ -37,28 +39,31 @@ public sealed class FluentValidationFilter
 
             var validatorType =
                 typeof(IValidator<>)
-                    .MakeGenericType(argumentType);
+                    .MakeGenericType(
+                        argumentType);
 
             var validators =
                 _serviceProvider
-                    .GetServices(validatorType)
+                    .GetServices(
+                        validatorType)
                     .OfType<IValidator>()
                     .ToList();
 
-            foreach (var validator in validators)
+            foreach (var validator
+                     in validators)
             {
                 var validationContext =
                     new ValidationContext<object>(
                         argument);
 
-                var validationResult =
+                var result =
                     await validator.ValidateAsync(
                         validationContext,
                         context.HttpContext
                             .RequestAborted);
 
                 foreach (var failure
-                         in validationResult.Errors)
+                         in result.Errors)
                 {
                     if (failure == null ||
                         string.IsNullOrWhiteSpace(
@@ -71,13 +76,15 @@ public sealed class FluentValidationFilter
                         ToCamelCase(
                             failure.PropertyName);
 
-                    if (!validationErrors.TryGetValue(
-                            propertyName,
-                            out var messages))
+                    if (!validationErrors
+                            .TryGetValue(
+                                propertyName,
+                                out var messages))
                     {
                         messages = [];
 
-                        validationErrors[propertyName] =
+                        validationErrors[
+                            propertyName] =
                             messages;
                     }
 
@@ -96,9 +103,19 @@ public sealed class FluentValidationFilter
         {
             context.Result =
                 new BadRequestObjectResult(
-                    new ValidationErrorResponse
+                    new ApiErrorResponse
                     {
-                        Errors =
+                        StatusCode =
+                            StatusCodes
+                                .Status400BadRequest,
+
+                        Title =
+                            "Validation failed",
+
+                        Detail =
+                            "One or more validation errors occurred.",
+
+                        ValidationErrors =
                             validationErrors
                                 .ToDictionary(
                                     item => item.Key,
@@ -123,14 +140,26 @@ public sealed class FluentValidationFilter
             return "request";
         }
 
-        if (propertyName.Length == 1)
+        var normalized =
+            propertyName.Trim();
+
+        if (normalized.StartsWith(
+                "$.",
+                StringComparison.Ordinal))
         {
-            return propertyName.ToLowerInvariant();
+            normalized =
+                normalized[2..];
+        }
+
+        if (normalized.Length == 1)
+        {
+            return normalized
+                .ToLowerInvariant();
         }
 
         return
             char.ToLowerInvariant(
-                propertyName[0])
-            + propertyName[1..];
+                normalized[0])
+            + normalized[1..];
     }
 }

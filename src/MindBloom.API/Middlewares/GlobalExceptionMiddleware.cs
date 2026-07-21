@@ -9,11 +9,15 @@ namespace MindBloom.API.Middlewares;
 public sealed class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<GlobalExceptionMiddleware>
+        _logger;
 
     public GlobalExceptionMiddleware(
-        RequestDelegate next)
+        RequestDelegate next,
+        ILogger<GlobalExceptionMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(
@@ -33,29 +37,53 @@ public sealed class GlobalExceptionMiddleware
         {
             await WriteErrorAsync(
                 context,
-                HttpStatusCode.NotFound,
+                StatusCodes.Status404NotFound,
+                "Resource not found",
+                exception.Message);
+        }
+        catch (BadRequestException exception)
+        {
+            await WriteErrorAsync(
+                context,
+                StatusCodes.Status400BadRequest,
+                "Bad request",
                 exception.Message);
         }
         catch (BusinessException exception)
         {
             await WriteErrorAsync(
                 context,
-                HttpStatusCode.Conflict,
+                StatusCodes.Status409Conflict,
+                "Business rule violation",
                 exception.Message);
         }
         catch (ArgumentException exception)
         {
             await WriteErrorAsync(
                 context,
-                HttpStatusCode.BadRequest,
+                StatusCodes.Status400BadRequest,
+                "Bad request",
+                exception.Message);
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            await WriteErrorAsync(
+                context,
+                StatusCodes.Status401Unauthorized,
+                "Unauthorized",
                 exception.Message);
         }
         catch (Exception exception)
         {
+            _logger.LogError(
+                exception,
+                "An unhandled exception occurred.");
+
             await WriteErrorAsync(
                 context,
-                HttpStatusCode.InternalServerError,
-                exception.Message);
+                StatusCodes.Status500InternalServerError,
+                "Internal server error",
+                "An unexpected server error occurred.");
         }
     }
 
@@ -74,8 +102,7 @@ public sealed class GlobalExceptionMiddleware
                     failure =>
                         ToCamelCase(
                             failure.PropertyName),
-                    StringComparer
-                        .OrdinalIgnoreCase)
+                    StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(
                     group => group.Key,
                     group => group
@@ -83,46 +110,69 @@ public sealed class GlobalExceptionMiddleware
                             failure.ErrorMessage)
                         .Distinct()
                         .ToArray(),
-                    StringComparer
-                        .OrdinalIgnoreCase);
-
-        context.Response.StatusCode =
-            (int)HttpStatusCode.BadRequest;
-
-        context.Response.ContentType =
-            "application/json";
+                    StringComparer.OrdinalIgnoreCase);
 
         var response =
-            new ValidationErrorResponse
+            new ApiErrorResponse
             {
-                Errors = errors
+                StatusCode =
+                    StatusCodes.Status400BadRequest,
+
+                Title =
+                    "Validation failed",
+
+                Detail =
+                    "One or more validation errors occurred.",
+
+                ValidationErrors =
+                    errors
             };
 
-        await context.Response.WriteAsync(
-            JsonSerializer.Serialize(
-                response));
+        await WriteResponseAsync(
+            context,
+            response);
     }
 
-    private static async Task
-        WriteErrorAsync(
-            HttpContext context,
-            HttpStatusCode statusCode,
-            string message)
+    private static async Task WriteErrorAsync(
+        HttpContext context,
+        int statusCode,
+        string title,
+        string detail)
+    {
+        var response =
+            new ApiErrorResponse
+            {
+                StatusCode = statusCode,
+                Title = title,
+                Detail = detail,
+                ValidationErrors = null
+            };
+
+        await WriteResponseAsync(
+            context,
+            response);
+    }
+
+    private static async Task WriteResponseAsync(
+        HttpContext context,
+        ApiErrorResponse response)
     {
         context.Response.StatusCode =
-            (int)statusCode;
+            response.StatusCode;
 
         context.Response.ContentType =
-            "application/json";
+            "application/problem+json";
 
-        var response = new
-        {
-            message
-        };
-
-        await context.Response.WriteAsync(
+        var json =
             JsonSerializer.Serialize(
-                response));
+                response,
+                new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy =
+                        JsonNamingPolicy.CamelCase
+                });
+
+        await context.Response.WriteAsync(json);
     }
 
     private static string ToCamelCase(
@@ -134,15 +184,25 @@ public sealed class GlobalExceptionMiddleware
             return "request";
         }
 
-        if (propertyName.Length == 1)
+        var normalized =
+            propertyName.Trim();
+
+        if (normalized.StartsWith(
+                "$.",
+                StringComparison.Ordinal))
         {
-            return propertyName
-                .ToLowerInvariant();
+            normalized =
+                normalized[2..];
+        }
+
+        if (normalized.Length == 1)
+        {
+            return normalized.ToLowerInvariant();
         }
 
         return
             char.ToLowerInvariant(
-                propertyName[0])
-            + propertyName[1..];
+                normalized[0])
+            + normalized[1..];
     }
 }
