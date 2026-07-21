@@ -9,13 +9,12 @@ using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Application.Common.BusinessRules;
 using MindBloom.Application.Common.Interfaces;
+using MindBloom.Application.Common.Pagination;
 
 namespace MindBloom.Infrastructure.Services;
 
 public class WorkshopService : IWorkshopService
 {
-    private const int MaximumPageSize = 50;
-
     private readonly ApplicationDbContext _context;
 
     private readonly IBusinessNotificationService
@@ -38,17 +37,10 @@ public class WorkshopService : IWorkshopService
             WorkshopQueryDto query,
             int? clientUserId)
     {
-        var pageNumber =
-            query.PageNumber < 1
-                ? 1
-                : query.PageNumber;
-
-        var pageSize =
-            query.PageSize < 1
-                ? 10
-                : Math.Min(
-                    query.PageSize,
-                    MaximumPageSize);
+        var pagination =
+            PaginationHelper.Normalize(
+                query.PageNumber,
+                query.PageSize);
 
         int? clientId = null;
 
@@ -89,10 +81,10 @@ public class WorkshopService : IWorkshopService
         var items =
             await workshops
                 .OrderBy(x => x.StartUtc)
-                .Skip(
-                    (pageNumber - 1) *
-                    pageSize)
-                .Take(pageSize)
+.Skip(
+    pagination.Skip)
+.Take(
+    pagination.PageSize)
                 .Select(x =>
                     new WorkshopResponseDto
                     {
@@ -172,11 +164,12 @@ public class WorkshopService : IWorkshopService
                     })
                 .ToListAsync();
 
-        return CreatePagedResponse(
-            items,
-            pageNumber,
-            pageSize,
-            totalCount);
+        return PagedResponse<WorkshopResponseDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<WorkshopResponseDto>
@@ -304,17 +297,10 @@ public class WorkshopService : IWorkshopService
             bool isAdmin,
             WorkshopQueryDto query)
     {
-        var pageNumber =
-            query.PageNumber < 1
-                ? 1
-                : query.PageNumber;
-
-        var pageSize =
-            query.PageSize < 1
-                ? 10
-                : Math.Min(
-                    query.PageSize,
-                    MaximumPageSize);
+        var pagination =
+            PaginationHelper.Normalize(
+                query.PageNumber,
+                query.PageSize);
 
         var workshops =
             _context.Workshops
@@ -342,10 +328,10 @@ public class WorkshopService : IWorkshopService
             await workshops
                 .OrderByDescending(x =>
                     x.CreatedAtUtc)
-                .Skip(
-                    (pageNumber - 1) *
-                    pageSize)
-                .Take(pageSize)
+.Skip(
+    pagination.Skip)
+.Take(
+    pagination.PageSize)
                 .Select(x =>
                     new WorkshopResponseDto
                     {
@@ -401,11 +387,12 @@ public class WorkshopService : IWorkshopService
                     })
                 .ToListAsync();
 
-        return CreatePagedResponse(
-            items,
-            pageNumber,
-            pageSize,
-            totalCount);
+        return PagedResponse<WorkshopResponseDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<WorkshopResponseDto>
@@ -949,17 +936,10 @@ public class WorkshopService : IWorkshopService
             int pageNumber,
             int pageSize)
     {
-        pageNumber =
-            pageNumber < 1
-                ? 1
-                : pageNumber;
-
-        pageSize =
-            pageSize < 1
-                ? 10
-                : Math.Min(
-                    pageSize,
-                    MaximumPageSize);
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
 
         var client =
             await _context.Clients
@@ -993,10 +973,10 @@ public class WorkshopService : IWorkshopService
             await query
                 .OrderBy(x =>
                     x.Workshop.StartUtc)
-                .Skip(
-                    (pageNumber - 1) *
-                    pageSize)
-                .Take(pageSize)
+.Skip(
+    pagination.Skip)
+.Take(
+    pagination.PageSize)
                 .Select(x =>
                     new WorkshopResponseDto
                     {
@@ -1067,11 +1047,12 @@ public class WorkshopService : IWorkshopService
                     })
                 .ToListAsync();
 
-        return CreatePagedResponse(
-            items,
-            pageNumber,
-            pageSize,
-            totalCount);
+        return PagedResponse<WorkshopResponseDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<
@@ -1083,17 +1064,10 @@ public class WorkshopService : IWorkshopService
         int pageNumber,
         int pageSize)
     {
-        pageNumber =
-            pageNumber < 1
-                ? 1
-                : pageNumber;
-
-        pageSize =
-            pageSize < 1
-                ? 10
-                : Math.Min(
-                    pageSize,
-                    MaximumPageSize);
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
 
         await GetWorkshopForManagementAsync(
             userId,
@@ -1115,10 +1089,10 @@ public class WorkshopService : IWorkshopService
             await query
                 .OrderByDescending(x =>
                     x.RegisteredAtUtc)
-                .Skip(
-                    (pageNumber - 1) *
-                    pageSize)
-                .Take(pageSize)
+.Skip(
+    pagination.Skip)
+.Take(
+    pagination.PageSize)
                 .Select(x =>
                     new WorkshopRegistrationResponseDto
                     {
@@ -1154,11 +1128,13 @@ public class WorkshopService : IWorkshopService
                     })
                 .ToListAsync();
 
-        return CreatePagedResponse(
-            items,
-            pageNumber,
-            pageSize,
-            totalCount);
+        return PagedResponse<
+                WorkshopRegistrationResponseDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     private async Task<Workshop>
@@ -1287,8 +1263,6 @@ public class WorkshopService : IWorkshopService
             currentStatus ==
                 WorkshopStatus.Scheduled)
         {
-            // Dodatna vremenska provjera radi se
-            // u servisu prije snimanja po potrebi.
         }
     }
 
@@ -1301,26 +1275,5 @@ public class WorkshopService : IWorkshopService
             : value.Trim();
     }
 
-    private static PagedResponse<T>
-        CreatePagedResponse<T>(
-            List<T> items,
-            int pageNumber,
-            int pageSize,
-            int totalCount)
-    {
-        return new PagedResponse<T>
-        {
-            Items = items,
-            PageNumber =
-                pageNumber,
-            PageSize =
-                pageSize,
-            TotalCount =
-                totalCount,
-            TotalPages =
-                (int)Math.Ceiling(
-                    totalCount /
-                    (double)pageSize)
-        };
-    }
+   
 }

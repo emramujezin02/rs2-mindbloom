@@ -7,6 +7,8 @@ using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.BusinessRules;
+using MindBloom.Application.Common.Models;
+using MindBloom.Application.Common.Pagination;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -107,34 +109,95 @@ public class ReviewService : IReviewService
     }
 
 
-    public async Task<List<ReviewResponseDto>>
-        GetTherapistReviewsAsync(
-            int therapistId)
+    public async Task<PagedResponse<ReviewResponseDto>>
+    GetTherapistReviewsAsync(
+        int therapistId,
+        ReviewFilterDto filter)
     {
-        return await _context.Reviews
-            .Include(x => x.Client)
-            .ThenInclude(x => x.User)
-            .Where(x => x.TherapistId == therapistId && !x.IsDeleted)
-            .OrderByDescending(x => x.CreatedAtUtc)
-            .Select(x => new ReviewResponseDto
-            {
-                Id = x.Id,
+        var pagination =
+            PaginationHelper.Normalize(
+                filter.PageNumber,
+                filter.PageSize);
 
-                ClientName =
-                    x.Client.User.FirstName
-                    + " "
-                    + x.Client.User.LastName,
+        var query =
+            _context.Reviews
+                .AsNoTracking()
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .Where(x =>
+                    x.TherapistId == therapistId &&
+                    !x.IsDeleted);
 
-                Rating = x.Rating,
+        query = filter.SortBy switch
+        {
+            ReviewSortBy.Newest =>
+                query.OrderByDescending(x =>
+                    x.CreatedAtUtc),
 
-                Comment = x.Comment,
+            ReviewSortBy.Oldest =>
+                query.OrderBy(x =>
+                    x.CreatedAtUtc),
 
-                CreatedAtUtc = x.CreatedAtUtc,
+            ReviewSortBy.HighestRating =>
+                query.OrderByDescending(x =>
+                    x.Rating)
+                .ThenByDescending(x =>
+                    x.CreatedAtUtc),
 
-                TherapistReply = x.TherapistReply,
-                TherapistReplyCreatedAtUtc = x.TherapistReplyCreatedAtUtc,
-            })
-            .ToListAsync();
+            ReviewSortBy.LowestRating =>
+                query.OrderBy(x =>
+                    x.Rating)
+                .ThenByDescending(x =>
+                    x.CreatedAtUtc),
+
+            _ =>
+                query.OrderByDescending(x =>
+                    x.CreatedAtUtc)
+        };
+
+        var totalCount =
+            await query.CountAsync();
+
+        var items =
+            await query
+                .Skip(
+                    pagination.Skip)
+                .Take(
+                    pagination.PageSize)
+                .Select(x =>
+                    new ReviewResponseDto
+                    {
+                        Id =
+                            x.Id,
+
+                        ClientName =
+                            x.Client.User.FirstName
+                            + " "
+                            + x.Client.User.LastName,
+
+                        Rating =
+                            x.Rating,
+
+                        Comment =
+                            x.Comment,
+
+                        CreatedAtUtc =
+                            x.CreatedAtUtc,
+
+                        TherapistReply =
+                            x.TherapistReply,
+
+                        TherapistReplyCreatedAtUtc =
+                            x.TherapistReplyCreatedAtUtc
+                    })
+                .ToListAsync();
+
+        return PagedResponse<ReviewResponseDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<TherapistRatingDto>
@@ -256,14 +319,22 @@ public class ReviewService : IReviewService
     }
 
 
-    public async Task<List<ClientReviewDto>>
-    GetMyReviewsAsync(
-        int clientUserId)
+    public async Task<PagedResponse<ClientReviewDto>>
+     GetMyReviewsAsync(
+         int clientUserId,
+         int pageNumber,
+         int pageSize)
     {
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == clientUserId);
+                    x.UserId == clientUserId &&
+                    !x.IsDeleted);
 
         if (client == null)
         {
@@ -271,36 +342,65 @@ public class ReviewService : IReviewService
                 "Client not found.");
         }
 
-        return await _context.Reviews
-            .Include(x => x.Therapist)
-                .ThenInclude(x => x.User)
-            .Where(x =>
-                x.ClientId == client.Id && !x.IsDeleted)
-            .OrderByDescending(x =>
-                x.CreatedAtUtc)
-            .Select(x => new ClientReviewDto
-            {
-                Id = x.Id,
+        var query =
+            _context.Reviews
+                .AsNoTracking()
+                .Include(x => x.Therapist)
+                    .ThenInclude(x => x.User)
+                .Where(x =>
+                    x.ClientId == client.Id &&
+                    !x.IsDeleted);
 
-                TherapistId =
-                    x.TherapistId,
+        var totalCount =
+            await query.CountAsync();
 
-                TherapistName =
-                    x.Therapist.User.FirstName
-                    + " "
-                    + x.Therapist.User.LastName,
+        var items =
+            await query
+                .OrderByDescending(x =>
+                    x.CreatedAtUtc)
+                .ThenByDescending(x =>
+                    x.Id)
+                .Skip(
+                    pagination.Skip)
+                .Take(
+                    pagination.PageSize)
+                .Select(x =>
+                    new ClientReviewDto
+                    {
+                        Id =
+                            x.Id,
 
-                Rating = x.Rating,
+                        TherapistId =
+                            x.TherapistId,
 
-                Comment = x.Comment,
+                        TherapistName =
+                            x.Therapist.User.FirstName
+                            + " "
+                            + x.Therapist.User.LastName,
 
-                CreatedAtUtc =
-                    x.CreatedAtUtc,
+                        Rating =
+                            x.Rating,
 
-                TherapistReply = x.TherapistReply,
-                TherapistReplyCreatedAtUtc = x.TherapistReplyCreatedAtUtc,
-            })
-            .ToListAsync();
+                        Comment =
+                            x.Comment,
+
+                        CreatedAtUtc =
+                            x.CreatedAtUtc,
+
+                        TherapistReply =
+                            x.TherapistReply,
+
+                        TherapistReplyCreatedAtUtc =
+                            x.TherapistReplyCreatedAtUtc
+                    })
+                .ToListAsync();
+
+        return PagedResponse<ClientReviewDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task ReplyToReviewAsync(
@@ -362,66 +462,5 @@ public class ReviewService : IReviewService
                 "Therapist replied to your review",
                 "Your therapist has replied to one of your reviews.",
                 review.AppointmentId);
-    }
-
-    public async Task<List<ReviewResponseDto>>
-    GetTherapistReviewsAsync(
-        int therapistId,
-        ReviewFilterDto filter)
-    {
-        var query =
-            _context.Reviews
-                .Include(x => x.Client)
-                    .ThenInclude(x => x.User)
-                .Where(x =>
-                    x.TherapistId == therapistId && !x.IsDeleted);
-
-        query = filter.SortBy switch
-        {
-            ReviewSortBy.Newest =>
-                query.OrderByDescending(x =>
-                    x.CreatedAtUtc),
-
-            ReviewSortBy.Oldest =>
-                query.OrderBy(x =>
-                    x.CreatedAtUtc),
-
-            ReviewSortBy.HighestRating =>
-                query.OrderByDescending(x =>
-                    x.Rating),
-
-            ReviewSortBy.LowestRating =>
-                query.OrderBy(x =>
-                    x.Rating),
-
-            _ =>
-                query.OrderByDescending(x =>
-                    x.CreatedAtUtc)
-        };
-
-        return await query
-            .Select(x => new ReviewResponseDto
-            {
-                Id = x.Id,
-
-                ClientName =
-                    x.Client.User.FirstName
-                    + " "
-                    + x.Client.User.LastName,
-
-                Rating = x.Rating,
-
-                Comment = x.Comment,
-
-                CreatedAtUtc =
-                    x.CreatedAtUtc,
-
-                TherapistReply =
-                    x.TherapistReply,
-
-                TherapistReplyCreatedAtUtc =
-                    x.TherapistReplyCreatedAtUtc
-            })
-            .ToListAsync();
     }
 }

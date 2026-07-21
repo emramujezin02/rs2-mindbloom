@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Features.Reviews.DTOs;
 using MindBloom.Application.Features.Reviews.Interfaces;
 using System.Security.Claims;
@@ -10,12 +11,14 @@ namespace MindBloom.API.Controllers;
 [Route("api/[controller]")]
 public class ReviewsController : ControllerBase
 {
-    private readonly IReviewService _reviewService;
+    private readonly IReviewService
+        _reviewService;
 
     public ReviewsController(
         IReviewService reviewService)
     {
-        _reviewService = reviewService;
+        _reviewService =
+            reviewService;
     }
 
     [Authorize(Roles = "Client")]
@@ -25,32 +28,32 @@ public class ReviewsController : ControllerBase
             CreateReviewDto request)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                    .Value);
+            GetCurrentUserId();
 
         await _reviewService.CreateAsync(
             userId,
             request);
 
         return StatusCode(
-    StatusCodes.Status201Created,
-    new
-    {
-        message = "Review added successfully."
-    });
+            StatusCodes.Status201Created,
+            new
+            {
+                message =
+                    "Review added successfully."
+            });
     }
 
     [HttpGet("therapist/{therapistId}")]
     public async Task<IActionResult>
         GetTherapistReviews(
-            int therapistId)
+            int therapistId,
+            [FromQuery] ReviewFilterDto filter)
     {
         var result =
             await _reviewService
                 .GetTherapistReviewsAsync(
-                    therapistId);
+                    therapistId,
+                    filter);
 
         return Ok(result);
     }
@@ -71,13 +74,11 @@ public class ReviewsController : ControllerBase
     [Authorize(Roles = "Client")]
     [HttpDelete("{reviewId}")]
     public async Task<IActionResult>
-    Delete(int reviewId)
+        Delete(
+            int reviewId)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                        .Value);
+            GetCurrentUserId();
 
         await _reviewService.DeleteAsync(
             userId,
@@ -86,17 +87,15 @@ public class ReviewsController : ControllerBase
         return NoContent();
     }
 
-    [HttpPut("{reviewId}")]
     [Authorize(Roles = "Client")]
-    public async Task<IActionResult> Update(
-    int reviewId,
-    UpdateReviewDto request)
+    [HttpPut("{reviewId}")]
+    public async Task<IActionResult>
+        Update(
+            int reviewId,
+            UpdateReviewDto request)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetCurrentUserId();
 
         await _reviewService.UpdateAsync(
             userId,
@@ -109,18 +108,25 @@ public class ReviewsController : ControllerBase
     [Authorize(Roles = "Client")]
     [HttpGet("mine")]
     public async Task<IActionResult>
-    GetMyReviews()
+        GetMyReviews(
+            [FromQuery]
+            int pageNumber =
+                PaginationDefaults
+                    .DefaultPageNumber,
+            [FromQuery]
+            int pageSize =
+                PaginationDefaults
+                    .DefaultPageSize)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetCurrentUserId();
 
         var result =
             await _reviewService
                 .GetMyReviewsAsync(
-                    userId);
+                    userId,
+                    pageNumber,
+                    pageSize);
 
         return Ok(result);
     }
@@ -128,15 +134,12 @@ public class ReviewsController : ControllerBase
     [Authorize(Roles = "Therapist")]
     [HttpPut("{reviewId}/reply")]
     public async Task<IActionResult>
-    ReplyToReview(
-        int reviewId,
-        ReplyToReviewDto request)
+        ReplyToReview(
+            int reviewId,
+            ReplyToReviewDto request)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetCurrentUserId();
 
         await _reviewService
             .ReplyToReviewAsync(
@@ -147,19 +150,21 @@ public class ReviewsController : ControllerBase
         return NoContent();
     }
 
-    [HttpGet("therapist/{therapistId}/filtered")]
-    public async Task<IActionResult>
-    GetTherapistReviews(
-        int therapistId,
-        [FromQuery]
-        ReviewFilterDto filter)
+    private int GetCurrentUserId()
     {
-        var result =
-            await _reviewService
-                .GetTherapistReviewsAsync(
-                    therapistId,
-                    filter);
+        var claim =
+            User.FindFirst(
+                ClaimTypes.NameIdentifier);
 
-        return Ok(result);
+        if (claim == null ||
+            !int.TryParse(
+                claim.Value,
+                out var userId))
+        {
+            throw new UnauthorizedAccessException(
+                "Authenticated user identifier is missing or invalid.");
+        }
+
+        return userId;
     }
 }

@@ -5,6 +5,7 @@ using MindBloom.Application.Features.JournalEntries.DTOs;
 using MindBloom.Application.Features.JournalEntries.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Application.Common.Pagination;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -52,6 +53,12 @@ public class JournalEntryService
             int pageNumber,
             int pageSize)
     {
+        var pagination =
+        PaginationHelper.Normalize(
+            pageNumber,
+            pageSize);
+
+
         var client =
             await GetClientAsync(
                 clientUserId);
@@ -70,9 +77,10 @@ public class JournalEntryService
             await query
                 .OrderByDescending(x =>
                     x.CreatedAtUtc)
-                .Skip(
-                    (pageNumber - 1) *
-                    pageSize)
+.Skip(
+    pagination.Skip)
+.Take(
+    pagination.PageSize)
                 .Take(pageSize)
                 .Select(x =>
                     new JournalEntryResponseDto
@@ -91,18 +99,12 @@ public class JournalEntryService
                     })
                 .ToListAsync();
 
-        return new PagedResponse<
-            JournalEntryResponseDto>
-        {
-            Items = items,
-            PageNumber = pageNumber,
-            PageSize = pageSize,
-            TotalCount = totalCount,
-            TotalPages =
-                (int)Math.Ceiling(
-                    totalCount /
-                    (double)pageSize)
-        };
+        return PagedResponse<JournalEntryResponseDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<JournalEntryResponseDto>
@@ -203,6 +205,11 @@ public class JournalEntryService
         int pageNumber,
         int pageSize)
     {
+        var pagination =
+    PaginationHelper.Normalize(
+        pageNumber,
+        pageSize);
+
         await EnsureTherapistOwnsClientAsync(
             therapistUserId,
             clientId);
@@ -223,9 +230,10 @@ public class JournalEntryService
             await query
                 .OrderByDescending(x =>
                     x.CreatedAtUtc)
-                .Skip(
-                    (pageNumber - 1) *
-                    pageSize)
+.Skip(
+    pagination.Skip)
+.Take(
+    pagination.PageSize)
                 .Take(pageSize)
                 .Select(x =>
                     new TherapistMoodEntryResponseDto
@@ -240,18 +248,13 @@ public class JournalEntryService
                     })
                 .ToListAsync();
 
-        return new PagedResponse<
-            TherapistMoodEntryResponseDto>
-        {
-            Items = items,
-            PageNumber = pageNumber,
-            PageSize = pageSize,
-            TotalCount = totalCount,
-            TotalPages =
-                (int)Math.Ceiling(
-                    totalCount /
-                    (double)pageSize)
-        };
+        return PagedResponse<
+                TherapistMoodEntryResponseDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<

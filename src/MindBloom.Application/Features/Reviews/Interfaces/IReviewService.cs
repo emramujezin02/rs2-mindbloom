@@ -1,22 +1,40 @@
-﻿using MindBloom.Application.Features.Reviews.DTOs;
+﻿using MindBloom.Application.Common.Models;
+using MindBloom.Application.Features.Reviews.DTOs;
 
 namespace MindBloom.Application.Features.Reviews.Interfaces;
 
 public interface IReviewService
 {
-    Task CreateAsync(int clientUserId,CreateReviewDto request);
+    Task CreateAsync(
+        int clientUserId,
+        CreateReviewDto request);
 
-    Task<List<ReviewResponseDto>>GetTherapistReviewsAsync(int therapistId);
+    Task<PagedResponse<ReviewResponseDto>>
+        GetTherapistReviewsAsync(
+            int therapistId,
+            ReviewFilterDto filter);
 
-    Task<TherapistRatingDto>GetTherapistRatingAsync(int therapistId);
+    Task<TherapistRatingDto>
+        GetTherapistRatingAsync(
+            int therapistId);
 
-    Task DeleteAsync(int clientUserId,int reviewId);
+    Task DeleteAsync(
+        int clientUserId,
+        int reviewId);
 
-    Task UpdateAsync(int clientUserId,int reviewId,UpdateReviewDto request);
+    Task UpdateAsync(
+        int clientUserId,
+        int reviewId,
+        UpdateReviewDto request);
 
-    Task<List<ClientReviewDto>>GetMyReviewsAsync(int clientUserId);
+    Task<PagedResponse<ClientReviewDto>>
+        GetMyReviewsAsync(
+            int clientUserId,
+            int pageNumber,
+            int pageSize);
 
-    Task ReplyToReviewAsync(int therapistUserId, int reviewId,ReplyToReviewDto request);
-
-    Task<List<ReviewResponseDto>>GetTherapistReviewsAsync(int therapistId,ReviewFilterDto filter);
+    Task ReplyToReviewAsync(
+        int therapistUserId,
+        int reviewId,
+        ReplyToReviewDto request);
 }

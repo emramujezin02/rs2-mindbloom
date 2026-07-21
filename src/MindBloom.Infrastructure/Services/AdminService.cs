@@ -11,6 +11,7 @@ using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Features.Memberships.Interfaces;
 using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Common.Exceptions;
+using MindBloom.Application.Common.Pagination;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -52,6 +53,11 @@ public class AdminService : IAdminService
         GetUsersAsync(
             SearchAdminUsersDto request)
     {
+        var pagination =
+    PaginationHelper.Normalize(
+        request.PageNumber,
+        request.PageSize);
+
         var query =
             _context.Users
                 .AsNoTracking()
@@ -135,12 +141,10 @@ public class AdminService : IAdminService
                     user.LastName)
                 .ThenBy(user =>
                     user.FirstName)
-                .Skip(
-                    (
-                        request.PageNumber - 1
-                    )
-                    * request.PageSize)
-                .Take(request.PageSize)
+.Skip(
+    pagination.Skip)
+.Take(
+    pagination.PageSize)
                 .Select(user =>
                     new UserListDto
                     {
@@ -194,26 +198,13 @@ public class AdminService : IAdminService
                     })
                 .ToListAsync();
 
-        return new PagedResponse<UserListDto>
-        {
-            Items = users,
+        return PagedResponse<UserListDto>
+    .Create(
+        users,
+        pagination.PageNumber,
+        pagination.PageSize,
+        totalCount);
 
-            PageNumber =
-                request.PageNumber,
-
-            PageSize =
-                request.PageSize,
-
-            TotalCount =
-                totalCount,
-
-            TotalPages =
-                totalCount == 0
-                    ? 0
-                    : (int)Math.Ceiling(
-                        totalCount
-                        / (double)request.PageSize)
-        };
     }
 
     public async Task UpdateUserStatusAsync(
@@ -619,6 +610,11 @@ public class AdminService : IAdminService
         GetReviewsAsync(
             SearchAdminReviewsDto request)
     {
+        var pagination =
+    PaginationHelper.Normalize(
+        request.PageNumber,
+        request.PageSize);
+
         if (request.Rating.HasValue &&
             (
                 request.Rating.Value < 1 ||
@@ -733,10 +729,10 @@ public class AdminService : IAdminService
                     x.CreatedAtUtc)
                 .ThenByDescending(x =>
                     x.Id)
-                .Skip(
-                    (request.PageNumber - 1)
-                    * request.PageSize)
-                .Take(request.PageSize)
+.Skip(
+    pagination.Skip)
+.Take(
+    pagination.PageSize)
                 .Select(x =>
                     new AdminReviewListDto
                     {
@@ -786,27 +782,12 @@ public class AdminService : IAdminService
                     })
                 .ToListAsync();
 
-        return new PagedResponse<AdminReviewListDto>
-        {
-            Items =
+        return PagedResponse<AdminReviewListDto>
+            .Create(
                 items,
-
-            PageNumber =
-                request.PageNumber,
-
-            PageSize =
-                request.PageSize,
-
-            TotalCount =
-                totalCount,
-
-            TotalPages =
-                totalCount == 0
-                    ? 0
-                    : (int)Math.Ceiling(
-                        totalCount /
-                        (double)request.PageSize)
-        };
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<
@@ -814,6 +795,12 @@ public class AdminService : IAdminService
     GetPendingTherapistsAsync(
         SearchTherapistVerificationDto request)
     {
+
+        var pagination =
+    PaginationHelper.Normalize(
+        request.PageNumber,
+        request.PageSize);
+
         var query =
             _context.Therapists
                 .AsNoTracking()
@@ -858,10 +845,10 @@ public class AdminService : IAdminService
             await query
                 .OrderBy(x =>
                     x.CreatedAtUtc)
-                .Skip(
-                    (request.PageNumber - 1)
-                    * request.PageSize)
-                .Take(request.PageSize)
+.Skip(
+    pagination.Skip)
+.Take(
+    pagination.PageSize)
                 .Select(x =>
                     new TherapistVerificationListDto
                     {
@@ -904,27 +891,13 @@ public class AdminService : IAdminService
                     })
                 .ToListAsync();
 
-        return new PagedResponse<
-            TherapistVerificationListDto>
-        {
-            Items = items,
-
-            PageNumber =
-                request.PageNumber,
-
-            PageSize =
-                request.PageSize,
-
-            TotalCount =
-                totalCount,
-
-            TotalPages =
-                totalCount == 0
-                    ? 0
-                    : (int)Math.Ceiling(
-                        totalCount
-                        / (double)request.PageSize)
-        };
+        return PagedResponse<
+                TherapistVerificationListDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<
@@ -1066,6 +1039,7 @@ public class AdminService : IAdminService
     GetReviewDetailsAsync(
         int reviewId)
     {
+
         var review =
             await _context.Reviews
                 .AsNoTracking()

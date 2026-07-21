@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Hosting;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.Interfaces;
 using System.Threading;
+using MindBloom.Application.Common.Pagination;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -150,6 +151,11 @@ public class TherapistService : ITherapistService
     public async Task<PagedResponse<TherapistResponseDto>>
     SearchAsync(SearchTherapistsDto request)
     {
+        var pagination =
+    PaginationHelper.Normalize(
+        request.PageNumber,
+        request.PageSize);
+
         var query =
             _context.Therapists
                 .Include(x => x.User)
@@ -202,11 +208,10 @@ public class TherapistService : ITherapistService
 
         var items =
             await query
-                .Skip(
-                    (request.PageNumber - 1)
-                    * request.PageSize)
-
-                .Take(request.PageSize)
+.Skip(
+    pagination.Skip)
+.Take(
+    pagination.PageSize)
 
                 .Select(x => new TherapistResponseDto
                 {
@@ -248,21 +253,12 @@ public class TherapistService : ITherapistService
                 })
                 .ToListAsync();
 
-        return new PagedResponse<TherapistResponseDto>
-        {
-            Items = items,
-
-            PageNumber = request.PageNumber,
-
-            PageSize = request.PageSize,
-
-            TotalCount = totalCount,
-
-            TotalPages =
-                (int)Math.Ceiling(
-                    totalCount
-                    / (double)request.PageSize)
-        };
+        return PagedResponse<TherapistResponseDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<List<TherapistResponseDto>>

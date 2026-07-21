@@ -6,6 +6,7 @@ using MindBloom.Application.Features.Chat.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Application.Common.Pagination;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -287,6 +288,11 @@ public sealed class ChatService : IChatService
             int pageNumber,
             int pageSize)
     {
+        var pagination =
+    PaginationHelper.Normalize(
+        pageNumber,
+        pageSize);
+
 
         await EnsureParticipantAsync(
             currentUserId,
@@ -310,10 +316,10 @@ public sealed class ChatService : IChatService
                     x.SentAtUtc)
                 .ThenByDescending(x =>
                     x.Id)
-                .Skip(
-                    (pageNumber - 1) *
-                    pageSize)
-                .Take(pageSize)
+.Skip(
+    pagination.Skip)
+.Take(
+    pagination.PageSize)
                 .Select(x =>
                     new ChatMessageResponseDto
                     {
@@ -352,26 +358,12 @@ public sealed class ChatService : IChatService
                 .ThenBy(x => x.Id)
                 .ToList();
 
-        return new PagedResponse<
-            ChatMessageResponseDto>
-        {
-            Items =
+        return PagedResponse<ChatMessageResponseDto>
+            .Create(
                 messages,
-
-            PageNumber =
-                pageNumber,
-
-            PageSize =
-                pageSize,
-
-            TotalCount =
-                totalCount,
-
-            TotalPages =
-                (int)Math.Ceiling(
-                    totalCount /
-                    (double)pageSize)
-        };
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<ChatMessageResponseDto>

@@ -5,6 +5,7 @@ using MindBloom.Application.Features.Articles.DTOs;
 using MindBloom.Application.Features.Articles.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Application.Common.Pagination;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -24,11 +25,10 @@ public class ArticleService : IArticleService
         GetPublicAsync(
             ArticleQueryDto query)
     {
-        var pageNumber =
-            query.PageNumber;
-
-        var pageSize =
-            query.PageSize;
+        var pagination =
+            PaginationHelper.Normalize(
+                query.PageNumber,
+                query.PageSize);
 
         var articles =
             _context.Articles
@@ -80,8 +80,7 @@ public class ArticleService : IArticleService
 
         return await CreatePagedResponseAsync(
             articles,
-            pageNumber,
-            pageSize);
+            pagination);
     }
 
     public async Task<ArticleResponseDto>
@@ -112,11 +111,10 @@ public class ArticleService : IArticleService
         GetManagementAsync(
             ArticleManagementQueryDto query)
     {
-        var pageNumber =
-            query.PageNumber;
-
-        var pageSize =
-            query.PageSize;
+        var pagination =
+            PaginationHelper.Normalize(
+                query.PageNumber,
+                query.PageSize);
 
         var articles =
             _context.Articles
@@ -174,8 +172,7 @@ public class ArticleService : IArticleService
 
         return await CreatePagedResponseAsync(
             articles,
-            pageNumber,
-            pageSize);
+            pagination);
     }
 
     public async Task<ArticleResponseDto>
@@ -440,11 +437,10 @@ public class ArticleService : IArticleService
     }
 
     private static async Task<
-        PagedResponse<ArticleResponseDto>>
-        CreatePagedResponseAsync(
-            IQueryable<Article> query,
-            int pageNumber,
-            int pageSize)
+    PagedResponse<ArticleResponseDto>>
+    CreatePagedResponseAsync(
+        IQueryable<Article> query,
+        PaginationParameters pagination)
     {
         var totalCount =
             await query.CountAsync();
@@ -456,9 +452,9 @@ public class ArticleService : IArticleService
                 .ThenByDescending(x =>
                     x.Id)
                 .Skip(
-                    (pageNumber - 1)
-                    * pageSize)
-                .Take(pageSize)
+                    pagination.Skip)
+                .Take(
+                    pagination.PageSize)
                 .Select(x =>
                     new ArticleResponseDto
                     {
@@ -497,27 +493,12 @@ public class ArticleService : IArticleService
                     })
                 .ToListAsync();
 
-        return new PagedResponse<ArticleResponseDto>
-        {
-            Items =
+        return PagedResponse<ArticleResponseDto>
+            .Create(
                 items,
-
-            PageNumber =
-                pageNumber,
-
-            PageSize =
-                pageSize,
-
-            TotalCount =
-                totalCount,
-
-            TotalPages =
-                totalCount == 0
-                    ? 0
-                    : (int)Math.Ceiling(
-                        totalCount
-                        / (double)pageSize)
-        };
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     private static string?
