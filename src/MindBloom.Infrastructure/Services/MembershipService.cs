@@ -116,9 +116,6 @@ public class MembershipService : IMembershipService
                 "Therapist not found.");
         }
 
-        ValidatePlanType(
-            request.PlanType);
-
         var activeMembershipExists =
             await _context.ClientMemberships
                 .AnyAsync(x =>
@@ -419,12 +416,6 @@ public class MembershipService : IMembershipService
             int clientUserId,
             ConfirmMembershipPaymentDto request)
     {
-        if (string.IsNullOrWhiteSpace(
-                request.PaymentIntentId))
-        {
-            throw new Exception(
-                "Payment intent ID is required.");
-        }
 
         var client =
             await _context.Clients
@@ -1031,11 +1022,6 @@ public class MembershipService : IMembershipService
                         x.AppointmentId ==
                             appointmentId);
 
-            /*
-             * Termin nije plaćen membershipom.
-             * Nema membership sesije koju treba
-             * vratiti ili potrošiti.
-             */
             if (usage == null)
             {
                 await transaction.CommitAsync();
@@ -1043,11 +1029,6 @@ public class MembershipService : IMembershipService
                 return;
             }
 
-            /*
-             * Idempotency:
-             * vraćena ili potrošena sesija se više
-             * ne obrađuje.
-             */
             if (usage.Status ==
                     MembershipUsageStatus.Restored ||
                 usage.Status ==
@@ -1118,11 +1099,6 @@ public class MembershipService : IMembershipService
             }
             else
             {
-                /*
-                 * Kod kasnog otkazivanja sesija se ne
-                 * vraća. Nema dodatnog umanjenja jer je
-                 * već rezervisana.
-                 */
                 usage.Status =
                     MembershipUsageStatus.Consumed;
 
@@ -1173,11 +1149,6 @@ public class MembershipService : IMembershipService
             return;
         }
 
-        /*
-         * Idempotency:
-         * završeni ili vraćeni usage se ponovo
-         * ne mijenja.
-         */
         if (usage.Status ==
                 MembershipUsageStatus.Consumed ||
             usage.Status ==
@@ -1322,17 +1293,7 @@ public class MembershipService : IMembershipService
         };
     }
 
-    private static void ValidatePlanType(
-        MembershipPlanType planType)
-    {
-        if (!Enum.IsDefined(
-                typeof(MembershipPlanType),
-                planType))
-        {
-            throw new Exception(
-                "Invalid membership plan.");
-        }
-    }
+
 
     private static int GetTotalSessions(
         MembershipPlanType planType)

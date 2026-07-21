@@ -32,7 +32,9 @@ public class TherapistsController : ControllerBase
                 userId,
                 request);
 
-        return Ok(result);
+        return StatusCode(
+    StatusCodes.Status201Created,
+    result);
     }
 
     [HttpGet]
@@ -54,7 +56,7 @@ public class TherapistsController : ControllerBase
             therapistId,
             request);
 
-        return Ok();
+        return NoContent();
     }
 
     [HttpGet("{therapistId}/availability")]
@@ -118,8 +120,7 @@ public class TherapistsController : ControllerBase
                 userId,
                 availabilityId);
 
-        return Ok(
-            "Availability deleted successfully.");
+        return NoContent();
     }
 
     [HttpGet("dashboard")]
@@ -156,11 +157,7 @@ public class TherapistsController : ControllerBase
                 userId,
                 request);
 
-        return Ok(new
-        {
-            message =
-                "Unavailable date added successfully."
-        });
+        return NoContent();
     }
 
     [HttpGet("{therapistId}/unavailable-dates")]
@@ -195,11 +192,7 @@ public class TherapistsController : ControllerBase
                 userId,
                 id);
 
-        return Ok(new
-        {
-            message =
-                "Unavailable date deleted successfully."
-        });
+        return NoContent();
     }
 
     [Authorize(Roles = "Therapist")]
@@ -257,11 +250,7 @@ public class TherapistsController : ControllerBase
                 userId,
                 id);
 
-        return Ok(new
-        {
-            message =
-                "Document deleted successfully."
-        });
+        return NoContent();
     }
 
     [Authorize(Roles = "Therapist")]
@@ -341,9 +330,10 @@ public class TherapistsController : ControllerBase
     [HttpPost("profile/image")]
     [Consumes("multipart/form-data")]
     public async Task<
-    ActionResult<TherapistProfileImageDto>>
-    UploadProfileImage(
-        [FromForm] IFormFile file)
+ActionResult<TherapistProfileImageDto>>
+UploadProfileImage(
+    [FromForm]
+    UploadTherapistProfileImageDto request)
     {
         var userId =
             GetCurrentUserId();
@@ -352,7 +342,7 @@ public class TherapistsController : ControllerBase
             await _therapistService
                 .UploadProfileImageAsync(
                     userId,
-                    file);
+                    request.File);
 
         return Ok(result);
     }

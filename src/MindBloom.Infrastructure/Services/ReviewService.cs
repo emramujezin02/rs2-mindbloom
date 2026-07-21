@@ -29,27 +29,12 @@ public class ReviewService : IReviewService
      int clientUserId,
      CreateReviewDto request)
     {
-        if (request.Rating < 1 ||
-            request.Rating > 5)
-        {
-            throw new Exception(
-                "Rating must be between 1 and 5.");
-        }
+       
 
         var comment =
             request.Comment.Trim();
 
-        if (string.IsNullOrWhiteSpace(comment))
-        {
-            throw new Exception(
-                "Review comment is required.");
-        }
-
-        if (comment.Length > 1000)
-        {
-            throw new Exception(
-                "Review comment may contain at most 1000 characters.");
-        }
+     
 
         var client =
             await _context.Clients
@@ -241,9 +226,11 @@ public class ReviewService : IReviewService
                 "Review not found.");
         }
 
-        review.Rating = request.Rating;
+        review.Rating =
+    request.Rating;
 
-        review.Comment = request.Comment;
+        review.Comment =
+            request.Comment.Trim();
 
         await _context.SaveChangesAsync();
     }
@@ -302,15 +289,6 @@ public class ReviewService : IReviewService
     {
         var reply = request.Reply?.Trim() ?? string.Empty;
 
-        if (string.IsNullOrWhiteSpace(reply))
-        {
-            throw new Exception("Review reply is required.");
-        }
-
-        if (reply.Length > 1000)
-        {
-            throw new Exception("Review reply may contain at most 1000 characters.");
-        }
 
         var therapist =
             await _context.Therapists

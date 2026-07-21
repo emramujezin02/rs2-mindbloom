@@ -523,77 +523,10 @@ public class TherapistService : ITherapistService
                     StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-        if (string.IsNullOrWhiteSpace(biography))
-        {
-            throw new ArgumentException(
-                "Biography is required.");
-        }
-
-        if (biography.Length > 2000)
-        {
-            throw new ArgumentException(
-                "Biography cannot contain more than 2000 characters.");
-        }
-
-        if (string.IsNullOrWhiteSpace(specialization))
-        {
-            throw new ArgumentException(
-                "Specialization is required.");
-        }
-
-        if (specialization.Length > 150)
-        {
-            throw new ArgumentException(
-                "Specialization cannot contain more than 150 characters.");
-        }
-
-        if (request.ExperienceYears < 0 ||
-            request.ExperienceYears > 70)
-        {
-            throw new ArgumentException(
-                "Experience must be between 0 and 70 years.");
-        }
-
-        if (request.HourlyRate <= 0 ||
-            request.HourlyRate > 10000)
-        {
-            throw new ArgumentException(
-                "Hourly rate must be greater than zero and cannot exceed 10000.");
-        }
-
-        if (string.IsNullOrWhiteSpace(location))
-        {
-            throw new ArgumentException(
-                "Location is required.");
-        }
-
-        if (location.Length > 200)
-        {
-            throw new ArgumentException(
-                "Location cannot contain more than 200 characters.");
-        }
-
-        if (languages.Count == 0)
-        {
-            throw new ArgumentException(
-                "At least one language is required.");
-        }
-
-        if (languages.Any(x =>
-                x.Length > 100))
-        {
-            throw new ArgumentException(
-                "A language cannot contain more than 100 characters.");
-        }
+       
 
         var serializedLanguages =
             string.Join(",", languages);
-
-        if (serializedLanguages.Length > 1000)
-        {
-            throw new ArgumentException(
-                "The complete language list is too long.");
-        }
 
         therapist.Biography =
             biography;

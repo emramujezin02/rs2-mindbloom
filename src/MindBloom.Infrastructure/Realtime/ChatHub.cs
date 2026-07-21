@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.SignalR;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Chat.DTOs;
 using MindBloom.Application.Features.Chat.Interfaces;
+using FluentValidation;
+using MindBloom.Application.Features.Chat.DTOs;
 
 namespace MindBloom.Infrastructure.Realtime;
 
@@ -13,11 +15,19 @@ public sealed class ChatHub : Hub
     private readonly IChatService
         _chatService;
 
+    private readonly IValidator<SendChatMessageDto>
+    _messageValidator;
+
     public ChatHub(
-        IChatService chatService)
+        IChatService chatService,
+        IValidator<SendChatMessageDto>
+            messageValidator)
     {
         _chatService =
             chatService;
+
+        _messageValidator =
+            messageValidator;
     }
 
     public async Task JoinConversation(
@@ -74,24 +84,45 @@ public sealed class ChatHub : Hub
     }
 
     public async Task SendMessage(
-        int conversationId,
-        string content)
+     int conversationId,
+     string content)
     {
         var userId =
             GetCurrentUserId();
+
+        var request =
+            new SendChatMessageDto
+            {
+                ConversationId =
+                    conversationId,
+
+                Content =
+                    content
+            };
+
+        var validationResult =
+            await _messageValidator
+                .ValidateAsync(
+                    request);
+
+        if (!validationResult.IsValid)
+        {
+            var message =
+                string.Join(
+                    " ",
+                    validationResult.Errors
+                        .Select(x =>
+                            x.ErrorMessage));
+
+            throw new HubException(
+                message);
+        }
 
         var result =
             await _chatService
                 .SendMessageAsync(
                     userId,
-                    new SendChatMessageDto
-                    {
-                        ConversationId =
-                            conversationId,
-
-                        Content =
-                            content
-                    });
+                    request);
 
         await Clients
             .Group(

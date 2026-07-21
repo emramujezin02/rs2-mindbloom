@@ -11,11 +11,6 @@ namespace MindBloom.Infrastructure.Services;
 public class JournalEntryService
     : IJournalEntryService
 {
-    private const int MinimumMood = 1;
-    private const int MaximumMood = 5;
-
-    private const int MaximumEmotionLength = 100;
-    private const int MaximumNoteLength = 2000;
 
     private readonly ApplicationDbContext _context;
 
@@ -30,10 +25,6 @@ public class JournalEntryService
             int clientUserId,
             CreateJournalEntryDto request)
     {
-        Validate(
-            request.Mood,
-            request.Emotion,
-            request.Note);
 
         var client =
             await GetClientAsync(
@@ -64,21 +55,6 @@ public class JournalEntryService
         var client =
             await GetClientAsync(
                 clientUserId);
-
-        if (pageNumber < 1)
-        {
-            pageNumber = 1;
-        }
-
-        if (pageSize < 1)
-        {
-            pageSize = 10;
-        }
-
-        if (pageSize > 50)
-        {
-            pageSize = 50;
-        }
 
         var query =
             _context.MoodEntries
@@ -161,10 +137,6 @@ public class JournalEntryService
             int journalEntryId,
             UpdateJournalEntryDto request)
     {
-        Validate(
-            request.Mood,
-            request.Emotion,
-            request.Note);
 
         var client =
             await GetClientAsync(
@@ -235,20 +207,7 @@ public class JournalEntryService
             therapistUserId,
             clientId);
 
-        if (pageNumber < 1)
-        {
-            pageNumber = 1;
-        }
 
-        if (pageSize < 1)
-        {
-            pageSize = 10;
-        }
-
-        if (pageSize > 50)
-        {
-            pageSize = 50;
-        }
 
         var query =
             _context.MoodEntries
@@ -306,7 +265,7 @@ public class JournalEntryService
             therapistUserId,
             clientId);
 
-        days = NormalizeAnalyticsPeriod(days);
+        
 
         var toUtc =
             DateTime.UtcNow.Date
@@ -600,47 +559,7 @@ public class JournalEntryService
         return client;
     }
 
-    private static void Validate(
-        int mood,
-        string emotion,
-        string note)
-    {
-        if (mood < MinimumMood ||
-            mood > MaximumMood)
-        {
-            throw new Exception(
-                "Mood must be between 1 and 5.");
-        }
-
-        var normalizedEmotion =
-            emotion?.Trim()
-            ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(
-                normalizedEmotion))
-        {
-            throw new Exception(
-                "Emotion is required.");
-        }
-
-        if (normalizedEmotion.Length >
-            MaximumEmotionLength)
-        {
-            throw new Exception(
-                "Emotion may contain at most 100 characters.");
-        }
-
-        var normalizedNote =
-            note?.Trim()
-            ?? string.Empty;
-
-        if (normalizedNote.Length >
-            MaximumNoteLength)
-        {
-            throw new Exception(
-                "Note may contain at most 2000 characters.");
-        }
-    }
+   
 
     private static JournalEntryResponseDto
         MapToDto(

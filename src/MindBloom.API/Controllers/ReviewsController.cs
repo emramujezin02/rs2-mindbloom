@@ -34,10 +34,12 @@ public class ReviewsController : ControllerBase
             userId,
             request);
 
-        return Ok(new
-        {
-            message = "Review added successfully."
-        });
+        return StatusCode(
+    StatusCodes.Status201Created,
+    new
+    {
+        message = "Review added successfully."
+    });
     }
 
     [HttpGet("therapist/{therapistId}")]
@@ -81,8 +83,7 @@ public class ReviewsController : ControllerBase
             userId,
             reviewId);
 
-        return Ok(
-            "Review deleted successfully.");
+        return NoContent();
     }
 
     [HttpPut("{reviewId}")]
@@ -102,12 +103,7 @@ public class ReviewsController : ControllerBase
             reviewId,
             request);
 
-        return Ok(
-            new
-            {
-                message =
-                    "Review updated successfully."
-            });
+        return NoContent();
     }
 
     [Authorize(Roles = "Client")]
@@ -148,11 +144,7 @@ public class ReviewsController : ControllerBase
                 reviewId,
                 request);
 
-        return Ok(new
-        {
-            message =
-                "Reply added successfully."
-        });
+        return NoContent();
     }
 
     [HttpGet("therapist/{therapistId}/filtered")]

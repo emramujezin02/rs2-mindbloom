@@ -296,12 +296,6 @@ public class PaymentService : IPaymentService
         int clientUserId,
         ConfirmPaymentDto request)
     {
-        if (string.IsNullOrWhiteSpace(
-                request.PaymentIntentId))
-        {
-            throw new Exception(
-                "Payment intent ID is required.");
-        }
 
         var client =
             await _context.Clients

@@ -414,16 +414,7 @@ public class WorkshopService : IWorkshopService
             bool isAdmin,
             CreateWorkshopDto request)
     {
-        ValidateWorkshop(
-            request.Title,
-            request.Description,
-            request.StartUtc,
-            request.EndUtc,
-            request.Type,
-            request.OnlineLink,
-            request.Location,
-            request.Capacity,
-            request.Price);
+
 
         var userExists =
             await _context.Users
@@ -525,16 +516,7 @@ public class WorkshopService : IWorkshopService
             int workshopId,
             UpdateWorkshopDto request)
     {
-        ValidateWorkshop(
-            request.Title,
-            request.Description,
-            request.StartUtc,
-            request.EndUtc,
-            request.Type,
-            request.OnlineLink,
-            request.Location,
-            request.Capacity,
-            request.Price);
+
 
         var workshop =
             await GetWorkshopForManagementAsync(
@@ -1264,110 +1246,7 @@ public class WorkshopService : IWorkshopService
         return query;
     }
 
-    private static void ValidateWorkshop(
-        string title,
-        string description,
-        DateTime startUtc,
-        DateTime endUtc,
-        WorkshopType type,
-        string? onlineLink,
-        string? location,
-        int capacity,
-        decimal price)
-    {
-        var normalizedTitle =
-            title?.Trim() ??
-            string.Empty;
-
-        var normalizedDescription =
-            description?.Trim() ??
-            string.Empty;
-
-        if (normalizedTitle.Length < 3 ||
-            normalizedTitle.Length > 150)
-        {
-            throw new BadRequestException(
-                "Title must contain between 3 and 150 characters.");
-        }
-
-        if (normalizedDescription.Length < 10 ||
-            normalizedDescription.Length > 2000)
-        {
-            throw new BadRequestException(
-                "Description must contain between 10 and 2000 characters.");
-        }
-
-        if (startUtc >= endUtc)
-        {
-            throw new BadRequestException(
-                "Workshop start time must be before its end time.");
-        }
-
-        if (startUtc <= DateTime.UtcNow)
-        {
-            throw new BadRequestException(
-                "Workshop must be scheduled in the future.");
-        }
-
-        if (capacity < 1 ||
-            capacity > 10000)
-        {
-            throw new BadRequestException(
-                "Capacity must be between 1 and 10000 participants.");
-        }
-
-        if (price < 0)
-        {
-            throw new BadRequestException(
-                "Workshop price cannot be negative.");
-        }
-
-        if (!Enum.IsDefined(type))
-        {
-            throw new BadRequestException(
-                "Select a valid workshop type.");
-        }
-
-        if (type ==
-                WorkshopType.Online &&
-            string.IsNullOrWhiteSpace(
-                onlineLink))
-        {
-            throw new BadRequestException(
-                "Online link is required for an online workshop.");
-        }
-
-        if (type ==
-                WorkshopType.InPerson &&
-            string.IsNullOrWhiteSpace(
-                location))
-        {
-            throw new BadRequestException(
-                "Location is required for an in-person workshop.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(
-                onlineLink))
-        {
-            var validUrl =
-                Uri.TryCreate(
-                    onlineLink.Trim(),
-                    UriKind.Absolute,
-                    out var uri) &&
-                (
-                    uri.Scheme ==
-                        Uri.UriSchemeHttp ||
-                    uri.Scheme ==
-                        Uri.UriSchemeHttps
-                );
-
-            if (!validUrl)
-            {
-                throw new BadRequestException(
-                    "Online link must be a valid HTTP or HTTPS URL.");
-            }
-        }
-    }
+    
 
     private static void
         ValidateStatusTransition(

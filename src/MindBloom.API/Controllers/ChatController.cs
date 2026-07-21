@@ -45,19 +45,18 @@ public class ChatController : ControllerBase
     public async Task<IActionResult>
         GetMessages(
             int conversationId,
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 20)
+            [FromQuery]
+ChatPagingQueryDto query)
     {
         var userId =
             GetCurrentUserId();
 
         var result =
-            await _chatService
-                .GetMessagesAsync(
-                    userId,
-                    conversationId,
-                    pageNumber,
-                    pageSize);
+await _chatService.GetMessagesAsync(
+    userId,
+    conversationId,
+    query.PageNumber,
+    query.PageSize);
 
         return Ok(result);
     }

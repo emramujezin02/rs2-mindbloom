@@ -52,11 +52,7 @@ public class PaymentsController : ControllerBase
                 userId,
                 request);
 
-        return Ok(new
-        {
-            message =
-                "Payment verified and confirmed successfully."
-        });
+        return NoContent();
     }
 
     [Authorize(Roles = "Client")]

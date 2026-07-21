@@ -52,11 +52,7 @@ public class AppointmentService : IAppointmentService
                 .FirstOrDefaultAsync(
                     x => x.Id == request.TherapistId);
 
-        if (request.StartUtc < DateTime.Now)
-        {
-            throw new Exception(
-                "You cannot book appointments in the past.");
-        }
+
 
         if (therapist == null)
         {
@@ -84,20 +80,7 @@ public class AppointmentService : IAppointmentService
         var endTime =
             request.EndUtc.TimeOfDay;
 
-        if (request.StartUtc >= request.EndUtc)
-        {
-            throw new Exception(
-                "Appointment start time must be before end time.");
-        }
 
-        var appointmentDuration =
-            request.EndUtc - request.StartUtc;
-
-        if (appointmentDuration != TimeSpan.FromHours(1))
-        {
-            throw new Exception(
-                "Appointment must last exactly one hour.");
-        }
 
         if (startTime < availability.StartTime
             || endTime > availability.EndTime)
@@ -149,23 +132,8 @@ public class AppointmentService : IAppointmentService
             throw new NotFoundException("Client profile not found.");
         }
 
-        if (request.Type
-    == AppointmentType.Online
-    && string.IsNullOrWhiteSpace(
-        request.MeetingLink))
-        {
-            throw new Exception(
-                "Meeting link is required for online appointments.");
-        }
 
-        if (request.Type
-            == AppointmentType.InPerson
-            && string.IsNullOrWhiteSpace(
-                request.Location))
-        {
-            throw new Exception(
-                "Location is required for in-person appointments.");
-        }
+
 
         var appointment = new Appointment
         {
@@ -532,24 +500,7 @@ public class AppointmentService : IAppointmentService
             request.Reason?.Trim() ??
             string.Empty;
 
-        if (string.IsNullOrWhiteSpace(
-                reason))
-        {
-            throw new Exception(
-                "Cancellation reason is required.");
-        }
 
-        if (reason.Length < 5)
-        {
-            throw new Exception(
-                "Cancellation reason must contain at least 5 characters.");
-        }
-
-        if (reason.Length > 500)
-        {
-            throw new Exception(
-                "Cancellation reason may contain at most 500 characters.");
-        }
 
         var client =
             await _context.Clients

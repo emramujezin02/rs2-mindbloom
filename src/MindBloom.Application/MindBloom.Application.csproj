@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="Microsoft.AspNetCore" Version="2.3.9" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.3.9" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Core" Version="2.3.9" />

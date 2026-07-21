@@ -10,10 +10,6 @@ namespace MindBloom.Infrastructure.Services;
 
 public class ArticleService : IArticleService
 {
-    private const int MaximumTitleLength = 200;
-    private const int MaximumDescriptionLength = 500;
-    private const int MaximumContentLength = 20000;
-    private const int MaximumImageUrlLength = 1000;
 
     private readonly ApplicationDbContext _context;
 
@@ -29,12 +25,10 @@ public class ArticleService : IArticleService
             ArticleQueryDto query)
     {
         var pageNumber =
-            NormalizePageNumber(
-                query.PageNumber);
+            query.PageNumber;
 
         var pageSize =
-            NormalizePageSize(
-                query.PageSize);
+            query.PageSize;
 
         var articles =
             _context.Articles
@@ -119,12 +113,10 @@ public class ArticleService : IArticleService
             ArticleManagementQueryDto query)
     {
         var pageNumber =
-            NormalizePageNumber(
-                query.PageNumber);
+            query.PageNumber;
 
         var pageSize =
-            NormalizePageSize(
-                query.PageSize);
+            query.PageSize;
 
         var articles =
             _context.Articles
@@ -214,11 +206,7 @@ public class ArticleService : IArticleService
             bool isAdmin,
             CreateArticleDto request)
     {
-        Validate(
-            request.Title,
-            request.Description,
-            request.Content,
-            request.ImageUrl);
+       
 
         var user =
             await _context.Users
@@ -305,11 +293,7 @@ public class ArticleService : IArticleService
             int articleId,
             UpdateArticleDto request)
     {
-        Validate(
-            request.Title,
-            request.Description,
-            request.Content,
-            request.ImageUrl);
+        
 
         var article =
             await _context.Articles
@@ -534,123 +518,6 @@ public class ArticleService : IArticleService
                         totalCount
                         / (double)pageSize)
         };
-    }
-
-    private static int NormalizePageNumber(
-        int pageNumber)
-    {
-        return pageNumber < 1
-            ? 1
-            : pageNumber;
-    }
-
-    private static int NormalizePageSize(
-        int pageSize)
-    {
-        if (pageSize < 1)
-        {
-            return 10;
-        }
-
-        return Math.Min(
-            pageSize,
-            50);
-    }
-
-    private static void Validate(
-        string title,
-        string description,
-        string content,
-        string? imageUrl)
-    {
-        var normalizedTitle =
-            title?.Trim()
-            ?? string.Empty;
-
-        var normalizedDescription =
-            description?.Trim()
-            ?? string.Empty;
-
-        var normalizedContent =
-            content?.Trim()
-            ?? string.Empty;
-
-        if (normalizedTitle.Length < 3)
-        {
-            throw new Exception(
-                "Article title must contain at least 3 characters.");
-        }
-
-        if (normalizedTitle.Length >
-            MaximumTitleLength)
-        {
-            throw new Exception(
-                "Article title may contain at most 200 characters.");
-        }
-
-        if (normalizedDescription.Length < 10)
-        {
-            throw new Exception(
-                "Article description must contain at least 10 characters.");
-        }
-
-        if (normalizedDescription.Length >
-            MaximumDescriptionLength)
-        {
-            throw new Exception(
-                "Article description may contain at most 500 characters.");
-        }
-
-        if (normalizedContent.Length < 20)
-        {
-            throw new Exception(
-                "Article content must contain at least 20 characters.");
-        }
-
-        if (normalizedContent.Length >
-            MaximumContentLength)
-        {
-            throw new Exception(
-                "Article content may contain at most 20000 characters.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(
-                imageUrl))
-        {
-            var normalizedImageUrl =
-                imageUrl.Trim();
-
-            if (normalizedImageUrl.Length >
-                MaximumImageUrlLength)
-            {
-                throw new Exception(
-                    "Image URL may contain at most 1000 characters.");
-            }
-
-            var isRelative =
-                normalizedImageUrl
-                    .StartsWith('/');
-
-            var isValidAbsolute =
-                Uri.TryCreate(
-                    normalizedImageUrl,
-                    UriKind.Absolute,
-                    out var uri)
-                && (
-                    uri.Scheme ==
-                    Uri.UriSchemeHttp
-                    ||
-                    uri.Scheme ==
-                    Uri.UriSchemeHttps
-                );
-
-            if (!isRelative &&
-                !isValidAbsolute)
-            {
-                throw new Exception(
-                    "Image URL must be an HTTP/HTTPS URL or a relative application path.");
-            }
-        }
     }
 
     private static string?

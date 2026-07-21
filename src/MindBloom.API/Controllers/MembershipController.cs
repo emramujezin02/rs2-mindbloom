@@ -119,10 +119,7 @@ public class MembershipsController : ControllerBase
                 userId,
                 request);
 
-        return Ok(new
-        {
-            message = "Membership session reserved successfully."
-        });
+        return NoContent();
     }
 
     private int GetAuthenticatedUserId()

@@ -41,12 +41,11 @@ public class JournalEntriesController
         return Ok(result);
     }
 
-    [Authorize(
-        Roles = RoleConstants.Client)]
+    [Authorize(Roles = RoleConstants.Client)]
     [HttpGet("mine")]
     public async Task<IActionResult> Mine(
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 10)
+    [FromQuery]
+    JournalEntryPagingQueryDto query)
     {
         var userId =
             GetAuthenticatedUserId();
@@ -55,8 +54,8 @@ public class JournalEntriesController
             await _journalEntryService
                 .GetMineAsync(
                     userId,
-                    pageNumber,
-                    pageSize);
+                    query.PageNumber,
+                    query.PageSize);
 
         return Ok(result);
     }
@@ -120,16 +119,13 @@ public class JournalEntriesController
         });
     }
 
-    [Authorize(
-        Roles = RoleConstants.Therapist)]
+    [Authorize(Roles = RoleConstants.Therapist)]
     [HttpGet("clients/{clientId:int}/history")]
     public async Task<IActionResult>
-        GetClientHistory(
-            int clientId,
-            [FromQuery]
-            int pageNumber = 1,
-            [FromQuery]
-            int pageSize = 10)
+    GetClientHistory(
+        int clientId,
+        [FromQuery]
+        JournalEntryPagingQueryDto query)
     {
         var therapistUserId =
             GetAuthenticatedUserId();
@@ -139,21 +135,20 @@ public class JournalEntriesController
                 .GetClientHistoryForTherapistAsync(
                     therapistUserId,
                     clientId,
-                    pageNumber,
-                    pageSize);
+                    query.PageNumber,
+                    query.PageSize);
 
         return Ok(result);
     }
 
-    [Authorize(
-        Roles = RoleConstants.Therapist)]
+    [Authorize(Roles = RoleConstants.Therapist)]
     [HttpGet(
-        "clients/{clientId:int}/trend")]
+    "clients/{clientId:int}/trend")]
     public async Task<IActionResult>
-        GetClientTrend(
-            int clientId,
-            [FromQuery]
-        int days = 30)
+    GetClientTrend(
+        int clientId,
+        [FromQuery]
+        JournalEntryTrendQueryDto query)
     {
         var therapistUserId =
             GetAuthenticatedUserId();
@@ -163,20 +158,19 @@ public class JournalEntriesController
                 .GetClientTrendForTherapistAsync(
                     therapistUserId,
                     clientId,
-                    days);
+                    query.Days);
 
         return Ok(result);
     }
 
-    [Authorize(
-        Roles = RoleConstants.Therapist)]
+    [Authorize(Roles = RoleConstants.Therapist)]
     [HttpGet(
-        "clients/{clientId:int}/analytics")]
+    "clients/{clientId:int}/analytics")]
     public async Task<IActionResult>
-        GetClientAnalytics(
-            int clientId,
-            [FromQuery]
-        int days = 30)
+    GetClientAnalytics(
+        int clientId,
+        [FromQuery]
+        JournalEntryTrendQueryDto query)
     {
         var therapistUserId =
             GetAuthenticatedUserId();
@@ -186,7 +180,7 @@ public class JournalEntriesController
                 .GetClientTrendForTherapistAsync(
                     therapistUserId,
                     clientId,
-                    days);
+                    query.Days);
 
         return Ok(result);
     }

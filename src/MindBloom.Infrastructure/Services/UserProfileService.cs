@@ -1,5 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using MindBloom.Application.Common.Exceptions;
@@ -12,16 +11,11 @@ namespace MindBloom.Infrastructure.Services;
 
 public class UserProfileService : IUserProfileService
 {
-    private const int MinimumNameLength = 2;
-    private const int MaximumNameLength = 50;
 
     private const long MaximumProfileImageSize =
         5 * 1024 * 1024;
 
-    private static readonly Regex PhoneNumberRegex =
-        new(
-            @"^\+?[0-9][0-9\s\-]{6,19}$",
-            RegexOptions.Compiled);
+
 
     private static readonly HashSet<string>
         AllowedExtensions =
@@ -76,7 +70,6 @@ public class UserProfileService : IUserProfileService
             int userId,
             UpdateUserProfileDto request)
     {
-        ValidateRequest(request);
 
         var user =
             await _userManager.FindByIdAsync(
@@ -363,63 +356,9 @@ public class UserProfileService : IUserProfileService
         }
     }
 
-    private static void ValidateRequest(
-        UpdateUserProfileDto request)
-    {
-        ValidateName(
-            request.FirstName,
-            "First name");
+   
 
-        ValidateName(
-            request.LastName,
-            "Last name");
-
-        if (!string.IsNullOrWhiteSpace(
-                request.PhoneNumber))
-        {
-            var phoneNumber =
-                request.PhoneNumber.Trim();
-
-            if (!PhoneNumberRegex.IsMatch(
-                    phoneNumber))
-            {
-                throw new BadRequestException(
-                    "Enter a valid phone number containing 7 to 20 characters. "
-                    + "Only digits, spaces, hyphens and an optional leading + are allowed.");
-            }
-        }
-    }
-
-    private static void ValidateName(
-        string value,
-        string fieldName)
-    {
-        if (string.IsNullOrWhiteSpace(
-                value))
-        {
-            throw new BadRequestException(
-                $"{fieldName} is required.");
-        }
-
-        var trimmedValue =
-            value.Trim();
-
-        if (trimmedValue.Length <
-            MinimumNameLength)
-        {
-            throw new BadRequestException(
-                $"{fieldName} must contain at least "
-                + $"{MinimumNameLength} characters.");
-        }
-
-        if (trimmedValue.Length >
-            MaximumNameLength)
-        {
-            throw new BadRequestException(
-                $"{fieldName} may contain at most "
-                + $"{MaximumNameLength} characters.");
-        }
-    }
+   
 
     private static UserProfileDto MapToDto(
         ApplicationUser user)

@@ -11,9 +11,6 @@ namespace MindBloom.Infrastructure.Services;
 
 public sealed class ChatService : IChatService
 {
-    private const int MaximumMessageLength =
-        2000;
-
     private readonly ApplicationDbContext
         _context;
 
@@ -238,11 +235,6 @@ public sealed class ChatService : IChatService
             }
             catch (DbUpdateException)
             {
-                /*
-                 * Ako su dva zahtjeva istovremeno
-                 * pokušala kreirati conversation,
-                 * učitavamo već kreirani zapis.
-                 */
                 _context.ChangeTracker.Clear();
 
                 conversation =
@@ -295,9 +287,6 @@ public sealed class ChatService : IChatService
             int pageNumber,
             int pageSize)
     {
-        ValidatePaging(
-            ref pageNumber,
-            ref pageSize);
 
         await EnsureParticipantAsync(
             currentUserId,
@@ -315,11 +304,6 @@ public sealed class ChatService : IChatService
         var totalCount =
             await query.CountAsync();
 
-        /*
-         * Najnovije poruke se uzimaju prve,
-         * ali response se vraća hronološki
-         * unutar trenutne stranice.
-         */
         var messages =
             await query
                 .OrderByDescending(x =>
@@ -396,23 +380,7 @@ public sealed class ChatService : IChatService
             SendChatMessageDto request)
     {
         var content =
-            request.Content?.Trim() ??
-            string.Empty;
-
-        if (string.IsNullOrWhiteSpace(
-                content))
-        {
-            throw new Exception(
-                "Message content is required.");
-        }
-
-        if (content.Length >
-            MaximumMessageLength)
-        {
-            throw new Exception(
-                $"Message may contain at most "
-                + $"{MaximumMessageLength} characters.");
-        }
+     request.Content.Trim();
 
         var conversation =
             await _context.Conversations
@@ -615,23 +583,4 @@ public sealed class ChatService : IChatService
         }
     }
 
-    private static void ValidatePaging(
-        ref int pageNumber,
-        ref int pageSize)
-    {
-        if (pageNumber < 1)
-        {
-            pageNumber = 1;
-        }
-
-        if (pageSize < 1)
-        {
-            pageSize = 20;
-        }
-
-        if (pageSize > 100)
-        {
-            pageSize = 100;
-        }
-    }
 }

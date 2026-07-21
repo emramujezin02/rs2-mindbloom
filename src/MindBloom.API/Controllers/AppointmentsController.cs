@@ -82,7 +82,7 @@ public class AppointmentsController : ControllerBase
                 therapistUserId,
                 request);
 
-        return Ok("Appointment updated.");
+        return NoContent();
     }
 
     [HttpPut("{appointmentId}/cancel")]
@@ -101,10 +101,7 @@ public class AppointmentsController : ControllerBase
                 appointmentId,
                 request);
 
-        return Ok(new
-        {
-            message = "Appointment cancelled successfully."
-        });
+        return NoContent();
     }
 
     [HttpGet("therapist/stats")]
@@ -208,11 +205,7 @@ public class AppointmentsController : ControllerBase
                 appointmentId,
                 request);
 
-        return Ok(new
-        {
-            message =
-                "Meeting link updated successfully."
-        });
+        return NoContent();
     }
 
     [Authorize(Roles = "Client")]
