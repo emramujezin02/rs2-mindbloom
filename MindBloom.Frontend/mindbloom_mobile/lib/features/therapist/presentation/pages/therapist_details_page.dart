@@ -7,6 +7,8 @@ import '../viewmodels/therapist_details_viewmodel.dart';
 import '../widgets/therapist_location_map.dart';
 import '../widgets/therapist_profile_image.dart';
 import '../widgets/therapist_session_modes.dart';
+import '../../../appointment/presentation/pages/appointment_create_page.dart';
+import '../../../appointment/presentation/widgets/available_slots_preview.dart';
 
 class TherapistDetailsPage extends StatefulWidget {
   final int therapistId;
@@ -384,6 +386,41 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                 ),
               ),
             ),
+
+const SizedBox(height: 24),
+
+const Text(
+  'Next available appointments',
+  style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+  ),
+),
+
+const SizedBox(height: 8),
+
+AvailableSlotsPreview(
+  isLoading:
+      _appointmentPreviewViewModel
+          .isLoadingPreview,
+  groupedSlots:
+      _appointmentPreviewViewModel
+          .groupedPreviewSlots,
+  onBookSlot: (slot) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            AppointmentCreatePage(
+          therapist:
+              therapistSummary,
+          initialSlot: slot,
+        ),
+      ),
+    );
+  },
+),
+
+const SizedBox(height: 24),
 
           const SizedBox(height: 24),
 

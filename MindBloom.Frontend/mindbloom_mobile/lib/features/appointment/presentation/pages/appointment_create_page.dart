@@ -82,16 +82,19 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
       return;
     }
 
-    final matchingSlot = _viewModel.availableSlots
-        .where(
-          (slot) =>
-              slot.year == initialSlot.year &&
-              slot.month == initialSlot.month &&
-              slot.day == initialSlot.day &&
-              slot.hour == initialSlot.hour &&
-              slot.minute == initialSlot.minute,
-        )
-        .firstOrNull;
+DateTime? matchingSlot;
+
+for (final slot
+    in _viewModel.availableSlots) {
+  if (slot.year == initialSlot.year &&
+      slot.month == initialSlot.month &&
+      slot.day == initialSlot.day &&
+      slot.hour == initialSlot.hour &&
+      slot.minute == initialSlot.minute) {
+    matchingSlot = slot;
+    break;
+  }
+}
 
     if (matchingSlot != null) {
       setState(() {

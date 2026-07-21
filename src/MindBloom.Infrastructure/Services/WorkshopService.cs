@@ -7,7 +7,7 @@ using MindBloom.Application.Features.Workshops.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
-//using MindBloom.Shared.Exceptions;
+using MindBloom.Application.Common.BusinessRules;
 using MindBloom.Application.Common.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
@@ -696,18 +696,18 @@ public class WorkshopService : IWorkshopService
     }
 
     public async Task RegisterAsync(
-        int clientUserId,
-        int workshopId)
+      int clientUserId,
+      int workshopId)
     {
         await using var transaction =
             await _context.Database
                 .BeginTransactionAsync(
                     IsolationLevel.Serializable);
 
-        string workshopTitle =
-    string.Empty;
+        var workshopTitle =
+            string.Empty;
 
-        int organizerUserId =
+        var organizerUserId =
             0;
 
         try
@@ -716,7 +716,7 @@ public class WorkshopService : IWorkshopService
                 await _context.Clients
                     .FirstOrDefaultAsync(x =>
                         x.UserId ==
-                        clientUserId &&
+                            clientUserId &&
                         !x.IsDeleted);
 
             if (client == null)
@@ -738,42 +738,20 @@ public class WorkshopService : IWorkshopService
             }
 
             workshopTitle =
-    workshop.Title;
+                workshop.Title;
 
             organizerUserId =
                 workshop.OrganizerUserId;
 
-            if (workshop.Status !=
-                WorkshopStatus.Scheduled)
-            {
-                throw new BusinessException(
-                    "Registration is available only for scheduled workshops.");
-            }
+            BusinessRuleGuard.Against(
+                workshop.Status !=
+                    WorkshopStatus.Scheduled,
+                "Registration is available only for scheduled workshops.");
 
-            if (workshop.StartUtc <=
-                DateTime.UtcNow)
-            {
-                throw new BusinessException(
-                    "Registration is closed because the workshop has already started.");
-            }
-
-            var registeredCount =
-                await _context
-                    .WorkshopRegistrations
-                    .CountAsync(x =>
-                        x.WorkshopId ==
-                            workshopId &&
-                        !x.IsDeleted &&
-                        x.Status ==
-                        WorkshopRegistrationStatus
-                            .Registered);
-
-            if (registeredCount >=
-                workshop.Capacity)
-            {
-                throw new BusinessException(
-                    "The workshop has reached its maximum capacity.");
-            }
+            BusinessRuleGuard.Against(
+                workshop.StartUtc <=
+                    DateTime.UtcNow,
+                "Registration is closed because the workshop has already started.");
 
             var existingRegistration =
                 await _context
@@ -784,16 +762,30 @@ public class WorkshopService : IWorkshopService
                         x.ClientId ==
                             client.Id);
 
+            BusinessRuleGuard.Against(
+                existingRegistration?.Status ==
+                    WorkshopRegistrationStatus.Registered &&
+                !existingRegistration.IsDeleted,
+                "You are already registered for this workshop.");
+
+            var registeredCount =
+                await _context
+                    .WorkshopRegistrations
+                    .CountAsync(x =>
+                        x.WorkshopId ==
+                            workshopId &&
+                        !x.IsDeleted &&
+                        x.Status ==
+                            WorkshopRegistrationStatus
+                                .Registered);
+
+            BusinessRuleGuard.Against(
+                registeredCount >=
+                    workshop.Capacity,
+                "The workshop has reached its maximum capacity.");
+
             if (existingRegistration != null)
             {
-                if (existingRegistration.Status ==
-                    WorkshopRegistrationStatus
-                        .Registered)
-                {
-                    throw new BusinessException(
-                        "You are already registered for this workshop.");
-                }
-
                 existingRegistration.Status =
                     WorkshopRegistrationStatus
                         .Registered;
@@ -814,11 +806,14 @@ public class WorkshopService : IWorkshopService
                     {
                         WorkshopId =
                             workshopId,
+
                         ClientId =
                             client.Id,
+
                         Status =
                             WorkshopRegistrationStatus
                                 .Registered,
+
                         RegisteredAtUtc =
                             DateTime.UtcNow
                     };
@@ -827,7 +822,16 @@ public class WorkshopService : IWorkshopService
                     .Add(registration);
             }
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException exception)
+            {
+                throw new BusinessException(
+                    "You are already registered for this workshop.",
+                    exception);
+            }
 
             await transaction.CommitAsync();
         }
@@ -838,11 +842,10 @@ public class WorkshopService : IWorkshopService
         }
 
         await _businessNotificationService
-    .PublishAsync(
-        clientUserId,
-        "Workshop registration confirmed",
-        $"You have successfully registered for "
-        + $"\"{workshopTitle}\".");
+            .PublishAsync(
+                clientUserId,
+                "Workshop registration confirmed",
+                $"You have successfully registered for \"{workshopTitle}\".");
 
         if (organizerUserId > 0 &&
             organizerUserId != clientUserId)
@@ -851,8 +854,7 @@ public class WorkshopService : IWorkshopService
                 .PublishAsync(
                     organizerUserId,
                     "New workshop registration",
-                    $"A new participant registered for "
-                    + $"\"{workshopTitle}\".");
+                    $"A new participant registered for \"{workshopTitle}\".");
         }
     }
 
@@ -1177,13 +1179,10 @@ public class WorkshopService : IWorkshopService
                 "Workshop not found.");
         }
 
-        if (!isAdmin &&
-            workshop.OrganizerUserId !=
-                userId)
-        {
-            throw new BusinessException(
-                "You may manage only workshops that you organized.");
-        }
+        BusinessRuleGuard.AgainstNotOwned(
+            isAdmin ||
+            workshop.OrganizerUserId == userId,
+            "You may manage only workshops that you organized.");
 
         return workshop;
     }

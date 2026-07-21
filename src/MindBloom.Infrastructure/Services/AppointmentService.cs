@@ -13,6 +13,7 @@ using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Features.Memberships.Interfaces;
 using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Common.Exceptions;
+using MindBloom.Application.Common.BusinessRules;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -68,11 +69,9 @@ public class AppointmentService : IAppointmentService
                     x.TherapistId == request.TherapistId
                     && x.DayOfWeek == dayOfWeek);
 
-        if (availability == null)
-        {
-            throw new Exception(
-                "Therapist is not available on this day.");
-        }
+        BusinessRuleGuard.Against(
+            availability == null,
+            "Therapist is not available on this day.");
 
         var startTime =
             request.StartUtc.TimeOfDay;
@@ -82,12 +81,10 @@ public class AppointmentService : IAppointmentService
 
 
 
-        if (startTime < availability.StartTime
-            || endTime > availability.EndTime)
-        {
-            throw new Exception(
-                "Appointment is outside working hours.");
-        }
+        BusinessRuleGuard.Against(
+            startTime < availability.StartTime
+            || endTime > availability.EndTime,
+            "Appointment is outside working hours.");
 
         var unavailableDate =
     await _context
@@ -98,11 +95,9 @@ public class AppointmentService : IAppointmentService
             && request.StartUtc < x.EndUtc
             && request.EndUtc > x.StartUtc);
 
-        if (unavailableDate)
-        {
-            throw new Exception(
-                "Therapist is unavailable during this time.");
-        }
+        BusinessRuleGuard.Against(
+            unavailableDate,
+            "Therapist is unavailable during this time.");
 
         var overlappingAppointment =
     await _context.Appointments
@@ -118,11 +113,9 @@ public class AppointmentService : IAppointmentService
                     AppointmentStatus.Accepted
             ));
 
-        if (overlappingAppointment)
-        {
-            throw new BusinessException(
-                "Selected appointment time is already booked.");
-        }
+        BusinessRuleGuard.Against(
+            overlappingAppointment,
+            "Selected appointment time is already booked.");
 
         var client = await _context.Clients
     .FirstOrDefaultAsync(x => x.UserId == clientUserId);
@@ -383,8 +376,8 @@ public class AppointmentService : IAppointmentService
                 return;
             }
 
-            throw new Exception(
-                "The status of a finished appointment cannot be changed.");
+            throw new BusinessException(
+    "The status of a finished appointment cannot be changed.");
         }
 
         if (request.Status ==
@@ -538,15 +531,15 @@ public class AppointmentService : IAppointmentService
         if (appointment.Status ==
             AppointmentStatus.Completed)
         {
-            throw new Exception(
-                "A completed appointment cannot be cancelled.");
+            throw new BusinessException(
+    "A completed appointment cannot be cancelled.");
         }
 
         if (appointment.Status ==
             AppointmentStatus.Rejected)
         {
-            throw new Exception(
-                "A rejected appointment cannot be cancelled.");
+            throw new BusinessException(
+    "A rejected appointment cannot be cancelled.");
         }
 
         if (appointment.Status ==

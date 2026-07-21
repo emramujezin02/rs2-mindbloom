@@ -9,6 +9,7 @@ using Stripe;
 using System.Data;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Common.Exceptions;
+using MindBloom.Application.Common.BusinessRules;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -131,8 +132,9 @@ public class MembershipService : IMembershipService
 
         if (activeMembershipExists)
         {
-            throw new BusinessException(
-                "You already have an active membership for this therapist.");
+            BusinessRuleGuard.Against(
+    activeMembershipExists,
+    "You already have an active membership for this therapist.");
         }
 
         var pendingMembership =
@@ -543,8 +545,9 @@ public class MembershipService : IMembershipService
 
         if (duplicateActiveMembership)
         {
-            throw new BusinessException(
-                "You already have another active membership for this therapist.");
+            BusinessRuleGuard.Against(
+    duplicateActiveMembership,
+    "You already have another active membership for this therapist.");
         }
 
         membershipPayment.Status =

@@ -9,6 +9,7 @@ using MindBloom.Infrastructure.Persistence.Context;
 using Stripe;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Common.Exceptions;
+using MindBloom.Application.Common.BusinessRules;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -70,21 +71,25 @@ public class PaymentService : IPaymentService
 
         if (appointment.ClientId != client.Id)
         {
-            throw new Exception(
-                "This appointment does not belong to you.");
+            BusinessRuleGuard.AgainstNotOwned(
+    appointment.ClientId == client.Id,
+    "This appointment does not belong to you.");
         }
 
         if (appointment.Status !=
             AppointmentStatus.Accepted)
         {
-            throw new Exception(
-                "Only accepted appointments can be paid.");
+            BusinessRuleGuard.Against(
+    appointment.Status !=
+    AppointmentStatus.Accepted,
+    "Only accepted appointments can be paid.");
         }
 
         if (appointment.IsPaid)
         {
-            throw new BusinessException(
-                "This appointment is already paid.");
+            BusinessRuleGuard.Against(
+    appointment.IsPaid,
+    "This appointment is already paid.");
         }
 
         var existingPayment =
@@ -98,15 +103,17 @@ public class PaymentService : IPaymentService
             if (existingPayment.Status ==
                 PaymentStatus.Paid)
             {
-                throw new BusinessException(
-                    "Appointment has already been paid.");
+                BusinessRuleGuard.Against(
+    existingPayment.Status ==
+    PaymentStatus.Paid,
+    "Appointment has already been paid.");
             }
 
             if (existingPayment.Status ==
                 PaymentStatus.Refunded)
             {
-                throw new Exception(
-                    "Refunded appointments require a new booking.");
+                throw new BusinessException(
+    "Refunded appointments require a new booking.");
             }
 
             if (existingPayment.Status ==
@@ -326,8 +333,10 @@ public class PaymentService : IPaymentService
         if (payment.Appointment.ClientId !=
             client.Id)
         {
-            throw new Exception(
-                "This payment does not belong to you.");
+            BusinessRuleGuard.AgainstNotOwned(
+    payment.Appointment.ClientId ==
+    client.Id,
+    "This payment does not belong to you.");
         }
 
         if (payment.Status ==
@@ -362,8 +371,9 @@ public class PaymentService : IPaymentService
 
         if (anotherPaidPaymentExists)
         {
-            throw new BusinessException(
-                "Appointment already has a completed payment.");
+            BusinessRuleGuard.Against(
+    anotherPaidPaymentExists,
+    "Appointment already has a completed payment.");
         }
 
         PaymentIntent stripePaymentIntent;
@@ -626,12 +636,14 @@ public class PaymentService : IPaymentService
 
         if (string.IsNullOrWhiteSpace(normalizedReason))
         {
-            throw new Exception("Refund reason is required.");
+            throw new BusinessException(
+    "Refund reason is required.");
         }
 
         if (normalizedReason.Length > 500)
         {
-            throw new Exception("Refund reason may contain at most 500 characters.");
+            throw new BusinessException(
+     "Refund reason may contain at most 500 characters.");
         }
 
         var client =

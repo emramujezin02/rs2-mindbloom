@@ -6,6 +6,7 @@ using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Common.Exceptions;
+using MindBloom.Application.Common.BusinessRules;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -29,17 +30,11 @@ public class ReviewService : IReviewService
      int clientUserId,
      CreateReviewDto request)
     {
-       
-
-        var comment =
-            request.Comment.Trim();
-
-     
-
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == clientUserId);
+                    x.UserId == clientUserId &&
+                    !x.IsDeleted);
 
         if (client == null)
         {
@@ -50,49 +45,67 @@ public class ReviewService : IReviewService
         var appointment =
             await _context.Appointments
                 .FirstOrDefaultAsync(x =>
-                    x.Id == request.AppointmentId &&
-                    x.ClientId == client.Id);
+                    x.Id == request.AppointmentId);
 
         if (appointment == null)
         {
             throw new NotFoundException(
-                "Appointment not found or does not belong to the current client.");
+                "Appointment not found.");
         }
 
-        if (appointment.Status !=
-            AppointmentStatus.Completed)
-        {
-            throw new Exception(
-                "A review can only be submitted after the appointment is completed.");
-        }
+        BusinessRuleGuard.AgainstNotOwned(
+            appointment.ClientId == client.Id,
+            "You can review only your own appointment.");
+
+        BusinessRuleGuard.Against(
+            appointment.Status !=
+            AppointmentStatus.Completed,
+            "A review can only be submitted after the appointment is completed.");
 
         var existingReview =
             await _context.Reviews
                 .AnyAsync(x =>
                     x.AppointmentId ==
-                    appointment.Id);
+                        appointment.Id &&
+                    !x.IsDeleted);
 
-        if (existingReview)
-        {
-            throw new BusinessException(
-                "A review has already been submitted for this appointment.");
-        }
+        BusinessRuleGuard.Against(
+            existingReview,
+            "A review has already been submitted for this appointment.");
 
-        var review = new Review
-        {
-            ClientId = client.Id,
-            TherapistId =
-                appointment.TherapistId,
-            AppointmentId =
-                appointment.Id,
-            Rating = request.Rating,
-            Comment = comment
-        };
+        var review =
+            new Review
+            {
+                ClientId =
+                    client.Id,
+
+                TherapistId =
+                    appointment.TherapistId,
+
+                AppointmentId =
+                    appointment.Id,
+
+                Rating =
+                    request.Rating,
+
+                Comment =
+                    request.Comment.Trim()
+            };
 
         _context.Reviews.Add(review);
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception)
+        {
+            throw new BusinessException(
+                "A review has already been submitted for this appointment.",
+                exception);
+        }
     }
+
 
     public async Task<List<ReviewResponseDto>>
         GetTherapistReviewsAsync(
@@ -157,14 +170,14 @@ public class ReviewService : IReviewService
     }
 
     public async Task DeleteAsync(
-     int clientUserId,
-     int reviewId)
+      int clientUserId,
+      int reviewId)
     {
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
-                    x.UserId ==
-                    clientUserId);
+                    x.UserId == clientUserId &&
+                    !x.IsDeleted);
 
         if (client == null)
         {
@@ -175,16 +188,18 @@ public class ReviewService : IReviewService
         var review =
             await _context.Reviews
                 .FirstOrDefaultAsync(x =>
-                    x.Id == reviewId
-                    && x.ClientId ==
-                        client.Id
-                    && !x.IsDeleted);
+                    x.Id == reviewId &&
+                    !x.IsDeleted);
 
         if (review == null)
         {
             throw new NotFoundException(
                 "Review not found.");
         }
+
+        BusinessRuleGuard.AgainstNotOwned(
+            review.ClientId == client.Id,
+            "You can delete only your own review.");
 
         review.IsDeleted =
             true;
@@ -199,26 +214,27 @@ public class ReviewService : IReviewService
     }
 
     public async Task UpdateAsync(
-    int clientUserId,
-    int reviewId,
-    UpdateReviewDto request)
+     int clientUserId,
+     int reviewId,
+     UpdateReviewDto request)
     {
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == clientUserId);
+                    x.UserId == clientUserId &&
+                    !x.IsDeleted);
 
         if (client == null)
         {
-            throw new NotFoundException("Client not found.");
+            throw new NotFoundException(
+                "Client not found.");
         }
 
         var review =
-    await _context.Reviews
-        .FirstOrDefaultAsync(x =>
-            x.Id == reviewId
-            && x.ClientId == client.Id
-            && !x.IsDeleted);
+            await _context.Reviews
+                .FirstOrDefaultAsync(x =>
+                    x.Id == reviewId &&
+                    !x.IsDeleted);
 
         if (review == null)
         {
@@ -226,14 +242,19 @@ public class ReviewService : IReviewService
                 "Review not found.");
         }
 
+        BusinessRuleGuard.AgainstNotOwned(
+            review.ClientId == client.Id,
+            "You can update only your own review.");
+
         review.Rating =
-    request.Rating;
+            request.Rating;
 
         review.Comment =
             request.Comment.Trim();
 
         await _context.SaveChangesAsync();
     }
+
 
     public async Task<List<ClientReviewDto>>
     GetMyReviewsAsync(

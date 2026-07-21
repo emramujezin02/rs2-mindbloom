@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Features.Auth.DTOs;
 using System.Security.Cryptography;
 using MindBloom.Application.Common.Exceptions;
+using MindBloom.Application.Common.BusinessRules;
 
 
 namespace MindBloom.Infrastructure.Services;
@@ -61,24 +62,22 @@ public class AuthService : IAuthService
             request.Username.Trim();
 
         var existingEmailUser =
-            await _userManager.FindByEmailAsync(
-                normalizedEmail);
+           await _userManager.FindByEmailAsync(
+               normalizedEmail);
 
-        if (existingEmailUser != null)
-        {
-            throw new BusinessException(
-                "A user with this email already exists.");
-        }
+        BusinessRuleGuard.Against(
+            existingEmailUser != null,
+            "A user with this email already exists.");
 
         var existingUsernameUser =
             await _userManager.FindByNameAsync(
                 normalizedUsername);
 
-        if (existingUsernameUser != null)
-        {
-            throw new BusinessException(
-                "A user with this username already exists.");
-        }
+        BusinessRuleGuard.Against(
+            existingUsernameUser != null,
+            "A user with this username already exists.");
+
+
 
         var user = new ApplicationUser
         {
