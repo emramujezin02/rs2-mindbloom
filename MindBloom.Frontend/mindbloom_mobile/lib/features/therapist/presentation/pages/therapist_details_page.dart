@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../../../appointment/presentation/viewmodels/appointment_create_viewmodel.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../data/models/therapist_map_data.dart';
@@ -20,19 +20,32 @@ class TherapistDetailsPage extends StatefulWidget {
 class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
   final TherapistDetailsViewModel _viewModel =
       AppInjection.createTherapistDetailsViewModel();
+  final AppointmentCreateViewModel _appointmentPreviewViewModel =
+      AppInjection.createAppointmentViewModel();
 
   @override
   void initState() {
     super.initState();
 
     _viewModel.addListener(_onViewModelChanged);
+
+    _appointmentPreviewViewModel.addListener(_onViewModelChanged);
+
     _viewModel.loadTherapist(widget.therapistId);
+
+    _appointmentPreviewViewModel.loadNextAvailableSlots(
+      therapistId: widget.therapistId,
+    );
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
+
+    _appointmentPreviewViewModel.removeListener(_onViewModelChanged);
+
     _viewModel.dispose();
+    _appointmentPreviewViewModel.dispose();
 
     super.dispose();
   }
@@ -44,7 +57,12 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
   }
 
   Future<void> _reload() async {
-    await _viewModel.loadTherapist(widget.therapistId);
+    await Future.wait([
+      _viewModel.loadTherapist(widget.therapistId),
+      _appointmentPreviewViewModel.loadNextAvailableSlots(
+        therapistId: widget.therapistId,
+      ),
+    ]);
   }
 
   @override

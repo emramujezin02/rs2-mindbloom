@@ -9,7 +9,13 @@ import '../viewmodels/appointment_create_viewmodel.dart';
 class AppointmentCreatePage extends StatefulWidget {
   final TherapistModel therapist;
 
-  const AppointmentCreatePage({super.key, required this.therapist});
+  final DateTime? initialSlot;
+
+  const AppointmentCreatePage({
+    super.key,
+    required this.therapist,
+    this.initialSlot,
+  });
 
   @override
   State<AppointmentCreatePage> createState() => _AppointmentCreatePageState();
@@ -26,6 +32,7 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
   final TextEditingController _locationController = TextEditingController();
 
   DateTime? _selectedDate;
+
   DateTime? _selectedSlot;
 
   int _type = 1;
@@ -36,12 +43,67 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
 
     _viewModel.addListener(_onChanged);
 
-    _viewModel.loadBookingData(widget.therapist.id);
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await _viewModel.loadBookingData(widget.therapist.id);
+
+    if (!mounted) {
+      return;
+    }
+
+    final initialSlot = widget.initialSlot?.toLocal();
+
+    if (initialSlot == null) {
+      return;
+    }
+
+    final initialDate = DateTime(
+      initialSlot.year,
+      initialSlot.month,
+      initialSlot.day,
+    );
+
+    if (!_viewModel.isDateSelectable(initialDate)) {
+      return;
+    }
+
+    setState(() {
+      _selectedDate = initialDate;
+    });
+
+    await _viewModel.loadAvailableSlots(
+      therapistId: widget.therapist.id,
+      date: initialDate,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    final matchingSlot = _viewModel.availableSlots
+        .where(
+          (slot) =>
+              slot.year == initialSlot.year &&
+              slot.month == initialSlot.month &&
+              slot.day == initialSlot.day &&
+              slot.hour == initialSlot.hour &&
+              slot.minute == initialSlot.minute,
+        )
+        .firstOrNull;
+
+    if (matchingSlot != null) {
+      setState(() {
+        _selectedSlot = matchingSlot;
+      });
+    }
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onChanged);
+    _viewModel.dispose();
 
     _meetingLinkController.dispose();
     _locationController.dispose();
@@ -84,7 +146,7 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
 
     final picked = await showDatePicker(
       context: context,
-      initialDate: initialDate,
+      initialDate: _selectedDate ?? initialDate,
       firstDate: firstDate,
       lastDate: lastDate,
       selectableDayPredicate: _viewModel.isDateSelectable,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../therapist/data/models/therapist_availability_model.dart';
 import '../../data/models/appointment_create_request.dart';
 import '../../data/models/occupied_slot_model.dart';
@@ -14,6 +15,7 @@ class AppointmentCreateViewModel extends ChangeNotifier {
 
   bool isLoading = false;
   bool isLoadingSlots = false;
+  bool isLoadingPreview = false;
 
   String? error;
 
@@ -24,6 +26,8 @@ class AppointmentCreateViewModel extends ChangeNotifier {
   List<OccupiedSlotModel> occupiedSlots = [];
 
   List<DateTime> availableSlots = [];
+
+  Map<DateTime, List<DateTime>> groupedPreviewSlots = {};
 
   Future<void> loadBookingData(int therapistId) async {
     isLoading = true;
@@ -44,6 +48,79 @@ class AppointmentCreateViewModel extends ChangeNotifier {
     }
 
     isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadNextAvailableSlots({
+    required int therapistId,
+    int daysAhead = 14,
+    int maximumSlots = 8,
+  }) async {
+    isLoadingPreview = true;
+    error = null;
+    groupedPreviewSlots = {};
+    notifyListeners();
+
+    try {
+      if (availabilities.isEmpty) {
+        final results = await Future.wait([
+          repository.getTherapistAvailabilities(therapistId),
+          repository.getTherapistUnavailableDates(therapistId),
+        ]);
+
+        availabilities = results[0] as List<TherapistAvailabilityModel>;
+
+        unavailableDates = results[1] as List<UnavailableDateModel>;
+      }
+
+      final now = DateTime.now();
+
+      final today = DateTime(now.year, now.month, now.day);
+
+      final previewResult = <DateTime, List<DateTime>>{};
+
+      var totalSlots = 0;
+
+      for (var dayOffset = 0; dayOffset < daysAhead; dayOffset++) {
+        if (totalSlots >= maximumSlots) {
+          break;
+        }
+
+        final date = today.add(Duration(days: dayOffset));
+
+        if (!isDateSelectable(date)) {
+          continue;
+        }
+
+        final dailyOccupiedSlots = await repository.getOccupiedSlots(
+          therapistId: therapistId,
+          date: date,
+        );
+
+        final dailySlots = _buildAvailableSlotsForDate(
+          date: date,
+          dailyOccupiedSlots: dailyOccupiedSlots,
+        );
+
+        if (dailySlots.isEmpty) {
+          continue;
+        }
+
+        final remainingSlots = maximumSlots - totalSlots;
+
+        final slotsForPreview = dailySlots.take(remainingSlots).toList();
+
+        previewResult[date] = slotsForPreview;
+
+        totalSlots += slotsForPreview.length;
+      }
+
+      groupedPreviewSlots = previewResult;
+    } catch (exception) {
+      error = exception.toString();
+    }
+
+    isLoadingPreview = false;
     notifyListeners();
   }
 
@@ -100,7 +177,10 @@ class AppointmentCreateViewModel extends ChangeNotifier {
         date: date,
       );
 
-      availableSlots = _buildAvailableSlots(date);
+      availableSlots = _buildAvailableSlotsForDate(
+        date: date,
+        dailyOccupiedSlots: occupiedSlots,
+      );
     } catch (exception) {
       error = exception.toString();
     }
@@ -109,7 +189,10 @@ class AppointmentCreateViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<DateTime> _buildAvailableSlots(DateTime date) {
+  List<DateTime> _buildAvailableSlotsForDate({
+    required DateTime date,
+    required List<OccupiedSlotModel> dailyOccupiedSlots,
+  }) {
     final backendDayOfWeek = _toBackendDayOfWeek(date.weekday);
 
     final dailyAvailabilities = availabilities
@@ -149,7 +232,7 @@ class AppointmentCreateViewModel extends ChangeNotifier {
 
         final isPast = slotStart.isBefore(DateTime.now());
 
-        final isOccupied = occupiedSlots.any((occupiedSlot) {
+        final isOccupied = dailyOccupiedSlots.any((occupiedSlot) {
           final occupiedStart = occupiedSlot.startUtc.toLocal();
 
           final occupiedEnd = occupiedSlot.endUtc.toLocal();
