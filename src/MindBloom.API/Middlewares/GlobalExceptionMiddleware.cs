@@ -8,16 +8,35 @@ namespace MindBloom.API.Middlewares;
 
 public sealed class GlobalExceptionMiddleware
 {
+    private static readonly JsonSerializerOptions
+        JsonOptions =
+            new()
+            {
+                PropertyNamingPolicy =
+                    JsonNamingPolicy.CamelCase,
+
+                DefaultIgnoreCondition =
+                    System.Text.Json.Serialization
+                        .JsonIgnoreCondition
+                        .WhenWritingNull
+            };
+
     private readonly RequestDelegate _next;
+
     private readonly ILogger<GlobalExceptionMiddleware>
         _logger;
 
+    private readonly IHostEnvironment
+        _environment;
+
     public GlobalExceptionMiddleware(
         RequestDelegate next,
-        ILogger<GlobalExceptionMiddleware> logger)
+        ILogger<GlobalExceptionMiddleware> logger,
+        IHostEnvironment environment)
     {
         _next = next;
         _logger = logger;
+        _environment = environment;
     }
 
     public async Task InvokeAsync(
@@ -27,136 +46,69 @@ public sealed class GlobalExceptionMiddleware
         {
             await _next(context);
         }
-        catch (ValidationException exception)
+        catch (Exception exception)
         {
-            await WriteValidationErrorAsync(
+            await HandleExceptionAsync(
                 context,
                 exception);
         }
-        catch (NotFoundException exception)
-        {
-            await WriteErrorAsync(
-                context,
-                StatusCodes.Status404NotFound,
-                "Resource not found",
-                exception.Message);
-        }
-        catch (BadRequestException exception)
-        {
-            await WriteErrorAsync(
-                context,
-                StatusCodes.Status400BadRequest,
-                "Bad request",
-                exception.Message);
-        }
-        catch (BusinessException exception)
-        {
-            await WriteErrorAsync(
-                context,
-                StatusCodes.Status409Conflict,
-                "Business rule violation",
-                exception.Message);
-        }
-        catch (ArgumentException exception)
-        {
-            await WriteErrorAsync(
-                context,
-                StatusCodes.Status400BadRequest,
-                "Bad request",
-                exception.Message);
-        }
-        catch (UnauthorizedAccessException exception)
-        {
-            await WriteErrorAsync(
-                context,
-                StatusCodes.Status401Unauthorized,
-                "Unauthorized",
-                exception.Message);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(
-                exception,
-                "An unhandled exception occurred.");
-
-            await WriteErrorAsync(
-                context,
-                StatusCodes.Status500InternalServerError,
-                "Internal server error",
-                "An unexpected server error occurred.");
-        }
     }
 
-    private static async Task
-        WriteValidationErrorAsync(
-            HttpContext context,
-            ValidationException exception)
+    private async Task HandleExceptionAsync(
+        HttpContext context,
+        Exception exception)
     {
-        var errors =
-            exception.Errors
-                .Where(failure =>
-                    failure != null &&
-                    !string.IsNullOrWhiteSpace(
-                        failure.ErrorMessage))
-                .GroupBy(
-                    failure =>
-                        ToCamelCase(
-                            failure.PropertyName),
-                    StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group
-                        .Select(failure =>
-                            failure.ErrorMessage)
-                        .Distinct()
-                        .ToArray(),
-                    StringComparer.OrdinalIgnoreCase);
+        if (context.Response.HasStarted)
+        {
+            _logger.LogWarning(
+                exception,
+                "The response has already started. "
+                + "The exception middleware cannot write an error response.");
+
+            throw exception;
+        }
+
+        var errorDefinition =
+            MapException(exception);
+
+        LogException(
+            exception,
+            errorDefinition.StatusCode,
+            context);
 
         var response =
             new ApiErrorResponse
             {
                 StatusCode =
-                    StatusCodes.Status400BadRequest,
+                    errorDefinition.StatusCode,
 
                 Title =
-                    "Validation failed",
+                    errorDefinition.Title,
 
                 Detail =
-                    "One or more validation errors occurred.",
+                    GetDetail(
+                        exception,
+                        errorDefinition),
+
+                TraceId =
+                    context.TraceIdentifier,
 
                 ValidationErrors =
-                    errors
+                    errorDefinition.ValidationErrors,
+
+                ExceptionType =
+                    _environment.IsDevelopment()
+                        ? exception.GetType().Name
+                        : null,
+
+                StackTrace =
+                    _environment.IsDevelopment()
+                        ? exception.StackTrace
+                        : null
             };
 
-        await WriteResponseAsync(
-            context,
-            response);
-    }
+        context.Response.Clear();
 
-    private static async Task WriteErrorAsync(
-        HttpContext context,
-        int statusCode,
-        string title,
-        string detail)
-    {
-        var response =
-            new ApiErrorResponse
-            {
-                StatusCode = statusCode,
-                Title = title,
-                Detail = detail,
-                ValidationErrors = null
-            };
-
-        await WriteResponseAsync(
-            context,
-            response);
-    }
-
-    private static async Task WriteResponseAsync(
-        HttpContext context,
-        ApiErrorResponse response)
-    {
         context.Response.StatusCode =
             response.StatusCode;
 
@@ -166,13 +118,204 @@ public sealed class GlobalExceptionMiddleware
         var json =
             JsonSerializer.Serialize(
                 response,
-                new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy =
-                        JsonNamingPolicy.CamelCase
-                });
+                JsonOptions);
 
-        await context.Response.WriteAsync(json);
+        await context.Response.WriteAsync(
+            json,
+            context.RequestAborted);
+    }
+
+    private static ErrorDefinition MapException(
+        Exception exception)
+    {
+        return exception switch
+        {
+            ValidationException
+                validationException =>
+                    new ErrorDefinition(
+                        StatusCodes.Status400BadRequest,
+                        "Validation failed",
+                        "One or more validation errors occurred.",
+                        CreateValidationErrors(
+                            validationException)),
+
+            BadRequestException =>
+                new ErrorDefinition(
+                    StatusCodes.Status400BadRequest,
+                    "Bad request",
+                    exception.Message),
+
+            NotFoundException =>
+                new ErrorDefinition(
+                    StatusCodes.Status404NotFound,
+                    "Resource not found",
+                    exception.Message),
+
+            BusinessException =>
+                new ErrorDefinition(
+                    StatusCodes.Status409Conflict,
+                    "Business rule violation",
+                    exception.Message),
+
+            UnauthorizedAccessException =>
+                new ErrorDefinition(
+                    StatusCodes.Status401Unauthorized,
+                    "Unauthorized",
+                    string.IsNullOrWhiteSpace(
+                        exception.Message)
+                        ? "Authentication is required."
+                        : exception.Message),
+
+            ArgumentNullException =>
+                new ErrorDefinition(
+                    StatusCodes.Status400BadRequest,
+                    "Bad request",
+                    exception.Message),
+
+            ArgumentOutOfRangeException =>
+                new ErrorDefinition(
+                    StatusCodes.Status400BadRequest,
+                    "Bad request",
+                    exception.Message),
+
+            ArgumentException =>
+                new ErrorDefinition(
+                    StatusCodes.Status400BadRequest,
+                    "Bad request",
+                    exception.Message),
+
+            KeyNotFoundException =>
+                new ErrorDefinition(
+                    StatusCodes.Status404NotFound,
+                    "Resource not found",
+                    exception.Message),
+
+            InvalidOperationException =>
+                new ErrorDefinition(
+                    StatusCodes.Status409Conflict,
+                    "Invalid operation",
+                    exception.Message),
+
+            OperationCanceledException =>
+                new ErrorDefinition(
+                    StatusCodes.Status499ClientClosedRequest,
+                    "Request cancelled",
+                    "The request was cancelled."),
+
+            _ =>
+                new ErrorDefinition(
+                    StatusCodes
+                        .Status500InternalServerError,
+                    "Internal server error",
+                    "An unexpected server error occurred.")
+        };
+    }
+
+    private string GetDetail(
+        Exception exception,
+        ErrorDefinition errorDefinition)
+    {
+        if (errorDefinition.StatusCode !=
+            StatusCodes.Status500InternalServerError)
+        {
+            return errorDefinition.Detail;
+        }
+
+        if (_environment.IsDevelopment())
+        {
+            return exception.Message;
+        }
+
+        return "An unexpected server error occurred.";
+    }
+
+    private void LogException(
+        Exception exception,
+        int statusCode,
+        HttpContext context)
+    {
+        var requestPath =
+            context.Request.Path;
+
+        var requestMethod =
+            context.Request.Method;
+
+        var traceId =
+            context.TraceIdentifier;
+
+        if (statusCode >=
+            StatusCodes.Status500InternalServerError)
+        {
+            _logger.LogError(
+                exception,
+                "Unhandled server exception. "
+                + "Method: {RequestMethod}, "
+                + "Path: {RequestPath}, "
+                + "TraceId: {TraceId}, "
+                + "StatusCode: {StatusCode}",
+                requestMethod,
+                requestPath,
+                traceId,
+                statusCode);
+
+            return;
+        }
+
+        if (statusCode ==
+                StatusCodes.Status401Unauthorized ||
+            statusCode ==
+                StatusCodes.Status403Forbidden)
+        {
+            _logger.LogWarning(
+                exception,
+                "Authorization exception. "
+                + "Method: {RequestMethod}, "
+                + "Path: {RequestPath}, "
+                + "TraceId: {TraceId}, "
+                + "StatusCode: {StatusCode}",
+                requestMethod,
+                requestPath,
+                traceId,
+                statusCode);
+
+            return;
+        }
+
+        _logger.LogInformation(
+            exception,
+            "Handled application exception. "
+            + "Method: {RequestMethod}, "
+            + "Path: {RequestPath}, "
+            + "TraceId: {TraceId}, "
+            + "StatusCode: {StatusCode}",
+            requestMethod,
+            requestPath,
+            traceId,
+            statusCode);
+    }
+
+    private static IDictionary<string, string[]>
+        CreateValidationErrors(
+            ValidationException exception)
+    {
+        return exception.Errors
+            .Where(failure =>
+                failure != null &&
+                !string.IsNullOrWhiteSpace(
+                    failure.ErrorMessage))
+            .GroupBy(
+                failure =>
+                    ToCamelCase(
+                        failure.PropertyName),
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(failure =>
+                        failure.ErrorMessage)
+                    .Distinct()
+                    .ToArray(),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     private static string ToCamelCase(
@@ -197,7 +340,8 @@ public sealed class GlobalExceptionMiddleware
 
         if (normalized.Length == 1)
         {
-            return normalized.ToLowerInvariant();
+            return normalized
+                .ToLowerInvariant();
         }
 
         return
@@ -205,4 +349,11 @@ public sealed class GlobalExceptionMiddleware
                 normalized[0])
             + normalized[1..];
     }
+
+    private sealed record ErrorDefinition(
+        int StatusCode,
+        string Title,
+        string Detail,
+        IDictionary<string, string[]>?
+            ValidationErrors = null);
 }

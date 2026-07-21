@@ -10,7 +10,14 @@ public sealed class ApiErrorResponse
     public string Detail { get; init; } =
         string.Empty;
 
+    public string TraceId { get; init; } =
+        string.Empty;
+
     public IDictionary<string, string[]>?
         ValidationErrors
     { get; init; }
+
+    public string? ExceptionType { get; init; }
+
+    public string? StackTrace { get; init; }
 }
