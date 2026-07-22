@@ -15,7 +15,6 @@ using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Security;
 using MindBloom.Infrastructure.Services;
 using MindBloom.Infrastructure.BackgroundServices;
-using MindBloom.Application.Features.Reviews.Interfaces;
 using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Features.Notifications.Interfaces;
 using MindBloom.Application.Features.Favorites.Interfaces;
@@ -29,10 +28,7 @@ using MindBloom.Infrastructure.Payments;
 using MindBloom.Application.Features.Chat.Interfaces;
 using MindBloom.Application.Features.ReferenceData.Interfaces;
 using MindBloom.Application.Features.AdminReports.Interfaces;
-using MindBloom.Application.Common.Interfaces;
 using MindBloom.Infrastructure.Services.Geocoding;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Options;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 

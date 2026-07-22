@@ -17,7 +17,6 @@ using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Persistence.Seed;
 using MindBloom.Infrastructure.Realtime;
 using MindBloom.Infrastructure.Recommendations;
-using MindBloom.API.Configuration;
 
 Env.Load("../../.env");
 
