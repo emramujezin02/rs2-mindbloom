@@ -27,6 +27,36 @@ public class AppointmentService : IAppointmentService
 
     private readonly IMembershipService _membershipService;
 
+    private static bool IsValidStatusTransition(
+    AppointmentStatus currentStatus,
+    AppointmentStatus newStatus)
+    {
+        if (currentStatus == newStatus)
+        {
+            return true;
+        }
+
+        return currentStatus switch
+        {
+            AppointmentStatus.Pending =>
+                newStatus == AppointmentStatus.Accepted
+                || newStatus == AppointmentStatus.Rejected
+                || newStatus == AppointmentStatus.Cancelled,
+
+            AppointmentStatus.Accepted =>
+                newStatus == AppointmentStatus.Completed
+                || newStatus == AppointmentStatus.Cancelled,
+
+            AppointmentStatus.Completed => false,
+
+            AppointmentStatus.Cancelled => false,
+
+            AppointmentStatus.Rejected => false,
+
+            _ => false
+        };
+    }
+
     public AppointmentService(
         ApplicationDbContext context,
         IBusinessNotificationService businessNotificationService,
@@ -365,21 +395,12 @@ public class AppointmentService : IAppointmentService
                 "Appointment not found.");
         }
 
-        if (appointment.Status ==
-                AppointmentStatus.Cancelled ||
-            appointment.Status ==
-                AppointmentStatus.Rejected ||
-            appointment.Status ==
-                AppointmentStatus.Completed)
+        if (!IsValidStatusTransition(
+          appointment.Status,
+          request.Status))
         {
-            if (appointment.Status ==
-                request.Status)
-            {
-                return;
-            }
-
             throw new BusinessException(
-    "The status of a finished appointment cannot be changed.");
+                $"Status transition from {appointment.Status} to {request.Status} is not allowed.");
         }
 
         if (request.Status ==
@@ -542,6 +563,14 @@ public class AppointmentService : IAppointmentService
         {
             throw new BusinessException(
     "A rejected appointment cannot be cancelled.");
+        }
+
+        if (!IsValidStatusTransition(
+        appointment.Status,
+        AppointmentStatus.Cancelled))
+        {
+            throw new BusinessException(
+                $"Status transition from {appointment.Status} to Cancelled is not allowed.");
         }
 
         if (appointment.Status ==
