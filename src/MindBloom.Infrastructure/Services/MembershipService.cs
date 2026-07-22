@@ -678,6 +678,7 @@ public class MembershipService : IMembershipService
     {
         var client =
             await _context.Clients
+            
                 .Include(x => x.User)
                 .FirstOrDefaultAsync(x =>
                     x.UserId == clientUserId &&

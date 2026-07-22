@@ -499,6 +499,7 @@ public class PaymentService : IPaymentService
         }
 
         return await _context.Payments
+            .AsNoTracking()
             .Include(x => x.Appointment)
             .ThenInclude(x => x.Therapist)
             .ThenInclude(x => x.User)
@@ -558,6 +559,7 @@ public class PaymentService : IPaymentService
 
         var payment =
             await _context.Payments
+            .AsNoTracking()
                 .Include(x => x.Appointment)
                 .ThenInclude(x => x.Therapist)
                 .ThenInclude(x => x.User)

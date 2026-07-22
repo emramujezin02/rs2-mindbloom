@@ -248,6 +248,7 @@ public class AppointmentService : IAppointmentService
         }
 
         return await _context.Appointments
+            .AsNoTracking()
             .Include(x => x.Therapist)
             .ThenInclude(x => x.User)
             .Where(x => x.ClientId == client.Id)
@@ -288,6 +289,7 @@ public class AppointmentService : IAppointmentService
         }
 
         return await _context.Appointments
+            .AsNoTracking()
             .Include(x => x.Client)
             .ThenInclude(x => x.User)
             .Where(x => x.TherapistId == therapist.Id)
@@ -641,27 +643,33 @@ public class AppointmentService : IAppointmentService
             throw new NotFoundException("Therapist not found.");
         }
 
-        var appointments =
-            await _context.Appointments
-                .Where(x =>
-                    x.TherapistId == therapist.Id)
-                .ToListAsync();
+        var totalAppointments =
+     await _context.Appointments
+         .CountAsync(x =>
+             x.TherapistId == therapist.Id);
 
         var completedAppointments =
-            appointments.Count(x =>
-                x.Status == AppointmentStatus.Accepted
-                && x.EndUtc < DateTime.Now);
+            await _context.Appointments
+                .CountAsync(x =>
+                    x.TherapistId == therapist.Id
+                    && x.Status ==
+                        AppointmentStatus.Accepted
+                    && x.EndUtc < DateTime.UtcNow);
 
         var cancelledAppointments =
-            appointments.Count(x =>
-                x.Status == AppointmentStatus.Cancelled);
+            await _context.Appointments
+                .CountAsync(x =>
+                    x.TherapistId == therapist.Id
+                    && x.Status ==
+                        AppointmentStatus.Cancelled);
 
         decimal totalEarnings =
             completedAppointments * 50;
 
         return new TherapistStatsDto
         {
-            TotalAppointments = appointments.Count,
+            TotalAppointments =
+                totalAppointments,
 
             CompletedAppointments =
                 completedAppointments,
@@ -669,8 +677,10 @@ public class AppointmentService : IAppointmentService
             CancelledAppointments =
                 cancelledAppointments,
 
-            TotalEarnings = totalEarnings
+            TotalEarnings =
+                totalEarnings
         };
+
     }
 
     public async Task AddAppointmentNoteAsync(
@@ -763,7 +773,7 @@ public class AppointmentService : IAppointmentService
                 "Therapist not found.");
         }
 
-        return await _context.AppointmentNotes
+        return await _context.AppointmentNotes.AsNoTracking()
             .Where(x =>
                 x.AppointmentId == appointmentId
                 && x.TherapistId == therapist.Id)
@@ -810,6 +820,7 @@ public class AppointmentService : IAppointmentService
 
         var appointments =
             await _context.Appointments
+            .AsNoTracking()
                 .Include(x => x.Therapist)
                 .Where(x =>
                     x.ClientId == client.Id)

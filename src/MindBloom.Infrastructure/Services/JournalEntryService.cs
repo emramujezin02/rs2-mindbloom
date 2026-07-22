@@ -81,7 +81,6 @@ public class JournalEntryService
     pagination.Skip)
 .Take(
     pagination.PageSize)
-                .Take(pageSize)
                 .Select(x =>
                     new JournalEntryResponseDto
                     {
@@ -234,7 +233,6 @@ public class JournalEntryService
     pagination.Skip)
 .Take(
     pagination.PageSize)
-                .Take(pageSize)
                 .Select(x =>
                     new TherapistMoodEntryResponseDto
                     {

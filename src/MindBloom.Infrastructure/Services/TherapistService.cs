@@ -85,7 +85,7 @@ public class TherapistService : ITherapistService
     public async Task<List<TherapistResponseDto>>
         GetAllAsync()
     {
-        return await _context.Therapists
+        return await _context.Therapists.AsNoTracking()
             .Include(x => x.User)
             .Where(x =>
     !x.IsDeleted &&
@@ -157,7 +157,7 @@ public class TherapistService : ITherapistService
         request.PageSize);
 
         var query =
-            _context.Therapists
+            _context.Therapists.AsNoTracking()
                 .Include(x => x.User)
                 .Include(x => x.Reviews)
                  .Where(x =>
