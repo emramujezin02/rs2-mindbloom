@@ -5,6 +5,8 @@ import '../../../article/data/models/article_model.dart';
 import '../../../review/data/models/review_model.dart';
 import '../../../therapist/data/models/therapist_model.dart';
 import '../viewmodels/landing_page_view_model.dart';
+import '../../../therapist/data/models/therapist_list_arguments.dart';
+import '../../../therapy_approach/data/models/therapy_approach_model.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -78,6 +80,16 @@ class _LandingPageState extends State<LandingPage> {
     Navigator.of(context).pushNamed(AppRouter.therapists);
   }
 
+  void _openTherapistsByApproach(TherapyApproachModel approach) {
+    Navigator.of(context).pushNamed(
+      AppRouter.therapists,
+      arguments: TherapistListArguments(
+        therapyApproachId: approach.id,
+        therapyApproachName: approach.name,
+      ),
+    );
+  }
+
   void _openTherapistDetails(int therapistId) {
     Navigator.of(
       context,
@@ -144,7 +156,14 @@ class _LandingPageState extends State<LandingPage> {
                       ),
                       Container(
                         key: therapySectionKey,
-                        child: _TherapySection(onReadArticles: _openArticles),
+                        child: _TherapySection(
+                          approaches: viewModel.therapyApproaches,
+                          isLoading: viewModel.isTherapyApproachesLoading,
+                          errorMessage: viewModel.therapyApproachErrorMessage,
+                          onRetry: viewModel.retryTherapyApproaches,
+                          onApproachSelected: _openTherapistsByApproach,
+                          onReadArticles: _openArticles,
+                        ),
                       ),
                       if (viewModel.isLoading &&
                           viewModel.therapists.isEmpty &&
@@ -585,42 +604,21 @@ class _HeroVisual extends StatelessWidget {
 }
 
 class _TherapySection extends StatelessWidget {
+  final List<TherapyApproachModel> approaches;
+  final bool isLoading;
+  final String? errorMessage;
+  final Future<void> Function() onRetry;
+  final ValueChanged<TherapyApproachModel> onApproachSelected;
   final VoidCallback onReadArticles;
 
-  const _TherapySection({required this.onReadArticles});
-
-  static const directions = [
-    (
-      Icons.psychology_alt_outlined,
-      'Psychodynamic therapy',
-      'Explore previous experiences and emotional patterns.',
-    ),
-    (
-      Icons.lightbulb_outline,
-      'Cognitive behavioural therapy',
-      'Understand connections between thoughts and behaviour.',
-    ),
-    (
-      Icons.self_improvement,
-      'Gestalt therapy',
-      'Focus on awareness and the present moment.',
-    ),
-    (
-      Icons.favorite_border,
-      'Humanistic therapy',
-      'Support personal growth and self-understanding.',
-    ),
-    (
-      Icons.groups_outlined,
-      'Systemic family therapy',
-      'Explore relationships within couples and families.',
-    ),
-    (
-      Icons.hub_outlined,
-      'Integrative therapy',
-      'Combine therapeutic approaches according to client needs.',
-    ),
-  ];
+  const _TherapySection({
+    required this.approaches,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.onRetry,
+    required this.onApproachSelected,
+    required this.onReadArticles,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -629,89 +627,116 @@ class _TherapySection extends StatelessWidget {
       title: 'Find an approach that suits your needs',
       description: 'Learn about different forms of psychotherapy.',
       backgroundColor: Colors.white,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 950
-              ? 3
-              : constraints.maxWidth >= 600
-              ? 2
-              : 1;
+      child: _SectionContent(
+        isLoading: isLoading,
+        isEmpty: approaches.isEmpty,
+        errorMessage: errorMessage,
+        emptyMessage: 'No active therapy approaches are currently available.',
+        onRetry: onRetry,
+        footer: OutlinedButton.icon(
+          onPressed: onReadArticles,
+          icon: const Icon(Icons.menu_book_outlined),
+          label: const Text('Read educational articles'),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 950
+                ? 3
+                : constraints.maxWidth >= 600
+                ? 2
+                : 1;
 
-          const spacing = 18.0;
+            const spacing = 18.0;
 
-          final itemWidth =
-              (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
+            final itemWidth =
+                (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
 
-          return Column(
-            children: [
-              Wrap(
-                spacing: spacing,
-                runSpacing: spacing,
-                children: directions.map((direction) {
-                  return SizedBox(
-                    width: itemWidth,
-                    child: _TherapyCard(
-                      icon: direction.$1,
-                      title: direction.$2,
-                      description: direction.$3,
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 28),
-              OutlinedButton.icon(
-                onPressed: onReadArticles,
-                icon: const Icon(Icons.menu_book_outlined),
-                label: const Text('Read educational articles'),
-              ),
-            ],
-          );
-        },
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: approaches.map((approach) {
+                return SizedBox(
+                  width: itemWidth,
+                  child: _TherapyCard(
+                    approach: approach,
+                    onTap: () {
+                      onApproachSelected(approach);
+                    },
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
       ),
     );
   }
 }
 
 class _TherapyCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
+  final TherapyApproachModel approach;
+  final VoidCallback onTap;
 
-  const _TherapyCard({
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
+  const _TherapyCard({required this.approach, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       color: const Color(0xFFFAF7FE),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(22),
         side: const BorderSide(color: Color(0xFFE8DEF3)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              backgroundColor: const Color(0xFFE9DFFF),
-              child: Icon(icon, color: const Color(0xFF72559A)),
-            ),
-            const SizedBox(height: 17),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 9),
-            Text(
-              description,
-              style: const TextStyle(color: Color(0xFF6D6673), height: 1.5),
-            ),
-          ],
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const CircleAvatar(
+                radius: 27,
+                backgroundColor: Color(0xFFE9DFFF),
+                child: Icon(
+                  Icons.psychology_alt_outlined,
+                  color: Color(0xFF72559A),
+                ),
+              ),
+              const SizedBox(height: 17),
+              Text(
+                approach.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 9),
+              Text(
+                approach.description.trim().isEmpty
+                    ? 'Learn more about this therapeutic approach.'
+                    : approach.description,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Color(0xFF6D6673), height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              const Row(
+                children: [
+                  Text(
+                    'View therapists',
+                    style: TextStyle(
+                      color: Color(0xFF72559A),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(width: 5),
+                  Icon(Icons.arrow_forward, size: 18, color: Color(0xFF72559A)),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

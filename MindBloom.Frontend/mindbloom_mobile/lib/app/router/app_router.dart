@@ -70,6 +70,7 @@ import '../../features/therapist/data/models/therapist_profile_model.dart';
 import '../../features/therapist/presentation/pages/therapist_edit_profile_page.dart';
 
 import '../../features/therapist/presentation/pages/therapist_emotional_analytics_page.dart';
+import '../../features/therapist/data/models/therapist_list_arguments.dart';
 
 class AppRouter {
   static const String home = '/';
@@ -140,7 +141,14 @@ class AppRouter {
         );
 
       case therapists:
-        return MaterialPageRoute(builder: (_) => const TherapistListPage());
+        final arguments = settings.arguments;
+
+        return MaterialPageRoute(
+          builder: (_) => TherapistListPage(
+            arguments: arguments is TherapistListArguments ? arguments : null,
+          ),
+          settings: settings,
+        );
 
       case therapistDetails:
         final therapistId = settings.arguments as int;

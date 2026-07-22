@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../../favorite/data/models/favorite_model.dart';
 import '../../../favorite/data/repositories/favorite_repository.dart';
 import '../../data/models/therapist_filter_request.dart';
@@ -7,7 +8,6 @@ import '../../data/repositories/therapist_repository.dart';
 
 class TherapistListViewModel extends ChangeNotifier {
   final TherapistRepository therapistRepository;
-
   final FavoriteRepository favoriteRepository;
 
   bool isLoading = false;
@@ -22,35 +22,33 @@ class TherapistListViewModel extends ChangeNotifier {
     required this.favoriteRepository,
   });
 
-  Future<void> loadTherapists() async {
+  Future<void> loadTherapists({int? therapyApproachId}) async {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      final results = await Future.wait([
-        therapistRepository.getTherapists(),
-        favoriteRepository.getMyFavorites(),
-      ]);
+      if (therapyApproachId != null) {
+        therapists = await therapistRepository.searchTherapists(
+          TherapistFilterRequest(therapyApproachId: therapyApproachId),
+        );
+      } else {
+        therapists = await therapistRepository.getTherapists();
+      }
 
-      therapists = results[0] as List<TherapistModel>;
-
-      final favorites = results[1] as List<FavoriteModel>;
-
-      favoriteTherapistIds
-        ..clear()
-        ..addAll(favorites.map((favorite) => favorite.therapistId));
+      await _loadFavoriteIdsWithoutNotification();
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = _normalizeError(error);
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 
   Future<void> searchTherapists({
     String? name,
     String? specialization,
+    int? therapyApproachId,
     double? minPrice,
     double? maxPrice,
     String? sortBy,
@@ -64,29 +62,38 @@ class TherapistListViewModel extends ChangeNotifier {
         TherapistFilterRequest(
           name: name,
           specialization: specialization,
+          therapyApproachId: therapyApproachId,
           minPrice: minPrice,
           maxPrice: maxPrice,
           sortBy: sortBy,
         ),
       );
 
-      await loadFavoriteIds();
+      await _loadFavoriteIdsWithoutNotification();
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = _normalizeError(error);
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 
   Future<void> loadFavoriteIds() async {
+    try {
+      await _loadFavoriteIdsWithoutNotification();
+    } catch (error) {
+      errorMessage = _normalizeError(error);
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> _loadFavoriteIdsWithoutNotification() async {
     final favorites = await favoriteRepository.getMyFavorites();
 
     favoriteTherapistIds
       ..clear()
-      ..addAll(favorites.map((favorite) => favorite.therapistId));
-
-    notifyListeners();
+      ..addAll(favorites.map((FavoriteModel favorite) => favorite.therapistId));
   }
 
   bool isFavorite(int therapistId) {
@@ -99,11 +106,9 @@ class TherapistListViewModel extends ChangeNotifier {
     try {
       if (isFavorite(therapistId)) {
         await favoriteRepository.removeFavorite(therapistId);
-
         favoriteTherapistIds.remove(therapistId);
       } else {
         await favoriteRepository.addFavorite(therapistId);
-
         favoriteTherapistIds.add(therapistId);
       }
 
@@ -111,10 +116,20 @@ class TherapistListViewModel extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = _normalizeError(error);
       notifyListeners();
 
       return false;
     }
+  }
+
+  String _normalizeError(Object error) {
+    final message = error.toString();
+
+    if (message.startsWith('Exception: ')) {
+      return message.substring('Exception: '.length);
+    }
+
+    return message;
   }
 }

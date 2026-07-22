@@ -82,10 +82,11 @@ import '../../features/therapist/presentation/viewmodels/therapist_clients_viewm
 import '../../features/therapist/presentation/viewmodels/therapist_client_details_viewmodel.dart';
 
 import '../../features/therapist/presentation/viewmodels/therapist_emotional_analytics_viewmodel.dart';
+import '../../features/therapy_approach/data/repositories/therapy_approach_repository.dart';
+import '../../features/therapy_approach/data/services/therapy_approach_api_service.dart';
 
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
-
   static final ApiClient apiClient = ApiClient(sessionStorage: sessionStorage);
 
   static final NotificationRepository _notificationRepository =
@@ -351,10 +352,19 @@ class AppInjection {
 
     final reviewRepository = ReviewRepository(apiService: reviewApiService);
 
+    final therapyApproachApiService = TherapyApproachApiService(
+      apiClient: apiClient,
+    );
+
+    final therapyApproachRepository = TherapyApproachRepository(
+      apiService: therapyApproachApiService,
+    );
+
     return LandingPageViewModel(
       therapistRepository: therapistRepository,
       articleRepository: articleRepository,
       reviewRepository: reviewRepository,
+      therapyApproachRepository: therapyApproachRepository,
     );
   }
 

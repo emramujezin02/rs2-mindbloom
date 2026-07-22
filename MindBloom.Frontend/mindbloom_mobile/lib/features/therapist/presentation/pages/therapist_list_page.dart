@@ -4,9 +4,12 @@ import '../widgets/therapist_profile_image.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../viewmodels/therapist_list_viewmodel.dart';
+import '../../data/models/therapist_list_arguments.dart';
 
 class TherapistListPage extends StatefulWidget {
-  const TherapistListPage({super.key});
+  final TherapistListArguments? arguments;
+
+  const TherapistListPage({super.key, this.arguments});
 
   @override
   State<TherapistListPage> createState() => _TherapistListPageState();
@@ -22,12 +25,20 @@ class _TherapistListPageState extends State<TherapistListPage> {
   final _maxPriceController = TextEditingController();
 
   String? _sortBy;
+  int? _selectedTherapyApproachId;
+  String? _selectedTherapyApproachName;
 
   @override
   void initState() {
     super.initState();
+
     _viewModel.addListener(_onChanged);
-    _viewModel.loadTherapists();
+
+    _selectedTherapyApproachId = widget.arguments?.therapyApproachId;
+
+    _selectedTherapyApproachName = widget.arguments?.therapyApproachName;
+
+    _viewModel.loadTherapists(therapyApproachId: _selectedTherapyApproachId);
   }
 
   @override
@@ -50,6 +61,7 @@ class _TherapistListPageState extends State<TherapistListPage> {
     _viewModel.searchTherapists(
       name: _nameController.text,
       specialization: _specializationController.text,
+      therapyApproachId: _selectedTherapyApproachId,
       minPrice: double.tryParse(_minPriceController.text),
       maxPrice: double.tryParse(_maxPriceController.text),
       sortBy: _sortBy,
@@ -64,6 +76,8 @@ class _TherapistListPageState extends State<TherapistListPage> {
 
     setState(() {
       _sortBy = null;
+      _selectedTherapyApproachId = null;
+      _selectedTherapyApproachName = null;
     });
 
     _viewModel.loadTherapists();
@@ -75,6 +89,61 @@ class _TherapistListPageState extends State<TherapistListPage> {
       appBar: AppBar(title: const Text('Therapists')),
       body: Column(
         children: [
+          if (_selectedTherapyApproachId != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0E8FA),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFD8C7EB)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.psychology_alt_outlined,
+                    color: Color(0xFF72559A),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Selected therapy approach',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF756B7D),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _selectedTherapyApproachName ?? 'Therapy approach',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF49375D),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Remove therapy approach filter',
+                    onPressed: () {
+                      setState(() {
+                        _selectedTherapyApproachId = null;
+                        _selectedTherapyApproachName = null;
+                      });
+
+                      _applyFilters();
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           _buildFilters(),
           Expanded(child: _buildBody()),
         ],

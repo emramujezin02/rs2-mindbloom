@@ -1,13 +1,15 @@
 class TherapistFilterRequest {
   final String? name;
   final String? specialization;
+  final int? therapyApproachId;
   final double? minPrice;
   final double? maxPrice;
   final String? sortBy;
 
-  TherapistFilterRequest({
+  const TherapistFilterRequest({
     this.name,
     this.specialization,
+    this.therapyApproachId,
     this.minPrice,
     this.maxPrice,
     this.sortBy,
@@ -16,12 +18,21 @@ class TherapistFilterRequest {
   Map<String, String> toQueryParameters() {
     final params = <String, String>{};
 
-    if (name != null && name!.trim().isNotEmpty) {
-      params['name'] = name!.trim();
+    final normalizedName = name?.trim();
+
+    if (normalizedName != null && normalizedName.isNotEmpty) {
+      params['name'] = normalizedName;
     }
 
-    if (specialization != null && specialization!.trim().isNotEmpty) {
-      params['specialization'] = specialization!.trim();
+    final normalizedSpecialization = specialization?.trim();
+
+    if (normalizedSpecialization != null &&
+        normalizedSpecialization.isNotEmpty) {
+      params['specialization'] = normalizedSpecialization;
+    }
+
+    if (therapyApproachId != null && therapyApproachId! > 0) {
+      params['therapyApproachId'] = therapyApproachId.toString();
     }
 
     if (minPrice != null) {
@@ -32,8 +43,10 @@ class TherapistFilterRequest {
       params['maxPrice'] = maxPrice.toString();
     }
 
-    if (sortBy != null && sortBy!.isNotEmpty) {
-      params['sortBy'] = sortBy!;
+    final normalizedSortBy = sortBy?.trim();
+
+    if (normalizedSortBy != null && normalizedSortBy.isNotEmpty) {
+      params['sortBy'] = normalizedSortBy;
     }
 
     return params;
