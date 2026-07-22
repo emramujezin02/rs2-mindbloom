@@ -18,6 +18,29 @@ public class TherapistService : ITherapistService
 {
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _environment;
+
+    private const long MaximumDocumentSize =
+    10 * 1024 * 1024;
+
+    private static readonly HashSet<string>
+        AllowedDocumentExtensions =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".pdf"
+        };
+
+    private static readonly HashSet<string>
+        AllowedDocumentMimeTypes =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+        "image/jpeg",
+        "image/png",
+        "application/pdf"
+        };
+
     private readonly IGeocodingService _geocodingService;
 
     public TherapistService(ApplicationDbContext context, IWebHostEnvironment environment, IGeocodingService geocodingService)
@@ -974,26 +997,7 @@ public class TherapistService : ITherapistService
                 "Therapist not found.");
         }
 
-        if (file == null || file.Length == 0)
-        {
-            throw new Exception(
-                "Invalid file.");
-        }
-
-        var allowedTypes =
-            new[]
-            {
-            "image/jpeg",
-            "image/png",
-            "application/pdf"
-            };
-
-        if (!allowedTypes.Contains(
-            file.ContentType))
-        {
-            throw new Exception(
-                "Only JPG, PNG and PDF files are allowed.");
-        }
+        await ValidateDocumentAsync(file);
 
         var webRootPath =
     _environment.WebRootPath
@@ -1014,8 +1018,12 @@ public class TherapistService : ITherapistService
                 uploadsFolder);
         }
 
+        var extension =
+            Path.GetExtension(file.FileName)
+                .ToLowerInvariant();
+
         var uniqueFileName =
-            $"{Guid.NewGuid()}_{file.FileName}";
+            $"{Guid.NewGuid():N}{extension}";
 
         var filePath =
             Path.Combine(
@@ -1034,7 +1042,7 @@ public class TherapistService : ITherapistService
             {
                 TherapistId = therapist.Id,
 
-                FileName = file.FileName,
+                FileName = uniqueFileName,
 
                 FilePath =
                     $"/uploads/therapists/{uniqueFileName}",
@@ -1498,6 +1506,78 @@ public class TherapistService : ITherapistService
         if (File.Exists(physicalPath))
         {
             File.Delete(physicalPath);
+        }
+    }
+
+    private static async Task ValidateDocumentAsync(
+    IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+        {
+            throw new BadRequestException(
+                "Select a document.");
+        }
+
+        if (file.Length > MaximumDocumentSize)
+        {
+            throw new BadRequestException(
+                "Maximum document size is 10 MB.");
+        }
+
+        var extension =
+            Path.GetExtension(file.FileName);
+
+        if (string.IsNullOrWhiteSpace(extension) ||
+            !AllowedDocumentExtensions.Contains(extension))
+        {
+            throw new BadRequestException(
+                "Only JPG, JPEG, PNG and PDF files are allowed.");
+        }
+
+        if (string.IsNullOrWhiteSpace(file.ContentType) ||
+            !AllowedDocumentMimeTypes.Contains(file.ContentType))
+        {
+            throw new BadRequestException(
+                "Unsupported content type.");
+        }
+
+        var header = new byte[8];
+
+        await using var stream =
+            file.OpenReadStream();
+
+        var bytesRead =
+            await stream.ReadAsync(
+                header.AsMemory(0, header.Length));
+
+        var isJpeg =
+            bytesRead >= 3 &&
+            header[0] == 0xFF &&
+            header[1] == 0xD8 &&
+            header[2] == 0xFF;
+
+        var isPng =
+            bytesRead >= 8 &&
+            header[0] == 0x89 &&
+            header[1] == 0x50 &&
+            header[2] == 0x4E &&
+            header[3] == 0x47 &&
+            header[4] == 0x0D &&
+            header[5] == 0x0A &&
+            header[6] == 0x1A &&
+            header[7] == 0x0A;
+
+        var isPdf =
+            bytesRead >= 4 &&
+            header[0] == 0x25 &&
+            header[1] == 0x50 &&
+            header[2] == 0x44 &&
+            header[3] == 0x46;
+
+        if (!isJpeg && !isPng && !isPdf)
+        {
+            throw new BadRequestException(
+                "Invalid file format.");
         }
     }
 
