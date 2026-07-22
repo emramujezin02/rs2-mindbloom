@@ -50,8 +50,8 @@ public class JwtTokenService : IJwtTokenService
             issuer: _jwtSettings.Issuer,
             audience: _jwtSettings.Audience,
             claims: claims,
-            expires: DateTime.Now.AddMinutes(
-                _jwtSettings.ExpirationInMinutes),
+expires: DateTime.UtcNow.AddMinutes(
+    _jwtSettings.ExpirationInMinutes),
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler()
