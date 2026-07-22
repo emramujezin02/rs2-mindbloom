@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:mindbloom_mobile/app/di/injection.dart';
+import 'package:mindbloom_mobile/features/landing/presentation/viewmodels/landing_page_viewmodel.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../article/data/models/article_model.dart';
 import '../../../review/data/models/review_model.dart';
 import '../../../therapist/data/models/therapist_model.dart';
-import '../viewmodels/landing_page_view_model.dart';
 import '../../../therapist/data/models/therapist_list_arguments.dart';
 import '../../../therapy_approach/data/models/therapy_approach_model.dart';
+import '../../../therapist/presentation/widgets/therapist_profile_image.dart';
+import '../../../therapist/presentation/widgets/therapist_session_modes.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -780,7 +782,7 @@ class _TherapistsSection extends StatelessWidget {
           label: const Text('View all therapists'),
         ),
         child: SizedBox(
-          height: 355,
+          height: 430,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: therapists.length,
@@ -813,10 +815,6 @@ class _TherapistCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = therapist.fullName.trim().isEmpty
-        ? '?'
-        : therapist.fullName.trim()[0].toUpperCase();
-
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,
@@ -827,67 +825,78 @@ class _TherapistCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(21),
+          padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 42,
-                backgroundColor: const Color(0xFFE4D8F3),
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Color(0xFF72559A),
-                    fontSize: 31,
-                    fontWeight: FontWeight.bold,
-                  ),
+              Center(
+                child: TherapistProfileImage(
+                  fullName: therapist.fullName,
+                  profileImageUrl: therapist.profileImageUrl,
+                  radius: 42,
                 ),
               ),
-              const SizedBox(height: 18),
+
+              const SizedBox(height: 16),
+
               Text(
                 therapist.fullName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 6),
+
+              const SizedBox(height: 5),
+
               Text(
                 therapist.specialization,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: Color(0xFF765B97),
-                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF72559A),
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                therapist.biography.isEmpty
-                    ? 'View therapist profile and availability.'
-                    : therapist.biography,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Color(0xFF6B6570), height: 1.4),
+
+              const SizedBox(height: 10),
+
+              TherapistSessionModes(
+                offersOnline: therapist.offersOnline,
+                offersInPerson: therapist.offersInPerson,
+                compact: true,
               ),
-              const Spacer(),
+
+              const SizedBox(height: 10),
+
               Row(
                 children: [
-                  const Icon(Icons.star_rounded, color: Color(0xFFF2B84B)),
+                  const Icon(Icons.star, size: 18, color: Color(0xFFF2B84B)),
                   const SizedBox(width: 4),
                   Text(
                     therapist.averageRating.toStringAsFixed(1),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  const Spacer(),
-                  const Text(
-                    'View profile',
-                    style: TextStyle(
-                      color: Color(0xFF72559A),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                 ],
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                '${therapist.hourlyRate.toStringAsFixed(2)} KM / session',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+
+              const Spacer(),
+
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: onTap,
+                  child: const Text('View profile'),
+                ),
               ),
             ],
           ),

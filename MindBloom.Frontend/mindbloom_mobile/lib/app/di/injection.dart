@@ -1,4 +1,5 @@
 import 'package:mindbloom_mobile/features/appointment/presentation/viewmodels/therapist_appointments_viewmodel.dart';
+import 'package:mindbloom_mobile/features/landing/presentation/viewmodels/landing_page_viewmodel.dart';
 import 'package:mindbloom_mobile/features/therapist/presentation/viewmodels/therapist_dashboard_viewmodel.dart';
 import 'package:mindbloom_mobile/features/therapist/presentation/viewmodels/therapist_profile_viewmodel.dart';
 
@@ -75,8 +76,6 @@ import '../../features/chat/presentation/viewmodels/chat_list_viewmodel.dart';
 import '../../features/recommendation/data/repositories/recommendation_repository.dart';
 import '../../features/recommendation/data/services/recommendation_api_service.dart';
 import '../../features/recommendation/presentation/viewmodels/recommendation_viewmodel.dart';
-
-import '../../features/landing/presentation/viewmodels/landing_page_view_model.dart';
 
 import '../../features/therapist/presentation/viewmodels/therapist_clients_viewmodel.dart';
 import '../../features/therapist/presentation/viewmodels/therapist_client_details_viewmodel.dart';
