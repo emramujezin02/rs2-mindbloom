@@ -4,6 +4,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
+using MindBloom.API.Configuration;
 using MindBloom.API.Filters;
 using MindBloom.API.Messaging.DependencyInjection;
 using MindBloom.API.Middlewares;
@@ -16,6 +17,7 @@ using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Persistence.Seed;
 using MindBloom.Infrastructure.Realtime;
 using MindBloom.Infrastructure.Recommendations;
+using MindBloom.API.Configuration;
 
 Env.Load("../../.env");
 
@@ -26,6 +28,10 @@ var builder =
 
 builder.Configuration
     .AddEnvironmentVariables();
+
+builder.Services.Configure<RequestTimingOptions>(
+    builder.Configuration.GetSection(
+        RequestTimingOptions.SectionName));
 
 builder.Services
     .AddValidatorsFromAssemblyContaining<
@@ -164,6 +170,9 @@ var app =
 
 app.UseMiddleware<
     CorrelationIdMiddleware>();
+
+app.UseMiddleware<
+    RequestTimingMiddleware>();
 
 app.UseMiddleware<
     GlobalExceptionMiddleware>();
