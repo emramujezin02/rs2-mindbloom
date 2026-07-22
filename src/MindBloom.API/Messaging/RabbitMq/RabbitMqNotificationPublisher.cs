@@ -95,20 +95,18 @@ public sealed class RabbitMqNotificationPublisher :
                 cancellationToken: cancellationToken);
 
             _logger.LogInformation(
-                "Email notification message {MessageId} published. Event: {EventType}, recipient: {RecipientEmail}, correlation ID: {CorrelationId}.",
+                "Email notification message {MessageId} published. Event: {EventType}, correlation ID: {CorrelationId}.",
                 message.MessageId,
                 message.EventType,
-                message.RecipientEmail,
                 message.CorrelationId);
         }
         catch (Exception exception)
         {
             _logger.LogError(
                 exception,
-                "Failed to publish email notification message {MessageId}. Event: {EventType}, recipient: {RecipientEmail}, correlation ID: {CorrelationId}.",
+                "Failed to publish email notification message {MessageId}. Event: {EventType}, correlation ID: {CorrelationId}.",
                 message.MessageId,
                 message.EventType,
-                message.RecipientEmail,
                 message.CorrelationId);
 
             await ResetChannelAsync();

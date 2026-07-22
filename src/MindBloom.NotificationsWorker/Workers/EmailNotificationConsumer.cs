@@ -198,9 +198,8 @@ public sealed class EmailNotificationConsumer :
                 _options.MaximumRetryCount + 1;
 
             _logger.LogInformation(
-                "Processing email notification {MessageId}. Recipient: {RecipientEmail}. Attempt {CurrentAttempt}/{MaximumAttempts}. Correlation ID: {CorrelationId}.",
+                "Processing email notification {MessageId}. Attempt {CurrentAttempt}/{MaximumAttempts}. Correlation ID: {CorrelationId}.",
                 message.MessageId,
-                message.RecipientEmail,
                 currentAttempt,
                 maximumAttempts,
                 message.CorrelationId);
@@ -208,17 +207,11 @@ public sealed class EmailNotificationConsumer :
             var emailBody =
                 _bodyBuilder.Build(message);
 
-            /*
-             * Stvarno SMTP slanje.
-             */
             await _emailService.SendAsync(
                 message.RecipientEmail,
                 message.Subject,
                 emailBody);
 
-            /*
-             * ACK tek nakon uspješnog slanja emaila.
-             */
             await AcknowledgeAsync(
                 eventArgs.DeliveryTag);
 

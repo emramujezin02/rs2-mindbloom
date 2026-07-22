@@ -5,10 +5,6 @@ using RabbitMQ.Client.Events;
 
 namespace MindBloom.API.Messaging.RabbitMq;
 
-/// <summary>
-/// Manages one long-lived RabbitMQ connection for the entire API process.
-/// Registered as a singleton.
-/// </summary>
 public sealed class RabbitMqConnectionManager : IAsyncDisposable
 {
     private readonly RabbitMqOptions _options;

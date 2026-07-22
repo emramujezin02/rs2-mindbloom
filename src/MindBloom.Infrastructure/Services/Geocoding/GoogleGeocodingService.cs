@@ -107,8 +107,7 @@ public sealed class GoogleGeocodingService : IGeocodingService
                     : geocodingResponse.ErrorMessage;
 
                 _logger.LogWarning(
-                    "Google Geocoding failed for address {Address}. Status: {Status}.",
-                    fullAddress,
+                    "Google Geocoding request failed with status {Status}.",
                     geocodingResponse.Status);
 
                 return GeocodingResult.Failure(message);
@@ -131,8 +130,7 @@ public sealed class GoogleGeocodingService : IGeocodingService
             when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(
-                "Google Geocoding request timed out for address {Address}.",
-                fullAddress);
+                "Google Geocoding request timed out.");
 
             return GeocodingResult.Failure(
                 "The geocoding request timed out.");
@@ -141,8 +139,7 @@ public sealed class GoogleGeocodingService : IGeocodingService
         {
             _logger.LogError(
                 exception,
-                "Google Geocoding HTTP request failed for address {Address}.",
-                fullAddress);
+                "Google Geocoding HTTP request failed.");
 
             return GeocodingResult.Failure(
                 "The geocoding service could not be reached.");
@@ -151,8 +148,7 @@ public sealed class GoogleGeocodingService : IGeocodingService
         {
             _logger.LogError(
                 exception,
-                "Unexpected geocoding error for address {Address}.",
-                fullAddress);
+                "Unexpected geocoding error.");
 
             return GeocodingResult.Failure(
                 "An unexpected geocoding error occurred.");
