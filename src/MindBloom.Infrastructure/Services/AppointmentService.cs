@@ -4,14 +4,10 @@ using MindBloom.Application.Features.Appointments.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Domain.Enums;
-using MindBloom.Application.Features.Appointments.DTOs;
 using MindBloom.Application.Common.Interfaces;
-using MindBloom.Application.Features.Notifications.Interfaces;
 using MindBloom.Application.Features.Therapists.DTOs;
 using MindBloom.Application.Features.Payments.Interfaces;
-using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Features.Memberships.Interfaces;
-using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.BusinessRules;
 

@@ -7,7 +7,6 @@ using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Payments;
 using MindBloom.Infrastructure.Persistence.Context;
 using Stripe;
-using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.BusinessRules;
 
@@ -782,11 +781,6 @@ public class PaymentService : IPaymentService
             payment.Status !=
                 PaymentStatus.RefundFailed)
         {
-            /*
-             * Pending ili Failed uplata nije
-             * stvarno naplaćena i nema šta
-             * refundirati.
-             */
             return;
         }
 

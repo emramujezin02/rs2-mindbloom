@@ -1,6 +1,5 @@
 ﻿using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Common.Models;
 

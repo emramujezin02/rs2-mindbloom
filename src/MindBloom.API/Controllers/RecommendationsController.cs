@@ -20,19 +20,6 @@ public sealed class RecommendationsController : ControllerBase
             recommendationService;
     }
 
-    /// <summary>
-    /// Returns a personalized and explainable therapist recommendation list
-    /// for the currently authenticated client.
-    /// </summary>
-    /// <param name="request">
-    /// Client preferences and results derived from the initial assessment.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// Request cancellation token.
-    /// </param>
-    /// <returns>
-    /// Therapists sorted by a personalized recommendation score.
-    /// </returns>
     [HttpPost("therapists")]
     [ProducesResponseType(
         typeof(IReadOnlyList<TherapistRecommendationDto>),

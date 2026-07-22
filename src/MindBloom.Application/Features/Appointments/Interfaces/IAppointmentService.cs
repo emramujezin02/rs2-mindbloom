@@ -1,6 +1,5 @@
 ﻿using MindBloom.Application.Features.Appointments.DTOs;
 using MindBloom.Application.Features.Therapists.DTOs;
-using MindBloom.Application.Features.Therapists.DTOs;
 
 namespace MindBloom.Application.Features.Appointments.Interfaces;
 

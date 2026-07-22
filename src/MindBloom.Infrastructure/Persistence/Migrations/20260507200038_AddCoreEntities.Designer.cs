@@ -15,7 +15,6 @@ namespace MindBloom.Infrastructure.Migrations
     [Migration("20260507200038_AddCoreEntities")]
     partial class AddCoreEntities
     {
-        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618

@@ -4,10 +4,8 @@
 
 namespace MindBloom.Infrastructure.Migrations
 {
-    /// <inheritdoc />
     public partial class AddTherapistMapCoordinates : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<double>(
@@ -23,7 +21,6 @@ namespace MindBloom.Infrastructure.Migrations
                 nullable: true);
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(

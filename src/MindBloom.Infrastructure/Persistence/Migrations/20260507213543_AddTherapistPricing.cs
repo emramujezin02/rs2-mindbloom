@@ -4,10 +4,8 @@
 
 namespace MindBloom.Infrastructure.Migrations
 {
-    /// <inheritdoc />
     public partial class AddTherapistPricing : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<int>(

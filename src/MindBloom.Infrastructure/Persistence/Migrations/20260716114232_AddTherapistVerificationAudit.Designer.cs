@@ -15,7 +15,6 @@ namespace MindBloom.Infrastructure.Migrations
     [Migration("20260716114232_AddTherapistVerificationAudit")]
     partial class AddTherapistVerificationAudit
     {
-        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618

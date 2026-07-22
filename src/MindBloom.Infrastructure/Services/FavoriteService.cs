@@ -2,7 +2,6 @@
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Favorites.DTOs;
 using MindBloom.Application.Features.Favorites.Interfaces;
-using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 
 namespace MindBloom.Infrastructure.Services;

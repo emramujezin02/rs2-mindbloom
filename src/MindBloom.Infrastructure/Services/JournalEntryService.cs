@@ -415,21 +415,6 @@ public class JournalEntryService
         };
     }
 
-    private static int NormalizeAnalyticsPeriod(
-    int days)
-    {
-        return days switch
-        {
-            7 => 7,
-            14 => 14,
-            30 => 30,
-            90 => 90,
-            180 => 180,
-            365 => 365,
-            _ => 30
-        };
-    }
-
     private static MoodTrendCalculation
         CalculateMoodTrend(
             IReadOnlyList<MoodTrendPointDto>

@@ -110,11 +110,6 @@ public class AdminReportService : IAdminReportService
         var grossRevenue = paidPayments.Sum(
             x => x.PaymentAmount);
 
-        /*
-         * Payment trenutno nema posebno RefundAmount polje.
-         * Zato se završeni refund računa kao puni povrat
-         * originalnog iznosa Payment zapisa.
-         */
         var refundedAmount = refundedPayments.Sum(
             x => x.PaymentAmount);
 
@@ -296,10 +291,6 @@ public class AdminReportService : IAdminReportService
                 paidAppointments.Sum(
                     x => x.PaymentAmount);
 
-            /*
-             * Kako Payment nema RefundAmount,
-             * svaki završeni refund predstavlja puni povrat.
-             */
             var refundedAmount =
                 refundedAppointments.Sum(
                     x => x.PaymentAmount);

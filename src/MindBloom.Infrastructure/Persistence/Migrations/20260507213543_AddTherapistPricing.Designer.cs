@@ -15,7 +15,6 @@ namespace MindBloom.Infrastructure.Migrations
     [Migration("20260507213543_AddTherapistPricing")]
     partial class AddTherapistPricing
     {
-        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618

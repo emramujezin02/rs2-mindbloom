@@ -263,7 +263,6 @@ public sealed class RabbitMqNotificationPublisher :
         }
         catch
         {
-            // Dispose still needs to be attempted.
         }
 
         await _channel.DisposeAsync();

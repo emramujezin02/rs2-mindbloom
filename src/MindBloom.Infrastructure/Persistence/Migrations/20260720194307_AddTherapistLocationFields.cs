@@ -4,10 +4,8 @@
 
 namespace MindBloom.Infrastructure.Migrations
 {
-    /// <inheritdoc />
     public partial class AddTherapistLocationFields : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<string>(
@@ -46,7 +44,6 @@ namespace MindBloom.Infrastructure.Migrations
                 defaultValue: false);
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(

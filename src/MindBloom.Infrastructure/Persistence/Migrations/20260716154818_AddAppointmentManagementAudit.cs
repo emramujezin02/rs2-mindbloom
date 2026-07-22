@@ -5,10 +5,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace MindBloom.Infrastructure.Migrations
 {
-    /// <inheritdoc />
     public partial class AddAppointmentManagementAudit : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -56,7 +54,6 @@ namespace MindBloom.Infrastructure.Migrations
                 column: "ChangedByUserId");
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

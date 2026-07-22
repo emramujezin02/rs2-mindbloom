@@ -196,10 +196,6 @@ public class ReferenceDataService : IReferenceDataService
         specialization.Description =
             NormalizeDescription(request.Description);
 
-        /*
-         * Dok postoji legacy string polje, njegov naziv se mora
-         * sinhronizovati nakon izmjene referentnog podatka.
-         */
         var therapists = await _context.Therapists
             .Where(x =>
                 !x.IsDeleted &&
@@ -211,10 +207,6 @@ public class ReferenceDataService : IReferenceDataService
             therapist.Specialization = name;
         }
 
-        /*
-         * Ovim se obuhvataju i postojeći terapeuti iz perioda
-         * prije uvođenja SpecializationId.
-         */
         var legacyTherapists = await _context.Therapists
             .Where(x =>
                 !x.IsDeleted &&

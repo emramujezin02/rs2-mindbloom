@@ -15,7 +15,6 @@ namespace MindBloom.Infrastructure.Migrations
     [Migration("20260507200605_seederfix2")]
     partial class seederfix2
     {
-        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
