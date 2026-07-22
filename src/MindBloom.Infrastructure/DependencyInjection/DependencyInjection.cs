@@ -42,9 +42,31 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION");
+        var connectionString =
+            Environment.GetEnvironmentVariable(
+                "DB_CONNECTION");
 
-        services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
+        if (string.IsNullOrWhiteSpace(
+                connectionString))
+        {
+            throw new InvalidOperationException(
+                "The DB_CONNECTION environment variable is not configured.");
+        }
+
+        services.AddDbContext<ApplicationDbContext>(
+            options =>
+            {
+                options.UseSqlServer(
+                    connectionString,
+                    sqlServerOptions =>
+                    {
+                        sqlServerOptions.EnableRetryOnFailure(
+                            maxRetryCount: 5,
+                            maxRetryDelay:
+                                TimeSpan.FromSeconds(10),
+                            errorNumbersToAdd: null);
+                    });
+            });
 
         services.AddSignalR();
 
