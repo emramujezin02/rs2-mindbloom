@@ -9,6 +9,10 @@ class SessionViewModel extends ChangeNotifier {
 
   bool isInitialized = false;
   bool isLoggedIn = false;
+  String? role;
+  bool get isClient => role == 'Client';
+  bool get isTherapist => role == 'Therapist';
+  bool get isAdmin => role == 'Admin';
 
   SessionViewModel({
     required this.sessionStorage,
@@ -17,6 +21,8 @@ class SessionViewModel extends ChangeNotifier {
 
   Future<void> initialize() async {
     final token = await sessionStorage.getToken();
+
+    role = await sessionStorage.getUserRole();
 
     isLoggedIn = token != null && token.trim().isNotEmpty;
 
@@ -28,7 +34,21 @@ class SessionViewModel extends ChangeNotifier {
   Future<void> logout() async {
     await authRepository.logout();
 
+    await sessionStorage.clearSession();
+
+    role = null;
+
     isLoggedIn = false;
+
+    notifyListeners();
+  }
+
+  Future<void> updateSession({required String role}) async {
+    this.role = role;
+
+    isLoggedIn = true;
+
+    await sessionStorage.saveUserRole(role);
 
     notifyListeners();
   }

@@ -1,12 +1,37 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\",
-  "Documents": [],
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.domain\\enums\\userrole.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|solutionrelative:src\\mindbloom.domain\\enums\\userrole.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": []
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "UserRole.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Enums\\UserRole.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Enums\\UserRole.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Enums\\UserRole.cs",
+              "RelativeToolTip": "src\\MindBloom.Domain\\Enums\\UserRole.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-22T12:00:26.299Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
     }
   ]
 }

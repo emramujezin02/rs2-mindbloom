@@ -7,6 +7,8 @@ class SessionStorageService {
 
   final FlutterSecureStorage _storage;
 
+  static const String _userRoleKey = 'mindbloom_user_role';
+
   SessionStorageService({FlutterSecureStorage? storage})
     : _storage = storage ?? const FlutterSecureStorage();
 
@@ -50,10 +52,22 @@ class SessionStorageService {
   }
 
   Future<void> clearSession() async {
-    await Future.wait([deleteToken(), deleteRefreshToken()]);
+    await Future.wait([deleteToken(), deleteRefreshToken(), deleteUserRole()]);
   }
 
   Future<void> clear() async {
     await clearSession();
+  }
+
+  Future<void> saveUserRole(String role) async {
+    await _storage.write(key: _userRoleKey, value: role);
+  }
+
+  Future<String?> getUserRole() async {
+    return _storage.read(key: _userRoleKey);
+  }
+
+  Future<void> deleteUserRole() async {
+    await _storage.delete(key: _userRoleKey);
   }
 }
