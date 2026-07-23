@@ -203,10 +203,10 @@ class _LandingPageState extends State<LandingPage> {
                         key: articlesSectionKey,
                         child: _ArticlesSection(
                           articles: viewModel.articles,
-                          isLoading: viewModel.isLoading,
+                          isLoading: viewModel.isArticlesLoading,
                           errorMessage: viewModel.articleErrorMessage,
                           onViewAll: _openArticles,
-                          onRetry: viewModel.loadLandingData,
+                          onRetry: viewModel.retryArticles,
                           onArticleSelected: _openArticleDetails,
                         ),
                       ),
@@ -1158,6 +1158,20 @@ class _ArticleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localPublishedDate = article.publishedAtUtc.toLocal();
+
+    final formattedPublishedDate = MaterialLocalizations.of(
+      context,
+    ).formatMediumDate(localPublishedDate);
+
+    final authorName = article.authorName.trim().isEmpty
+        ? 'MindBloom'
+        : article.authorName.trim();
+
+    final description = article.description.trim().isEmpty
+        ? 'Read this MindBloom article to learn more.'
+        : article.description.trim();
+
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,
@@ -1190,7 +1204,7 @@ class _ArticleCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 9),
                   Text(
-                    article.description,
+                    description,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -1198,17 +1212,49 @@ class _ArticleCard extends StatelessWidget {
                       height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  Text(
-                    article.authorName.isEmpty
-                        ? 'MindBloom'
-                        : article.authorName,
-                    style: const TextStyle(
-                      color: Color(0xFF8063A4),
-                      fontWeight: FontWeight.w700,
-                    ),
+                  const SizedBox(height: 15),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.person_outline,
+                        size: 18,
+                        color: Color(0xFF8063A4),
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          authorName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF8063A4),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 13),
+                  const SizedBox(height: 9),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 17,
+                        color: Color(0xFF8063A4),
+                      ),
+                      const SizedBox(width: 7),
+                      Text(
+                        formattedPublishedDate,
+                        style: const TextStyle(
+                          color: Color(0xFF6B6272),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   const Row(
                     children: [
                       Text(

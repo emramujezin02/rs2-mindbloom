@@ -8,6 +8,7 @@ class ArticleModel {
   final int? therapistId;
   final String authorName;
   final DateTime publishedAtUtc;
+  final bool isPublished;
 
   ArticleModel({
     required this.id,
@@ -19,19 +20,47 @@ class ArticleModel {
     required this.therapistId,
     required this.authorName,
     required this.publishedAtUtc,
+    required this.isPublished,
   });
 
   factory ArticleModel.fromJson(Map<String, dynamic> json) {
     return ArticleModel(
-      id: json['id'] ?? 0,
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      content: json['content'] ?? '',
-      imageUrl: json['imageUrl'] ?? '',
-      authorUserId: json['authorUserId'] ?? 0,
-      therapistId: json['therapistId'] as int?,
-      authorName: json['authorName'] ?? '',
-      publishedAtUtc: DateTime.parse(json['publishedAtUtc']),
+      id: _parseInt(json['id']),
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      content: json['content']?.toString() ?? '',
+      imageUrl: json['imageUrl']?.toString() ?? '',
+      authorUserId: _parseInt(json['authorUserId']),
+      therapistId: _parseNullableInt(json['therapistId']),
+      authorName: json['authorName']?.toString() ?? '',
+      publishedAtUtc: _parseDateTime(json['publishedAtUtc']),
+      isPublished: json['isPublished'] == true,
     );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static int? _parseNullableInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is int) {
+      return value;
+    }
+
+    return int.tryParse(value.toString());
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    final parsedDate = DateTime.tryParse(value?.toString() ?? '');
+
+    return parsedDate ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   }
 }

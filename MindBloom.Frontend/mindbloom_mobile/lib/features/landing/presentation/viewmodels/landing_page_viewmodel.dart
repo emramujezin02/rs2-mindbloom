@@ -23,6 +23,7 @@ class LandingPageViewModel extends ChangeNotifier {
   });
 
   bool isLoading = false;
+  bool isArticlesLoading = false;
   bool isReviewsLoading = false;
   bool isTherapyApproachesLoading = false;
 
@@ -99,6 +100,19 @@ class LandingPageViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> retryArticles() async {
+    if (isArticlesLoading) {
+      return;
+    }
+
+    articleErrorMessage = null;
+    notifyListeners();
+
+    await _loadArticles();
+
+    notifyListeners();
+  }
+
   Future<void> retryReviews() async {
     if (isReviewsLoading) {
       return;
@@ -160,16 +174,36 @@ class LandingPageViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadArticles() async {
+    isArticlesLoading = true;
+    articleErrorMessage = null;
+
     try {
       final response = await articleRepository.getArticles(
         pageNumber: 1,
         pageSize: 6,
       );
 
-      articles = response.items.take(6).toList();
+      final publishedArticles =
+          response.items
+              .where(
+                (article) =>
+                    article.id > 0 &&
+                    article.isPublished &&
+                    article.title.trim().isNotEmpty &&
+                    article.description.trim().isNotEmpty,
+              )
+              .toList()
+            ..sort(
+              (first, second) =>
+                  second.publishedAtUtc.compareTo(first.publishedAtUtc),
+            );
+
+      articles = publishedArticles.take(6).toList();
     } catch (error) {
       articles = [];
       articleErrorMessage = _normalizeError(error);
+    } finally {
+      isArticlesLoading = false;
     }
   }
 
