@@ -57,6 +57,22 @@ public class AuthService : IAuthService
         var normalizedUsername =
             request.Username.Trim();
 
+        var normalizedGender =
+    request.Gender.Trim();
+
+        var allowedGenders =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+        "Male",
+        "Female",
+        "Other"
+            };
+
+        BusinessRuleGuard.Against(
+            !allowedGenders.Contains(normalizedGender),
+            "Gender must be Male, Female or Other.");
+
         var existingEmailUser =
            await _userManager.FindByEmailAsync(
                normalizedEmail);
@@ -82,6 +98,7 @@ public class AuthService : IAuthService
             Email = normalizedEmail,
             UserName = normalizedUsername,
             DateOfBirth = request.DateOfBirth,
+            Gender = normalizedGender,
             CreatedAtUtc = DateTime.UtcNow,
             EmailConfirmed =
                 IsDemoAccount(normalizedEmail),

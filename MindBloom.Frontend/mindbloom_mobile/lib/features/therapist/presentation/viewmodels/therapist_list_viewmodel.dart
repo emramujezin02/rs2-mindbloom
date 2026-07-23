@@ -16,58 +16,68 @@ class TherapistListViewModel extends ChangeNotifier {
   List<TherapistModel> therapists = [];
 
   final Set<int> favoriteTherapistIds = <int>{};
-
   final Set<int> changingFavoriteTherapistIds = <int>{};
+
+  int currentPage = 1;
+  final int pageSize = 10;
 
   TherapistListViewModel({
     required this.therapistRepository,
     required this.favoriteRepository,
   });
 
-  Future<void> loadTherapists({int? therapyApproachId}) async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+  Future<void> loadTherapists({
+    int? therapyApproachId,
+  }) async {
+    currentPage = 1;
 
-    try {
-      if (therapyApproachId != null) {
-        therapists = await therapistRepository.searchTherapists(
-          TherapistFilterRequest(therapyApproachId: therapyApproachId),
-        );
-      } else {
-        therapists = await therapistRepository.getTherapists();
-      }
-
-      await _tryLoadFavoriteIds();
-    } catch (error) {
-      errorMessage = _normalizeError(error);
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
+    await searchTherapists(
+      therapyApproachId: therapyApproachId,
+      resetPage: true,
+    );
   }
 
   Future<void> searchTherapists({
-    String? name,
+    String? searchText,
     String? specialization,
     int? therapyApproachId,
+    String? gender,
+    String? language,
+    String? location,
+    String? sessionMode,
     double? minPrice,
     double? maxPrice,
+    double? minRating,
+    String? availableDay,
     String? sortBy,
+    bool resetPage = true,
   }) async {
+    if (resetPage) {
+      currentPage = 1;
+    }
+
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      therapists = await therapistRepository.searchTherapists(
+      therapists =
+          await therapistRepository.searchTherapists(
         TherapistFilterRequest(
-          name: name,
+          searchText: searchText,
           specialization: specialization,
           therapyApproachId: therapyApproachId,
+          gender: gender,
+          language: language,
+          location: location,
+          sessionMode: sessionMode,
           minPrice: minPrice,
           maxPrice: maxPrice,
+          minRating: minRating,
+          availableDay: availableDay,
           sortBy: sortBy,
+          pageNumber: currentPage,
+          pageSize: pageSize,
         ),
       );
 
@@ -91,11 +101,17 @@ class TherapistListViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadFavoriteIdsWithoutNotification() async {
-    final favorites = await favoriteRepository.getMyFavorites();
+    final favorites =
+        await favoriteRepository.getMyFavorites();
 
     favoriteTherapistIds
       ..clear()
-      ..addAll(favorites.map((FavoriteModel favorite) => favorite.therapistId));
+      ..addAll(
+        favorites.map(
+          (FavoriteModel favorite) =>
+              favorite.therapistId,
+        ),
+      );
   }
 
   Future<void> _tryLoadFavoriteIds() async {
@@ -107,29 +123,49 @@ class TherapistListViewModel extends ChangeNotifier {
   }
 
   bool isFavorite(int therapistId) {
-    return favoriteTherapistIds.contains(therapistId);
+    return favoriteTherapistIds.contains(
+      therapistId,
+    );
   }
 
   bool isChangingFavorite(int therapistId) {
-    return changingFavoriteTherapistIds.contains(therapistId);
+    return changingFavoriteTherapistIds.contains(
+      therapistId,
+    );
   }
 
-  Future<bool> toggleFavorite(int therapistId) async {
+  Future<bool> toggleFavorite(
+    int therapistId,
+  ) async {
     if (isChangingFavorite(therapistId)) {
       return false;
     }
 
     errorMessage = null;
-    changingFavoriteTherapistIds.add(therapistId);
+
+    changingFavoriteTherapistIds.add(
+      therapistId,
+    );
+
     notifyListeners();
 
     try {
       if (isFavorite(therapistId)) {
-        await favoriteRepository.removeFavorite(therapistId);
-        favoriteTherapistIds.remove(therapistId);
+        await favoriteRepository.removeFavorite(
+          therapistId,
+        );
+
+        favoriteTherapistIds.remove(
+          therapistId,
+        );
       } else {
-        await favoriteRepository.addFavorite(therapistId);
-        favoriteTherapistIds.add(therapistId);
+        await favoriteRepository.addFavorite(
+          therapistId,
+        );
+
+        favoriteTherapistIds.add(
+          therapistId,
+        );
       }
 
       return true;
@@ -137,7 +173,10 @@ class TherapistListViewModel extends ChangeNotifier {
       errorMessage = _normalizeError(error);
       return false;
     } finally {
-      changingFavoriteTherapistIds.remove(therapistId);
+      changingFavoriteTherapistIds.remove(
+        therapistId,
+      );
+
       notifyListeners();
     }
   }
@@ -146,7 +185,9 @@ class TherapistListViewModel extends ChangeNotifier {
     final message = error.toString();
 
     if (message.startsWith('Exception: ')) {
-      return message.substring('Exception: '.length);
+      return message.substring(
+        'Exception: '.length,
+      );
     }
 
     return message;

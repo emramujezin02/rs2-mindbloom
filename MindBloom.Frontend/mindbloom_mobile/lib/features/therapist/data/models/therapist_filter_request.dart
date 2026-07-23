@@ -1,38 +1,92 @@
 class TherapistFilterRequest {
-  final String? name;
+  final String? searchText;
   final String? specialization;
   final int? therapyApproachId;
+  final String? gender;
+  final String? language;
+  final String? location;
+  final String? sessionMode;
   final double? minPrice;
   final double? maxPrice;
+  final double? minRating;
+  final String? availableDay;
   final String? sortBy;
+  final int pageNumber;
+  final int pageSize;
 
   const TherapistFilterRequest({
-    this.name,
+    this.searchText,
     this.specialization,
     this.therapyApproachId,
+    this.gender,
+    this.language,
+    this.location,
+    this.sessionMode,
     this.minPrice,
     this.maxPrice,
+    this.minRating,
+    this.availableDay,
     this.sortBy,
+    this.pageNumber = 1,
+    this.pageSize = 10,
   });
 
   Map<String, String> toQueryParameters() {
-    final params = <String, String>{};
+    final params = <String, String>{
+      'pageNumber': pageNumber.toString(),
+      'pageSize': pageSize.toString(),
+    };
 
-    final normalizedName = name?.trim();
+    final normalizedSearchText = searchText?.trim();
 
-    if (normalizedName != null && normalizedName.isNotEmpty) {
-      params['name'] = normalizedName;
+    if (normalizedSearchText != null &&
+        normalizedSearchText.isNotEmpty) {
+      params['searchText'] = normalizedSearchText;
     }
 
-    final normalizedSpecialization = specialization?.trim();
+    final normalizedSpecialization =
+        specialization?.trim();
 
     if (normalizedSpecialization != null &&
         normalizedSpecialization.isNotEmpty) {
-      params['specialization'] = normalizedSpecialization;
+      params['specialization'] =
+          normalizedSpecialization;
     }
 
-    if (therapyApproachId != null && therapyApproachId! > 0) {
-      params['therapyApproachId'] = therapyApproachId.toString();
+    if (therapyApproachId != null &&
+        therapyApproachId! > 0) {
+      params['therapyApproachId'] =
+          therapyApproachId.toString();
+    }
+
+    final normalizedGender = gender?.trim();
+
+    if (normalizedGender != null &&
+        normalizedGender.isNotEmpty) {
+      params['gender'] = normalizedGender;
+    }
+
+    final normalizedLanguage = language?.trim();
+
+    if (normalizedLanguage != null &&
+        normalizedLanguage.isNotEmpty) {
+      params['language'] = normalizedLanguage;
+    }
+
+    final normalizedLocation = location?.trim();
+
+    if (normalizedLocation != null &&
+        normalizedLocation.isNotEmpty) {
+      params['location'] = normalizedLocation;
+    }
+
+    final normalizedSessionMode =
+        sessionMode?.trim();
+
+    if (normalizedSessionMode != null &&
+        normalizedSessionMode.isNotEmpty) {
+      params['sessionMode'] =
+          normalizedSessionMode;
     }
 
     if (minPrice != null) {
@@ -43,9 +97,23 @@ class TherapistFilterRequest {
       params['maxPrice'] = maxPrice.toString();
     }
 
+    if (minRating != null) {
+      params['minRating'] = minRating.toString();
+    }
+
+    final normalizedAvailableDay =
+        availableDay?.trim();
+
+    if (normalizedAvailableDay != null &&
+        normalizedAvailableDay.isNotEmpty) {
+      params['availableDay'] =
+          normalizedAvailableDay;
+    }
+
     final normalizedSortBy = sortBy?.trim();
 
-    if (normalizedSortBy != null && normalizedSortBy.isNotEmpty) {
+    if (normalizedSortBy != null &&
+        normalizedSortBy.isNotEmpty) {
       params['sortBy'] = normalizedSortBy;
     }
 

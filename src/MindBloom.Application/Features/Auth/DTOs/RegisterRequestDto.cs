@@ -13,4 +13,6 @@ public class RegisterRequestDto
     public string Password { get; set; } = string.Empty;
 
     public DateTime DateOfBirth { get; set; }
+
+    public string Gender { get; set; } = string.Empty;
 }

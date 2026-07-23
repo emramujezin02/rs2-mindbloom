@@ -187,39 +187,118 @@ public class TherapistService : ITherapistService
     }
 
     public async Task<PagedResponse<TherapistResponseDto>>
-    SearchAsync(SearchTherapistsDto request)
+     SearchAsync(SearchTherapistsDto request)
     {
         var pagination =
-    PaginationHelper.Normalize(
-        request.PageNumber,
-        request.PageSize);
+            PaginationHelper.Normalize(
+                request.PageNumber,
+                request.PageSize);
+
+        if (request.MinPrice.HasValue &&
+            request.MinPrice.Value < 0)
+        {
+            throw new BadRequestException(
+                "Minimum price cannot be negative.");
+        }
+
+        if (request.MaxPrice.HasValue &&
+            request.MaxPrice.Value < 0)
+        {
+            throw new BadRequestException(
+                "Maximum price cannot be negative.");
+        }
+
+        if (request.MinPrice.HasValue &&
+            request.MaxPrice.HasValue &&
+            request.MinPrice.Value >
+            request.MaxPrice.Value)
+        {
+            throw new BadRequestException(
+                "Minimum price cannot be greater than maximum price.");
+        }
+
+        if (request.MinRating.HasValue &&
+            (
+                request.MinRating.Value < 0 ||
+                request.MinRating.Value > 5
+            ))
+        {
+            throw new BadRequestException(
+                "Minimum rating must be between 0 and 5.");
+        }
 
         var query =
-            _context.Therapists.AsNoTracking()
-                .Include(x => x.User)
-                .Include(x => x.Reviews)
-.Where(x =>
-    !x.IsDeleted &&
-    x.VerificationStatus ==
-        TherapistVerificationStatus.Approved)
+            _context.Therapists
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.User.IsActive &&
+                    !x.User.IsBlocked &&
+                    x.VerificationStatus ==
+                        TherapistVerificationStatus.Approved)
                 .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(request.Name))
+        if (!string.IsNullOrWhiteSpace(
+                request.SearchText))
         {
+            var searchText =
+                request.SearchText
+                    .Trim()
+                    .ToLower();
+
             query = query.Where(x =>
-                (x.User.FirstName + " "
-                 + x.User.LastName)
+                (
+                    x.User.FirstName
+                    + " "
+                    + x.User.LastName
+                )
                 .ToLower()
-                .Contains(request.Name.ToLower()));
+                .Contains(searchText)
+                ||
+                x.Specialization
+                    .ToLower()
+                    .Contains(searchText)
+                ||
+                x.City
+                    .ToLower()
+                    .Contains(searchText)
+                ||
+                x.Country
+                    .ToLower()
+                    .Contains(searchText)
+                ||
+                x.Address
+                    .ToLower()
+                    .Contains(searchText)
+                ||
+                (
+                    x.Languages
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(searchText)
+                ||
+                x.TherapyApproaches.Any(ta =>
+                    !ta.IsDeleted &&
+                    !ta.TherapyApproach.IsDeleted &&
+                    ta.TherapyApproach.IsActive &&
+                    ta.TherapyApproach.Name
+                        .ToLower()
+                        .Contains(searchText)));
         }
 
         if (!string.IsNullOrWhiteSpace(
-            request.Specialization))
+                request.Specialization))
         {
+            var specialization =
+                request.Specialization
+                    .Trim()
+                    .ToLower();
+
             query = query.Where(x =>
-                x.Specialization.ToLower()
-                .Contains(
-                    request.Specialization.ToLower()));
+                x.Specialization
+                    .ToLower()
+                    .Contains(specialization));
         }
 
         if (request.TherapyApproachId.HasValue)
@@ -233,88 +312,274 @@ public class TherapistService : ITherapistService
                     ta.TherapyApproach.IsActive));
         }
 
-        query = request.SortBy?.ToLower() switch
+        if (!string.IsNullOrWhiteSpace(
+                request.Gender))
         {
-            "rating" =>
-                query.OrderByDescending(x =>
-                    x.Reviews.Any()
-                        ? x.Reviews.Average(r => r.Rating)
-                        : 0),
+            var gender =
+                request.Gender
+                    .Trim()
+                    .ToLower();
 
-            "price" =>
-                query.OrderBy(x => x.HourlyRate),
+            query = query.Where(x =>
+                x.User.Gender != null &&
+                x.User.Gender
+                    .ToLower() == gender);
+        }
 
-            "experience" =>
-                query.OrderByDescending(
-                    x => x.ExperienceYears),
+        if (!string.IsNullOrWhiteSpace(
+                request.Language))
+        {
+            var language =
+                request.Language
+                    .Trim()
+                    .ToLower();
 
-            _ =>
-                query.OrderBy(x => x.Id)
-        };
+            query = query.Where(x =>
+                x.Languages != null &&
+                (
+                    "," + x.Languages.ToLower() + ","
+                )
+                .Contains(
+                    "," + language + ","));
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.Location))
+        {
+            var location =
+                request.Location
+                    .Trim()
+                    .ToLower();
+
+            query = query.Where(x =>
+                x.Country
+                    .ToLower()
+                    .Contains(location)
+                ||
+                x.City
+                    .ToLower()
+                    .Contains(location)
+                ||
+                x.Address
+                    .ToLower()
+                    .Contains(location)
+                ||
+                (
+                    x.Location
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(location));
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.SessionMode))
+        {
+            var sessionMode =
+                request.SessionMode
+                    .Trim()
+                    .ToLower();
+
+            query = sessionMode switch
+            {
+                "online" =>
+                    query.Where(x =>
+                        x.OffersOnline),
+
+                "inperson" =>
+                    query.Where(x =>
+                        x.OffersInPerson),
+
+                "both" =>
+                    query.Where(x =>
+                        x.OffersOnline &&
+                        x.OffersInPerson),
+
+                _ =>
+                    throw new BadRequestException(
+                        "Session mode must be online, inPerson or both.")
+            };
+        }
+
+        if (request.MinPrice.HasValue)
+        {
+            query = query.Where(x =>
+                x.HourlyRate >=
+                request.MinPrice.Value);
+        }
+
+        if (request.MaxPrice.HasValue)
+        {
+            query = query.Where(x =>
+                x.HourlyRate <=
+                request.MaxPrice.Value);
+        }
+
+        if (request.MinRating.HasValue)
+        {
+            query = query.Where(x =>
+                x.Reviews
+.Where(review =>
+    !review.IsDeleted)
+                    .Any()
+                &&
+                x.Reviews
+.Where(review =>
+    !review.IsDeleted)
+                    .Average(review =>
+                        review.Rating)
+                >= request.MinRating.Value);
+        }
+
+        if (request.AvailableDay.HasValue)
+        {
+            query = query.Where(x =>
+                x.Availabilities.Any(
+                    availability =>
+                        !availability.IsDeleted &&
+                        availability.DayOfWeek ==
+                            request.AvailableDay.Value));
+        }
+
+        query =
+            request.SortBy?
+                .Trim()
+                .ToLower() switch
+            {
+                "rating" =>
+                    query
+                        .OrderByDescending(x =>
+                            x.Reviews
+.Where(review =>
+    !review.IsDeleted)
+                                .Any()
+                                ? x.Reviews
+                                    .Where(review =>
+                                        !review.IsDeleted &&
+                                        review.IsApproved)
+                                    .Average(review =>
+                                        review.Rating)
+                                : 0)
+                        .ThenBy(x =>
+                            x.Id),
+
+                "price" =>
+                    query
+                        .OrderBy(x =>
+                            x.HourlyRate)
+                        .ThenBy(x =>
+                            x.Id),
+
+                "experience" =>
+                    query
+                        .OrderByDescending(x =>
+                            x.ExperienceYears)
+                        .ThenBy(x =>
+                            x.Id),
+
+                _ =>
+                    query.OrderBy(x =>
+                        x.Id)
+            };
 
         var totalCount =
             await query.CountAsync();
 
         var items =
             await query
-.Skip(
-    pagination.Skip)
-.Take(
-    pagination.PageSize)
+                .Skip(pagination.Skip)
+                .Take(pagination.PageSize)
+                .Select(x =>
+                    new TherapistResponseDto
+                    {
+                        Id = x.Id,
 
-                .Select(x => new TherapistResponseDto
-                {
-                    Id = x.Id,
+                        UserId = x.UserId,
 
-                    FullName =
-                        x.User.FirstName
-                        + " "
-                        + x.User.LastName,
+                        FullName =
+                            x.User.FirstName
+                            + " "
+                            + x.User.LastName,
 
-                    Email = x.User.Email!,
+                        Email =
+                            x.User.Email
+                            ?? string.Empty,
 
-                    Specialization =
-                        x.Specialization,
+                        Specialization =
+                            x.Specialization,
 
-                    Biography = x.Biography,
+                        Biography =
+                            x.Biography,
 
-                    HourlyRate =
-                        x.HourlyRate,
+                        HourlyRate =
+                            x.HourlyRate,
 
-                    ExperienceYears =
-                        x.ExperienceYears,
+                        ExperienceYears =
+                            x.ExperienceYears,
 
-                    VerificationStatus =
-    x.VerificationStatus.ToString(),
+                        AverageRating =
+                            x.Reviews
+.Where(review =>
+    !review.IsDeleted)
+                                .Any()
+                                ? Math.Round(
+                                    x.Reviews
+                                        .Where(review =>
+                                            !review.IsDeleted &&
+                                            review.IsApproved)
+                                        .Average(review =>
+                                            review.Rating),
+                                    1)
+                                : 0,
 
-                    AverageRating =
-                        x.Reviews.Any()
-                            ? x.Reviews.Average(
-                                r => r.Rating)
-                            : 0,
+                        TotalReviews =
+                            x.Reviews.Count(review =>
+    !review.IsDeleted),
 
-                    TotalReviews =
-    x.Reviews.Count,
+                        VerificationStatus =
+                            x.VerificationStatus
+                                .ToString(),
 
-                    ProfileImageUrl = x.ProfileImagePath,
+                        VerificationNotes =
+                            x.VerificationNotes,
 
-                    Country = x.Country,
-                    City = x.City,
-                    Address = x.Address,
-                    OffersOnline = x.OffersOnline,
-                    OffersInPerson = x.OffersInPerson,
-                    Latitude = x.Latitude,
-                    Longitude = x.Longitude,
+                        ProfileImageUrl =
+                            x.User.ProfileImageUrl
+                            ?? x.ProfileImagePath,
 
-                    TherapyApproaches = x.TherapyApproaches
-    .Where(ta =>
-        !ta.IsDeleted &&
-        !ta.TherapyApproach.IsDeleted &&
-        ta.TherapyApproach.IsActive)
-    .OrderBy(ta => ta.TherapyApproach.Name)
-    .Select(ta => ta.TherapyApproach.Name)
-    .ToList(),
-                })
+                        Country =
+                            x.Country,
+
+                        City =
+                            x.City,
+
+                        Address =
+                            x.Address,
+
+                        OffersOnline =
+                            x.OffersOnline,
+
+                        OffersInPerson =
+                            x.OffersInPerson,
+
+                        Latitude =
+                            x.Latitude,
+
+                        Longitude =
+                            x.Longitude,
+
+                        TherapyApproaches =
+                            x.TherapyApproaches
+                                .Where(ta =>
+                                    !ta.IsDeleted &&
+                                    !ta.TherapyApproach.IsDeleted &&
+                                    ta.TherapyApproach.IsActive)
+                                .OrderBy(ta =>
+                                    ta.TherapyApproach.Name)
+                                .Select(ta =>
+                                    ta.TherapyApproach.Name)
+                                .ToList()
+                    })
                 .ToListAsync();
 
         return PagedResponse<TherapistResponseDto>

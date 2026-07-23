@@ -182,15 +182,15 @@ public sealed class SearchTherapistsDtoValidator
 {
     public SearchTherapistsDtoValidator()
     {
-        RuleFor(x => x.Name)
+        RuleFor(x => x.SearchText)
             .MaximumLength(
                 TherapistValidationRules
                     .MaximumSearchLength)
             .WithMessage(
-                $"Name search may contain at most {TherapistValidationRules.MaximumSearchLength} characters.")
+                $"Search text may contain at most {TherapistValidationRules.MaximumSearchLength} characters.")
             .When(x =>
                 !string.IsNullOrWhiteSpace(
-                    x.Name));
+                    x.SearchText));
 
         RuleFor(x => x.Specialization)
             .MaximumLength(
@@ -201,6 +201,103 @@ public sealed class SearchTherapistsDtoValidator
             .When(x =>
                 !string.IsNullOrWhiteSpace(
                     x.Specialization));
+
+        RuleFor(x => x.Gender)
+            .Must(gender =>
+                string.IsNullOrWhiteSpace(gender) ||
+                gender.Equals(
+                    "Male",
+                    StringComparison.OrdinalIgnoreCase) ||
+                gender.Equals(
+                    "Female",
+                    StringComparison.OrdinalIgnoreCase) ||
+                gender.Equals(
+                    "Other",
+                    StringComparison.OrdinalIgnoreCase))
+            .WithMessage(
+                "Gender must be Male, Female or Other.");
+
+        RuleFor(x => x.Language)
+            .MaximumLength(
+                TherapistValidationRules
+                    .MaximumLanguageLength)
+            .WithMessage(
+                $"Language may contain at most {TherapistValidationRules.MaximumLanguageLength} characters.")
+            .When(x =>
+                !string.IsNullOrWhiteSpace(
+                    x.Language));
+
+        RuleFor(x => x.Location)
+            .MaximumLength(
+                TherapistValidationRules
+                    .MaximumLocationLength)
+            .WithMessage(
+                $"Location may contain at most {TherapistValidationRules.MaximumLocationLength} characters.")
+            .When(x =>
+                !string.IsNullOrWhiteSpace(
+                    x.Location));
+
+        RuleFor(x => x.SessionMode)
+            .Must(sessionMode =>
+                string.IsNullOrWhiteSpace(sessionMode) ||
+                sessionMode.Equals(
+                    "online",
+                    StringComparison.OrdinalIgnoreCase) ||
+                sessionMode.Equals(
+                    "inPerson",
+                    StringComparison.OrdinalIgnoreCase) ||
+                sessionMode.Equals(
+                    "both",
+                    StringComparison.OrdinalIgnoreCase))
+            .WithMessage(
+                "Session mode must be online, inPerson or both.");
+
+        RuleFor(x => x.MinPrice)
+            .GreaterThanOrEqualTo(0)
+            .WithMessage(
+                "Minimum price cannot be negative.")
+            .LessThanOrEqualTo(
+                TherapistValidationRules
+                    .MaximumHourlyRate)
+            .WithMessage(
+                $"Minimum price may not exceed {TherapistValidationRules.MaximumHourlyRate}.")
+            .When(x =>
+                x.MinPrice.HasValue);
+
+        RuleFor(x => x.MaxPrice)
+            .GreaterThanOrEqualTo(0)
+            .WithMessage(
+                "Maximum price cannot be negative.")
+            .LessThanOrEqualTo(
+                TherapistValidationRules
+                    .MaximumHourlyRate)
+            .WithMessage(
+                $"Maximum price may not exceed {TherapistValidationRules.MaximumHourlyRate}.")
+            .When(x =>
+                x.MaxPrice.HasValue);
+
+        RuleFor(x => x.MaxPrice)
+            .GreaterThanOrEqualTo(x =>
+                x.MinPrice)
+            .WithMessage(
+                "Maximum price must be greater than or equal to minimum price.")
+            .When(x =>
+                x.MinPrice.HasValue &&
+                x.MaxPrice.HasValue);
+
+        RuleFor(x => x.MinRating)
+            .InclusiveBetween(0, 5)
+            .WithMessage(
+                "Minimum rating must be between 0 and 5.")
+            .When(x =>
+                x.MinRating.HasValue);
+
+        RuleFor(x => x.AvailableDay)
+            .IsInEnum()
+            .WithMessage(
+                "Available day is not valid.")
+            .When(x =>
+                x.AvailableDay.HasValue);
 
         RuleFor(x => x.PageNumber)
             .GreaterThanOrEqualTo(1)

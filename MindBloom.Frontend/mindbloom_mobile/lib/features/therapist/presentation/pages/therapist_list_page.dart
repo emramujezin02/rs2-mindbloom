@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mindbloom_mobile/features/therapist/presentation/widgets/therapist_session_modes.dart';
 import '../widgets/therapist_profile_image.dart';
@@ -20,37 +22,70 @@ class _TherapistListPageState extends State<TherapistListPage> {
   final TherapistListViewModel _viewModel =
       AppInjection.createTherapistListViewModel();
 
-  final _nameController = TextEditingController();
-  final _specializationController = TextEditingController();
-  final _minPriceController = TextEditingController();
-  final _maxPriceController = TextEditingController();
 
-  String? _sortBy;
-  int? _selectedTherapyApproachId;
-  String? _selectedTherapyApproachName;
+final _searchController =
+    TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
+final _specializationController =
+    TextEditingController();
 
-    _viewModel.addListener(_onChanged);
+final _languageController =
+    TextEditingController();
 
-    _selectedTherapyApproachId = widget.arguments?.therapyApproachId;
+final _locationController =
+    TextEditingController();
 
-    _selectedTherapyApproachName = widget.arguments?.therapyApproachName;
+final _minPriceController =
+    TextEditingController();
 
-    _viewModel.loadTherapists(therapyApproachId: _selectedTherapyApproachId);
-  }
+final _maxPriceController =
+    TextEditingController();
 
-  @override
-  void dispose() {
-    _viewModel.removeListener(_onChanged);
-    _nameController.dispose();
-    _specializationController.dispose();
-    _minPriceController.dispose();
-    _maxPriceController.dispose();
-    super.dispose();
-  }
+Timer? _searchDebounce;
+
+String? _selectedGender;
+String? _selectedSessionMode;
+String? _selectedAvailableDay;
+double? _selectedMinRating;
+String? _sortBy;
+
+int? _selectedTherapyApproachId;
+String? _selectedTherapyApproachName;
+
+@override
+void initState() {
+  super.initState();
+
+  _viewModel.addListener(_onChanged);
+
+  _selectedTherapyApproachId =
+      widget.arguments?.therapyApproachId;
+
+  _selectedTherapyApproachName =
+      widget.arguments?.therapyApproachName;
+
+  _viewModel.loadTherapists(
+    therapyApproachId:
+        _selectedTherapyApproachId,
+  );
+}
+
+@override
+void dispose() {
+  _searchDebounce?.cancel();
+
+  _viewModel.removeListener(_onChanged);
+  _viewModel.dispose();
+
+  _searchController.dispose();
+  _specializationController.dispose();
+  _languageController.dispose();
+  _locationController.dispose();
+  _minPriceController.dispose();
+  _maxPriceController.dispose();
+
+  super.dispose();
+}
 
   void _onChanged() {
     if (mounted) {
@@ -58,214 +93,749 @@ class _TherapistListPageState extends State<TherapistListPage> {
     }
   }
 
-  Future<void> _refresh() async {
-    await _viewModel.searchTherapists(
-      name: _nameController.text,
-      specialization: _specializationController.text,
-      therapyApproachId: _selectedTherapyApproachId,
-      minPrice: double.tryParse(
-        _minPriceController.text.trim().replaceAll(',', '.'),
-      ),
-      maxPrice: double.tryParse(
-        _maxPriceController.text.trim().replaceAll(',', '.'),
-      ),
-      sortBy: _sortBy,
-    );
+  void _onSearchTextChanged(String _) {
+  _searchDebounce?.cancel();
+
+  _searchDebounce = Timer(
+    const Duration(milliseconds: 400),
+    () {
+      _applyFilters();
+    },
+  );
+}
+
+double? _parsePrice(
+  TextEditingController controller,
+) {
+  return double.tryParse(
+    controller.text
+        .trim()
+        .replaceAll(',', '.'),
+  );
+}
+
+Future<void> _applyFilters() async {
+  await _viewModel.searchTherapists(
+    searchText: _searchController.text,
+    specialization:
+        _specializationController.text,
+    therapyApproachId:
+        _selectedTherapyApproachId,
+    gender: _selectedGender,
+    language: _languageController.text,
+    location: _locationController.text,
+    sessionMode: _selectedSessionMode,
+    minPrice: _parsePrice(
+      _minPriceController,
+    ),
+    maxPrice: _parsePrice(
+      _maxPriceController,
+    ),
+    minRating: _selectedMinRating,
+    availableDay: _selectedAvailableDay,
+    sortBy: _sortBy,
+    resetPage: true,
+  );
+}
+
+Future<void> _refresh() async {
+  await _applyFilters();
+}
+
+void _clearFilters() {
+  _searchDebounce?.cancel();
+
+  _searchController.clear();
+  _specializationController.clear();
+  _languageController.clear();
+  _locationController.clear();
+  _minPriceController.clear();
+  _maxPriceController.clear();
+
+  setState(() {
+    _selectedGender = null;
+    _selectedSessionMode = null;
+    _selectedAvailableDay = null;
+    _selectedMinRating = null;
+    _sortBy = null;
+
+    _selectedTherapyApproachId = null;
+    _selectedTherapyApproachName = null;
+  });
+
+  _viewModel.searchTherapists(
+    resetPage: true,
+  );
+}
+
+bool get _hasActiveFilters {
+  return _searchController.text.trim().isNotEmpty ||
+      _specializationController.text
+          .trim()
+          .isNotEmpty ||
+      _languageController.text
+          .trim()
+          .isNotEmpty ||
+      _locationController.text
+          .trim()
+          .isNotEmpty ||
+      _minPriceController.text
+          .trim()
+          .isNotEmpty ||
+      _maxPriceController.text
+          .trim()
+          .isNotEmpty ||
+      _selectedTherapyApproachId != null ||
+      _selectedGender != null ||
+      _selectedSessionMode != null ||
+      _selectedAvailableDay != null ||
+      _selectedMinRating != null ||
+      _sortBy != null;
+}
+
   }
 
-  void _applyFilters() {
-    _viewModel.searchTherapists(
-      name: _nameController.text,
-      specialization: _specializationController.text,
-      therapyApproachId: _selectedTherapyApproachId,
-      minPrice: double.tryParse(_minPriceController.text),
-      maxPrice: double.tryParse(_maxPriceController.text),
-      sortBy: _sortBy,
-    );
-  }
-
-  void _clearFilters() {
-    _nameController.clear();
-    _specializationController.clear();
-    _minPriceController.clear();
-    _maxPriceController.clear();
-
-    setState(() {
-      _sortBy = null;
-      _selectedTherapyApproachId = null;
-      _selectedTherapyApproachName = null;
-    });
-
-    _viewModel.loadTherapists();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Therapists')),
-      body: Column(
-        children: [
-          if (_selectedTherapyApproachId != null) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0E8FA),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFD8C7EB)),
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Therapists'),
+    ),
+    body: Column(
+      children: [
+        ExpansionTile(
+          initiallyExpanded: true,
+          leading: const Icon(
+            Icons.tune,
+          ),
+          title: const Text(
+            'Search and filters',
+          ),
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.62,
               ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.psychology_alt_outlined,
-                    color: Color(0xFF72559A),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Selected therapy approach',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF756B7D),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _selectedTherapyApproachName ?? 'Therapy approach',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF49375D),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Remove therapy approach filter',
-                    onPressed: () {
-                      setState(() {
-                        _selectedTherapyApproachId = null;
-                        _selectedTherapyApproachName = null;
-                      });
-
-                      _applyFilters();
-                    },
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
+              child: SingleChildScrollView(
+                padding: EdgeInsets.zero,
+                child: _buildFilters(),
               ),
             ),
-            const SizedBox(height: 10),
           ],
-          _buildFilters(),
-          Expanded(child: _buildBody()),
-        ],
+        ),
+        if (_hasActiveFilters)
+          _buildActiveFilters(),
+        Expanded(
+          child: _buildBody(),
+        ),
+      ],
+    ),
+  );
+}
+
+ Widget _buildFilters() {
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(
+      12,
+      0,
+      12,
+      12,
+    ),
+    child: Column(
+      children: [
+        TextField(
+          controller: _searchController,
+          onChanged: _onSearchTextChanged,
+          textInputAction:
+              TextInputAction.search,
+          decoration: const InputDecoration(
+            labelText: 'Search therapists',
+            hintText:
+                'Name, specialization, location...',
+            prefixIcon: Icon(
+              Icons.search,
+            ),
+            border: OutlineInputBorder(),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        TextField(
+          controller:
+              _specializationController,
+          decoration: const InputDecoration(
+            labelText: 'Specialization',
+            prefixIcon: Icon(
+              Icons.psychology_outlined,
+            ),
+            border: OutlineInputBorder(),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        DropdownButtonFormField<String>(
+          value: _selectedGender,
+          decoration: const InputDecoration(
+            labelText: 'Gender',
+            prefixIcon: Icon(
+              Icons.person_outline,
+            ),
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(
+              value: 'Female',
+              child: Text('Female'),
+            ),
+            DropdownMenuItem(
+              value: 'Male',
+              child: Text('Male'),
+            ),
+            DropdownMenuItem(
+              value: 'Other',
+              child: Text('Other'),
+            ),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _selectedGender = value;
+            });
+
+            _applyFilters();
+          },
+        ),
+
+        const SizedBox(height: 10),
+
+        TextField(
+          controller: _languageController,
+          decoration: const InputDecoration(
+            labelText: 'Language',
+            hintText: 'For example: Bosnian',
+            prefixIcon: Icon(
+              Icons.language,
+            ),
+            border: OutlineInputBorder(),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        TextField(
+          controller: _locationController,
+          decoration: const InputDecoration(
+            labelText: 'Location',
+            hintText:
+                'City, country or address',
+            prefixIcon: Icon(
+              Icons.location_on_outlined,
+            ),
+            border: OutlineInputBorder(),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        DropdownButtonFormField<String>(
+          value: _selectedSessionMode,
+          decoration: const InputDecoration(
+            labelText: 'Session mode',
+            prefixIcon: Icon(
+              Icons.video_call_outlined,
+            ),
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(
+              value: 'online',
+              child: Text('Online'),
+            ),
+            DropdownMenuItem(
+              value: 'inPerson',
+              child: Text('In person'),
+            ),
+            DropdownMenuItem(
+              value: 'both',
+              child: Text(
+                'Online and in person',
+              ),
+            ),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _selectedSessionMode = value;
+            });
+
+            _applyFilters();
+          },
+        ),
+
+        const SizedBox(height: 10),
+
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller:
+                    _minPriceController,
+                keyboardType:
+                    const TextInputType
+                        .numberWithOptions(
+                  decimal: true,
+                ),
+                decoration:
+                    const InputDecoration(
+                  labelText: 'Min price',
+                  suffixText: 'KM',
+                  border:
+                      OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller:
+                    _maxPriceController,
+                keyboardType:
+                    const TextInputType
+                        .numberWithOptions(
+                  decimal: true,
+                ),
+                decoration:
+                    const InputDecoration(
+                  labelText: 'Max price',
+                  suffixText: 'KM',
+                  border:
+                      OutlineInputBorder(),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 10),
+
+        DropdownButtonFormField<double>(
+          value: _selectedMinRating,
+          decoration: const InputDecoration(
+            labelText: 'Minimum rating',
+            prefixIcon: Icon(
+              Icons.star_outline,
+            ),
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(
+              value: 1,
+              child: Text('1.0 or higher'),
+            ),
+            DropdownMenuItem(
+              value: 2,
+              child: Text('2.0 or higher'),
+            ),
+            DropdownMenuItem(
+              value: 3,
+              child: Text('3.0 or higher'),
+            ),
+            DropdownMenuItem(
+              value: 4,
+              child: Text('4.0 or higher'),
+            ),
+            DropdownMenuItem(
+              value: 4.5,
+              child: Text('4.5 or higher'),
+            ),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _selectedMinRating = value;
+            });
+
+            _applyFilters();
+          },
+        ),
+
+        const SizedBox(height: 10),
+
+        DropdownButtonFormField<String>(
+          value: _selectedAvailableDay,
+          decoration: const InputDecoration(
+            labelText: 'Available day',
+            prefixIcon: Icon(
+              Icons.calendar_today_outlined,
+            ),
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(
+              value: 'Monday',
+              child: Text('Monday'),
+            ),
+            DropdownMenuItem(
+              value: 'Tuesday',
+              child: Text('Tuesday'),
+            ),
+            DropdownMenuItem(
+              value: 'Wednesday',
+              child: Text('Wednesday'),
+            ),
+            DropdownMenuItem(
+              value: 'Thursday',
+              child: Text('Thursday'),
+            ),
+            DropdownMenuItem(
+              value: 'Friday',
+              child: Text('Friday'),
+            ),
+            DropdownMenuItem(
+              value: 'Saturday',
+              child: Text('Saturday'),
+            ),
+            DropdownMenuItem(
+              value: 'Sunday',
+              child: Text('Sunday'),
+            ),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _selectedAvailableDay =
+                  value;
+            });
+
+            _applyFilters();
+          },
+        ),
+
+        const SizedBox(height: 10),
+
+        DropdownButtonFormField<String>(
+          value: _sortBy,
+          decoration: const InputDecoration(
+            labelText: 'Sort by',
+            prefixIcon: Icon(
+              Icons.sort,
+            ),
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(
+              value: 'rating',
+              child: Text(
+                'Highest rating',
+              ),
+            ),
+            DropdownMenuItem(
+              value: 'price',
+              child: Text(
+                'Lowest price',
+              ),
+            ),
+            DropdownMenuItem(
+              value: 'experience',
+              child: Text(
+                'Most experience',
+              ),
+            ),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _sortBy = value;
+            });
+
+            _applyFilters();
+          },
+        ),
+
+        const SizedBox(height: 12),
+
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _applyFilters,
+                icon: const Icon(
+                  Icons.search,
+                ),
+                label: const Text(
+                  'Apply filters',
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _hasActiveFilters
+                    ? _clearFilters
+                    : null,
+                icon: const Icon(
+                  Icons.restart_alt,
+                ),
+                label: const Text(
+                  'Reset all',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildActiveFilters() {
+  final chips = <Widget>[];
+
+  void addChip({
+    required String label,
+    required VoidCallback onDeleted,
+  }) {
+    chips.add(
+      InputChip(
+        label: Text(label),
+        onDeleted: onDeleted,
+        deleteIcon: const Icon(
+          Icons.close,
+          size: 18,
+        ),
       ),
     );
   }
 
-  Widget _buildFilters() {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        children: [
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Search by name',
-              border: OutlineInputBorder(),
-            ),
-          ),
+  final searchText =
+      _searchController.text.trim();
 
-          const SizedBox(height: 10),
-
-          TextField(
-            controller: _specializationController,
-            decoration: const InputDecoration(
-              labelText: 'Specialization',
-              border: OutlineInputBorder(),
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _minPriceController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Min price',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  controller: _maxPriceController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Max price',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-
-          DropdownButtonFormField<String>(
-            initialValue: _sortBy,
-            decoration: const InputDecoration(
-              labelText: 'Sort by',
-              border: OutlineInputBorder(),
-            ),
-            items: const [
-              DropdownMenuItem(value: 'rating', child: Text('Highest rating')),
-              DropdownMenuItem(value: 'price', child: Text('Lowest price')),
-              DropdownMenuItem(
-                value: 'experience',
-                child: Text('Most experience'),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() {
-                _sortBy = value;
-              });
-            },
-          ),
-
-          const SizedBox(height: 10),
-
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _applyFilters,
-                  icon: const Icon(Icons.search),
-                  label: const Text('Search'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _clearFilters,
-                  icon: const Icon(Icons.clear),
-                  label: const Text('Clear'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+  if (searchText.isNotEmpty) {
+    addChip(
+      label: 'Search: $searchText',
+      onDeleted: () {
+        _searchDebounce?.cancel();
+        _searchController.clear();
+        setState(() {});
+        _applyFilters();
+      },
     );
   }
+
+  final specialization =
+      _specializationController.text.trim();
+
+  if (specialization.isNotEmpty) {
+    addChip(
+      label:
+          'Specialization: $specialization',
+      onDeleted: () {
+        _specializationController.clear();
+        setState(() {});
+        _applyFilters();
+      },
+    );
+  }
+
+  if (_selectedTherapyApproachId != null) {
+    addChip(
+      label:
+          'Approach: ${_selectedTherapyApproachName ?? 'Selected'}',
+      onDeleted: () {
+        setState(() {
+          _selectedTherapyApproachId =
+              null;
+          _selectedTherapyApproachName =
+              null;
+        });
+
+        _applyFilters();
+      },
+    );
+  }
+
+  if (_selectedGender != null) {
+    addChip(
+      label: 'Gender: $_selectedGender',
+      onDeleted: () {
+        setState(() {
+          _selectedGender = null;
+        });
+
+        _applyFilters();
+      },
+    );
+  }
+
+  final language =
+      _languageController.text.trim();
+
+  if (language.isNotEmpty) {
+    addChip(
+      label: 'Language: $language',
+      onDeleted: () {
+        _languageController.clear();
+        setState(() {});
+        _applyFilters();
+      },
+    );
+  }
+
+  final location =
+      _locationController.text.trim();
+
+  if (location.isNotEmpty) {
+    addChip(
+      label: 'Location: $location',
+      onDeleted: () {
+        _locationController.clear();
+        setState(() {});
+        _applyFilters();
+      },
+    );
+  }
+
+  if (_selectedSessionMode != null) {
+    final sessionModeLabel =
+        switch (_selectedSessionMode) {
+      'online' => 'Online',
+      'inPerson' => 'In person',
+      'both' => 'Online and in person',
+      _ => _selectedSessionMode!,
+    };
+
+    addChip(
+      label:
+          'Session mode: $sessionModeLabel',
+      onDeleted: () {
+        setState(() {
+          _selectedSessionMode = null;
+        });
+
+        _applyFilters();
+      },
+    );
+  }
+
+  final minPrice =
+      _minPriceController.text.trim();
+
+  if (minPrice.isNotEmpty) {
+    addChip(
+      label: 'Min price: $minPrice KM',
+      onDeleted: () {
+        _minPriceController.clear();
+        setState(() {});
+        _applyFilters();
+      },
+    );
+  }
+
+  final maxPrice =
+      _maxPriceController.text.trim();
+
+  if (maxPrice.isNotEmpty) {
+    addChip(
+      label: 'Max price: $maxPrice KM',
+      onDeleted: () {
+        _maxPriceController.clear();
+        setState(() {});
+        _applyFilters();
+      },
+    );
+  }
+
+  if (_selectedMinRating != null) {
+    addChip(
+      label:
+          'Rating: ${_selectedMinRating!.toStringAsFixed(1)}+',
+      onDeleted: () {
+        setState(() {
+          _selectedMinRating = null;
+        });
+
+        _applyFilters();
+      },
+    );
+  }
+
+  if (_selectedAvailableDay != null) {
+    addChip(
+      label:
+          'Available: $_selectedAvailableDay',
+      onDeleted: () {
+        setState(() {
+          _selectedAvailableDay = null;
+        });
+
+        _applyFilters();
+      },
+    );
+  }
+
+  if (_sortBy != null) {
+    final sortLabel = switch (_sortBy) {
+      'rating' => 'Highest rating',
+      'price' => 'Lowest price',
+      'experience' => 'Most experience',
+      _ => _sortBy!,
+    };
+
+    addChip(
+      label: 'Sort: $sortLabel',
+      onDeleted: () {
+        setState(() {
+          _sortBy = null;
+        });
+
+        _applyFilters();
+      },
+    );
+  }
+
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.fromLTRB(
+      12,
+      4,
+      12,
+      12,
+    ),
+    decoration: const BoxDecoration(
+      border: Border(
+        bottom: BorderSide(
+          color: Color(0xFFE5DCEA),
+        ),
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Active filters',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: _clearFilters,
+              child: const Text(
+                'Reset all',
+              ),
+            ),
+          ],
+        ),
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: chips,
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildBody() {
     if (_viewModel.isLoading) {
@@ -324,19 +894,21 @@ class _TherapistListPageState extends State<TherapistListPage> {
     if (_viewModel.therapists.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 180),
+        children: [
+          const SizedBox(height: 180),
           Center(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                'No therapists available.',
+                _hasActiveFilters
+                    ? 'No therapists match the selected filters.'
+                    : 'No therapists are currently available.',
                 textAlign: TextAlign.center,
               ),
             ),
           ),
-          SizedBox(height: 180),
-          PublicFooter(),
+          const SizedBox(height: 180),
+          const PublicFooter(),
         ],
       );
     }
