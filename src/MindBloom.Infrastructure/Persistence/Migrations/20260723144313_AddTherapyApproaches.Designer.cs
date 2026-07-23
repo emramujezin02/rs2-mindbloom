@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MindBloom.Infrastructure.Persistence.Context;
 
@@ -11,9 +12,11 @@ using MindBloom.Infrastructure.Persistence.Context;
 namespace MindBloom.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260723144313_AddTherapyApproaches")]
+    partial class AddTherapyApproaches
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1426,41 +1429,6 @@ namespace MindBloom.Infrastructure.Migrations
                     b.ToTable("TherapistSpecializations");
                 });
 
-            modelBuilder.Entity("MindBloom.Domain.Entities.TherapistTherapyApproach", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("TherapistId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TherapyApproachId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TherapyApproachId");
-
-                    b.HasIndex("TherapistId", "IsDeleted");
-
-                    b.HasIndex("TherapistId", "TherapyApproachId")
-                        .IsUnique();
-
-                    b.ToTable("TherapistTherapyApproaches");
-                });
-
             modelBuilder.Entity("MindBloom.Domain.Entities.TherapistUnavailableDate", b =>
                 {
                     b.Property<int>("Id")
@@ -1541,48 +1509,6 @@ namespace MindBloom.Infrastructure.Migrations
                     b.HasIndex("TherapistId", "ChangedAtUtc");
 
                     b.ToTable("TherapistVerificationAudits");
-                });
-
-            modelBuilder.Entity("MindBloom.Domain.Entities.TherapyApproach", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasFilter("[IsDeleted] = 0");
-
-                    b.HasIndex("IsActive", "IsDeleted");
-
-                    b.ToTable("TherapyApproaches");
                 });
 
             modelBuilder.Entity("MindBloom.Domain.Entities.Workshop", b =>
@@ -1712,6 +1638,71 @@ namespace MindBloom.Infrastructure.Migrations
                     b.HasIndex("WorkshopId", "Status");
 
                     b.ToTable("WorkshopRegistrations");
+                });
+
+            modelBuilder.Entity("TherapistTherapyApproach", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("TherapistId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TherapyApproachId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TherapyApproachId");
+
+                    b.HasIndex("TherapistId", "TherapyApproachId")
+                        .IsUnique();
+
+                    b.ToTable("TherapistTherapyApproaches");
+                });
+
+            modelBuilder.Entity("TherapyApproach", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TherapyApproaches");
                 });
 
             modelBuilder.Entity("Favorite", b =>
@@ -2134,25 +2125,6 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Navigation("Therapist");
                 });
 
-            modelBuilder.Entity("MindBloom.Domain.Entities.TherapistTherapyApproach", b =>
-                {
-                    b.HasOne("MindBloom.Domain.Entities.Therapist", "Therapist")
-                        .WithMany("TherapyApproaches")
-                        .HasForeignKey("TherapistId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MindBloom.Domain.Entities.TherapyApproach", "TherapyApproach")
-                        .WithMany("TherapistTherapyApproaches")
-                        .HasForeignKey("TherapyApproachId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Therapist");
-
-                    b.Navigation("TherapyApproach");
-                });
-
             modelBuilder.Entity("MindBloom.Domain.Entities.TherapistUnavailableDate", b =>
                 {
                     b.HasOne("MindBloom.Domain.Entities.Therapist", "Therapist")
@@ -2225,6 +2197,25 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Navigation("Client");
 
                     b.Navigation("Workshop");
+                });
+
+            modelBuilder.Entity("TherapistTherapyApproach", b =>
+                {
+                    b.HasOne("MindBloom.Domain.Entities.Therapist", "Therapist")
+                        .WithMany("TherapyApproaches")
+                        .HasForeignKey("TherapistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TherapyApproach", "TherapyApproach")
+                        .WithMany("TherapistTherapyApproaches")
+                        .HasForeignKey("TherapyApproachId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Therapist");
+
+                    b.Navigation("TherapyApproach");
                 });
 
             modelBuilder.Entity("MindBloom.Domain.Entities.ApplicationUser", b =>
@@ -2305,14 +2296,14 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Navigation("Therapists");
                 });
 
-            modelBuilder.Entity("MindBloom.Domain.Entities.TherapyApproach", b =>
-                {
-                    b.Navigation("TherapistTherapyApproaches");
-                });
-
             modelBuilder.Entity("MindBloom.Domain.Entities.Workshop", b =>
                 {
                     b.Navigation("Registrations");
+                });
+
+            modelBuilder.Entity("TherapyApproach", b =>
+                {
+                    b.Navigation("TherapistTherapyApproaches");
                 });
 #pragma warning restore 612, 618
         }

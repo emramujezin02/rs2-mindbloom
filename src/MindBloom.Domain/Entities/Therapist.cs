@@ -71,4 +71,7 @@ public class Therapist : BaseEntity
 
     public ICollection<TherapistVerificationAudit> VerificationAudits { get; set; } =
         new List<TherapistVerificationAudit>();
+
+    public ICollection<TherapistTherapyApproach> TherapyApproaches { get; set; } =
+        new List<TherapistTherapyApproach>();
 }

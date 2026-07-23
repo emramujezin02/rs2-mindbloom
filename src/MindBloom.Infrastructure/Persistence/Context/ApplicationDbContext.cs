@@ -43,6 +43,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<AppointmentStatusAudit> AppointmentStatusAudits => Set<AppointmentStatusAudit>();
     public DbSet<ReviewModerationAudit> ReviewModerationAudits => Set<ReviewModerationAudit>();
     public DbSet<TherapistSpecialization> TherapistSpecializations => Set<TherapistSpecialization>();
+
+    public DbSet<TherapyApproach> TherapyApproaches =>
+    Set<TherapyApproach>();
+
+    public DbSet<TherapistTherapyApproach> TherapistTherapyApproaches =>
+        Set<TherapistTherapyApproach>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -112,6 +118,55 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany()
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<TherapyApproach>(entity =>
+        {
+            entity.Property(x => x.Name)
+                .IsRequired()
+                .HasMaxLength(150);
+
+            entity.Property(x => x.Description)
+                .HasMaxLength(500);
+
+            entity.Property(x => x.IsActive)
+                .HasDefaultValue(true);
+
+            entity.HasIndex(x => x.Name)
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+
+            entity.HasIndex(x => new
+            {
+                x.IsActive,
+                x.IsDeleted
+            });
+        });
+
+        builder.Entity<TherapistTherapyApproach>(entity =>
+        {
+            entity.HasOne(x => x.Therapist)
+                .WithMany(x => x.TherapyApproaches)
+                .HasForeignKey(x => x.TherapistId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.TherapyApproach)
+                .WithMany(x => x.TherapistTherapyApproaches)
+                .HasForeignKey(x => x.TherapyApproachId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => new
+            {
+                x.TherapistId,
+                x.TherapyApproachId
+            })
+            .IsUnique();
+
+            entity.HasIndex(x => new
+            {
+                x.TherapistId,
+                x.IsDeleted
+            });
+        });
 
         builder.Entity<ClientMembership>(
     entity =>

@@ -4,11 +4,13 @@ class TherapistModel {
   final String fullName;
   final String email;
   final String specialization;
+  final List<String> therapyApproaches;
   final String biography;
   final double hourlyRate;
   final int experienceYears;
   final double averageRating;
   final int totalReviews;
+  final String verificationStatus;
   final String? profileImageUrl;
 
   final String country;
@@ -26,11 +28,13 @@ class TherapistModel {
     required this.fullName,
     required this.email,
     required this.specialization,
+    required this.therapyApproaches,
     required this.biography,
     required this.hourlyRate,
     required this.experienceYears,
     required this.averageRating,
     required this.totalReviews,
+    required this.verificationStatus,
     this.profileImageUrl,
     required this.country,
     required this.city,
@@ -48,11 +52,13 @@ class TherapistModel {
       fullName: _stringValue(json['fullName']),
       email: _stringValue(json['email']),
       specialization: _stringValue(json['specialization']),
+      therapyApproaches: _stringListValue(json['therapyApproaches']),
       biography: _stringValue(json['biography']),
       hourlyRate: _doubleValue(json['hourlyRate']),
       experienceYears: _intValue(json['experienceYears']),
       averageRating: _doubleValue(json['averageRating']),
       totalReviews: _intValue(json['totalReviews']),
+      verificationStatus: _stringValue(json['verificationStatus']),
       profileImageUrl: _nullableString(json['profileImageUrl']),
       country: _stringValue(json['country']),
       city: _stringValue(json['city']),
@@ -180,5 +186,20 @@ class TherapistModel {
     final result = value.toString().trim();
 
     return result.isEmpty ? null : result;
+  }
+
+  static List<String> _stringListValue(dynamic value) {
+    if (value is! List) {
+      return <String>[];
+    }
+
+    return value
+        .map((item) => item?.toString().trim() ?? '')
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  bool get isVerified {
+    return verificationStatus.toLowerCase() == 'approved';
   }
 }

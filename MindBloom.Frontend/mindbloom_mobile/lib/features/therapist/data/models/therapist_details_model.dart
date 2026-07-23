@@ -7,6 +7,7 @@ class TherapistDetailsModel {
   final String email;
   final String biography;
   final String specialization;
+  final List<String> therapyApproaches;
   final double hourlyRate;
   final int experienceYears;
   final double averageRating;
@@ -30,6 +31,7 @@ class TherapistDetailsModel {
     required this.email,
     required this.biography,
     required this.specialization,
+    required this.therapyApproaches,
     required this.hourlyRate,
     required this.experienceYears,
     required this.averageRating,
@@ -54,6 +56,7 @@ class TherapistDetailsModel {
       email: _stringValue(json['email']),
       biography: _stringValue(json['biography']),
       specialization: _stringValue(json['specialization']),
+      therapyApproaches: _stringListValue(json['therapyApproaches']),
       hourlyRate: _doubleValue(json['hourlyRate']),
       experienceYears: _intValue(json['experienceYears']),
       averageRating: _doubleValue(json['averageRating']),
@@ -124,11 +127,13 @@ class TherapistDetailsModel {
       fullName: fullName,
       email: email,
       specialization: specialization,
+      therapyApproaches: therapyApproaches,
       biography: biography,
       hourlyRate: hourlyRate,
       experienceYears: experienceYears,
       averageRating: averageRating,
       totalReviews: totalReviews,
+      verificationStatus: 'Approved',
       profileImageUrl: profileImageUrl,
       country: country,
       city: city,
@@ -210,5 +215,16 @@ class TherapistDetailsModel {
     final normalizedValue = value.toString().trim();
 
     return normalizedValue.isEmpty ? null : normalizedValue;
+  }
+
+  static List<String> _stringListValue(dynamic value) {
+    if (value is! List) {
+      return <String>[];
+    }
+
+    return value
+        .map((item) => item?.toString().trim() ?? '')
+        .where((item) => item.isNotEmpty)
+        .toList();
   }
 }

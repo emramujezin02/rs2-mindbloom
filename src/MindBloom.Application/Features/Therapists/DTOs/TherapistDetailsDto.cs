@@ -36,5 +36,7 @@ public class TherapistDetailsDto
 
     public double? Longitude { get; set; }
 
+    public List<string> TherapyApproaches { get; set; } = [];
+
     public List<AvailabilityResponseDto> Availabilities { get; set; } = [];
 }

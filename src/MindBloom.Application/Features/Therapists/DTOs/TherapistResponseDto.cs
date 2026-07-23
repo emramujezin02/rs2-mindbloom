@@ -41,4 +41,6 @@ public class TherapistResponseDto
     public double? Latitude { get; set; }
 
     public double? Longitude { get; set; }
+
+    public List<string> TherapyApproaches { get; set; } = [];
 }

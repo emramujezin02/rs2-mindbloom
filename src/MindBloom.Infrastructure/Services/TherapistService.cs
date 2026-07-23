@@ -108,9 +108,11 @@ public class TherapistService : ITherapistService
     public async Task<List<TherapistResponseDto>>
         GetAllAsync()
     {
-        return await _context.Therapists.AsNoTracking()
+        return await _context.Therapists
+            .AsNoTracking()
             .Include(x => x.User)
-            .Where(x =>
+            .Include(x => x.Reviews)
+                    .Where(x =>
     !x.IsDeleted &&
     x.VerificationStatus ==
         TherapistVerificationStatus.Approved)
@@ -124,6 +126,11 @@ public class TherapistService : ITherapistService
                 Biography = x.Biography,
                 HourlyRate = x.HourlyRate,
                 ExperienceYears = x.ExperienceYears,
+                AverageRating = x.Reviews.Any() ? Math.Round(x.Reviews.Average(r => r.Rating), 1)
+        : 0,
+
+                TotalReviews =
+    x.Reviews.Count,
                 VerificationStatus = x.VerificationStatus.ToString(),
                 VerificationNotes = x.VerificationNotes,
                 ProfileImageUrl = x.ProfileImagePath,
@@ -134,6 +141,14 @@ public class TherapistService : ITherapistService
                 OffersInPerson = x.OffersInPerson,
                 Latitude = x.Latitude,
                 Longitude = x.Longitude,
+                TherapyApproaches = x.TherapyApproaches
+    .Where(ta =>
+        !ta.IsDeleted &&
+        !ta.TherapyApproach.IsDeleted &&
+        ta.TherapyApproach.IsActive)
+    .OrderBy(ta => ta.TherapyApproach.Name)
+    .Select(ta => ta.TherapyApproach.Name)
+    .ToList(),
             })
             .ToListAsync();
     }
@@ -183,10 +198,10 @@ public class TherapistService : ITherapistService
             _context.Therapists.AsNoTracking()
                 .Include(x => x.User)
                 .Include(x => x.Reviews)
-                 .Where(x =>
-            x.VerificationStatus
-            == TherapistVerificationStatus
-                .Approved)
+.Where(x =>
+    !x.IsDeleted &&
+    x.VerificationStatus ==
+        TherapistVerificationStatus.Approved)
                 .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.Name))
@@ -205,6 +220,17 @@ public class TherapistService : ITherapistService
                 x.Specialization.ToLower()
                 .Contains(
                     request.Specialization.ToLower()));
+        }
+
+        if (request.TherapyApproachId.HasValue)
+        {
+            query = query.Where(x =>
+                x.TherapyApproaches.Any(ta =>
+                    !ta.IsDeleted &&
+                    ta.TherapyApproachId ==
+                        request.TherapyApproachId.Value &&
+                    !ta.TherapyApproach.IsDeleted &&
+                    ta.TherapyApproach.IsActive));
         }
 
         query = request.SortBy?.ToLower() switch
@@ -258,11 +284,17 @@ public class TherapistService : ITherapistService
                     ExperienceYears =
                         x.ExperienceYears,
 
+                    VerificationStatus =
+    x.VerificationStatus.ToString(),
+
                     AverageRating =
                         x.Reviews.Any()
                             ? x.Reviews.Average(
                                 r => r.Rating)
                             : 0,
+
+                    TotalReviews =
+    x.Reviews.Count,
 
                     ProfileImageUrl = x.ProfileImagePath,
 
@@ -273,6 +305,15 @@ public class TherapistService : ITherapistService
                     OffersInPerson = x.OffersInPerson,
                     Latitude = x.Latitude,
                     Longitude = x.Longitude,
+
+                    TherapyApproaches = x.TherapyApproaches
+    .Where(ta =>
+        !ta.IsDeleted &&
+        !ta.TherapyApproach.IsDeleted &&
+        ta.TherapyApproach.IsActive)
+    .OrderBy(ta => ta.TherapyApproach.Name)
+    .Select(ta => ta.TherapyApproach.Name)
+    .ToList(),
                 })
                 .ToListAsync();
 
@@ -292,10 +333,10 @@ public class TherapistService : ITherapistService
             _context.Therapists
                 .Include(x => x.User)
                 .Include(x => x.Reviews)
-                 .Where(x =>
-            x.VerificationStatus
-            == TherapistVerificationStatus
-                .Approved)
+.Where(x =>
+    !x.IsDeleted &&
+    x.VerificationStatus ==
+        TherapistVerificationStatus.Approved)
                 .AsQueryable();
 
 
@@ -366,6 +407,17 @@ public class TherapistService : ITherapistService
                     OffersInPerson = x.OffersInPerson,
                     Latitude = x.Latitude,
                     Longitude = x.Longitude,
+
+                    VerificationStatus = x.VerificationStatus.ToString(),
+
+                    TherapyApproaches = x.TherapyApproaches
+    .Where(ta =>
+        !ta.IsDeleted &&
+        !ta.TherapyApproach.IsDeleted &&
+        ta.TherapyApproach.IsActive)
+    .OrderBy(ta => ta.TherapyApproach.Name)
+    .Select(ta => ta.TherapyApproach.Name)
+    .ToList(),
 
                 })
                 .ToListAsync();
@@ -716,11 +768,13 @@ public class TherapistService : ITherapistService
                 .Include(x => x.User)
                 .Include(x => x.Reviews)
                 .Include(x => x.Availabilities)
-                .FirstOrDefaultAsync(x =>
-                    x.Id == therapistId &&
-                    x.VerificationStatus ==
-                        TherapistVerificationStatus
-                            .Approved);
+                .Include(x => x.TherapyApproaches)
+    .ThenInclude(x => x.TherapyApproach)
+.FirstOrDefaultAsync(x =>
+    x.Id == therapistId &&
+    !x.IsDeleted &&
+    x.VerificationStatus ==
+        TherapistVerificationStatus.Approved);
 
         if (therapist == null)
         {
@@ -791,6 +845,14 @@ public class TherapistService : ITherapistService
             OffersInPerson = therapist.OffersInPerson,
             Latitude = therapist.Latitude,
             Longitude = therapist.Longitude,
+            TherapyApproaches = therapist.TherapyApproaches
+    .Where(ta =>
+        !ta.IsDeleted &&
+        !ta.TherapyApproach.IsDeleted &&
+        ta.TherapyApproach.IsActive)
+    .OrderBy(ta => ta.TherapyApproach.Name)
+    .Select(ta => ta.TherapyApproach.Name)
+    .ToList(),
         };
     }
 

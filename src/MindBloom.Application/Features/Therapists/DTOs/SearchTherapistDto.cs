@@ -11,4 +11,5 @@ public class SearchTherapistsDto
     public int PageSize { get; set; } = 10;
 
     public string? SortBy { get; set; }
+    public int? TherapyApproachId { get; set; }
 }

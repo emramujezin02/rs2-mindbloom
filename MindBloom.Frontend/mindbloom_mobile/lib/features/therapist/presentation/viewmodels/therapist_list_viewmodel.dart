@@ -17,6 +17,8 @@ class TherapistListViewModel extends ChangeNotifier {
 
   final Set<int> favoriteTherapistIds = <int>{};
 
+  final Set<int> changingFavoriteTherapistIds = <int>{};
+
   TherapistListViewModel({
     required this.therapistRepository,
     required this.favoriteRepository,
@@ -36,7 +38,7 @@ class TherapistListViewModel extends ChangeNotifier {
         therapists = await therapistRepository.getTherapists();
       }
 
-      await _loadFavoriteIdsWithoutNotification();
+      await _tryLoadFavoriteIds();
     } catch (error) {
       errorMessage = _normalizeError(error);
     } finally {
@@ -69,7 +71,7 @@ class TherapistListViewModel extends ChangeNotifier {
         ),
       );
 
-      await _loadFavoriteIdsWithoutNotification();
+      await _tryLoadFavoriteIds();
     } catch (error) {
       errorMessage = _normalizeError(error);
     } finally {
@@ -96,12 +98,30 @@ class TherapistListViewModel extends ChangeNotifier {
       ..addAll(favorites.map((FavoriteModel favorite) => favorite.therapistId));
   }
 
+  Future<void> _tryLoadFavoriteIds() async {
+    try {
+      await _loadFavoriteIdsWithoutNotification();
+    } catch (_) {
+      favoriteTherapistIds.clear();
+    }
+  }
+
   bool isFavorite(int therapistId) {
     return favoriteTherapistIds.contains(therapistId);
   }
 
+  bool isChangingFavorite(int therapistId) {
+    return changingFavoriteTherapistIds.contains(therapistId);
+  }
+
   Future<bool> toggleFavorite(int therapistId) async {
+    if (isChangingFavorite(therapistId)) {
+      return false;
+    }
+
     errorMessage = null;
+    changingFavoriteTherapistIds.add(therapistId);
+    notifyListeners();
 
     try {
       if (isFavorite(therapistId)) {
@@ -112,14 +132,13 @@ class TherapistListViewModel extends ChangeNotifier {
         favoriteTherapistIds.add(therapistId);
       }
 
-      notifyListeners();
-
       return true;
     } catch (error) {
       errorMessage = _normalizeError(error);
-      notifyListeners();
-
       return false;
+    } finally {
+      changingFavoriteTherapistIds.remove(therapistId);
+      notifyListeners();
     }
   }
 
