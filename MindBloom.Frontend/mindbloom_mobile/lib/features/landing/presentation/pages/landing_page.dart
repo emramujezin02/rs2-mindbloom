@@ -119,6 +119,10 @@ class _LandingPageState extends State<LandingPage> {
         onTherapists: () => _handleDrawerNavigation(therapistsSectionKey),
         onReviews: () => _handleDrawerNavigation(reviewsSectionKey),
         onArticles: () => _handleDrawerNavigation(articlesSectionKey),
+        onAbout: () {
+          Navigator.of(context).pop();
+          Navigator.of(context).pushNamed(AppRouter.about);
+        },
         onLogin: () {
           Navigator.of(context).pop();
           _openLogin();
@@ -137,6 +141,9 @@ class _LandingPageState extends State<LandingPage> {
               onTherapists: () => _scrollToSection(therapistsSectionKey),
               onReviews: () => _scrollToSection(reviewsSectionKey),
               onArticles: () => _scrollToSection(articlesSectionKey),
+              onAbout: () {
+                Navigator.of(context).pushNamed(AppRouter.about);
+              },
               onLogin: _openLogin,
               onRegister: _openRegister,
             ),
@@ -242,6 +249,7 @@ class _LandingNavigation extends StatelessWidget {
   final VoidCallback onTherapists;
   final VoidCallback onReviews;
   final VoidCallback onArticles;
+  final VoidCallback onAbout;
   final VoidCallback onLogin;
   final VoidCallback onRegister;
 
@@ -251,6 +259,7 @@ class _LandingNavigation extends StatelessWidget {
     required this.onTherapists,
     required this.onReviews,
     required this.onArticles,
+    required this.onAbout,
     required this.onLogin,
     required this.onRegister,
   });
@@ -294,6 +303,7 @@ class _LandingNavigation extends StatelessWidget {
               _NavigationButton(label: 'Therapists', onPressed: onTherapists),
               _NavigationButton(label: 'Reviews', onPressed: onReviews),
               _NavigationButton(label: 'Articles', onPressed: onArticles),
+              _NavigationButton(label: 'About', onPressed: onAbout),
               const SizedBox(width: 10),
               TextButton(onPressed: onLogin, child: const Text('Log in')),
               const SizedBox(width: 6),
@@ -330,6 +340,7 @@ class _LandingDrawer extends StatelessWidget {
   final VoidCallback onArticles;
   final VoidCallback onLogin;
   final VoidCallback onRegister;
+  final VoidCallback onAbout;
 
   const _LandingDrawer({
     required this.onHome,
@@ -339,6 +350,7 @@ class _LandingDrawer extends StatelessWidget {
     required this.onArticles,
     required this.onLogin,
     required this.onRegister,
+    required this.onAbout,
   });
 
   @override
@@ -383,6 +395,11 @@ class _LandingDrawer extends StatelessWidget {
                     leading: const Icon(Icons.article_outlined),
                     title: const Text('Articles'),
                     onTap: onArticles,
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.info_outline),
+                    title: const Text('About'),
+                    onTap: onAbout,
                   ),
                 ],
               ),

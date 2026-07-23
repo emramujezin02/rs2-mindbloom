@@ -9,6 +9,13 @@ class AboutPage extends StatelessWidget {
     Navigator.of(context).pushNamed(AppRouter.register);
   }
 
+  void _openTherapistRegister(BuildContext context) {
+    Navigator.of(context).pushNamed(
+      AppRouter.register,
+      arguments: const {'initialRole': 'therapist'},
+    );
+  }
+
   void _openTherapists(BuildContext context) {
     Navigator.of(context).pushNamed(AppRouter.therapists);
   }
@@ -30,11 +37,14 @@ class AboutPage extends StatelessWidget {
             const _AboutHeroSection(),
             const _DescriptionSection(),
             const _MissionVisionSection(),
+            const _ValuesSection(),
             const _HowItWorksSection(),
             const _PrivacySection(),
+            const _EmergencyNoticeSection(),
             _AboutCallToAction(
               onRegister: () => _openRegister(context),
               onBrowseTherapists: () => _openTherapists(context),
+              onTherapistRegister: () => _openTherapistRegister(context),
             ),
             const PublicFooter(),
           ],
@@ -178,6 +188,124 @@ class _MissionVisionSection extends StatelessWidget {
             children: [missionCard, SizedBox(height: 18), visionCard],
           );
         },
+      ),
+    );
+  }
+}
+
+class _ValuesSection extends StatelessWidget {
+  const _ValuesSection();
+
+  static const values = [
+    (
+      Icons.favorite_outline,
+      'Empathy',
+      'Every person deserves to feel heard, respected and supported without judgment.',
+    ),
+    (
+      Icons.verified_user_outlined,
+      'Trust',
+      'We build a secure environment in which clients and therapists can communicate openly and responsibly.',
+    ),
+    (
+      Icons.accessibility_new_outlined,
+      'Accessibility',
+      'Professional mental health support should be easier to find and available to people regardless of location.',
+    ),
+    (
+      Icons.psychology_outlined,
+      'Professionalism',
+      'MindBloom connects users with qualified therapists and encourages responsible, ethical and evidence-informed support.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return _AboutSection(
+      backgroundColor: Colors.white,
+      eyebrow: 'OUR VALUES',
+      title: 'The principles behind MindBloom',
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 950
+              ? 4
+              : constraints.maxWidth >= 620
+              ? 2
+              : 1;
+
+          const spacing = 18.0;
+
+          final itemWidth =
+              (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: values.map((value) {
+              return SizedBox(
+                width: itemWidth,
+                child: _ValueCard(
+                  icon: value.$1,
+                  title: value.$2,
+                  description: value.$3,
+                ),
+              );
+            }).toList(),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ValueCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+
+  const _ValueCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF7FE),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE5DAF0)),
+      ),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: const Color(0xFFE9DFFF),
+            child: Icon(icon, size: 29, color: const Color(0xFF72559A)),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF40334D),
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF68616D),
+              fontSize: 15,
+              height: 1.55,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -423,17 +551,111 @@ class _PrivacySection extends StatelessWidget {
   }
 }
 
+class _EmergencyNoticeSection extends StatelessWidget {
+  const _EmergencyNoticeSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.sizeOf(context).width >= 850;
+
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFFFF8F2),
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 70 : 22,
+        vertical: isDesktop ? 55 : 42,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1000),
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(isDesktop ? 30 : 22),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFCF9),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFFF0CFB6)),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final showHorizontal = constraints.maxWidth >= 650;
+
+                const icon = CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Color(0xFFFFE3CF),
+                  child: Icon(
+                    Icons.health_and_safety_outlined,
+                    size: 31,
+                    color: Color(0xFFB45F36),
+                  ),
+                );
+
+                const content = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Important emergency notice',
+                      style: TextStyle(
+                        color: Color(0xFF693B28),
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'MindBloom is not a replacement for emergency medical, '
+                      'psychiatric or crisis support. If you or another person '
+                      'is in immediate danger, experiencing a medical emergency '
+                      'or considering self-harm, contact the local emergency '
+                      'services or go to the nearest emergency department immediately.',
+                      style: TextStyle(
+                        color: Color(0xFF765344),
+                        fontSize: 16,
+                        height: 1.6,
+                      ),
+                    ),
+                  ],
+                );
+
+                if (showHorizontal) {
+                  return const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      icon,
+                      SizedBox(width: 22),
+                      Expanded(child: content),
+                    ],
+                  );
+                }
+
+                return const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [icon, SizedBox(height: 18), content],
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AboutCallToAction extends StatelessWidget {
   final VoidCallback onRegister;
   final VoidCallback onBrowseTherapists;
+  final VoidCallback onTherapistRegister;
 
   const _AboutCallToAction({
     required this.onRegister,
     required this.onBrowseTherapists,
+    required this.onTherapistRegister,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.sizeOf(context).width >= 850;
+
     return Container(
       width: double.infinity,
       color: Colors.white,
@@ -441,8 +663,11 @@ class _AboutCallToAction extends StatelessWidget {
       child: Center(
         child: Container(
           width: double.infinity,
-          constraints: const BoxConstraints(maxWidth: 1000),
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 46),
+          constraints: const BoxConstraints(maxWidth: 1050),
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 42 : 24,
+            vertical: isDesktop ? 48 : 36,
+          ),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF6E5193), Color(0xFF8C70AE)],
@@ -458,7 +683,7 @@ class _AboutCallToAction extends StatelessWidget {
               ),
               const SizedBox(height: 17),
               const Text(
-                'Ready to begin your journey?',
+                'Choose how you want to join MindBloom',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
@@ -467,32 +692,63 @@ class _AboutCallToAction extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 13),
-              const Text(
-                'Create an account or explore available therapists.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFFF1EAF8), fontSize: 16),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 720),
+                child: Text(
+                  'Find professional support, create your client account or '
+                  'join the platform as a therapist.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFFF1EAF8),
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                ),
               ),
-              const SizedBox(height: 26),
+              const SizedBox(height: 28),
               Wrap(
                 alignment: WrapAlignment.center,
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  FilledButton(
-                    onPressed: onRegister,
+                  FilledButton.icon(
+                    onPressed: onBrowseTherapists,
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF664989),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 15,
+                      ),
                     ),
-                    child: const Text('Create an account'),
+                    icon: const Icon(Icons.person_search_outlined),
+                    label: const Text('Find a therapist'),
                   ),
-                  OutlinedButton(
-                    onPressed: onBrowseTherapists,
+                  OutlinedButton.icon(
+                    onPressed: onRegister,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
                       side: const BorderSide(color: Colors.white),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 15,
+                      ),
                     ),
-                    child: const Text('Browse therapists'),
+                    icon: const Icon(Icons.person_add_alt_outlined),
+                    label: const Text('Create client account'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: onTherapistRegister,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 15,
+                      ),
+                    ),
+                    icon: const Icon(Icons.psychology_outlined),
+                    label: const Text('Register as therapist'),
                   ),
                 ],
               ),
