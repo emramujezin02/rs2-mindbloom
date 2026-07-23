@@ -23,6 +23,7 @@ class LandingPageViewModel extends ChangeNotifier {
   });
 
   bool isLoading = false;
+  bool isReviewsLoading = false;
   bool isTherapyApproachesLoading = false;
 
   String? errorMessage;
@@ -63,9 +64,8 @@ class LandingPageViewModel extends ChangeNotifier {
       _loadTherapyApproaches(),
       _loadTherapists(),
       _loadArticles(),
+      _loadReviews(),
     ]);
-
-    await _loadReviews();
 
     if (therapyApproaches.isEmpty &&
         therapists.isEmpty &&
@@ -95,6 +95,19 @@ class LandingPageViewModel extends ChangeNotifier {
     notifyListeners();
 
     await _loadTherapyApproaches();
+
+    notifyListeners();
+  }
+
+  Future<void> retryReviews() async {
+    if (isReviewsLoading) {
+      return;
+    }
+
+    reviewErrorMessage = null;
+    notifyListeners();
+
+    await _loadReviews();
 
     notifyListeners();
   }
@@ -161,41 +174,28 @@ class LandingPageViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadReviews() async {
-    reviews = [];
-
-    if (therapists.isEmpty) {
-      return;
-    }
+    isReviewsLoading = true;
+    reviewErrorMessage = null;
 
     try {
-      final therapistsForReviews = therapists.take(5).toList();
+      final loadedReviews = await reviewRepository.getPublicReviews(limit: 6);
 
-      final results = await Future.wait(
-        therapistsForReviews.map((therapist) async {
-          try {
-            return await reviewRepository.getTherapistReviews(therapist.id);
-          } catch (_) {
-            return <ReviewModel>[];
-          }
-        }),
-      );
-
-      final loadedReviews =
-          results
-              .expand((therapistReviews) => therapistReviews)
-              .where(
-                (review) =>
-                    review.rating > 0 && review.comment.trim().isNotEmpty,
-              )
-              .toList()
-            ..sort((first, second) {
-              return second.createdAtUtc.compareTo(first.createdAtUtc);
-            });
-
-      reviews = loadedReviews.take(6).toList();
+      reviews = loadedReviews
+          .where(
+            (review) =>
+                review.id > 0 &&
+                review.rating >= 1 &&
+                review.rating <= 5 &&
+                review.comment.trim().isNotEmpty &&
+                review.therapistName.trim().isNotEmpty,
+          )
+          .take(6)
+          .toList();
     } catch (error) {
       reviews = [];
       reviewErrorMessage = _normalizeError(error);
+    } finally {
+      isReviewsLoading = false;
     }
   }
 

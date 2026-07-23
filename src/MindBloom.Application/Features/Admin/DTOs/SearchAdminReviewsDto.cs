@@ -41,4 +41,5 @@ public class SearchAdminReviewsDto
     public bool? HasTherapistReply { get; set; }
 
     public bool? IsDeleted { get; set; }
+    public bool? IsApproved { get; set; }
 }

@@ -646,6 +646,13 @@ public class AdminService : IAdminService
                 !x.IsDeleted);
         }
 
+        if (request.IsApproved.HasValue)
+        {
+            query = query.Where(x =>
+                x.IsApproved ==
+                request.IsApproved.Value);
+        }
+
         if (request.Rating.HasValue)
         {
             query = query.Where(x =>
@@ -773,6 +780,8 @@ public class AdminService : IAdminService
 
                         IsDeleted =
                             x.IsDeleted,
+
+                        IsApproved = x.IsApproved,
 
                         CreatedAtUtc =
                             x.CreatedAtUtc,
@@ -1109,6 +1118,8 @@ public class AdminService : IAdminService
             IsDeleted =
                 review.IsDeleted,
 
+            IsApproved = review.IsApproved,
+
             ModerationReason =
                 review.ModerationReason,
 
@@ -1152,6 +1163,115 @@ public class AdminService : IAdminService
                         })
                     .ToList()
         };
+    }
+
+    public async Task ApproveReviewAsync(
+    int authenticatedAdminUserId,
+    int reviewId)
+    {
+        var admin =
+            await _context.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Id ==
+                        authenticatedAdminUserId &&
+                    !x.IsBlocked &&
+                    x.IsActive);
+
+        if (admin == null)
+        {
+            throw new NotFoundException(
+                "Administrator not found.");
+        }
+
+        var review =
+            await _context.Reviews
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == reviewId);
+
+        if (review == null)
+        {
+            throw new NotFoundException(
+                "Review not found.");
+        }
+
+        if (review.IsDeleted)
+        {
+            throw new Exception(
+                "A deleted review cannot be approved.");
+        }
+
+        if (review.IsApproved)
+        {
+            return;
+        }
+
+        var now =
+            DateTime.UtcNow;
+
+        await using var transaction =
+            await _context.Database
+                .BeginTransactionAsync();
+
+        try
+        {
+            review.IsApproved =
+                true;
+
+            review.ModeratedByUserId =
+                authenticatedAdminUserId;
+
+            review.ModeratedAtUtc =
+                now;
+
+            review.ModerationReason =
+                "Approved for public display.";
+
+            review.UpdatedAtUtc =
+                now;
+
+            var audit =
+                new ReviewModerationAudit
+                {
+                    ReviewId =
+                        review.Id,
+
+                    AdminUserId =
+                        authenticatedAdminUserId,
+
+                    Action =
+                        ReviewModerationAction
+                            .Approved,
+
+                    Reason =
+                        "Approved for public display.",
+
+                    PerformedAtUtc =
+                        now
+                };
+
+            _context
+                .ReviewModerationAudits
+                .Add(audit);
+
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+
+            throw;
+        }
+
+        await _notificationSender
+            .SendToUserAsync(
+                review.Client.UserId,
+                "Review approved",
+                "Your review has been approved "
+                + "for public display.");
     }
 
     public async Task DeleteReviewAsync(
@@ -1221,14 +1341,13 @@ public class AdminService : IAdminService
 
         try
         {
-            review.IsDeleted =
-                true;
+            review.IsDeleted = true;
 
-            review.ModerationReason =
-                reason;
+            review.IsApproved = false;
 
-            review.ModeratedByUserId =
-                authenticatedAdminUserId;
+            review.ModerationReason = reason;
+
+            review.ModeratedByUserId = authenticatedAdminUserId;
 
             review.ModeratedAtUtc =
                 now;

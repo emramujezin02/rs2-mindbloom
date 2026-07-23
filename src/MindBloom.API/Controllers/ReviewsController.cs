@@ -21,6 +21,21 @@ public class ReviewsController : ControllerBase
             reviewService;
     }
 
+    [AllowAnonymous]
+    [HttpGet("public")]
+    public async Task<IActionResult>
+    GetPublicReviews(
+        [FromQuery]
+        int limit = 6)
+    {
+        var result =
+            await _reviewService
+                .GetPublicReviewsAsync(
+                    limit);
+
+        return Ok(result);
+    }
+
     [Authorize(Roles = "Client")]
     [HttpPost]
     public async Task<IActionResult>

@@ -533,10 +533,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 .HasForeignKey(x => x.ModeratedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            entity.Property(x => x.IsApproved)
+    .HasDefaultValue(false);
+
             entity.HasIndex(x => new
             {
+                x.IsApproved,
                 x.IsDeleted,
-                x.Rating,
                 x.CreatedAtUtc
             });
         });

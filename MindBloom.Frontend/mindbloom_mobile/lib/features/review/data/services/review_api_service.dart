@@ -7,10 +7,22 @@ class ReviewApiService {
 
   ReviewApiService({required this.apiClient});
 
-  Future<List<ReviewModel>> getTherapistReviews(int therapistId) async {
-    final response = await apiClient.get('/Reviews/therapist/$therapistId');
+  Future<List<ReviewModel>> getPublicReviews({int limit = 6}) async {
+    final response = await apiClient.get(
+      '/Reviews/public?limit=$limit',
+      requiresAuth: false,
+    );
 
-    return (response as List).map((e) => ReviewModel.fromJson(e)).toList();
+    return _parseReviews(response);
+  }
+
+  Future<List<ReviewModel>> getTherapistReviews(int therapistId) async {
+    final response = await apiClient.get(
+      '/Reviews/therapist/$therapistId',
+      requiresAuth: false,
+    );
+
+    return _parseReviews(response);
   }
 
   Future<void> createReview(CreateReviewRequest request) async {
@@ -20,8 +32,27 @@ class ReviewApiService {
   Future<List<ReviewModel>> getMyReviews() async {
     final response = await apiClient.get('/Reviews/mine');
 
-    return (response as List)
-        .map((item) => ReviewModel.fromJson(item as Map<String, dynamic>))
+    return _parseReviews(response);
+  }
+
+  List<ReviewModel> _parseReviews(dynamic response) {
+    final dynamic items;
+
+    if (response is List) {
+      items = response;
+    } else if (response is Map<String, dynamic>) {
+      items = response['items'];
+    } else {
+      return [];
+    }
+
+    if (items is! List) {
+      return [];
+    }
+
+    return items
+        .whereType<Map>()
+        .map((item) => ReviewModel.fromJson(Map<String, dynamic>.from(item)))
         .toList();
   }
 }

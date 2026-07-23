@@ -30,6 +30,8 @@ public class AdminReviewDetailsDto
 
     public bool IsDeleted { get; set; }
 
+    public bool IsApproved { get; set; }
+
     public string? ModerationReason { get; set; }
 
     public DateTime? ModeratedAtUtc { get; set; }

@@ -7,6 +7,10 @@ class ReviewRepository {
 
   ReviewRepository({required this.apiService});
 
+  Future<List<ReviewModel>> getPublicReviews({int limit = 6}) {
+    return apiService.getPublicReviews(limit: limit);
+  }
+
   Future<List<ReviewModel>> getTherapistReviews(int therapistId) {
     return apiService.getTherapistReviews(therapistId);
   }

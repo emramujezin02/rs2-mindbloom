@@ -31,9 +31,8 @@ public interface IAdminService
         GetReviewsAsync(
             SearchAdminReviewsDto request);
 
-    Task<AdminReviewDetailsDto>
-        GetReviewDetailsAsync(
-            int reviewId);
+    Task<AdminReviewDetailsDto> GetReviewDetailsAsync(int reviewId);
+    Task ApproveReviewAsync(int authenticatedAdminUserId, int reviewId);
 
     Task DeleteReviewAsync(
         int authenticatedAdminUserId,

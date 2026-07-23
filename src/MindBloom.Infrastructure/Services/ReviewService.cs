@@ -75,23 +75,14 @@ public class ReviewService : IReviewService
             existingReview,
             "A review has already been submitted for this appointment.");
 
-        var review =
-            new Review
+        var review = new Review
             {
-                ClientId =
-                    client.Id,
-
-                TherapistId =
-                    appointment.TherapistId,
-
-                AppointmentId =
-                    appointment.Id,
-
-                Rating =
-                    request.Rating,
-
-                Comment =
-                    request.Comment.Trim()
+                ClientId = client.Id,
+                TherapistId = appointment.TherapistId,
+                AppointmentId = appointment.Id,
+                Rating = request.Rating,
+                Comment = request.Comment.Trim(),
+                IsApproved = false
             };
 
         _context.Reviews.Add(review);
@@ -106,6 +97,107 @@ public class ReviewService : IReviewService
                 "A review has already been submitted for this appointment.",
                 exception);
         }
+    }
+
+    public async Task<List<PublicReviewDto>>
+    GetPublicReviewsAsync(
+        int limit)
+    {
+        const int defaultLimit = 6;
+
+        const int maximumLimit = 10;
+
+        var normalizedLimit =
+            limit < 1
+                ? defaultLimit
+                : Math.Min(
+                    limit,
+                    maximumLimit);
+
+        var reviews =
+            await _context.Reviews
+                .AsNoTracking()
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Therapist)
+                    .ThenInclude(x => x.User)
+                .Where(x =>
+                    x.IsApproved &&
+                    !x.IsDeleted &&
+                    !x.Client.IsDeleted &&
+                    !x.Therapist.IsDeleted &&
+                    !x.Client.User.IsBlocked &&
+                    x.Client.User.IsActive &&
+                    !x.Therapist.User.IsBlocked &&
+                    x.Therapist.User.IsActive &&
+                    x.Therapist.VerificationStatus ==
+                        TherapistVerificationStatus
+                            .Approved)
+                .OrderByDescending(x =>
+                    x.CreatedAtUtc)
+                .ThenByDescending(x =>
+                    x.Id)
+                .Take(normalizedLimit)
+                .Select(x =>
+                    new
+                    {
+                        x.Id,
+
+                        ClientFirstName =
+                            x.Client.User.FirstName,
+
+                        ClientLastName =
+                            x.Client.User.LastName,
+
+                        x.Rating,
+
+                        x.Comment,
+
+                        x.TherapistId,
+
+                        TherapistFirstName =
+                            x.Therapist.User.FirstName,
+
+                        TherapistLastName =
+                            x.Therapist.User.LastName,
+
+                        x.CreatedAtUtc
+                    })
+                .ToListAsync();
+
+        return reviews
+            .Select(x =>
+                new PublicReviewDto
+                {
+                    Id =
+                        x.Id,
+
+                    ClientInitials =
+                        BuildClientInitials(
+                            x.ClientFirstName,
+                            x.ClientLastName),
+
+                    Rating =
+                        x.Rating,
+
+                    Comment =
+                        x.Comment,
+
+                    TherapistId =
+                        x.TherapistId,
+
+                    TherapistName =
+                        (
+                            x.TherapistFirstName
+                            + " "
+                            + x.TherapistLastName
+                        )
+                        .Trim(),
+
+                    CreatedAtUtc =
+                        x.CreatedAtUtc
+                })
+            .ToList();
     }
 
 
@@ -124,9 +216,10 @@ public class ReviewService : IReviewService
                 .AsNoTracking()
                 .Include(x => x.Client)
                     .ThenInclude(x => x.User)
-                .Where(x =>
-                    x.TherapistId == therapistId &&
-                    !x.IsDeleted);
+.Where(x =>
+    x.TherapistId == therapistId &&
+    x.IsApproved &&
+    !x.IsDeleted);
 
         query = filter.SortBy switch
         {
@@ -171,9 +264,13 @@ public class ReviewService : IReviewService
                             x.Id,
 
                         ClientName =
-                            x.Client.User.FirstName
-                            + " "
-                            + x.Client.User.LastName,
+    x.Client.User.FirstName
+    + " "
+    + x.Client.User.LastName
+        .Substring(
+            0,
+            1)
+    + ".",
 
                         Rating =
                             x.Rating,
@@ -264,8 +361,9 @@ public class ReviewService : IReviewService
             review.ClientId == client.Id,
             "You can delete only your own review.");
 
-        review.IsDeleted =
-            true;
+        review.IsDeleted = true;
+
+        review.IsApproved = false;
 
         review.ModerationReason =
             "Deleted by the review author.";
@@ -314,6 +412,21 @@ public class ReviewService : IReviewService
 
         review.Comment =
             request.Comment.Trim();
+
+        review.IsApproved =
+    false;
+
+        review.ModeratedByUserId =
+            null;
+
+        review.ModeratedAtUtc =
+            null;
+
+        review.ModerationReason =
+            null;
+
+        review.UpdatedAtUtc =
+            DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
     }
@@ -462,5 +575,38 @@ public class ReviewService : IReviewService
                 "Therapist replied to your review",
                 "Your therapist has replied to one of your reviews.",
                 review.AppointmentId);
+    }
+
+    private static string
+    BuildClientInitials(
+        string? firstName,
+        string? lastName)
+    {
+        var initials =
+            new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(
+                firstName))
+        {
+            initials.Add(
+                char.ToUpperInvariant(
+                    firstName.Trim()[0])
+                + ".");
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                lastName))
+        {
+            initials.Add(
+                char.ToUpperInvariant(
+                    lastName.Trim()[0])
+                + ".");
+        }
+
+        return initials.Count == 0
+            ? "MB"
+            : string.Join(
+                " ",
+                initials);
     }
 }

@@ -2,5 +2,7 @@
 
 public enum ReviewModerationAction
 {
-    Deleted = 1
+    Deleted = 1,
+
+    Approved = 2
 }

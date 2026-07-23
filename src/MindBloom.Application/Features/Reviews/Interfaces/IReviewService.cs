@@ -9,6 +9,10 @@ public interface IReviewService
         int clientUserId,
         CreateReviewDto request);
 
+    Task<List<PublicReviewDto>>
+        GetPublicReviewsAsync(
+            int limit);
+
     Task<PagedResponse<ReviewResponseDto>>
         GetTherapistReviewsAsync(
             int therapistId,

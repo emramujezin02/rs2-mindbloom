@@ -194,9 +194,9 @@ class _LandingPageState extends State<LandingPage> {
                         key: reviewsSectionKey,
                         child: _ReviewsSection(
                           reviews: viewModel.reviews,
-                          isLoading: viewModel.isLoading,
+                          isLoading: viewModel.isReviewsLoading,
                           errorMessage: viewModel.reviewErrorMessage,
-                          onRetry: viewModel.loadLandingData,
+                          onRetry: viewModel.retryReviews,
                         ),
                       ),
                       Container(
@@ -930,30 +930,35 @@ class _ReviewsSection extends StatelessWidget {
         isLoading: isLoading,
         isEmpty: reviews.isEmpty,
         errorMessage: errorMessage,
-        emptyMessage: 'There are no public reviews yet.',
+        emptyMessage: 'There are no approved public reviews yet.',
         onRetry: onRetry,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 950
-                ? 3
+            final isDesktop = constraints.maxWidth >= 900;
+
+            final cardWidth = isDesktop
+                ? 360.0
                 : constraints.maxWidth >= 600
-                ? 2
-                : 1;
+                ? 330.0
+                : constraints.maxWidth * 0.88;
 
-            const spacing = 18.0;
-
-            final itemWidth =
-                (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
-
-            return Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              children: reviews.map((review) {
-                return SizedBox(
-                  width: itemWidth,
-                  child: _ReviewCard(review: review),
-                );
-              }).toList(),
+            return SizedBox(
+              height: 330,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                itemCount: reviews.length,
+                separatorBuilder: (context, index) {
+                  return const SizedBox(width: 18);
+                },
+                itemBuilder: (context, index) {
+                  return SizedBox(
+                    width: cardWidth,
+                    child: _ReviewCard(review: reviews[index]),
+                  );
+                },
+              ),
             );
           },
         ),
@@ -969,6 +974,14 @@ class _ReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final initials = review.clientName.trim().isEmpty
+        ? 'MB'
+        : review.clientName.trim();
+
+    final therapistName = review.therapistName.trim().isEmpty
+        ? 'MindBloom therapist'
+        : review.therapistName.trim();
+
     return Card(
       elevation: 0,
       color: const Color(0xFFFAF7FE),
@@ -981,17 +994,30 @@ class _ReviewCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(
-              Icons.format_quote_rounded,
-              size: 38,
-              color: Color(0xFF9277B4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: const Color(0xFFE9DFFF),
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      color: Color(0xFF684C8E),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                const Icon(
+                  Icons.format_quote_rounded,
+                  size: 38,
+                  color: Color(0xFF9277B4),
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              review.comment,
-              style: const TextStyle(color: Color(0xFF5F5865), height: 1.6),
-            ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             Wrap(
               spacing: 2,
               children: List.generate(
@@ -1005,12 +1031,45 @@ class _ReviewCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
+            Expanded(
+              child: Text(
+                review.comment,
+                maxLines: 6,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Color(0xFF5F5865), height: 1.6),
+              ),
+            ),
+            const SizedBox(height: 16),
             Text(
-              review.clientName.isEmpty
-                  ? 'MindBloom client'
-                  : review.clientName,
-              style: const TextStyle(fontWeight: FontWeight.w800),
+              initials,
+              style: const TextStyle(
+                color: Color(0xFF3E3152),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Row(
+              children: [
+                const Icon(
+                  Icons.psychology_outlined,
+                  size: 18,
+                  color: Color(0xFF9277B4),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    'Therapist: $therapistName',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF6B6272),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

@@ -169,6 +169,26 @@ public class AdminController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPut("reviews/{reviewId}/approve")]
+    public async Task<IActionResult>
+    ApproveReview(
+        int reviewId)
+    {
+        var adminUserId =
+            GetAuthenticatedUserId();
+
+        await _adminService
+            .ApproveReviewAsync(
+                adminUserId,
+                reviewId);
+
+        return Ok(new
+        {
+            message =
+                "Review approved successfully."
+        });
+    }
+
     [HttpPut("reviews/{reviewId}/delete")]
     public async Task<IActionResult>
         DeleteReview(

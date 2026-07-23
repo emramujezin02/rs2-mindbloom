@@ -18,6 +18,8 @@ public class Review : BaseEntity
 
     public string Comment { get; set; } = string.Empty;
 
+    public bool IsApproved { get; set; }
+
     public string? TherapistReply { get; set; }
 
     public DateTime? TherapistReplyCreatedAtUtc { get; set; }

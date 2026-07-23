@@ -22,6 +22,8 @@ public class AdminReviewListDto
 
     public bool IsDeleted { get; set; }
 
+    public bool IsApproved { get; set; }
+
     public DateTime CreatedAtUtc { get; set; }
 
     public DateTime? ModeratedAtUtc { get; set; }
