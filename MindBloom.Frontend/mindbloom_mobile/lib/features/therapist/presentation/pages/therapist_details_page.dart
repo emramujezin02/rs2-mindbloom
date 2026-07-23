@@ -9,6 +9,7 @@ import '../widgets/therapist_profile_image.dart';
 import '../widgets/therapist_session_modes.dart';
 import '../../../appointment/presentation/pages/appointment_create_page.dart';
 import '../../../appointment/presentation/widgets/available_slots_preview.dart';
+import '../../../../core/widgets/public_footer.dart';
 
 class TherapistDetailsPage extends StatefulWidget {
   final int therapistId;
@@ -156,309 +157,315 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
       onRefresh: _reload,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.zero,
         children: [
-          TherapistProfileImage(
-            fullName: therapist.fullName,
-            profileImageUrl: therapist.profileImageUrl,
-            radius: 54,
-          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TherapistProfileImage(
+                  fullName: therapist.fullName,
+                  profileImageUrl: therapist.profileImageUrl,
+                  radius: 54,
+                ),
 
-          const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-          Text(
-            therapist.fullName,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 6),
-
-          Text(
-            therapist.specialization,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16),
-          ),
-
-          const SizedBox(height: 20),
-
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _InfoRow(
-                    icon: Icons.star,
-                    label: 'Rating',
-                    value:
-                        '${therapist.averageRating.toStringAsFixed(1)} '
-                        '(${therapist.totalReviews} reviews)',
+                Text(
+                  therapist.fullName,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const Divider(),
-                  _InfoRow(
-                    icon: Icons.work,
-                    label: 'Experience',
-                    value: '${therapist.experienceYears} years',
-                  ),
-                  const Divider(),
-                  _InfoRow(
-                    icon: Icons.payments,
-                    label: 'Price',
-                    value: '${therapist.hourlyRate.toStringAsFixed(2)} KM',
-                  ),
-                  const Divider(),
-                  _InfoRow(
-                    icon: Icons.email,
-                    label: 'Email',
-                    value: therapist.email,
-                  ),
-                ],
-              ),
-            ),
-          ),
+                ),
 
-          const SizedBox(height: 20),
+                const SizedBox(height: 6),
 
-          const Text(
-            'Location and session type',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+                Text(
+                  therapist.specialization,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16),
+                ),
 
-          const SizedBox(height: 8),
+                const SizedBox(height: 20),
 
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _InfoRow(
-                    icon: Icons.public,
-                    label: 'Country',
-                    value: therapist.country.trim().isEmpty
-                        ? 'Not specified'
-                        : therapist.country,
-                  ),
-
-                  const Divider(),
-
-                  _InfoRow(
-                    icon: Icons.location_city,
-                    label: 'City',
-                    value: therapist.city.trim().isEmpty
-                        ? 'Not specified'
-                        : therapist.city,
-                  ),
-
-                  if (therapist.offersInPerson) ...[
-                    const Divider(),
-                    _InfoRow(
-                      icon: Icons.location_on_outlined,
-                      label: 'Address',
-                      value: therapist.address.trim().isEmpty
-                          ? 'Not specified'
-                          : therapist.address,
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        _InfoRow(
+                          icon: Icons.star,
+                          label: 'Rating',
+                          value:
+                              '${therapist.averageRating.toStringAsFixed(1)} '
+                              '(${therapist.totalReviews} reviews)',
+                        ),
+                        const Divider(),
+                        _InfoRow(
+                          icon: Icons.work,
+                          label: 'Experience',
+                          value: '${therapist.experienceYears} years',
+                        ),
+                        const Divider(),
+                        _InfoRow(
+                          icon: Icons.payments,
+                          label: 'Price',
+                          value:
+                              '${therapist.hourlyRate.toStringAsFixed(2)} KM',
+                        ),
+                        const Divider(),
+                        _InfoRow(
+                          icon: Icons.email,
+                          label: 'Email',
+                          value: therapist.email,
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
+                ),
 
-                  const Divider(),
+                const SizedBox(height: 20),
+
+                const Text(
+                  'Location and session type',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 8),
+
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _InfoRow(
+                          icon: Icons.public,
+                          label: 'Country',
+                          value: therapist.country.trim().isEmpty
+                              ? 'Not specified'
+                              : therapist.country,
+                        ),
+
+                        const Divider(),
+
+                        _InfoRow(
+                          icon: Icons.location_city,
+                          label: 'City',
+                          value: therapist.city.trim().isEmpty
+                              ? 'Not specified'
+                              : therapist.city,
+                        ),
+
+                        if (therapist.offersInPerson) ...[
+                          const Divider(),
+                          _InfoRow(
+                            icon: Icons.location_on_outlined,
+                            label: 'Address',
+                            value: therapist.address.trim().isEmpty
+                                ? 'Not specified'
+                                : therapist.address,
+                          ),
+                        ],
+
+                        const Divider(),
+
+                        const Text(
+                          'Available session types',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        TherapistSessionModes(
+                          offersOnline: therapist.offersOnline,
+                          offersInPerson: therapist.offersInPerson,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                if (therapist.offersInPerson) ...[
+                  const SizedBox(height: 20),
 
                   const Text(
-                    'Available session types',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                    'Therapist location',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
 
-                  TherapistSessionModes(
-                    offersOnline: therapist.offersOnline,
-                    offersInPerson: therapist.offersInPerson,
+                  TherapistLocationMap(
+                    mapData: TherapistMapData(
+                      therapistName: therapist.fullName,
+                      address: therapist.formattedAddress,
+                      latitude: therapist.latitude ?? 0,
+                      longitude: therapist.longitude ?? 0,
+                    ),
+                    height: 250,
+                    interactive: true,
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.location_on_outlined, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          therapist.formattedAddress,
+                          style: const TextStyle(fontSize: 14, height: 1.4),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-            ),
-          ),
 
-          if (therapist.offersInPerson) ...[
-            const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-            const Text(
-              'Therapist location',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+                const Text(
+                  'Biography',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
 
-            const SizedBox(height: 8),
+                const SizedBox(height: 8),
 
-            TherapistLocationMap(
-              mapData: TherapistMapData(
-                therapistName: therapist.fullName,
-                address: therapist.formattedAddress,
-                latitude: therapist.latitude ?? 0,
-                longitude: therapist.longitude ?? 0,
-              ),
-              height: 250,
-              interactive: true,
-            ),
+                Text(
+                  therapist.biography.trim().isEmpty
+                      ? 'No biography added.'
+                      : therapist.biography,
+                  style: const TextStyle(fontSize: 15, height: 1.4),
+                ),
 
-            const SizedBox(height: 8),
+                const SizedBox(height: 24),
 
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.location_on_outlined, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    therapist.formattedAddress,
-                    style: const TextStyle(fontSize: 14, height: 1.4),
+                const Text(
+                  'Regular availability',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 8),
+
+                if (therapist.availabilities.isEmpty)
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        'The therapist has not published regular availability.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                else
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: therapist.availabilities
+                            .map(
+                              (availability) => Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 7,
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.schedule, size: 20),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        availability.dayName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      '${availability.formattedStartTime}'
+                                      ' – '
+                                      '${availability.formattedEndTime}',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
                   ),
+
+                const SizedBox(height: 24),
+
+                const Text(
+                  'Next available appointments',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 8),
+
+                AvailableSlotsPreview(
+                  isLoading: _appointmentPreviewViewModel.isLoadingPreview,
+                  groupedSlots:
+                      _appointmentPreviewViewModel.groupedPreviewSlots,
+                  onBookSlot: (slot) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => AppointmentCreatePage(
+                          therapist: therapistSummary,
+                          initialSlot: slot,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(
+                      AppRouter.appointmentCreate,
+                      arguments: therapistSummary,
+                    );
+                  },
+                  icon: const Icon(Icons.calendar_month),
+                  label: const Text('Book appointment'),
+                ),
+
+                const SizedBox(height: 12),
+
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(
+                      AppRouter.purchaseMembership,
+                      arguments: therapistSummary,
+                    );
+                  },
+                  icon: const Icon(Icons.card_membership),
+                  label: const Text('Buy membership package'),
+                ),
+
+                const SizedBox(height: 12),
+
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(
+                      AppRouter.therapistReviews,
+                      arguments: therapist.id,
+                    );
+                  },
+                  icon: const Icon(Icons.star),
+                  label: const Text('View reviews'),
                 ),
               ],
             ),
-          ],
-
-          const SizedBox(height: 20),
-
-          const Text(
-            'Biography',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            therapist.biography.trim().isEmpty
-                ? 'No biography added.'
-                : therapist.biography,
-            style: const TextStyle(fontSize: 15, height: 1.4),
-          ),
-
-          const SizedBox(height: 24),
-
-          const Text(
-            'Regular availability',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 8),
-
-          if (therapist.availabilities.isEmpty)
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'The therapist has not published regular availability.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            )
-          else
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: therapist.availabilities
-                      .map(
-                        (availability) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 7),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.schedule, size: 20),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  availability.dayName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                '${availability.formattedStartTime}'
-                                ' – '
-                                '${availability.formattedEndTime}',
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-            ),
-
-const SizedBox(height: 24),
-
-const Text(
-  'Next available appointments',
-  style: TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.bold,
-  ),
-),
-
-const SizedBox(height: 8),
-
-AvailableSlotsPreview(
-  isLoading:
-      _appointmentPreviewViewModel
-          .isLoadingPreview,
-  groupedSlots:
-      _appointmentPreviewViewModel
-          .groupedPreviewSlots,
-  onBookSlot: (slot) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            AppointmentCreatePage(
-          therapist:
-              therapistSummary,
-          initialSlot: slot,
-        ),
-      ),
-    );
-  },
-),
-
-const SizedBox(height: 24),
-
-          const SizedBox(height: 24),
-
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(context).pushNamed(
-                AppRouter.appointmentCreate,
-                arguments: therapistSummary,
-              );
-            },
-            icon: const Icon(Icons.calendar_month),
-            label: const Text('Book appointment'),
-          ),
-
-          const SizedBox(height: 12),
-
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.of(context).pushNamed(
-                AppRouter.purchaseMembership,
-                arguments: therapistSummary,
-              );
-            },
-            icon: const Icon(Icons.card_membership),
-            label: const Text('Buy membership package'),
-          ),
-
-          const SizedBox(height: 12),
-
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.of(
-                context,
-              ).pushNamed(AppRouter.therapistReviews, arguments: therapist.id);
-            },
-            icon: const Icon(Icons.star),
-            label: const Text('View reviews'),
-          ),
+          const PublicFooter(),
         ],
       ),
     );

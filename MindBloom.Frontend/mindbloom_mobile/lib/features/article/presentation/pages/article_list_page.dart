@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import '../../../../core/widgets/public_footer.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/constants/api_constants.dart';
@@ -146,25 +146,30 @@ class _ArticleListPageState extends State<ArticleListPage> {
     }
 
     if (_viewModel.error != null && _viewModel.articles.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _viewModel.error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _refresh,
-                child: const Text('Try again'),
-              ),
-            ],
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 120),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Text(
+                  _viewModel.error!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: _refresh,
+                  child: const Text('Try again'),
+                ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 120),
+          const PublicFooter(),
+        ],
       );
     }
 
@@ -175,21 +180,43 @@ class _ArticleListPageState extends State<ArticleListPage> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
             SizedBox(height: 180),
-            Center(child: Text('No articles were found.')),
+            Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'No articles were found.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+            SizedBox(height: 180),
+            PublicFooter(),
           ],
         ),
       );
     }
 
+    final hasPaginationItem = _viewModel.hasMorePages;
+
+    final footerIndex =
+        _viewModel.articles.length + (hasPaginationItem ? 1 : 0);
+
     return RefreshIndicator(
       onRefresh: _refresh,
       child: ListView.builder(
         controller: _scrollController,
-        padding: const EdgeInsets.all(12),
-        itemCount:
-            _viewModel.articles.length + (_viewModel.hasMorePages ? 1 : 0),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        itemCount: footerIndex + 1,
         itemBuilder: (context, index) {
-          if (index == _viewModel.articles.length) {
+          if (index == footerIndex) {
+            return const Padding(
+              padding: EdgeInsets.only(top: 20),
+              child: PublicFooter(),
+            );
+          }
+
+          if (index == _viewModel.articles.length && hasPaginationItem) {
             return Padding(
               padding: const EdgeInsets.all(20),
               child: Center(
@@ -205,9 +232,16 @@ class _ArticleListPageState extends State<ArticleListPage> {
 
           final article = _viewModel.articles[index];
 
-          return _ArticleCard(
-            article: article,
-            imageUrl: _buildImageUrl(article.imageUrl),
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 12,
+              right: 12,
+              top: index == 0 ? 12 : 0,
+            ),
+            child: _ArticleCard(
+              article: article,
+              imageUrl: _buildImageUrl(article.imageUrl),
+            ),
           );
         },
       ),

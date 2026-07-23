@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/public_footer.dart';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -35,7 +36,7 @@ class AboutPage extends StatelessWidget {
               onRegister: () => _openRegister(context),
               onBrowseTherapists: () => _openTherapists(context),
             ),
-            const _AboutFooter(),
+            const PublicFooter(),
           ],
         ),
       ),
@@ -503,67 +504,24 @@ class _AboutCallToAction extends StatelessWidget {
   }
 }
 
-class _AboutFooter extends StatelessWidget {
-  const _AboutFooter();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: const Color(0xFF3D314A),
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 35),
-      child: const Column(
-        children: [
-          _MindBloomLogo(
-            textColor: Colors.white,
-            iconBackgroundColor: Color(0xFF665A70),
-            iconColor: Colors.white,
-          ),
-          SizedBox(height: 18),
-          Text(
-            'A digital space for emotional support and personal growth.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFFCFC4D7), height: 1.5),
-          ),
-          SizedBox(height: 20),
-          Divider(color: Color(0xFF665A70)),
-          SizedBox(height: 16),
-          Text(
-            '© 2026 MindBloom. All rights reserved.',
-            style: TextStyle(color: Color(0xFFCFC4D7)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _MindBloomLogo extends StatelessWidget {
-  final Color textColor;
-  final Color iconBackgroundColor;
-  final Color iconColor;
-
-  const _MindBloomLogo({
-    this.textColor = const Color(0xFF5C477B),
-    this.iconBackgroundColor = const Color(0xFFE9DFFF),
-    this.iconColor = const Color(0xFF72559A),
-  });
+  const _MindBloomLogo();
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         CircleAvatar(
           radius: 19,
-          backgroundColor: iconBackgroundColor,
-          child: Icon(Icons.local_florist_outlined, color: iconColor),
+          backgroundColor: Color(0xFFE9DFFF),
+          child: Icon(Icons.local_florist_outlined, color: Color(0xFF72559A)),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Text(
           'MindBloom',
           style: TextStyle(
-            color: textColor,
+            color: Color(0xFF5C477B),
             fontSize: 21,
             fontWeight: FontWeight.w800,
           ),

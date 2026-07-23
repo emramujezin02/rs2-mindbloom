@@ -9,6 +9,7 @@ import '../../../therapist/data/models/therapist_list_arguments.dart';
 import '../../../therapy_approach/data/models/therapy_approach_model.dart';
 import '../../../therapist/presentation/widgets/therapist_profile_image.dart';
 import '../../../therapist/presentation/widgets/therapist_session_modes.dart';
+import '../../../../core/widgets/public_footer.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -214,7 +215,7 @@ class _LandingPageState extends State<LandingPage> {
                         onRegister: _openRegister,
                         onFindTherapist: _openTherapists,
                       ),
-                      const _LandingFooter(),
+                      const PublicFooter(),
                     ],
                   ),
                 ),
@@ -1493,163 +1494,6 @@ class _CallToActionSection extends StatelessWidget {
   }
 }
 
-class _LandingFooter extends StatelessWidget {
-  const _LandingFooter();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: const Color(0xFF3D314A),
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 46),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
-          child: Column(
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth >= 750) {
-                    return const Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: _FooterAbout()),
-                        Expanded(child: _FooterLinks()),
-                        Expanded(child: _FooterContact()),
-                      ],
-                    );
-                  }
-
-                  return const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _FooterAbout(),
-                      SizedBox(height: 28),
-                      _FooterLinks(),
-                      SizedBox(height: 28),
-                      _FooterContact(),
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 30),
-              const Divider(color: Color(0xFF665A70)),
-              const SizedBox(height: 18),
-              const Text(
-                '© 2026 MindBloom. All rights reserved.',
-                style: TextStyle(color: Color(0xFFCFC4D7)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FooterAbout extends StatelessWidget {
-  const _FooterAbout();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.only(right: 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _MindBloomLogo(),
-          SizedBox(height: 13),
-          Text(
-            'A digital space for emotional support and personal growth.',
-            style: _footerTextStyle,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FooterLinks extends StatelessWidget {
-  const _FooterLinks();
-
-  @override
-  Widget build(BuildContext context) {
-    return _FooterColumn(
-      title: 'Useful links',
-      children: [
-        InkWell(
-          onTap: () {
-            Navigator.of(context).pushNamed(AppRouter.about);
-          },
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 4),
-            child: Text('About us', style: _footerTextStyle),
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text('Terms of use', style: _footerTextStyle),
-        const SizedBox(height: 10),
-        const Text('Privacy policy', style: _footerTextStyle),
-        const SizedBox(height: 10),
-        InkWell(
-          onTap: () {
-            Navigator.of(context).pushNamed(AppRouter.articles);
-          },
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 4),
-            child: Text('Articles', style: _footerTextStyle),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FooterContact extends StatelessWidget {
-  const _FooterContact();
-
-  @override
-  Widget build(BuildContext context) {
-    return const _FooterColumn(
-      title: 'Contact',
-      children: [
-        Text('support@mindbloom.ba', style: _footerTextStyle),
-        SizedBox(height: 10),
-        Text('Mostar, Bosnia and Herzegovina', style: _footerTextStyle),
-      ],
-    );
-  }
-}
-
-class _FooterColumn extends StatelessWidget {
-  final String title;
-  final List<Widget> children;
-
-  const _FooterColumn({required this.title, required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...children,
-        ],
-      ),
-    );
-  }
-}
-
 class _LandingSection extends StatelessWidget {
   final String eyebrow;
   final String title;
@@ -1723,8 +1567,3 @@ class _LandingSection extends StatelessWidget {
     );
   }
 }
-
-const TextStyle _footerTextStyle = TextStyle(
-  color: Color(0xFFCFC4D7),
-  height: 1.5,
-);

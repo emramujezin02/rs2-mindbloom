@@ -4,6 +4,7 @@ import '../../data/models/article_model.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../viewmodels/article_viewmodel.dart';
+import '../../../../core/widgets/public_footer.dart';
 
 class ArticleDetailsPage extends StatefulWidget {
   final int articleId;
@@ -165,6 +166,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
               ],
             ),
           ),
+          const PublicFooter(),
         ],
       ),
     );

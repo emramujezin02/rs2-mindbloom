@@ -5,6 +5,7 @@ import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../viewmodels/therapist_list_viewmodel.dart';
 import '../../data/models/therapist_list_arguments.dart';
+import '../../../../core/widgets/public_footer.dart';
 
 class TherapistListPage extends StatefulWidget {
   final TherapistListArguments? arguments;
@@ -257,160 +258,188 @@ class _TherapistListPageState extends State<TherapistListPage> {
     }
 
     if (_viewModel.errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            _viewModel.errorMessage!,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.red),
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 140),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              _viewModel.errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
-        ),
+          const SizedBox(height: 140),
+          const PublicFooter(),
+        ],
       );
     }
 
     if (_viewModel.therapists.isEmpty) {
-      return const Center(child: Text('No therapists available.'));
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _viewModel.therapists.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final therapist = _viewModel.therapists[index];
-
-        return InkWell(
-          onTap: () {
-            Navigator.of(
-              context,
-            ).pushNamed(AppRouter.therapistDetails, arguments: therapist.id);
-          },
-          child: Card(
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 180),
+          Center(
             child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: TherapistProfileImage(
-                      fullName: therapist.fullName,
-                      profileImageUrl: therapist.profileImageUrl,
-                      radius: 42,
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          therapist.fullName,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () async {
-                          final wasFavorite = _viewModel.isFavorite(
-                            therapist.id,
-                          );
-
-                          final success = await _viewModel.toggleFavorite(
-                            therapist.id,
-                          );
-
-                          if (!context.mounted || !success) {
-                            return;
-                          }
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                wasFavorite
-                                    ? 'Therapist removed from favorites.'
-                                    : 'Therapist added to favorites.',
-                              ),
-                            ),
-                          );
-                        },
-                        tooltip: _viewModel.isFavorite(therapist.id)
-                            ? 'Remove from favorites'
-                            : 'Add to favorites',
-                        icon: Icon(
-                          _viewModel.isFavorite(therapist.id)
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  Text(
-                    therapist.specialization,
-                    style: const TextStyle(fontSize: 15),
-                  ),
-
-                  const SizedBox(height: 8),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.location_on_outlined, size: 19),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          therapist.formattedLocation,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  TherapistSessionModes(
-                    offersOnline: therapist.offersOnline,
-                    offersInPerson: therapist.offersInPerson,
-                    compact: true,
-                  ),
-
-                  const SizedBox(height: 10),
-                  Text(
-                    therapist.biography.isEmpty
-                        ? 'No biography added.'
-                        : therapist.biography,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Row(
-                    children: [
-                      const Icon(Icons.star, size: 18),
-                      const SizedBox(width: 4),
-                      Text(therapist.averageRating.toStringAsFixed(1)),
-                      const Spacer(),
-                      Text(
-                        '${therapist.hourlyRate.toStringAsFixed(2)} KM',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Text('${therapist.experienceYears} years of experience'),
-                ],
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'No therapists available.',
+                textAlign: TextAlign.center,
               ),
             ),
           ),
-        );
-      },
+          SizedBox(height: 180),
+          PublicFooter(),
+        ],
+      );
+    }
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: List.generate(_viewModel.therapists.length, (index) {
+              final therapist = _viewModel.therapists[index];
+
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: index == _viewModel.therapists.length - 1 ? 0 : 12,
+                ),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).pushNamed(
+                      AppRouter.therapistDetails,
+                      arguments: therapist.id,
+                    );
+                  },
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: TherapistProfileImage(
+                              fullName: therapist.fullName,
+                              profileImageUrl: therapist.profileImageUrl,
+                              radius: 42,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  therapist.fullName,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () async {
+                                  final wasFavorite = _viewModel.isFavorite(
+                                    therapist.id,
+                                  );
+
+                                  final success = await _viewModel
+                                      .toggleFavorite(therapist.id);
+
+                                  if (!mounted || !success) {
+                                    return;
+                                  }
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        wasFavorite
+                                            ? 'Therapist removed from favorites.'
+                                            : 'Therapist added to favorites.',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                tooltip: _viewModel.isFavorite(therapist.id)
+                                    ? 'Remove from favorites'
+                                    : 'Add to favorites',
+                                icon: Icon(
+                                  _viewModel.isFavorite(therapist.id)
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            therapist.specialization,
+                            style: const TextStyle(fontSize: 15),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.location_on_outlined, size: 19),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  therapist.formattedLocation,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          TherapistSessionModes(
+                            offersOnline: therapist.offersOnline,
+                            offersInPerson: therapist.offersInPerson,
+                            compact: true,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            therapist.biography.isEmpty
+                                ? 'No biography added.'
+                                : therapist.biography,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Icon(Icons.star, size: 18),
+                              const SizedBox(width: 4),
+                              Text(therapist.averageRating.toStringAsFixed(1)),
+                              const Spacer(),
+                              Text(
+                                '${therapist.hourlyRate.toStringAsFixed(2)} KM',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            '${therapist.experienceYears} years of experience',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+        const SizedBox(height: 20),
+        const PublicFooter(),
+      ],
     );
   }
 }
