@@ -31,6 +31,28 @@ class TherapistFilterRequest {
     this.pageSize = 10,
   });
 
+  TherapistFilterRequest copyWith({
+    int? pageNumber,
+    int? pageSize,
+  }) {
+    return TherapistFilterRequest(
+      searchText: searchText,
+      specialization: specialization,
+      therapyApproachId: therapyApproachId,
+      gender: gender,
+      language: language,
+      location: location,
+      sessionMode: sessionMode,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+      minRating: minRating,
+      availableDay: availableDay,
+      sortBy: sortBy,
+      pageNumber: pageNumber ?? this.pageNumber,
+      pageSize: pageSize ?? this.pageSize,
+    );
+  }
+
   Map<String, String> toQueryParameters() {
     final params = <String, String>{
       'pageNumber': pageNumber.toString(),

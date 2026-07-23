@@ -22,6 +22,9 @@ class _TherapistListPageState extends State<TherapistListPage> {
   final TherapistListViewModel _viewModel =
       AppInjection.createTherapistListViewModel();
 
+  final ScrollController _scrollController =
+      ScrollController();
+
 
 final _searchController =
     TextEditingController();
@@ -90,6 +93,19 @@ void dispose() {
   void _onChanged() {
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    const threshold = 250.0;
+
+    if (_scrollController.position.extentAfter <=
+        threshold) {
+      _viewModel.loadMore();
     }
   }
 
@@ -916,6 +932,7 @@ Widget _buildActiveFilters() {
     return RefreshIndicator(
       onRefresh: _refresh,
       child: ListView(
+        controller: _scrollController,
         padding: EdgeInsets.zero,
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
@@ -1158,6 +1175,31 @@ Widget _buildActiveFilters() {
               }),
             ),
           ),
+          if (_viewModel.isLoadingMore)
+            const Padding(
+              padding: EdgeInsets.symmetric(
+                vertical: 20,
+              ),
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+          if (!_viewModel.hasMore &&
+              _viewModel.therapists.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                8,
+                16,
+                20,
+              ),
+              child: Center(
+                child: Text(
+                  'All therapists have been loaded.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
           const SizedBox(height: 20),
           const PublicFooter(),
         ],

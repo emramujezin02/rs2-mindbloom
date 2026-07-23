@@ -12,6 +12,7 @@ import '../models/therapist_profile_model.dart';
 import '../models/update_therapist_profile_request.dart';
 import '../models/therapist_mood_entry_model.dart';
 import '../models/therapist_mood_trend_model.dart';
+import '../models/therapist_search_page_model.dart';
 
 class TherapistApiService {
   final ApiClient apiClient;
@@ -26,24 +27,29 @@ class TherapistApiService {
         .toList();
   }
 
-  Future<List<TherapistModel>> searchTherapists(
-    TherapistFilterRequest request,
-  ) async {
-    final uri = Uri(
-      path: '/Therapists/search',
-      queryParameters: request.toQueryParameters(),
+Future<TherapistSearchPageModel> searchTherapists(
+  TherapistFilterRequest request,
+) async {
+  final uri = Uri(
+    path: '/Therapists/search',
+    queryParameters: request.toQueryParameters(),
+  );
+
+  final response = await apiClient.get(
+    uri.toString(),
+  );
+
+  if (response is! Map) {
+    throw const FormatException(
+      'The server returned an invalid '
+      'therapist search response.',
     );
-
-    final response = await apiClient.get(uri.toString());
-
-    final items = response is Map<String, dynamic>
-        ? response['items']
-        : response;
-
-    return (items as List)
-        .map((item) => TherapistModel.fromJson(item as Map<String, dynamic>))
-        .toList();
   }
+
+  return TherapistSearchPageModel.fromJson(
+    Map<String, dynamic>.from(response),
+  );
+}
 
   Future<TherapistDetailsModel> getTherapistById(int therapistId) async {
     final response = await apiClient.get('/Therapists/$therapistId');

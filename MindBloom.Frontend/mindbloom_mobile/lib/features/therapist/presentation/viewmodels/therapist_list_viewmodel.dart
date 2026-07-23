@@ -11,15 +11,21 @@ class TherapistListViewModel extends ChangeNotifier {
   final FavoriteRepository favoriteRepository;
 
   bool isLoading = false;
+  bool isLoadingMore = false;
+  bool hasMore = true;
   String? errorMessage;
 
   List<TherapistModel> therapists = [];
 
   final Set<int> favoriteTherapistIds = <int>{};
-  final Set<int> changingFavoriteTherapistIds = <int>{};
+  final Set<int> changingFavoriteTherapistIds =
+      <int>{};
 
   int currentPage = 1;
   final int pageSize = 10;
+
+  TherapistFilterRequest _activeRequest =
+      const TherapistFilterRequest();
 
   TherapistListViewModel({
     required this.therapistRepository,
@@ -29,8 +35,6 @@ class TherapistListViewModel extends ChangeNotifier {
   Future<void> loadTherapists({
     int? therapyApproachId,
   }) async {
-    currentPage = 1;
-
     await searchTherapists(
       therapyApproachId: therapyApproachId,
       resetPage: true,
@@ -52,34 +56,45 @@ class TherapistListViewModel extends ChangeNotifier {
     String? sortBy,
     bool resetPage = true,
   }) async {
+    if (isLoading || isLoadingMore) {
+      return;
+    }
+
     if (resetPage) {
       currentPage = 1;
+      hasMore = true;
     }
+
+    _activeRequest = TherapistFilterRequest(
+      searchText: searchText,
+      specialization: specialization,
+      therapyApproachId: therapyApproachId,
+      gender: gender,
+      language: language,
+      location: location,
+      sessionMode: sessionMode,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+      minRating: minRating,
+      availableDay: availableDay,
+      sortBy: sortBy,
+      pageNumber: currentPage,
+      pageSize: pageSize,
+    );
 
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      therapists =
+      final page =
           await therapistRepository.searchTherapists(
-        TherapistFilterRequest(
-          searchText: searchText,
-          specialization: specialization,
-          therapyApproachId: therapyApproachId,
-          gender: gender,
-          language: language,
-          location: location,
-          sessionMode: sessionMode,
-          minPrice: minPrice,
-          maxPrice: maxPrice,
-          minRating: minRating,
-          availableDay: availableDay,
-          sortBy: sortBy,
-          pageNumber: currentPage,
-          pageSize: pageSize,
-        ),
+        _activeRequest,
       );
+
+      therapists = _removeDuplicates(page.items);
+      currentPage = page.pageNumber;
+      hasMore = page.hasMore;
 
       await _tryLoadFavoriteIds();
     } catch (error) {
@@ -88,6 +103,61 @@ class TherapistListViewModel extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> loadMore() async {
+    if (isLoading ||
+        isLoadingMore ||
+        !hasMore ||
+        therapists.isEmpty) {
+      return;
+    }
+
+    isLoadingMore = true;
+    errorMessage = null;
+    notifyListeners();
+
+    final nextPage = currentPage + 1;
+    final nextRequest = _activeRequest.copyWith(
+      pageNumber: nextPage,
+      pageSize: pageSize,
+    );
+
+    try {
+      final page =
+          await therapistRepository.searchTherapists(
+        nextRequest,
+      );
+
+      final merged = <int, TherapistModel>{
+        for (final therapist in therapists)
+          therapist.id: therapist,
+        for (final therapist in page.items)
+          therapist.id: therapist,
+      };
+
+      therapists = merged.values.toList();
+      currentPage = page.pageNumber;
+      hasMore = page.hasMore;
+      _activeRequest = nextRequest;
+    } catch (error) {
+      errorMessage = _normalizeError(error);
+    } finally {
+      isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  List<TherapistModel> _removeDuplicates(
+    List<TherapistModel> items,
+  ) {
+    final unique = <int, TherapistModel>{};
+
+    for (final therapist in items) {
+      unique[therapist.id] = therapist;
+    }
+
+    return unique.values.toList();
   }
 
   Future<void> loadFavoriteIds() async {
@@ -100,7 +170,8 @@ class TherapistListViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _loadFavoriteIdsWithoutNotification() async {
+  Future<void> _loadFavoriteIdsWithoutNotification()
+      async {
     final favorites =
         await favoriteRepository.getMyFavorites();
 
