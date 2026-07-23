@@ -95,11 +95,27 @@ public class TherapistsController : ControllerBase
 
     [HttpGet("{id}")]
     public async Task<IActionResult>
-    GetById(int id)
+ GetById(int id)
     {
+        int? currentUserId = null;
+
+        var userIdValue =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+        if (int.TryParse(
+                userIdValue,
+                out var parsedUserId))
+        {
+            currentUserId =
+                parsedUserId;
+        }
+
         var result =
             await _therapistService
-                .GetByIdAsync(id);
+                .GetByIdAsync(
+                    id,
+                    currentUserId);
 
         return Ok(result);
     }

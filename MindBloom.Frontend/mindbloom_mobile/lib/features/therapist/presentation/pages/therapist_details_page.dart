@@ -23,6 +23,7 @@ class TherapistDetailsPage extends StatefulWidget {
 class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
   final TherapistDetailsViewModel _viewModel =
       AppInjection.createTherapistDetailsViewModel();
+
   final AppointmentCreateViewModel _appointmentPreviewViewModel =
       AppInjection.createAppointmentViewModel();
 
@@ -31,7 +32,6 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
     super.initState();
 
     _viewModel.addListener(_onViewModelChanged);
-
     _appointmentPreviewViewModel.addListener(_onViewModelChanged);
 
     _viewModel.loadTherapist(widget.therapistId);
@@ -44,7 +44,6 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
-
     _appointmentPreviewViewModel.removeListener(_onViewModelChanged);
 
     _viewModel.dispose();
@@ -79,7 +78,6 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                 ? null
                 : () async {
                     final wasFavorite = _viewModel.isFavorite;
-
                     final success = await _viewModel.toggleFavorite();
 
                     if (!context.mounted || !success) {
@@ -165,32 +163,33 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TherapistProfileImage(
-                  fullName: therapist.fullName,
+                  fullName: therapist.displayName,
                   profileImageUrl: therapist.profileImageUrl,
                   radius: 54,
                 ),
-
                 const SizedBox(height: 20),
-
                 Text(
-                  therapist.fullName,
+                  therapist.displayName,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
-                const SizedBox(height: 6),
-
+                const SizedBox(height: 8),
                 Text(
-                  therapist.specialization,
+                  therapist.displaySpecialization,
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 16),
                 ),
-
+                const SizedBox(height: 12),
+                Center(
+                  child: Chip(
+                    avatar: const Icon(Icons.verified, size: 18),
+                    label: Text(therapist.displayVerificationStatus),
+                  ),
+                ),
                 const SizedBox(height: 20),
-
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -199,43 +198,58 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                         _InfoRow(
                           icon: Icons.star,
                           label: 'Rating',
-                          value:
-                              '${therapist.averageRating.toStringAsFixed(1)} '
-                              '(${therapist.totalReviews} reviews)',
+                          value: therapist.displayRating,
                         ),
                         const Divider(),
                         _InfoRow(
                           icon: Icons.work,
                           label: 'Experience',
-                          value: '${therapist.experienceYears} years',
+                          value: therapist.displayExperience,
                         ),
                         const Divider(),
                         _InfoRow(
                           icon: Icons.payments,
-                          label: 'Price',
-                          value:
-                              '${therapist.hourlyRate.toStringAsFixed(2)} KM',
+                          label: 'Price per session',
+                          value: therapist.displayPrice,
                         ),
                         const Divider(),
                         _InfoRow(
-                          icon: Icons.email,
-                          label: 'Email',
-                          value: therapist.email,
+                          icon: Icons.video_call_outlined,
+                          label: 'Session mode',
+                          value: therapist.sessionModeLabel,
                         ),
                       ],
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
-                const Text(
-                  'Location and session type',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-
+                const _SectionTitle('Biography'),
                 const SizedBox(height: 8),
-
+                Text(
+                  therapist.displayBiography,
+                  style: const TextStyle(fontSize: 15, height: 1.4),
+                ),
+                const SizedBox(height: 24),
+                const _SectionTitle('Specialization'),
+                const SizedBox(height: 8),
+                _ValueCard(value: therapist.displaySpecialization),
+                const SizedBox(height: 24),
+                const _SectionTitle('Therapy approaches'),
+                const SizedBox(height: 8),
+                _TagSection(
+                  values: therapist.therapyApproaches,
+                  emptyText: 'No therapy approaches specified.',
+                ),
+                const SizedBox(height: 24),
+                const _SectionTitle('Languages'),
+                const SizedBox(height: 8),
+                _TagSection(
+                  values: therapist.languages,
+                  emptyText: 'No languages specified.',
+                ),
+                const SizedBox(height: 24),
+                const _SectionTitle('Location and session type'),
+                const SizedBox(height: 8),
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -243,43 +257,24 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _InfoRow(
-                          icon: Icons.public,
-                          label: 'Country',
-                          value: therapist.country.trim().isEmpty
-                              ? 'Not specified'
-                              : therapist.country,
+                          icon: Icons.location_on_outlined,
+                          label: 'Location',
+                          value: therapist.formattedLocation,
                         ),
-
-                        const Divider(),
-
-                        _InfoRow(
-                          icon: Icons.location_city,
-                          label: 'City',
-                          value: therapist.city.trim().isEmpty
-                              ? 'Not specified'
-                              : therapist.city,
-                        ),
-
                         if (therapist.offersInPerson) ...[
                           const Divider(),
                           _InfoRow(
-                            icon: Icons.location_on_outlined,
+                            icon: Icons.home_work_outlined,
                             label: 'Address',
-                            value: therapist.address.trim().isEmpty
-                                ? 'Not specified'
-                                : therapist.address,
+                            value: therapist.formattedAddress,
                           ),
                         ],
-
                         const Divider(),
-
                         const Text(
                           'Available session types',
                           style: TextStyle(fontWeight: FontWeight.w600),
                         ),
-
                         const SizedBox(height: 10),
-
                         TherapistSessionModes(
                           offersOnline: therapist.offersOnline,
                           offersInPerson: therapist.offersInPerson,
@@ -288,30 +283,22 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                     ),
                   ),
                 ),
-
-                if (therapist.offersInPerson) ...[
+                if (therapist.offersInPerson &&
+                    therapist.hasValidCoordinates) ...[
                   const SizedBox(height: 20),
-
-                  const Text(
-                    'Therapist location',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-
+                  const _SectionTitle('Therapist location'),
                   const SizedBox(height: 8),
-
                   TherapistLocationMap(
                     mapData: TherapistMapData(
-                      therapistName: therapist.fullName,
+                      therapistName: therapist.displayName,
                       address: therapist.formattedAddress,
-                      latitude: therapist.latitude ?? 0,
-                      longitude: therapist.longitude ?? 0,
+                      latitude: therapist.latitude!,
+                      longitude: therapist.longitude!,
                     ),
                     height: 250,
                     interactive: true,
                   ),
-
                   const SizedBox(height: 8),
-
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -326,32 +313,9 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                     ],
                   ),
                 ],
-
-                const SizedBox(height: 20),
-
-                const Text(
-                  'Biography',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  therapist.biography.trim().isEmpty
-                      ? 'No biography added.'
-                      : therapist.biography,
-                  style: const TextStyle(fontSize: 15, height: 1.4),
-                ),
-
                 const SizedBox(height: 24),
-
-                const Text(
-                  'Regular availability',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-
+                const _SectionTitle('Regular availability'),
                 const SizedBox(height: 8),
-
                 if (therapist.availabilities.isEmpty)
                   const Card(
                     child: Padding(
@@ -398,16 +362,9 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                       ),
                     ),
                   ),
-
                 const SizedBox(height: 24),
-
-                const Text(
-                  'Next available appointments',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-
+                const _SectionTitle('Next available appointments'),
                 const SizedBox(height: 8),
-
                 AvailableSlotsPreview(
                   isLoading: _appointmentPreviewViewModel.isLoadingPreview,
                   groupedSlots:
@@ -423,9 +380,7 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                     );
                   },
                 ),
-
                 const SizedBox(height: 24),
-
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.of(context).pushNamed(
@@ -436,9 +391,21 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                   icon: const Icon(Icons.calendar_month),
                   label: const Text('Book appointment'),
                 ),
+                if (therapist.canOpenChat) ...[
+                  const SizedBox(height: 12),
 
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pushNamed(
+                        AppRouter.chatDetails,
+                        arguments: therapist.chatAppointmentId!,
+                      );
+                    },
+                    icon: const Icon(Icons.chat_outlined),
+                    label: const Text('Contact therapist'),
+                  ),
+                ],
                 const SizedBox(height: 12),
-
                 OutlinedButton.icon(
                   onPressed: () {
                     Navigator.of(context).pushNamed(
@@ -449,9 +416,7 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                   icon: const Icon(Icons.card_membership),
                   label: const Text('Buy membership package'),
                 ),
-
                 const SizedBox(height: 12),
-
                 OutlinedButton.icon(
                   onPressed: () {
                     Navigator.of(context).pushNamed(
@@ -459,8 +424,12 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                       arguments: therapist.id,
                     );
                   },
-                  icon: const Icon(Icons.star),
-                  label: const Text('View reviews'),
+                  icon: const Icon(Icons.star_outline),
+                  label: Text(
+                    therapist.totalReviews > 0
+                        ? 'View reviews (${therapist.totalReviews})'
+                        : 'View reviews',
+                  ),
                 ),
               ],
             ),
@@ -468,6 +437,61 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
           const PublicFooter(),
         ],
       ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String value;
+
+  const _SectionTitle(this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      value,
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    );
+  }
+}
+
+class _ValueCard extends StatelessWidget {
+  final String value;
+
+  const _ValueCard({required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(value, style: const TextStyle(fontSize: 15, height: 1.4)),
+      ),
+    );
+  }
+}
+
+class _TagSection extends StatelessWidget {
+  final List<String> values;
+  final String emptyText;
+
+  const _TagSection({required this.values, required this.emptyText});
+
+  @override
+  Widget build(BuildContext context) {
+    if (values.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(emptyText, textAlign: TextAlign.center),
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: values.map((value) => Chip(label: Text(value))).toList(),
     );
   }
 }

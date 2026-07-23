@@ -22,73 +22,64 @@ class _TherapistListPageState extends State<TherapistListPage> {
   final TherapistListViewModel _viewModel =
       AppInjection.createTherapistListViewModel();
 
-  final ScrollController _scrollController =
-      ScrollController();
+  final ScrollController _scrollController = ScrollController();
 
+  final _searchController = TextEditingController();
 
-final _searchController =
-    TextEditingController();
+  final _specializationController = TextEditingController();
 
-final _specializationController =
-    TextEditingController();
+  final _languageController = TextEditingController();
 
-final _languageController =
-    TextEditingController();
+  final _locationController = TextEditingController();
 
-final _locationController =
-    TextEditingController();
+  final _minPriceController = TextEditingController();
 
-final _minPriceController =
-    TextEditingController();
+  final _maxPriceController = TextEditingController();
 
-final _maxPriceController =
-    TextEditingController();
+  Timer? _searchDebounce;
 
-Timer? _searchDebounce;
+  String? _selectedGender;
+  String? _selectedSessionMode;
+  String? _selectedAvailableDay;
+  double? _selectedMinRating;
+  String? _sortBy;
 
-String? _selectedGender;
-String? _selectedSessionMode;
-String? _selectedAvailableDay;
-double? _selectedMinRating;
-String? _sortBy;
+  int? _selectedTherapyApproachId;
+  String? _selectedTherapyApproachName;
 
-int? _selectedTherapyApproachId;
-String? _selectedTherapyApproachName;
+  @override
+  void initState() {
+    super.initState();
 
-@override
-void initState() {
-  super.initState();
+    _viewModel.addListener(_onChanged);
 
-  _viewModel.addListener(_onChanged);
+    _scrollController.addListener(_onScroll);
 
-  _selectedTherapyApproachId =
-      widget.arguments?.therapyApproachId;
+    _selectedTherapyApproachId = widget.arguments?.therapyApproachId;
 
-  _selectedTherapyApproachName =
-      widget.arguments?.therapyApproachName;
+    _selectedTherapyApproachName = widget.arguments?.therapyApproachName;
 
-  _viewModel.loadTherapists(
-    therapyApproachId:
-        _selectedTherapyApproachId,
-  );
-}
+    _viewModel.loadTherapists(therapyApproachId: _selectedTherapyApproachId);
+  }
 
-@override
-void dispose() {
-  _searchDebounce?.cancel();
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
 
-  _viewModel.removeListener(_onChanged);
-  _viewModel.dispose();
+    _viewModel.removeListener(_onChanged);
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _viewModel.dispose();
 
-  _searchController.dispose();
-  _specializationController.dispose();
-  _languageController.dispose();
-  _locationController.dispose();
-  _minPriceController.dispose();
-  _maxPriceController.dispose();
+    _searchController.dispose();
+    _specializationController.dispose();
+    _languageController.dispose();
+    _locationController.dispose();
+    _minPriceController.dispose();
+    _maxPriceController.dispose();
 
-  super.dispose();
-}
+    super.dispose();
+  }
 
   void _onChanged() {
     if (mounted) {
@@ -103,755 +94,565 @@ void dispose() {
 
     const threshold = 250.0;
 
-    if (_scrollController.position.extentAfter <=
-        threshold) {
+    if (_scrollController.position.extentAfter <= threshold) {
       _viewModel.loadMore();
     }
   }
 
   void _onSearchTextChanged(String _) {
-  _searchDebounce?.cancel();
+    _searchDebounce?.cancel();
 
-  _searchDebounce = Timer(
-    const Duration(milliseconds: 400),
-    () {
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
       _applyFilters();
-    },
-  );
-}
-
-double? _parsePrice(
-  TextEditingController controller,
-) {
-  return double.tryParse(
-    controller.text
-        .trim()
-        .replaceAll(',', '.'),
-  );
-}
-
-Future<void> _applyFilters() async {
-  await _viewModel.searchTherapists(
-    searchText: _searchController.text,
-    specialization:
-        _specializationController.text,
-    therapyApproachId:
-        _selectedTherapyApproachId,
-    gender: _selectedGender,
-    language: _languageController.text,
-    location: _locationController.text,
-    sessionMode: _selectedSessionMode,
-    minPrice: _parsePrice(
-      _minPriceController,
-    ),
-    maxPrice: _parsePrice(
-      _maxPriceController,
-    ),
-    minRating: _selectedMinRating,
-    availableDay: _selectedAvailableDay,
-    sortBy: _sortBy,
-    resetPage: true,
-  );
-}
-
-Future<void> _refresh() async {
-  await _applyFilters();
-}
-
-void _clearFilters() {
-  _searchDebounce?.cancel();
-
-  _searchController.clear();
-  _specializationController.clear();
-  _languageController.clear();
-  _locationController.clear();
-  _minPriceController.clear();
-  _maxPriceController.clear();
-
-  setState(() {
-    _selectedGender = null;
-    _selectedSessionMode = null;
-    _selectedAvailableDay = null;
-    _selectedMinRating = null;
-    _sortBy = null;
-
-    _selectedTherapyApproachId = null;
-    _selectedTherapyApproachName = null;
-  });
-
-  _viewModel.searchTherapists(
-    resetPage: true,
-  );
-}
-
-bool get _hasActiveFilters {
-  return _searchController.text.trim().isNotEmpty ||
-      _specializationController.text
-          .trim()
-          .isNotEmpty ||
-      _languageController.text
-          .trim()
-          .isNotEmpty ||
-      _locationController.text
-          .trim()
-          .isNotEmpty ||
-      _minPriceController.text
-          .trim()
-          .isNotEmpty ||
-      _maxPriceController.text
-          .trim()
-          .isNotEmpty ||
-      _selectedTherapyApproachId != null ||
-      _selectedGender != null ||
-      _selectedSessionMode != null ||
-      _selectedAvailableDay != null ||
-      _selectedMinRating != null ||
-      _sortBy != null;
-}
-
+    });
   }
 
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: const Text('Therapists'),
-    ),
-    body: Column(
-      children: [
-        ExpansionTile(
-          initiallyExpanded: true,
-          leading: const Icon(
-            Icons.tune,
-          ),
-          title: const Text(
-            'Search and filters',
-          ),
-          children: [
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(context).height * 0.62,
-              ),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.zero,
-                child: _buildFilters(),
-              ),
-            ),
-          ],
-        ),
-        if (_hasActiveFilters)
-          _buildActiveFilters(),
-        Expanded(
-          child: _buildBody(),
-        ),
-      ],
-    ),
-  );
-}
+  double? _parsePrice(TextEditingController controller) {
+    return double.tryParse(controller.text.trim().replaceAll(',', '.'));
+  }
 
- Widget _buildFilters() {
-  return Padding(
-    padding: const EdgeInsets.fromLTRB(
-      12,
-      0,
-      12,
-      12,
-    ),
-    child: Column(
-      children: [
-        TextField(
-          controller: _searchController,
-          onChanged: _onSearchTextChanged,
-          textInputAction:
-              TextInputAction.search,
-          decoration: const InputDecoration(
-            labelText: 'Search therapists',
-            hintText:
-                'Name, specialization, location...',
-            prefixIcon: Icon(
-              Icons.search,
-            ),
-            border: OutlineInputBorder(),
-          ),
-        ),
+  Future<void> _applyFilters() async {
+    await _viewModel.searchTherapists(
+      searchText: _searchController.text,
+      specialization: _specializationController.text,
+      therapyApproachId: _selectedTherapyApproachId,
+      gender: _selectedGender,
+      language: _languageController.text,
+      location: _locationController.text,
+      sessionMode: _selectedSessionMode,
+      minPrice: _parsePrice(_minPriceController),
+      maxPrice: _parsePrice(_maxPriceController),
+      minRating: _selectedMinRating,
+      availableDay: _selectedAvailableDay,
+      sortBy: _sortBy,
+      resetPage: true,
+    );
+  }
 
-        const SizedBox(height: 10),
+  Future<void> _refresh() async {
+    await _applyFilters();
+  }
 
-        TextField(
-          controller:
-              _specializationController,
-          decoration: const InputDecoration(
-            labelText: 'Specialization',
-            prefixIcon: Icon(
-              Icons.psychology_outlined,
-            ),
-            border: OutlineInputBorder(),
-          ),
-        ),
+  void _clearFilters() {
+    _searchDebounce?.cancel();
 
-        const SizedBox(height: 10),
+    _searchController.clear();
+    _specializationController.clear();
+    _languageController.clear();
+    _locationController.clear();
+    _minPriceController.clear();
+    _maxPriceController.clear();
 
-        DropdownButtonFormField<String>(
-          value: _selectedGender,
-          decoration: const InputDecoration(
-            labelText: 'Gender',
-            prefixIcon: Icon(
-              Icons.person_outline,
-            ),
-            border: OutlineInputBorder(),
-          ),
-          items: const [
-            DropdownMenuItem(
-              value: 'Female',
-              child: Text('Female'),
-            ),
-            DropdownMenuItem(
-              value: 'Male',
-              child: Text('Male'),
-            ),
-            DropdownMenuItem(
-              value: 'Other',
-              child: Text('Other'),
-            ),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _selectedGender = value;
-            });
+    setState(() {
+      _selectedGender = null;
+      _selectedSessionMode = null;
+      _selectedAvailableDay = null;
+      _selectedMinRating = null;
+      _sortBy = null;
 
-            _applyFilters();
-          },
-        ),
+      _selectedTherapyApproachId = null;
+      _selectedTherapyApproachName = null;
+    });
 
-        const SizedBox(height: 10),
+    _viewModel.searchTherapists(resetPage: true);
+  }
 
-        TextField(
-          controller: _languageController,
-          decoration: const InputDecoration(
-            labelText: 'Language',
-            hintText: 'For example: Bosnian',
-            prefixIcon: Icon(
-              Icons.language,
-            ),
-            border: OutlineInputBorder(),
-          ),
-        ),
+  bool get _hasActiveFilters {
+    return _searchController.text.trim().isNotEmpty ||
+        _specializationController.text.trim().isNotEmpty ||
+        _languageController.text.trim().isNotEmpty ||
+        _locationController.text.trim().isNotEmpty ||
+        _minPriceController.text.trim().isNotEmpty ||
+        _maxPriceController.text.trim().isNotEmpty ||
+        _selectedTherapyApproachId != null ||
+        _selectedGender != null ||
+        _selectedSessionMode != null ||
+        _selectedAvailableDay != null ||
+        _selectedMinRating != null ||
+        _sortBy != null;
+  }
 
-        const SizedBox(height: 10),
-
-        TextField(
-          controller: _locationController,
-          decoration: const InputDecoration(
-            labelText: 'Location',
-            hintText:
-                'City, country or address',
-            prefixIcon: Icon(
-              Icons.location_on_outlined,
-            ),
-            border: OutlineInputBorder(),
-          ),
-        ),
-
-        const SizedBox(height: 10),
-
-        DropdownButtonFormField<String>(
-          value: _selectedSessionMode,
-          decoration: const InputDecoration(
-            labelText: 'Session mode',
-            prefixIcon: Icon(
-              Icons.video_call_outlined,
-            ),
-            border: OutlineInputBorder(),
-          ),
-          items: const [
-            DropdownMenuItem(
-              value: 'online',
-              child: Text('Online'),
-            ),
-            DropdownMenuItem(
-              value: 'inPerson',
-              child: Text('In person'),
-            ),
-            DropdownMenuItem(
-              value: 'both',
-              child: Text(
-                'Online and in person',
-              ),
-            ),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _selectedSessionMode = value;
-            });
-
-            _applyFilters();
-          },
-        ),
-
-        const SizedBox(height: 10),
-
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller:
-                    _minPriceController,
-                keyboardType:
-                    const TextInputType
-                        .numberWithOptions(
-                  decimal: true,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Therapists')),
+      body: Column(
+        children: [
+          ExpansionTile(
+            initiallyExpanded: true,
+            leading: const Icon(Icons.tune),
+            title: const Text('Search and filters'),
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.62,
                 ),
-                decoration:
-                    const InputDecoration(
-                  labelText: 'Min price',
-                  suffixText: 'KM',
-                  border:
-                      OutlineInputBorder(),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.zero,
+                  child: _buildFilters(),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                controller:
-                    _maxPriceController,
-                keyboardType:
-                    const TextInputType
-                        .numberWithOptions(
-                  decimal: true,
-                ),
-                decoration:
-                    const InputDecoration(
-                  labelText: 'Max price',
-                  suffixText: 'KM',
-                  border:
-                      OutlineInputBorder(),
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 10),
-
-        DropdownButtonFormField<double>(
-          value: _selectedMinRating,
-          decoration: const InputDecoration(
-            labelText: 'Minimum rating',
-            prefixIcon: Icon(
-              Icons.star_outline,
-            ),
-            border: OutlineInputBorder(),
+            ],
           ),
-          items: const [
-            DropdownMenuItem(
-              value: 1,
-              child: Text('1.0 or higher'),
-            ),
-            DropdownMenuItem(
-              value: 2,
-              child: Text('2.0 or higher'),
-            ),
-            DropdownMenuItem(
-              value: 3,
-              child: Text('3.0 or higher'),
-            ),
-            DropdownMenuItem(
-              value: 4,
-              child: Text('4.0 or higher'),
-            ),
-            DropdownMenuItem(
-              value: 4.5,
-              child: Text('4.5 or higher'),
-            ),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _selectedMinRating = value;
-            });
-
-            _applyFilters();
-          },
-        ),
-
-        const SizedBox(height: 10),
-
-        DropdownButtonFormField<String>(
-          value: _selectedAvailableDay,
-          decoration: const InputDecoration(
-            labelText: 'Available day',
-            prefixIcon: Icon(
-              Icons.calendar_today_outlined,
-            ),
-            border: OutlineInputBorder(),
-          ),
-          items: const [
-            DropdownMenuItem(
-              value: 'Monday',
-              child: Text('Monday'),
-            ),
-            DropdownMenuItem(
-              value: 'Tuesday',
-              child: Text('Tuesday'),
-            ),
-            DropdownMenuItem(
-              value: 'Wednesday',
-              child: Text('Wednesday'),
-            ),
-            DropdownMenuItem(
-              value: 'Thursday',
-              child: Text('Thursday'),
-            ),
-            DropdownMenuItem(
-              value: 'Friday',
-              child: Text('Friday'),
-            ),
-            DropdownMenuItem(
-              value: 'Saturday',
-              child: Text('Saturday'),
-            ),
-            DropdownMenuItem(
-              value: 'Sunday',
-              child: Text('Sunday'),
-            ),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _selectedAvailableDay =
-                  value;
-            });
-
-            _applyFilters();
-          },
-        ),
-
-        const SizedBox(height: 10),
-
-        DropdownButtonFormField<String>(
-          value: _sortBy,
-          decoration: const InputDecoration(
-            labelText: 'Sort by',
-            prefixIcon: Icon(
-              Icons.sort,
-            ),
-            border: OutlineInputBorder(),
-          ),
-          items: const [
-            DropdownMenuItem(
-              value: 'rating',
-              child: Text(
-                'Highest rating',
-              ),
-            ),
-            DropdownMenuItem(
-              value: 'price',
-              child: Text(
-                'Lowest price',
-              ),
-            ),
-            DropdownMenuItem(
-              value: 'experience',
-              child: Text(
-                'Most experience',
-              ),
-            ),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _sortBy = value;
-            });
-
-            _applyFilters();
-          },
-        ),
-
-        const SizedBox(height: 12),
-
-        Row(
-          children: [
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: _applyFilters,
-                icon: const Icon(
-                  Icons.search,
-                ),
-                label: const Text(
-                  'Apply filters',
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _hasActiveFilters
-                    ? _clearFilters
-                    : null,
-                icon: const Icon(
-                  Icons.restart_alt,
-                ),
-                label: const Text(
-                  'Reset all',
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildActiveFilters() {
-  final chips = <Widget>[];
-
-  void addChip({
-    required String label,
-    required VoidCallback onDeleted,
-  }) {
-    chips.add(
-      InputChip(
-        label: Text(label),
-        onDeleted: onDeleted,
-        deleteIcon: const Icon(
-          Icons.close,
-          size: 18,
-        ),
+          if (_hasActiveFilters) _buildActiveFilters(),
+          Expanded(child: _buildBody()),
+        ],
       ),
     );
   }
 
-  final searchText =
-      _searchController.text.trim();
+  Widget _buildFilters() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            onChanged: _onSearchTextChanged,
+            textInputAction: TextInputAction.search,
+            decoration: const InputDecoration(
+              labelText: 'Search therapists',
+              hintText: 'Name, specialization, location...',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(),
+            ),
+          ),
 
-  if (searchText.isNotEmpty) {
-    addChip(
-      label: 'Search: $searchText',
-      onDeleted: () {
-        _searchDebounce?.cancel();
-        _searchController.clear();
-        setState(() {});
-        _applyFilters();
-      },
-    );
-  }
+          const SizedBox(height: 10),
 
-  final specialization =
-      _specializationController.text.trim();
+          TextField(
+            controller: _specializationController,
+            decoration: const InputDecoration(
+              labelText: 'Specialization',
+              prefixIcon: Icon(Icons.psychology_outlined),
+              border: OutlineInputBorder(),
+            ),
+          ),
 
-  if (specialization.isNotEmpty) {
-    addChip(
-      label:
-          'Specialization: $specialization',
-      onDeleted: () {
-        _specializationController.clear();
-        setState(() {});
-        _applyFilters();
-      },
-    );
-  }
+          const SizedBox(height: 10),
 
-  if (_selectedTherapyApproachId != null) {
-    addChip(
-      label:
-          'Approach: ${_selectedTherapyApproachName ?? 'Selected'}',
-      onDeleted: () {
-        setState(() {
-          _selectedTherapyApproachId =
-              null;
-          _selectedTherapyApproachName =
-              null;
-        });
+          DropdownButtonFormField<String>(
+            initialValue: _selectedGender,
+            decoration: const InputDecoration(
+              labelText: 'Gender',
+              prefixIcon: Icon(Icons.person_outline),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'Female', child: Text('Female')),
+              DropdownMenuItem(value: 'Male', child: Text('Male')),
+              DropdownMenuItem(value: 'Other', child: Text('Other')),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _selectedGender = value;
+              });
 
-        _applyFilters();
-      },
-    );
-  }
+              _applyFilters();
+            },
+          ),
 
-  if (_selectedGender != null) {
-    addChip(
-      label: 'Gender: $_selectedGender',
-      onDeleted: () {
-        setState(() {
-          _selectedGender = null;
-        });
+          const SizedBox(height: 10),
 
-        _applyFilters();
-      },
-    );
-  }
+          TextField(
+            controller: _languageController,
+            decoration: const InputDecoration(
+              labelText: 'Language',
+              hintText: 'For example: Bosnian',
+              prefixIcon: Icon(Icons.language),
+              border: OutlineInputBorder(),
+            ),
+          ),
 
-  final language =
-      _languageController.text.trim();
+          const SizedBox(height: 10),
 
-  if (language.isNotEmpty) {
-    addChip(
-      label: 'Language: $language',
-      onDeleted: () {
-        _languageController.clear();
-        setState(() {});
-        _applyFilters();
-      },
-    );
-  }
+          TextField(
+            controller: _locationController,
+            decoration: const InputDecoration(
+              labelText: 'Location',
+              hintText: 'City, country or address',
+              prefixIcon: Icon(Icons.location_on_outlined),
+              border: OutlineInputBorder(),
+            ),
+          ),
 
-  final location =
-      _locationController.text.trim();
+          const SizedBox(height: 10),
 
-  if (location.isNotEmpty) {
-    addChip(
-      label: 'Location: $location',
-      onDeleted: () {
-        _locationController.clear();
-        setState(() {});
-        _applyFilters();
-      },
-    );
-  }
+          DropdownButtonFormField<String>(
+            initialValue: _selectedSessionMode,
+            decoration: const InputDecoration(
+              labelText: 'Session mode',
+              prefixIcon: Icon(Icons.video_call_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'online', child: Text('Online')),
+              DropdownMenuItem(value: 'inPerson', child: Text('In person')),
+              DropdownMenuItem(
+                value: 'both',
+                child: Text('Online and in person'),
+              ),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _selectedSessionMode = value;
+              });
 
-  if (_selectedSessionMode != null) {
-    final sessionModeLabel =
-        switch (_selectedSessionMode) {
-      'online' => 'Online',
-      'inPerson' => 'In person',
-      'both' => 'Online and in person',
-      _ => _selectedSessionMode!,
-    };
+              _applyFilters();
+            },
+          ),
 
-    addChip(
-      label:
-          'Session mode: $sessionModeLabel',
-      onDeleted: () {
-        setState(() {
-          _selectedSessionMode = null;
-        });
+          const SizedBox(height: 10),
 
-        _applyFilters();
-      },
-    );
-  }
-
-  final minPrice =
-      _minPriceController.text.trim();
-
-  if (minPrice.isNotEmpty) {
-    addChip(
-      label: 'Min price: $minPrice KM',
-      onDeleted: () {
-        _minPriceController.clear();
-        setState(() {});
-        _applyFilters();
-      },
-    );
-  }
-
-  final maxPrice =
-      _maxPriceController.text.trim();
-
-  if (maxPrice.isNotEmpty) {
-    addChip(
-      label: 'Max price: $maxPrice KM',
-      onDeleted: () {
-        _maxPriceController.clear();
-        setState(() {});
-        _applyFilters();
-      },
-    );
-  }
-
-  if (_selectedMinRating != null) {
-    addChip(
-      label:
-          'Rating: ${_selectedMinRating!.toStringAsFixed(1)}+',
-      onDeleted: () {
-        setState(() {
-          _selectedMinRating = null;
-        });
-
-        _applyFilters();
-      },
-    );
-  }
-
-  if (_selectedAvailableDay != null) {
-    addChip(
-      label:
-          'Available: $_selectedAvailableDay',
-      onDeleted: () {
-        setState(() {
-          _selectedAvailableDay = null;
-        });
-
-        _applyFilters();
-      },
-    );
-  }
-
-  if (_sortBy != null) {
-    final sortLabel = switch (_sortBy) {
-      'rating' => 'Highest rating',
-      'price' => 'Lowest price',
-      'experience' => 'Most experience',
-      _ => _sortBy!,
-    };
-
-    addChip(
-      label: 'Sort: $sortLabel',
-      onDeleted: () {
-        setState(() {
-          _sortBy = null;
-        });
-
-        _applyFilters();
-      },
-    );
-  }
-
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.fromLTRB(
-      12,
-      4,
-      12,
-      12,
-    ),
-    decoration: const BoxDecoration(
-      border: Border(
-        bottom: BorderSide(
-          color: Color(0xFFE5DCEA),
-        ),
-      ),
-    ),
-    child: Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'Active filters',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _minPriceController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Min price',
+                    suffixText: 'KM',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
-            ),
-            TextButton(
-              onPressed: _clearFilters,
-              child: const Text(
-                'Reset all',
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: _maxPriceController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Max price',
+                    suffixText: 'KM',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
               ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          DropdownButtonFormField<double>(
+            initialValue: _selectedMinRating,
+            decoration: const InputDecoration(
+              labelText: 'Minimum rating',
+              prefixIcon: Icon(Icons.star_outline),
+              border: OutlineInputBorder(),
             ),
-          ],
+            items: const [
+              DropdownMenuItem(value: 1, child: Text('1.0 or higher')),
+              DropdownMenuItem(value: 2, child: Text('2.0 or higher')),
+              DropdownMenuItem(value: 3, child: Text('3.0 or higher')),
+              DropdownMenuItem(value: 4, child: Text('4.0 or higher')),
+              DropdownMenuItem(value: 4.5, child: Text('4.5 or higher')),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _selectedMinRating = value;
+              });
+
+              _applyFilters();
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+          DropdownButtonFormField<String>(
+            initialValue: _selectedAvailableDay,
+            decoration: const InputDecoration(
+              labelText: 'Available day',
+              prefixIcon: Icon(Icons.calendar_today_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'Monday', child: Text('Monday')),
+              DropdownMenuItem(value: 'Tuesday', child: Text('Tuesday')),
+              DropdownMenuItem(value: 'Wednesday', child: Text('Wednesday')),
+              DropdownMenuItem(value: 'Thursday', child: Text('Thursday')),
+              DropdownMenuItem(value: 'Friday', child: Text('Friday')),
+              DropdownMenuItem(value: 'Saturday', child: Text('Saturday')),
+              DropdownMenuItem(value: 'Sunday', child: Text('Sunday')),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _selectedAvailableDay = value;
+              });
+
+              _applyFilters();
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+          DropdownButtonFormField<String>(
+            initialValue: _sortBy,
+            decoration: const InputDecoration(
+              labelText: 'Sort by',
+              prefixIcon: Icon(Icons.sort),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'rating', child: Text('Highest rating')),
+              DropdownMenuItem(value: 'price', child: Text('Lowest price')),
+              DropdownMenuItem(
+                value: 'experience',
+                child: Text('Most experience'),
+              ),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _sortBy = value;
+              });
+
+              _applyFilters();
+            },
+          ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _applyFilters,
+                  icon: const Icon(Icons.search),
+                  label: const Text('Apply filters'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _hasActiveFilters ? _clearFilters : null,
+                  icon: const Icon(Icons.restart_alt),
+                  label: const Text('Reset all'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActiveFilters() {
+    final chips = <Widget>[];
+
+    void addChip({required String label, required VoidCallback onDeleted}) {
+      chips.add(
+        InputChip(
+          label: Text(label),
+          onDeleted: onDeleted,
+          deleteIcon: const Icon(Icons.close, size: 18),
         ),
-        Wrap(
-          spacing: 7,
-          runSpacing: 7,
-          children: chips,
-        ),
-      ],
-    ),
-  );
-}
+      );
+    }
+
+    final searchText = _searchController.text.trim();
+
+    if (searchText.isNotEmpty) {
+      addChip(
+        label: 'Search: $searchText',
+        onDeleted: () {
+          _searchDebounce?.cancel();
+          _searchController.clear();
+          setState(() {});
+          _applyFilters();
+        },
+      );
+    }
+
+    final specialization = _specializationController.text.trim();
+
+    if (specialization.isNotEmpty) {
+      addChip(
+        label: 'Specialization: $specialization',
+        onDeleted: () {
+          _specializationController.clear();
+          setState(() {});
+          _applyFilters();
+        },
+      );
+    }
+
+    if (_selectedTherapyApproachId != null) {
+      addChip(
+        label: 'Approach: ${_selectedTherapyApproachName ?? 'Selected'}',
+        onDeleted: () {
+          setState(() {
+            _selectedTherapyApproachId = null;
+            _selectedTherapyApproachName = null;
+          });
+
+          _applyFilters();
+        },
+      );
+    }
+
+    if (_selectedGender != null) {
+      addChip(
+        label: 'Gender: $_selectedGender',
+        onDeleted: () {
+          setState(() {
+            _selectedGender = null;
+          });
+
+          _applyFilters();
+        },
+      );
+    }
+
+    final language = _languageController.text.trim();
+
+    if (language.isNotEmpty) {
+      addChip(
+        label: 'Language: $language',
+        onDeleted: () {
+          _languageController.clear();
+          setState(() {});
+          _applyFilters();
+        },
+      );
+    }
+
+    final location = _locationController.text.trim();
+
+    if (location.isNotEmpty) {
+      addChip(
+        label: 'Location: $location',
+        onDeleted: () {
+          _locationController.clear();
+          setState(() {});
+          _applyFilters();
+        },
+      );
+    }
+
+    if (_selectedSessionMode != null) {
+      final sessionModeLabel = switch (_selectedSessionMode) {
+        'online' => 'Online',
+        'inPerson' => 'In person',
+        'both' => 'Online and in person',
+        _ => _selectedSessionMode!,
+      };
+
+      addChip(
+        label: 'Session mode: $sessionModeLabel',
+        onDeleted: () {
+          setState(() {
+            _selectedSessionMode = null;
+          });
+
+          _applyFilters();
+        },
+      );
+    }
+
+    final minPrice = _minPriceController.text.trim();
+
+    if (minPrice.isNotEmpty) {
+      addChip(
+        label: 'Min price: $minPrice KM',
+        onDeleted: () {
+          _minPriceController.clear();
+          setState(() {});
+          _applyFilters();
+        },
+      );
+    }
+
+    final maxPrice = _maxPriceController.text.trim();
+
+    if (maxPrice.isNotEmpty) {
+      addChip(
+        label: 'Max price: $maxPrice KM',
+        onDeleted: () {
+          _maxPriceController.clear();
+          setState(() {});
+          _applyFilters();
+        },
+      );
+    }
+
+    if (_selectedMinRating != null) {
+      addChip(
+        label: 'Rating: ${_selectedMinRating!.toStringAsFixed(1)}+',
+        onDeleted: () {
+          setState(() {
+            _selectedMinRating = null;
+          });
+
+          _applyFilters();
+        },
+      );
+    }
+
+    if (_selectedAvailableDay != null) {
+      addChip(
+        label: 'Available: $_selectedAvailableDay',
+        onDeleted: () {
+          setState(() {
+            _selectedAvailableDay = null;
+          });
+
+          _applyFilters();
+        },
+      );
+    }
+
+    if (_sortBy != null) {
+      final sortLabel = switch (_sortBy) {
+        'rating' => 'Highest rating',
+        'price' => 'Lowest price',
+        'experience' => 'Most experience',
+        _ => _sortBy!,
+      };
+
+      addChip(
+        label: 'Sort: $sortLabel',
+        onDeleted: () {
+          setState(() {
+            _sortBy = null;
+          });
+
+          _applyFilters();
+        },
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE5DCEA))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Active filters',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              TextButton(
+                onPressed: _clearFilters,
+                child: const Text('Reset all'),
+              ),
+            ],
+          ),
+          Wrap(spacing: 7, runSpacing: 7, children: chips),
+        ],
+      ),
+    );
+  }
 
   Widget _buildBody() {
     if (_viewModel.isLoading) {
@@ -1177,22 +978,12 @@ Widget _buildActiveFilters() {
           ),
           if (_viewModel.isLoadingMore)
             const Padding(
-              padding: EdgeInsets.symmetric(
-                vertical: 20,
-              ),
-              child: Center(
-                child: CircularProgressIndicator(),
-              ),
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(child: CircularProgressIndicator()),
             ),
-          if (!_viewModel.hasMore &&
-              _viewModel.therapists.isNotEmpty)
+          if (!_viewModel.hasMore && _viewModel.therapists.isNotEmpty)
             const Padding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                8,
-                16,
-                20,
-              ),
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 20),
               child: Center(
                 child: Text(
                   'All therapists have been loaded.',

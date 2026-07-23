@@ -1024,8 +1024,9 @@ public class TherapistService : ITherapistService
     }
 
     public async Task<TherapistDetailsDto>
-     GetByIdAsync(
-         int therapistId)
+ GetByIdAsync(
+     int therapistId,
+     int? currentUserId)
     {
         var therapist =
             await _context.Therapists
@@ -1034,12 +1035,14 @@ public class TherapistService : ITherapistService
                 .Include(x => x.Reviews)
                 .Include(x => x.Availabilities)
                 .Include(x => x.TherapyApproaches)
-    .ThenInclude(x => x.TherapyApproach)
-.FirstOrDefaultAsync(x =>
-    x.Id == therapistId &&
-    !x.IsDeleted &&
-    x.VerificationStatus ==
-        TherapistVerificationStatus.Approved);
+                    .ThenInclude(x =>
+                        x.TherapyApproach)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == therapistId &&
+                    !x.IsDeleted &&
+                    x.VerificationStatus ==
+                        TherapistVerificationStatus
+                            .Approved);
 
         if (therapist == null)
         {
@@ -1047,9 +1050,58 @@ public class TherapistService : ITherapistService
                 "Therapist not found or is not publicly available.");
         }
 
+        int? chatAppointmentId = null;
+
+        if (currentUserId.HasValue)
+        {
+            chatAppointmentId =
+                await _context.Appointments
+                    .AsNoTracking()
+                    .Where(appointment =>
+                        !appointment.IsDeleted &&
+                        appointment.TherapistId ==
+                            therapistId &&
+                        appointment.Client.UserId ==
+                            currentUserId.Value &&
+                        (
+                            appointment.Status ==
+                                AppointmentStatus.Accepted ||
+                            appointment.Status ==
+                                AppointmentStatus.Completed
+                        ))
+                    .OrderByDescending(appointment =>
+                        appointment.Status ==
+                        AppointmentStatus.Accepted)
+                    .ThenByDescending(appointment =>
+                        appointment.StartUtc)
+                    .Select(appointment =>
+                        (int?)appointment.Id)
+                    .FirstOrDefaultAsync();
+        }
+
+        var languages =
+            string.IsNullOrWhiteSpace(
+                therapist.Languages)
+                ? new List<string>()
+                : therapist.Languages
+                    .Split(
+                        ',',
+                        StringSplitOptions
+                            .RemoveEmptyEntries |
+                        StringSplitOptions
+                            .TrimEntries)
+                    .Where(language =>
+                        !string.IsNullOrWhiteSpace(
+                            language))
+                    .Distinct(
+                        StringComparer
+                            .OrdinalIgnoreCase)
+                    .ToList();
+
         return new TherapistDetailsDto
         {
-            Id = therapist.Id,
+            Id =
+                therapist.Id,
 
             FullName =
                 therapist.User.FirstName
@@ -1066,6 +1118,29 @@ public class TherapistService : ITherapistService
             Specialization =
                 therapist.Specialization,
 
+            TherapyApproaches =
+                therapist.TherapyApproaches
+                    .Where(therapyApproach =>
+                        !therapyApproach.IsDeleted &&
+                        !therapyApproach
+                            .TherapyApproach
+                            .IsDeleted &&
+                        therapyApproach
+                            .TherapyApproach
+                            .IsActive)
+                    .OrderBy(therapyApproach =>
+                        therapyApproach
+                            .TherapyApproach
+                            .Name)
+                    .Select(therapyApproach =>
+                        therapyApproach
+                            .TherapyApproach
+                            .Name)
+                    .ToList(),
+
+            Languages =
+                languages,
+
             HourlyRate =
                 therapist.HourlyRate,
 
@@ -1073,51 +1148,83 @@ public class TherapistService : ITherapistService
                 therapist.ExperienceYears,
 
             AverageRating =
-                therapist.Reviews.Any()
+                therapist.Reviews.Any(review =>
+                    !review.IsDeleted &&
+                    review.IsApproved)
                     ? Math.Round(
                         therapist.Reviews
-                            .Average(x =>
-                                x.Rating),
+                            .Where(review =>
+                                !review.IsDeleted &&
+                                review.IsApproved)
+                            .Average(review =>
+                                review.Rating),
                         1)
                     : 0,
 
             TotalReviews =
-                therapist.Reviews.Count,
+                therapist.Reviews.Count(review =>
+                    !review.IsDeleted &&
+                    review.IsApproved),
+
+            VerificationStatus =
+                therapist.VerificationStatus
+                    .ToString(),
 
             Availabilities =
                 therapist.Availabilities
-                    .OrderBy(x =>
-                        x.DayOfWeek)
-                    .ThenBy(x =>
-                        x.StartTime)
-                    .Select(x =>
+                    .Where(availability =>
+                        !availability.IsDeleted)
+                    .OrderBy(availability =>
+                        availability.DayOfWeek)
+                    .ThenBy(availability =>
+                        availability.StartTime)
+                    .Select(availability =>
                         new AvailabilityResponseDto
                         {
-                            Id = x.Id,
+                            Id =
+                                availability.Id,
+
                             DayOfWeek =
-                                x.DayOfWeek,
+                                availability.DayOfWeek,
+
                             StartTime =
-                                x.StartTime,
+                                availability.StartTime,
+
                             EndTime =
-                                x.EndTime
+                                availability.EndTime
                         })
                     .ToList(),
-            ProfileImageUrl = therapist.ProfileImagePath,
-            Country = therapist.Country,
-            City = therapist.City,
-            Address = therapist.Address,
-            OffersOnline = therapist.OffersOnline,
-            OffersInPerson = therapist.OffersInPerson,
-            Latitude = therapist.Latitude,
-            Longitude = therapist.Longitude,
-            TherapyApproaches = therapist.TherapyApproaches
-    .Where(ta =>
-        !ta.IsDeleted &&
-        !ta.TherapyApproach.IsDeleted &&
-        ta.TherapyApproach.IsActive)
-    .OrderBy(ta => ta.TherapyApproach.Name)
-    .Select(ta => ta.TherapyApproach.Name)
-    .ToList(),
+
+            ProfileImageUrl =
+                therapist.User.ProfileImageUrl
+                ?? therapist.ProfileImagePath,
+
+            Country =
+                therapist.Country,
+
+            City =
+                therapist.City,
+
+            Address =
+                therapist.Address,
+
+            OffersOnline =
+                therapist.OffersOnline,
+
+            OffersInPerson =
+                therapist.OffersInPerson,
+
+            Latitude =
+                therapist.Latitude,
+
+            Longitude =
+                therapist.Longitude,
+
+            CanChat =
+                chatAppointmentId.HasValue,
+
+            ChatAppointmentId =
+                chatAppointmentId
         };
     }
 

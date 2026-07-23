@@ -36,6 +36,15 @@ public class TherapistDetailsDto
 
     public double? Longitude { get; set; }
 
+    public List<string> Languages { get; set; } = [];
+
+    public string VerificationStatus { get; set; } =
+        string.Empty;
+
+    public bool CanChat { get; set; }
+
+    public int? ChatAppointmentId { get; set; }
+
     public List<string> TherapyApproaches { get; set; } = [];
 
     public List<AvailabilityResponseDto> Availabilities { get; set; } = [];

@@ -19,8 +19,10 @@ public interface ITherapistService
     Task<List<TherapistResponseDto>>FilterAsync(TherapistFilterDto filter);
 
     Task UpdateProfileAsync(int therapistUserId,UpdateTherapistProfileDto request);
-    
-    Task<TherapistDetailsDto>GetByIdAsync(int therapistId);
+
+    Task<TherapistDetailsDto> GetByIdAsync(
+    int therapistId,
+    int? currentUserId);
 
     Task DeleteAvailabilityAsync(int therapistUserId,int availabilityId);
 

@@ -8,10 +8,14 @@ class TherapistDetailsModel {
   final String biography;
   final String specialization;
   final List<String> therapyApproaches;
+  final List<String> languages;
   final double hourlyRate;
   final int experienceYears;
   final double averageRating;
   final int totalReviews;
+  final String verificationStatus;
+  final bool canChat;
+  final int? chatAppointmentId;
   final String? profileImageUrl;
 
   final String country;
@@ -32,10 +36,14 @@ class TherapistDetailsModel {
     required this.biography,
     required this.specialization,
     required this.therapyApproaches,
+    required this.languages,
     required this.hourlyRate,
     required this.experienceYears,
     required this.averageRating,
     required this.totalReviews,
+    required this.verificationStatus,
+    required this.canChat,
+    this.chatAppointmentId,
     required this.country,
     required this.city,
     required this.address,
@@ -57,10 +65,14 @@ class TherapistDetailsModel {
       biography: _stringValue(json['biography']),
       specialization: _stringValue(json['specialization']),
       therapyApproaches: _stringListValue(json['therapyApproaches']),
+      languages: _stringListValue(json['languages']),
       hourlyRate: _doubleValue(json['hourlyRate']),
       experienceYears: _intValue(json['experienceYears']),
       averageRating: _doubleValue(json['averageRating']),
       totalReviews: _intValue(json['totalReviews']),
+      verificationStatus: _stringValue(json['verificationStatus']),
+      canChat: _boolValue(json['canChat']),
+      chatAppointmentId: _nullableInt(json['chatAppointmentId']),
       profileImageUrl: _nullableString(json['profileImageUrl']),
       country: _stringValue(json['country']),
       city: _stringValue(json['city']),
@@ -71,11 +83,69 @@ class TherapistDetailsModel {
       longitude: _nullableDouble(json['longitude']),
       availabilities: availabilityJson is List
           ? availabilityJson
-                .whereType<Map<String, dynamic>>()
-                .map(TherapistAvailabilityModel.fromJson)
+                .whereType<Map>()
+                .map(
+                  (item) => TherapistAvailabilityModel.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
                 .toList()
           : <TherapistAvailabilityModel>[],
     );
+  }
+
+  String get displayName {
+    final value = fullName.trim();
+    return value.isEmpty ? 'Therapist' : value;
+  }
+
+  String get displayBiography {
+    final value = biography.trim();
+    return value.isEmpty ? 'No biography added.' : value;
+  }
+
+  String get displaySpecialization {
+    final value = specialization.trim();
+    return value.isEmpty ? 'Not specified' : value;
+  }
+
+  String get displayExperience {
+    if (experienceYears <= 0) {
+      return 'Not specified';
+    }
+
+    return '$experienceYears ${experienceYears == 1 ? 'year' : 'years'}';
+  }
+
+  String get displayPrice {
+    if (hourlyRate <= 0) {
+      return 'Not specified';
+    }
+
+    return '${hourlyRate.toStringAsFixed(2)} KM';
+  }
+
+  String get displayRating {
+    if (totalReviews <= 0) {
+      return 'No reviews yet';
+    }
+
+    return '${averageRating.toStringAsFixed(1)} '
+        '($totalReviews ${totalReviews == 1 ? 'review' : 'reviews'})';
+  }
+
+  String get displayVerificationStatus {
+    final value = verificationStatus.trim();
+
+    if (value.isEmpty) {
+      return 'Not specified';
+    }
+
+    if (value.toLowerCase() == 'approved') {
+      return 'Verified';
+    }
+
+    return value;
   }
 
   String get formattedLocation {
@@ -103,6 +173,26 @@ class TherapistDetailsModel {
     }
 
     return parts.join(', ');
+  }
+
+  String get sessionModeLabel {
+    if (offersOnline && offersInPerson) {
+      return 'Online and in person';
+    }
+
+    if (offersOnline) {
+      return 'Online';
+    }
+
+    if (offersInPerson) {
+      return 'In person';
+    }
+
+    return 'Not specified';
+  }
+
+  bool get canOpenChat {
+    return canChat && chatAppointmentId != null && chatAppointmentId! > 0;
   }
 
   bool get hasValidCoordinates {
@@ -133,7 +223,7 @@ class TherapistDetailsModel {
       experienceYears: experienceYears,
       averageRating: averageRating,
       totalReviews: totalReviews,
-      verificationStatus: 'Approved',
+      verificationStatus: verificationStatus,
       profileImageUrl: profileImageUrl,
       country: country,
       city: city,
@@ -225,6 +315,23 @@ class TherapistDetailsModel {
     return value
         .map((item) => item?.toString().trim() ?? '')
         .where((item) => item.isNotEmpty)
+        .toSet()
         .toList();
+  }
+
+  static int? _nullableInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value.toString());
   }
 }
