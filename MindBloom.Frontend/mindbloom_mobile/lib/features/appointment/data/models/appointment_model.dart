@@ -11,6 +11,9 @@ class AppointmentModel {
   final String? meetingLink;
   final String? location;
   final int? paymentId;
+  final String? notes;
+  final bool canAccessSession;
+  final String? sessionAccessMessage;
 
   const AppointmentModel({
     required this.id,
@@ -25,6 +28,9 @@ class AppointmentModel {
     this.meetingLink,
     this.location,
     this.paymentId,
+    this.notes,
+    this.canAccessSession = false,
+    this.sessionAccessMessage,
   });
 
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +47,9 @@ class AppointmentModel {
       meetingLink: _toNullableString(json['meetingLink']),
       location: _toNullableString(json['location']),
       paymentId: _toNullableInt(json['paymentId']),
+      notes: _toNullableString(json['notes']),
+      canAccessSession: _toBool(json['canAccessSession']),
+      sessionAccessMessage: _toNullableString(json['sessionAccessMessage']),
     );
   }
 
@@ -57,6 +66,9 @@ class AppointmentModel {
     String? meetingLink,
     String? location,
     int? paymentId,
+    String? notes,
+    bool? canAccessSession,
+    String? sessionAccessMessage,
   }) {
     return AppointmentModel(
       id: id ?? this.id,
@@ -71,6 +83,9 @@ class AppointmentModel {
       meetingLink: meetingLink ?? this.meetingLink,
       location: location ?? this.location,
       paymentId: paymentId ?? this.paymentId,
+      notes: notes ?? this.notes,
+      canAccessSession: canAccessSession ?? this.canAccessSession,
+      sessionAccessMessage: sessionAccessMessage ?? this.sessionAccessMessage,
     );
   }
 
@@ -179,5 +194,13 @@ class AppointmentModel {
     final parsed = DateTime.tryParse(value?.toString() ?? '');
 
     return parsed ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+  }
+
+  static bool _toBool(dynamic value) {
+    if (value is bool) {
+      return value;
+    }
+
+    return value?.toString().toLowerCase() == 'true';
   }
 }

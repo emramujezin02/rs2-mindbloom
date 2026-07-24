@@ -124,4 +124,12 @@ class AppointmentApiService {
         )
         .toList();
   }
+
+  Future<AppointmentModel> getAppointmentDetails(int appointmentId) async {
+    final response = await apiClient.get('/Appointments/$appointmentId');
+
+    return AppointmentModel.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
 }

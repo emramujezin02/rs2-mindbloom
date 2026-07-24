@@ -62,4 +62,8 @@ class AppointmentRepository {
   }) {
     return apiService.getOccupiedSlots(therapistId: therapistId, date: date);
   }
+
+  Future<AppointmentModel> getAppointmentDetails(int appointmentId) {
+    return apiService.getAppointmentDetails(appointmentId);
+  }
 }

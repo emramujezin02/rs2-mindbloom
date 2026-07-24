@@ -50,6 +50,26 @@ public class AppointmentsController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize(Roles = "Client")]
+    [HttpGet("{appointmentId:int}")]
+    public async Task<IActionResult>
+    GetClientAppointmentDetails(
+        int appointmentId)
+    {
+        var userId =
+            int.Parse(
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier)!);
+
+        var result =
+            await _appointmentService
+                .GetClientAppointmentDetailsAsync(
+                    userId,
+                    appointmentId);
+
+        return Ok(result);
+    }
+
     [HttpGet("therapist")]
     [Authorize(Roles = "Therapist")]
     public async Task<IActionResult>

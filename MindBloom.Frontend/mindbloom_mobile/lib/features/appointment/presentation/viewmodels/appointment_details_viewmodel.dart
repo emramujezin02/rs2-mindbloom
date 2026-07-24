@@ -14,7 +14,56 @@ class AppointmentDetailsViewModel extends ChangeNotifier {
   AppointmentModel currentAppointment;
 
   bool isLoading = false;
+  bool isRefreshingSession = false;
   String? errorMessage;
+
+  Future<void> loadDetails() async {
+    if (isLoading) {
+      return;
+    }
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      currentAppointment = await repository.getAppointmentDetails(
+        currentAppointment.id,
+      );
+    } catch (error) {
+      errorMessage = _friendlyError(error);
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> refreshSessionAccess() async {
+    if (isRefreshingSession) {
+      return false;
+    }
+
+    isRefreshingSession = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      currentAppointment = await repository.getAppointmentDetails(
+        currentAppointment.id,
+      );
+
+      return currentAppointment.canAccessSession &&
+          currentAppointment.meetingLink != null &&
+          currentAppointment.meetingLink!.trim().isNotEmpty;
+    } catch (error) {
+      errorMessage = _friendlyError(error);
+
+      return false;
+    } finally {
+      isRefreshingSession = false;
+      notifyListeners();
+    }
+  }
 
   Future<bool> cancelAppointment(String reason) async {
     if (isLoading) {
@@ -31,32 +80,28 @@ class AppointmentDetailsViewModel extends ChangeNotifier {
         reason: reason,
       );
 
-      await _reloadCurrentAppointment();
-
-      isLoading = false;
-      notifyListeners();
+      currentAppointment = await repository.getAppointmentDetails(
+        currentAppointment.id,
+      );
 
       return true;
     } catch (error) {
-      isLoading = false;
-
-      errorMessage = error.toString().replaceFirst('Exception: ', '').trim();
-
-      notifyListeners();
+      errorMessage = _friendlyError(error);
 
       return false;
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
   }
 
-  Future<void> _reloadCurrentAppointment() async {
-    final appointments = await repository.getMyAppointments();
+  String _friendlyError(Object error) {
+    final message = error.toString().replaceFirst('Exception: ', '').trim();
 
-    for (final appointment in appointments) {
-      if (appointment.id == currentAppointment.id) {
-        currentAppointment = appointment;
-
-        return;
-      }
+    if (message.isEmpty) {
+      return 'Appointment details could not be loaded.';
     }
+
+    return message;
   }
 }

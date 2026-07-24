@@ -29,4 +29,10 @@ public class AppointmentResponseDto
     public string ClientName { get; set; } = string.Empty;
 
     public string ClientEmail { get; set; } = string.Empty;
+
+    public string? Notes { get; set; }
+
+    public bool CanAccessSession { get; set; }
+
+    public string? SessionAccessMessage { get; set; }
 }

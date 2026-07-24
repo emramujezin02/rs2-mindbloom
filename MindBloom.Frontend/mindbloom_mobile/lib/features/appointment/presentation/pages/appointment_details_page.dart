@@ -38,6 +38,8 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
     _paymentViewModel.addListener(_onViewModelChanged);
 
     _paymentViewModel.loadPaymentStatus(widget.appointment.id);
+
+    _viewModel.loadDetails();
   }
 
   @override
@@ -56,13 +58,32 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   }
 
   Future<void> _joinSession() async {
+    final accessGranted = await _viewModel.refreshSessionAccess();
+
+    if (!mounted) {
+      return;
+    }
+
     final appointment = _viewModel.currentAppointment;
+
+    if (!accessGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            appointment.sessionAccessMessage ??
+                'The online session is not available.',
+          ),
+        ),
+      );
+
+      return;
+    }
 
     final link = appointment.meetingLink;
 
     if (link == null || link.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Meeting link is not available yet.')),
+        const SnackBar(content: Text('Meeting link is not available.')),
       );
 
       return;
@@ -70,7 +91,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
     final uri = Uri.tryParse(link.trim());
 
-    if (uri == null) {
+    if (uri == null || !(uri.scheme == 'https' || uri.scheme == 'http')) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Meeting link is invalid.')));
@@ -407,6 +428,13 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
     final formatter = DateFormat('dd.MM.yyyy. HH:mm');
 
+    final duration = appointment.endUtc.difference(appointment.startUtc);
+
+    final durationText = duration.inMinutes >= 60
+        ? '${duration.inHours} h '
+              '${duration.inMinutes.remainder(60)} min'
+        : '${duration.inMinutes} min';
+
     final normalizedStatus = appointment.status.trim().toLowerCase();
 
     final appointmentAllowsCancel =
@@ -430,6 +458,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
     final canJoinSession =
         appointment.type.trim().toLowerCase() == 'online' &&
+        appointment.canAccessSession &&
         appointment.meetingLink != null &&
         appointment.meetingLink!.trim().isNotEmpty &&
         normalizedStatus == 'accepted';
@@ -464,48 +493,111 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                 child: Column(
                   children: [
                     _RowItem(label: 'Status', value: appointment.status),
+
                     const Divider(),
+
                     _RowItem(label: 'Type', value: appointment.type),
+
                     const Divider(),
+
                     _RowItem(
                       label: 'Start',
                       value: formatter.format(appointment.startUtc.toLocal()),
                     ),
+
+                    const Divider(),
+
+                    _RowItem(
+                      label: 'End',
+                      value: formatter.format(appointment.endUtc.toLocal()),
+                    ),
+
+                    const Divider(),
+
+                    _RowItem(label: 'Duration', value: durationText),
+
                     const Divider(),
 
                     _RowItem(
                       label: 'Price',
                       value: '${appointment.price.toStringAsFixed(2)} BAM',
                     ),
-                    const Divider(),
-                    _RowItem(
-                      label: 'End',
-                      value: formatter.format(appointment.endUtc.toLocal()),
-                    ),
                   ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 16),
+            if (appointment.notes != null &&
+                appointment.notes!.trim().isNotEmpty) ...[
+              const SizedBox(height: 16),
 
-            _buildPaymentStatusCard(),
-
-            if (appointment.meetingLink != null &&
-                appointment.meetingLink!.trim().isNotEmpty) ...[
-              const SizedBox(height: 20),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Meeting link',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      const Row(
+                        children: [
+                          Icon(Icons.notes_outlined),
+                          SizedBox(width: 8),
+                          Text(
+                            'Appointment note',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(appointment.meetingLink!),
+
+                      const SizedBox(height: 10),
+
+                      Text(appointment.notes!),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 16),
+
+            _buildPaymentStatusCard(),
+
+            if (appointment.type.trim().toLowerCase() == 'online') ...[
+              const SizedBox(height: 20),
+
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        appointment.canAccessSession
+                            ? Icons.video_call
+                            : Icons.lock_clock_outlined,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              appointment.canAccessSession
+                                  ? 'Online session available'
+                                  : 'Online session unavailable',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              appointment.canAccessSession
+                                  ? 'You can now securely join the online session.'
+                                  : appointment.sessionAccessMessage ??
+                                        'The online session is not currently available.',
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -563,15 +655,31 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
             if (canOpenReceipt) const SizedBox(height: 10),
 
-            ElevatedButton.icon(
-              onPressed: canJoinSession ? _joinSession : null,
-              icon: const Icon(Icons.video_call),
-              label: Text(
-                canJoinSession ? 'Join session' : 'Join session unavailable',
+            if (appointment.type.trim().toLowerCase() == 'online')
+              ElevatedButton.icon(
+                onPressed: _viewModel.isRefreshingSession ? null : _joinSession,
+                icon: _viewModel.isRefreshingSession
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        canJoinSession
+                            ? Icons.video_call
+                            : Icons.lock_clock_outlined,
+                      ),
+                label: Text(
+                  _viewModel.isRefreshingSession
+                      ? 'Checking session access...'
+                      : canJoinSession
+                      ? 'Join session'
+                      : 'Check session access',
+                ),
               ),
-            ),
 
-            const SizedBox(height: 10),
+            if (appointment.type.trim().toLowerCase() == 'online')
+              const SizedBox(height: 10),
 
             ElevatedButton.icon(
               onPressed: canOpenChat

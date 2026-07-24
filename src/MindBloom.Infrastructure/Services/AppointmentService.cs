@@ -327,7 +327,9 @@ public class AppointmentService : IAppointmentService
                         x.Price,
 
                     MeetingLink =
-                        x.MeetingLink,
+                        null,
+
+                    Notes=x.Notes,
 
                     Location =
                         x.Location,
@@ -1043,6 +1045,170 @@ public class AppointmentService : IAppointmentService
                     EndUtc = x.EndUtc
                 })
             .ToListAsync();
+    }
+
+    public async Task<AppointmentResponseDto>
+    GetClientAppointmentDetailsAsync(
+        int clientUserId,
+        int appointmentId)
+    {
+        await AutoCompleteAppointmentsAsync();
+
+        var client =
+            await _context.Clients
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == clientUserId &&
+                    !x.IsDeleted);
+
+        if (client == null)
+        {
+            throw new NotFoundException(
+                "Client profile not found.");
+        }
+
+        var appointment =
+            await _context.Appointments
+                .AsNoTracking()
+                .Include(x => x.Therapist)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Payment)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == appointmentId &&
+                    x.ClientId == client.Id);
+
+        if (appointment == null)
+        {
+            throw new NotFoundException(
+                "Appointment not found.");
+        }
+
+        var nowUtc = DateTime.UtcNow;
+
+        var accessOpensAtUtc =
+            appointment.StartUtc.AddMinutes(-15);
+
+        var isOnline =
+            appointment.Type ==
+            AppointmentType.Online;
+
+        var isAccepted =
+            appointment.Status ==
+            AppointmentStatus.Accepted;
+
+        var isInsideAccessWindow =
+            nowUtc >= accessOpensAtUtc &&
+            nowUtc <= appointment.EndUtc;
+
+        var hasMeetingLink =
+            !string.IsNullOrWhiteSpace(
+                appointment.MeetingLink);
+
+        var canAccessSession =
+            isOnline &&
+            isAccepted &&
+            isInsideAccessWindow &&
+            hasMeetingLink;
+
+        string? sessionAccessMessage;
+
+        if (!isOnline)
+        {
+            sessionAccessMessage =
+                "This is an in-person appointment.";
+        }
+        else if (appointment.Status ==
+                 AppointmentStatus.Cancelled)
+        {
+            sessionAccessMessage =
+                "The online session is unavailable because the appointment was cancelled.";
+        }
+        else if (appointment.Status ==
+                 AppointmentStatus.Rejected)
+        {
+            sessionAccessMessage =
+                "The online session is unavailable because the appointment was rejected.";
+        }
+        else if (appointment.Status ==
+                 AppointmentStatus.Pending)
+        {
+            sessionAccessMessage =
+                "The therapist must accept the appointment before the online session becomes available.";
+        }
+        else if (appointment.Status ==
+                 AppointmentStatus.Completed ||
+                 nowUtc > appointment.EndUtc)
+        {
+            sessionAccessMessage =
+                "The online session has ended.";
+        }
+        else if (nowUtc < accessOpensAtUtc)
+        {
+            sessionAccessMessage =
+                "The online session becomes available 15 minutes before the appointment starts.";
+        }
+        else if (!hasMeetingLink)
+        {
+            sessionAccessMessage =
+                "The therapist has not added the online session link yet.";
+        }
+        else
+        {
+            sessionAccessMessage = null;
+        }
+
+        return new AppointmentResponseDto
+        {
+            Id = appointment.Id,
+
+            TherapistId =
+                appointment.TherapistId,
+
+            TherapistName =
+                appointment.Therapist.User.FirstName
+                + " "
+                + appointment.Therapist.User.LastName,
+
+            StartUtc =
+                appointment.StartUtc,
+
+            EndUtc =
+                appointment.EndUtc,
+
+            Status =
+                appointment.Status.ToString(),
+
+            Type =
+                appointment.Type.ToString(),
+
+            Price =
+                appointment.Price,
+
+            MeetingLink =
+                canAccessSession
+                    ? appointment.MeetingLink
+                    : null,
+
+            Location =
+                appointment.Location,
+
+            Notes =
+                appointment.Notes,
+
+            CanAccessSession =
+                canAccessSession,
+
+            SessionAccessMessage =
+                sessionAccessMessage,
+
+            PaymentId =
+                appointment.Payment != null
+                    ? appointment.Payment.Id
+                    : null,
+
+            ClientId =
+                appointment.ClientId
+        };
     }
 }
 
