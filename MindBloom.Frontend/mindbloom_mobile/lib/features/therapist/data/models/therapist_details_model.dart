@@ -152,27 +152,33 @@ class TherapistDetailsModel {
     final locationParts = <String>[
       city.trim(),
       country.trim(),
-    ].where((part) => part.isNotEmpty).toList();
+    ].where((value) => value.isNotEmpty).toList();
 
     if (locationParts.isEmpty) {
-      return 'Location not specified';
+      return offersOnline && !offersInPerson
+          ? 'Online sessions'
+          : 'Location not specified';
     }
 
     return locationParts.join(', ');
   }
 
   String get formattedAddress {
-    final parts = <String>[
+    if (!offersInPerson) {
+      return 'Online sessions only';
+    }
+
+    final addressParts = <String>[
       address.trim(),
       city.trim(),
       country.trim(),
-    ].where((part) => part.isNotEmpty).toList();
+    ].where((value) => value.isNotEmpty).toList();
 
-    if (parts.isEmpty) {
-      return 'Address not specified';
+    if (addressParts.isEmpty) {
+      return 'Office address not specified';
     }
 
-    return parts.join(', ');
+    return addressParts.join(', ');
   }
 
   String get sessionModeLabel {
@@ -188,7 +194,7 @@ class TherapistDetailsModel {
       return 'In person';
     }
 
-    return 'Not specified';
+    return 'Session mode not specified';
   }
 
   bool get canOpenChat {

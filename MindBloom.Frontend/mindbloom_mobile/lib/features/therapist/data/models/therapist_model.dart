@@ -74,10 +74,12 @@ class TherapistModel {
     final locationParts = <String>[
       city.trim(),
       country.trim(),
-    ].where((part) => part.isNotEmpty).toList();
+    ].where((value) => value.isNotEmpty).toList();
 
     if (locationParts.isEmpty) {
-      return 'Location not specified';
+      return offersOnline && !offersInPerson
+          ? 'Online sessions'
+          : 'Location not specified';
     }
 
     return locationParts.join(', ');
