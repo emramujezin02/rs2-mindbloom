@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import 'package:mindbloom_mobile/features/therapist/data/models/therapist_map_data.dart';
 import 'therapist_map_fallback.dart';
 
@@ -40,6 +42,38 @@ class _TherapistLocationMapState extends State<TherapistLocationMap> {
     };
   }
 
+  Future<void> _openExternalNavigation() async {
+    if (!widget.mapData.hasValidCoordinates) {
+      return;
+    }
+
+    final latitude = widget.mapData.latitude;
+    final longitude = widget.mapData.longitude;
+
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1'
+      '&destination=$latitude,$longitude',
+    );
+
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Navigation could not be opened.')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Navigation could not be opened.')),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _controller?.dispose();
@@ -77,7 +111,7 @@ class _TherapistLocationMapState extends State<TherapistLocationMap> {
               myLocationButtonEnabled: false,
               myLocationEnabled: false,
               compassEnabled: widget.interactive,
-              mapToolbarEnabled: widget.interactive,
+              mapToolbarEnabled: false,
               onMapCreated: (controller) {
                 _controller = controller;
 
@@ -95,6 +129,16 @@ class _TherapistLocationMapState extends State<TherapistLocationMap> {
                 child: ColoredBox(
                   color: Colors.white,
                   child: Center(child: CircularProgressIndicator()),
+                ),
+              ),
+            if (_isMapReady)
+              Positioned(
+                right: 12,
+                bottom: 12,
+                child: FilledButton.icon(
+                  onPressed: _openExternalNavigation,
+                  icon: const Icon(Icons.directions_outlined),
+                  label: const Text('Directions'),
                 ),
               ),
           ],

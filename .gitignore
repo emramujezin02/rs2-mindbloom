@@ -63,3 +63,6 @@ node_modules/
 # Temporary
 temp/
 tmp/
+
+local.properties
+**/local.properties
