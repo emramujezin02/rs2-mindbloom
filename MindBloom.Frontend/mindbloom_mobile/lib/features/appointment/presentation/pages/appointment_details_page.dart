@@ -472,6 +472,12 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                       value: formatter.format(appointment.startUtc.toLocal()),
                     ),
                     const Divider(),
+
+                    _RowItem(
+                      label: 'Price',
+                      value: '${appointment.price.toStringAsFixed(2)} BAM',
+                    ),
+                    const Divider(),
                     _RowItem(
                       label: 'End',
                       value: formatter.format(appointment.endUtc.toLocal()),

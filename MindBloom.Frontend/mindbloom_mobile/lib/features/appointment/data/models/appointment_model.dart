@@ -7,6 +7,7 @@ class AppointmentModel {
   final DateTime endUtc;
   final String status;
   final String type;
+  final double price;
   final String? meetingLink;
   final String? location;
   final int? paymentId;
@@ -20,6 +21,7 @@ class AppointmentModel {
     required this.endUtc,
     required this.status,
     required this.type,
+    required this.price,
     this.meetingLink,
     this.location,
     this.paymentId,
@@ -35,6 +37,7 @@ class AppointmentModel {
       endUtc: _toDateTime(json['endUtc']),
       status: _toString(json['status']),
       type: _toString(json['type']),
+      price: _toDouble(json['price']),
       meetingLink: _toNullableString(json['meetingLink']),
       location: _toNullableString(json['location']),
       paymentId: _toNullableInt(json['paymentId']),
@@ -50,6 +53,7 @@ class AppointmentModel {
     DateTime? endUtc,
     String? status,
     String? type,
+    double? price,
     String? meetingLink,
     String? location,
     int? paymentId,
@@ -63,10 +67,32 @@ class AppointmentModel {
       endUtc: endUtc ?? this.endUtc,
       status: status ?? this.status,
       type: type ?? this.type,
+      price: price ?? this.price,
       meetingLink: meetingLink ?? this.meetingLink,
       location: location ?? this.location,
       paymentId: paymentId ?? this.paymentId,
     );
+  }
+
+  bool get isUpcoming {
+    final normalizedStatus = status.trim().toLowerCase();
+
+    final isInactive =
+        normalizedStatus == 'completed' ||
+        normalizedStatus == 'cancelled' ||
+        normalizedStatus == 'rejected';
+
+    return startUtc.toLocal().isAfter(DateTime.now()) && !isInactive;
+  }
+
+  bool get canBeCancelled {
+    final normalizedStatus = status.trim().toLowerCase();
+
+    return normalizedStatus == 'pending' || normalizedStatus == 'accepted';
+  }
+
+  bool get isOnline {
+    return type.trim().toLowerCase() == 'online';
   }
 
   static String _readClientName(Map<String, dynamic> json) {
@@ -83,6 +109,7 @@ class AppointmentModel {
     }
 
     final firstName = _toString(json['clientFirstName']);
+
     final lastName = _toString(json['clientLastName']);
 
     final combinedName = '$firstName $lastName'.trim();
@@ -120,6 +147,18 @@ class AppointmentModel {
     }
 
     return int.tryParse(value.toString());
+  }
+
+  static double _toDouble(dynamic value) {
+    if (value is double) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   static String _toString(dynamic value) {

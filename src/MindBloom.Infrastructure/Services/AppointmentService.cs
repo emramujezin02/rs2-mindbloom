@@ -293,25 +293,50 @@ public class AppointmentService : IAppointmentService
         return await _context.Appointments
             .AsNoTracking()
             .Include(x => x.Therapist)
-            .ThenInclude(x => x.User)
-            .Where(x => x.ClientId == client.Id)
-            .Select(x => new AppointmentResponseDto
-            {
-                Id = x.Id,
-                TherapistId = x.TherapistId,
-                TherapistName =
-                    x.Therapist.User.FirstName
-                    + " "
-                    + x.Therapist.User.LastName,
-                StartUtc = x.StartUtc,
-                EndUtc = x.EndUtc,
-                Status = x.Status.ToString(),
-                Type = x.Type.ToString(),
+                .ThenInclude(x => x.User)
+            .Where(x =>
+                x.ClientId == client.Id)
+            .OrderBy(x =>
+                x.StartUtc)
+            .Select(x =>
+                new AppointmentResponseDto
+                {
+                    Id = x.Id,
 
-                MeetingLink = x.MeetingLink,
+                    TherapistId =
+                        x.TherapistId,
 
-                Location = x.Location,
-            })
+                    TherapistName =
+                        x.Therapist.User.FirstName
+                        + " "
+                        + x.Therapist.User.LastName,
+
+                    StartUtc =
+                        x.StartUtc,
+
+                    EndUtc =
+                        x.EndUtc,
+
+                    Status =
+                        x.Status.ToString(),
+
+                    Type =
+                        x.Type.ToString(),
+
+                    Price =
+                        x.Price,
+
+                    MeetingLink =
+                        x.MeetingLink,
+
+                    Location =
+                        x.Location,
+
+                    PaymentId =
+    x.Payment != null
+        ? x.Payment.Id
+        : null
+                })
             .ToListAsync();
     }
 
@@ -369,6 +394,11 @@ public class AppointmentService : IAppointmentService
                 MeetingLink = x.MeetingLink,
 
                 Location = x.Location,
+
+                PaymentId =
+    x.Payment != null
+        ? x.Payment.Id
+        : null
 
             })
             .ToListAsync();

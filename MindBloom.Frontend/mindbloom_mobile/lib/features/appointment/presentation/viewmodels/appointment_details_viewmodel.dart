@@ -17,6 +17,10 @@ class AppointmentDetailsViewModel extends ChangeNotifier {
   String? errorMessage;
 
   Future<bool> cancelAppointment(String reason) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
     errorMessage = null;
     notifyListeners();
@@ -35,7 +39,9 @@ class AppointmentDetailsViewModel extends ChangeNotifier {
       return true;
     } catch (error) {
       isLoading = false;
-      errorMessage = error.toString();
+
+      errorMessage = error.toString().replaceFirst('Exception: ', '').trim();
+
       notifyListeners();
 
       return false;

@@ -14,12 +14,14 @@ public class AppointmentResponseDto
 
     public string Status { get; set; } = null!;
 
-    public string Type { get; set; }
-    = string.Empty;
+    public string Type { get; set; } = string.Empty;
+
+    public decimal Price { get; set; }
 
     public string? MeetingLink { get; set; }
 
     public string? Location { get; set; }
+
     public int? PaymentId { get; set; }
 
     public int ClientId { get; set; }
