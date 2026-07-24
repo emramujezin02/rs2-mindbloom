@@ -10,6 +10,7 @@ import '../widgets/therapist_session_modes.dart';
 import '../../../appointment/presentation/pages/appointment_create_page.dart';
 import '../../../appointment/presentation/widgets/available_slots_preview.dart';
 import '../../../../core/widgets/public_footer.dart';
+import '../../data/models/therapist_model.dart';
 
 class TherapistDetailsPage extends StatefulWidget {
   final int therapistId;
@@ -65,6 +66,29 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
         therapistId: widget.therapistId,
       ),
     ]);
+  }
+
+  Future<void> _openBookingPage({
+    required TherapistModel therapistSummary,
+    DateTime? initialSlot,
+  }) async {
+    final wasBooked = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AppointmentCreatePage(
+          therapist: therapistSummary,
+          initialSlot: initialSlot,
+          returnResultOnSuccess: true,
+        ),
+      ),
+    );
+
+    if (!mounted || wasBooked != true) {
+      return;
+    }
+
+    await _appointmentPreviewViewModel.loadNextAvailableSlots(
+      therapistId: widget.therapistId,
+    );
   }
 
   @override
@@ -365,32 +389,32 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                 const SizedBox(height: 24),
                 const _SectionTitle('Next available appointments'),
                 const SizedBox(height: 8),
+
                 AvailableSlotsPreview(
                   isLoading: _appointmentPreviewViewModel.isLoadingPreview,
                   groupedSlots:
                       _appointmentPreviewViewModel.groupedPreviewSlots,
                   onBookSlot: (slot) {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => AppointmentCreatePage(
-                          therapist: therapistSummary,
-                          initialSlot: slot,
-                        ),
-                      ),
+                    _openBookingPage(
+                      therapistSummary: therapistSummary,
+                      initialSlot: slot,
                     );
                   },
+                  onShowAllSlots: () {
+                    _openBookingPage(therapistSummary: therapistSummary);
+                  },
                 ),
+
                 const SizedBox(height: 24),
+
                 ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.of(context).pushNamed(
-                      AppRouter.appointmentCreate,
-                      arguments: therapistSummary,
-                    );
+                    _openBookingPage(therapistSummary: therapistSummary);
                   },
                   icon: const Icon(Icons.calendar_month),
                   label: const Text('Book appointment'),
                 ),
+
                 if (therapist.canOpenChat) ...[
                   const SizedBox(height: 12),
 

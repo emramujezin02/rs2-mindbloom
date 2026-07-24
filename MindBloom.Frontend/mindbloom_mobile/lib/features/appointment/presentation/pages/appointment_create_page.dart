@@ -11,10 +11,13 @@ class AppointmentCreatePage extends StatefulWidget {
 
   final DateTime? initialSlot;
 
+  final bool returnResultOnSuccess;
+
   const AppointmentCreatePage({
     super.key,
     required this.therapist,
     this.initialSlot,
+    this.returnResultOnSuccess = false,
   });
 
   @override
@@ -82,19 +85,18 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
       return;
     }
 
-DateTime? matchingSlot;
+    DateTime? matchingSlot;
 
-for (final slot
-    in _viewModel.availableSlots) {
-  if (slot.year == initialSlot.year &&
-      slot.month == initialSlot.month &&
-      slot.day == initialSlot.day &&
-      slot.hour == initialSlot.hour &&
-      slot.minute == initialSlot.minute) {
-    matchingSlot = slot;
-    break;
-  }
-}
+    for (final slot in _viewModel.availableSlots) {
+      if (slot.year == initialSlot.year &&
+          slot.month == initialSlot.month &&
+          slot.day == initialSlot.day &&
+          slot.hour == initialSlot.hour &&
+          slot.minute == initialSlot.minute) {
+        matchingSlot = slot;
+        break;
+      }
+    }
 
     if (matchingSlot != null) {
       setState(() {
@@ -231,6 +233,11 @@ for (final slot
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Appointment request sent successfully.')),
       );
+
+      if (widget.returnResultOnSuccess) {
+        Navigator.of(context).pop(true);
+        return;
+      }
 
       Navigator.of(
         context,
