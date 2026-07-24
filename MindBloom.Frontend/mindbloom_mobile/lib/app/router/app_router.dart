@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mindbloom_mobile/features/about/presentation/page/about_page.dart';
+import 'package:mindbloom_mobile/features/private_journal/presentation/pages/private_jorunal_page.dart';
 import '../../screens/home_screen.dart';
 
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -73,6 +74,11 @@ import '../../features/therapist/presentation/pages/therapist_emotional_analytic
 import '../../features/therapist/data/models/therapist_list_arguments.dart';
 import '../../features/journal/presentation/pages/client_emotional_analytics_page.dart';
 
+import '../../features/private_journal/data/models/private_journal_entry_model.dart';
+import '../../features/private_journal/presentation/pages/add_private_journal_entry_page.dart';
+import '../../features/private_journal/presentation/pages/edit_private_journal_entry_page.dart';
+import '../../features/private_journal/presentation/pages/private_journal_entry_details_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String login = '/login';
@@ -123,6 +129,13 @@ class AppRouter {
   static const String therapistEmotionalAnalytics =
       '/therapist/clients/emotional-analytics';
   static const String clientEmotionalAnalytics = '/journal/analytics';
+  static const String privateJournal = '/private-journal';
+
+  static const String addPrivateJournalEntry = '/private-journal/add';
+
+  static const String privateJournalEntryDetails = '/private-journal/details';
+
+  static const String editPrivateJournalEntry = '/private-journal/edit';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -386,6 +399,28 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => const ClientEmotionalAnalyticsPage(),
           settings: settings,
+        );
+
+      case privateJournal:
+        return MaterialPageRoute(builder: (_) => const PrivateJournalPage());
+
+      case addPrivateJournalEntry:
+        return MaterialPageRoute(
+          builder: (_) => const AddPrivateJournalEntryPage(),
+        );
+
+      case privateJournalEntryDetails:
+        final entryId = settings.arguments as int;
+
+        return MaterialPageRoute(
+          builder: (_) => PrivateJournalEntryDetailsPage(entryId: entryId),
+        );
+
+      case editPrivateJournalEntry:
+        final entry = settings.arguments as PrivateJournalEntryModel;
+
+        return MaterialPageRoute(
+          builder: (_) => EditPrivateJournalEntryPage(entry: entry),
         );
 
       case home:

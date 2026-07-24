@@ -17,6 +17,10 @@ using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Persistence.Seed;
 using MindBloom.Infrastructure.Realtime;
 using MindBloom.Infrastructure.Recommendations;
+using MindBloom.Application.Features.PrivateJournalEntries.Interfaces;
+using MindBloom.Infrastructure.Services;
+using MindBloom.Application.Features.PrivateJournalEntries.Validators;
+
 
 Env.Load("../../.env");
 
@@ -38,6 +42,15 @@ builder.Services
 
 builder.Services
     .AddScoped<FluentValidationFilter>();
+
+builder.Services
+    .AddScoped<
+        IPrivateJournalEntryService,
+        PrivateJournalEntryService>();
+
+builder.Services
+    .AddValidatorsFromAssemblyContaining<
+        CreatePrivateJournalEntryDtoValidator>();
 
 builder.Services
     .AddControllers(options =>

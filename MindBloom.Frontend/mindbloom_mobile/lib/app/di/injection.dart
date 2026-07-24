@@ -7,6 +7,10 @@ import '../../core/network/api_client.dart';
 import '../../features/session/presentation/viewmodels/session_viewmodel.dart';
 import '../../services/session_storage_service.dart';
 
+import '../../features/private_journal/data/repositories/private_journal_repository.dart';
+import '../../features/private_journal/data/services/private_journal_api_service.dart';
+import '../../features/private_journal/presentation/viewmodels/private_journal_viewmodel.dart';
+
 import '../../features/auth/data/repositories/auth_repository.dart';
 import '../../features/auth/data/services/auth_api_service.dart';
 import '../../features/auth/presentation/viewmodels/auth_viewmodel.dart';
@@ -423,6 +427,25 @@ class AppInjection {
   createTherapistEmotionalAnalyticsViewModel() {
     return TherapistEmotionalAnalyticsViewModel(
       repository: _createTherapistRepository(),
+    );
+  }
+
+  static PrivateJournalApiService createPrivateJournalApiService() {
+    return PrivateJournalApiService(apiClient: apiClient);
+  }
+
+  static PrivateJournalRepository createPrivateJournalRepository() {
+    return PrivateJournalRepository(
+      apiService: createPrivateJournalApiService(),
+    );
+  }
+
+  static PrivateJournalViewModel createPrivateJournalViewModel() {
+    return PrivateJournalViewModel(
+      repository: createPrivateJournalRepository(),
+      journalRepository: JournalRepository(
+        apiService: JournalApiService(apiClient: apiClient),
+      ),
     );
   }
 }

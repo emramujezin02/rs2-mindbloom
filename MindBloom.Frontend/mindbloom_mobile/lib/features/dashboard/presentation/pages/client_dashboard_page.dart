@@ -128,9 +128,61 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
                                 .toLocal(),
                           ),
                   ),
+                  _PrivateJournalNavigationCard(
+                    onTap: () {
+                      Navigator.of(context).pushNamed(AppRouter.privateJournal);
+                    },
+                  ),
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _PrivateJournalNavigationCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _PrivateJournalNavigationCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.all(18),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 26,
+                child: Icon(Icons.menu_book_outlined, size: 28),
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Private journal',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text('Write and manage private journal entries.'),
+                  ],
+                ),
+              ),
+              SizedBox(width: 8),
+              Icon(Icons.arrow_forward_ios, size: 18),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

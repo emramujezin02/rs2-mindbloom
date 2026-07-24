@@ -43,7 +43,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<AppointmentStatusAudit> AppointmentStatusAudits => Set<AppointmentStatusAudit>();
     public DbSet<ReviewModerationAudit> ReviewModerationAudits => Set<ReviewModerationAudit>();
     public DbSet<TherapistSpecialization> TherapistSpecializations => Set<TherapistSpecialization>();
-
+    public DbSet<PrivateJournalEntry>
+    PrivateJournalEntries =>
+        Set<PrivateJournalEntry>();
     public DbSet<TherapyApproach> TherapyApproaches =>
     Set<TherapyApproach>();
 
@@ -412,6 +414,52 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
              .HasFilter(
                  "[StripeRefundId] IS NOT NULL");
      });
+
+        builder.Entity<PrivateJournalEntry>(
+    entity =>
+    {
+        entity.Property(x =>
+                x.Title)
+            .IsRequired()
+            .HasMaxLength(150);
+
+        entity.Property(x =>
+                x.Content)
+            .IsRequired()
+            .HasMaxLength(10000);
+
+        entity.Property(x =>
+                x.EntryDateUtc)
+            .IsRequired();
+
+        entity.HasOne(x =>
+                x.Client)
+            .WithMany()
+            .HasForeignKey(x =>
+                x.ClientId)
+            .OnDelete(
+                DeleteBehavior.Restrict);
+
+        entity.HasOne(x =>
+                x.MoodEntry)
+            .WithMany()
+            .HasForeignKey(x =>
+                x.MoodEntryId)
+            .OnDelete(
+                DeleteBehavior.SetNull);
+
+        entity.HasIndex(x => new
+        {
+            x.ClientId,
+            x.EntryDateUtc
+        });
+
+        entity.HasIndex(x => new
+        {
+            x.ClientId,
+            x.IsDeleted
+        });
+    });
 
         builder.Entity<MembershipPayment>(
     entity =>
