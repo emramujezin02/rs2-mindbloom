@@ -296,8 +296,27 @@ public class JournalEntryService
                 totalCount);
     }
 
-    public async Task<
-     TherapistMoodTrendResponseDto>
+    public async Task<TherapistMoodTrendResponseDto>
+    GetMyAnalyticsAsync(
+        int clientUserId,
+        DateTime fromUtc,
+        DateTime toUtc)
+    {
+        ValidateAnalyticsPeriod(
+            fromUtc,
+            toUtc);
+
+        var client =
+            await GetClientAsync(
+                clientUserId);
+
+        return await BuildAnalyticsAsync(
+            client.Id,
+            fromUtc,
+            toUtc);
+    }
+
+    public async Task<TherapistMoodTrendResponseDto>
      GetClientTrendForTherapistAsync(
          int therapistUserId,
          int clientId,
@@ -306,8 +325,6 @@ public class JournalEntryService
         await EnsureTherapistOwnsClientAsync(
             therapistUserId,
             clientId);
-
-        
 
         var toUtc =
             DateTime.UtcNow.Date
@@ -318,21 +335,46 @@ public class JournalEntryService
             DateTime.UtcNow.Date
                 .AddDays(-(days - 1));
 
+        return await BuildAnalyticsAsync(
+            clientId,
+            fromUtc,
+            toUtc);
+    }
+
+    private async Task<TherapistMoodTrendResponseDto>
+    BuildAnalyticsAsync(
+        int clientId,
+        DateTime fromUtc,
+        DateTime toUtc)
+    {
+        var normalizedFromUtc =
+            DateTime.SpecifyKind(
+                fromUtc,
+                DateTimeKind.Utc);
+
+        var normalizedToUtc =
+            DateTime.SpecifyKind(
+                toUtc,
+                DateTimeKind.Utc);
+
         var entries =
             await _context.MoodEntries
                 .AsNoTracking()
                 .Where(x =>
                     x.ClientId == clientId &&
                     !x.IsDeleted &&
-                    x.CreatedAtUtc >= fromUtc &&
-                    x.CreatedAtUtc <= toUtc)
+                    x.CreatedAtUtc >=
+                        normalizedFromUtc &&
+                    x.CreatedAtUtc <=
+                        normalizedToUtc)
                 .Select(x => new
                 {
                     x.CreatedAtUtc,
                     x.MoodScore,
                     x.Emotion
                 })
-                .OrderBy(x => x.CreatedAtUtc)
+                .OrderBy(x =>
+                    x.CreatedAtUtc)
                 .ToListAsync();
 
         var points =
@@ -363,7 +405,8 @@ public class JournalEntryService
         var emotionGroups =
             entries
                 .SelectMany(x =>
-                    SplitEmotions(x.Emotion))
+                    SplitEmotions(
+                        x.Emotion))
                 .GroupBy(
                     emotion => emotion,
                     StringComparer.OrdinalIgnoreCase)
@@ -378,9 +421,9 @@ public class JournalEntryService
                     x.Emotion)
                 .ToList();
 
-
-        var emotionEntryCount =
-            emotionGroups.Sum(x => x.Count);
+        var totalEmotionCount =
+            emotionGroups.Sum(x =>
+                x.Count);
 
         var emotionAnalytics =
             emotionGroups
@@ -394,32 +437,53 @@ public class JournalEntryService
                             item.Count,
 
                         Percentage =
-                            emotionEntryCount == 0
+                            totalEmotionCount == 0
                                 ? 0
                                 : Math.Round(
                                     item.Count * 100.0 /
-                                    emotionEntryCount,
+                                    totalEmotionCount,
                                     2)
                     })
                 .ToList();
 
-        var mostFrequentEmotion =
-            emotionGroups
-                .Select(x => x.Emotion)
+        var trendResult =
+            CalculateMoodTrend(
+                points);
+
+        var bestDay =
+            points
+                .OrderByDescending(x =>
+                    x.AverageMood)
+                .ThenBy(x =>
+                    x.DateUtc)
                 .FirstOrDefault();
 
-        var trendResult =
-            CalculateMoodTrend(points);
+        var hardestDay =
+            points
+                .OrderBy(x =>
+                    x.AverageMood)
+                .ThenBy(x =>
+                    x.DateUtc)
+                .FirstOrDefault();
+
+        var days =
+            (normalizedToUtc.Date -
+             normalizedFromUtc.Date)
+            .Days + 1;
 
         return new TherapistMoodTrendResponseDto
         {
-            ClientId = clientId,
+            ClientId =
+                clientId,
 
-            Days = days,
+            Days =
+                days,
 
-            FromUtc = fromUtc,
+            FromUtc =
+                normalizedFromUtc,
 
-            ToUtc = toUtc,
+            ToUtc =
+                normalizedToUtc,
 
             AverageMood =
                 entries.Count == 0
@@ -430,7 +494,10 @@ public class JournalEntryService
                         2),
 
             MostFrequentEmotion =
-                mostFrequentEmotion,
+                emotionGroups
+                    .Select(x =>
+                        x.Emotion)
+                    .FirstOrDefault(),
 
             TotalEntries =
                 entries.Count,
@@ -446,6 +513,12 @@ public class JournalEntryService
 
             RecentAverageMood =
                 trendResult.RecentAverage,
+
+            BestDay =
+                bestDay,
+
+            HardestDay =
+                hardestDay,
 
             Points =
                 points,
@@ -746,5 +819,33 @@ public class JournalEntryService
         return string.IsNullOrWhiteSpace(note)
             ? string.Empty
             : note.Trim();
+    }
+
+    private static void ValidateAnalyticsPeriod(
+    DateTime fromUtc,
+    DateTime toUtc)
+    {
+        if (fromUtc > toUtc)
+        {
+            throw new BusinessException(
+                "Start date cannot be later than end date.");
+        }
+
+        var periodLength =
+            (toUtc.Date - fromUtc.Date).Days + 1;
+
+        if (periodLength > 365)
+        {
+            throw new BusinessException(
+                "Analytics period may contain at most 365 days.");
+        }
+
+        if (toUtc >
+            DateTime.UtcNow
+                .AddMinutes(1))
+        {
+            throw new BusinessException(
+                "Analytics period cannot end in the future.");
+        }
     }
 }

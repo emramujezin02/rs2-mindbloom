@@ -84,6 +84,8 @@ import '../../features/therapist/presentation/viewmodels/therapist_emotional_ana
 import '../../features/therapy_approach/data/repositories/therapy_approach_repository.dart';
 import '../../features/therapy_approach/data/services/therapy_approach_api_service.dart';
 
+import '../../features/journal/presentation/viewmodels/client_emotional_analytics_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
   static final ApiClient apiClient = ApiClient(sessionStorage: sessionStorage);
@@ -105,6 +107,15 @@ class AppInjection {
       sessionStorage: sessionStorage,
       authRepository: authRepository,
     );
+  }
+
+  static ClientEmotionalAnalyticsViewModel
+  createClientEmotionalAnalyticsViewModel() {
+    final api = JournalApiService(apiClient: apiClient);
+
+    final repository = JournalRepository(apiService: api);
+
+    return ClientEmotionalAnalyticsViewModel(repository: repository);
   }
 
   static AuthViewModel createAuthViewModel() {

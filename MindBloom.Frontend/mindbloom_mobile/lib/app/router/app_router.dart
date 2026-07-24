@@ -71,6 +71,7 @@ import '../../features/therapist/presentation/pages/therapist_edit_profile_page.
 
 import '../../features/therapist/presentation/pages/therapist_emotional_analytics_page.dart';
 import '../../features/therapist/data/models/therapist_list_arguments.dart';
+import '../../features/journal/presentation/pages/client_emotional_analytics_page.dart';
 
 class AppRouter {
   static const String home = '/';
@@ -121,6 +122,7 @@ class AppRouter {
   static const String therapistEditProfile = '/therapist/edit-profile';
   static const String therapistEmotionalAnalytics =
       '/therapist/clients/emotional-analytics';
+  static const String clientEmotionalAnalytics = '/journal/analytics';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -377,6 +379,12 @@ class AppRouter {
             clientId: arguments.clientId,
             clientName: arguments.clientName,
           ),
+          settings: settings,
+        );
+
+      case clientEmotionalAnalytics:
+        return MaterialPageRoute(
+          builder: (_) => const ClientEmotionalAnalyticsPage(),
           settings: settings,
         );
 

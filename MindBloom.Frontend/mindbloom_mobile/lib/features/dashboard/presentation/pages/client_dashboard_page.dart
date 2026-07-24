@@ -26,6 +26,8 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
+    _viewModel.dispose();
+
     super.dispose();
   }
 
@@ -63,6 +65,13 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
                       Navigator.of(
                         context,
                       ).pushNamed(AppRouter.recommendations);
+                    },
+                  ),
+                  _AnalyticsNavigationCard(
+                    onTap: () {
+                      Navigator.of(
+                        context,
+                      ).pushNamed(AppRouter.clientEmotionalAnalytics);
                     },
                   ),
                   _DashboardCard(
@@ -199,6 +208,52 @@ class _DashboardCard extends StatelessWidget {
         subtitle: Text(
           value,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
+
+class _AnalyticsNavigationCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AnalyticsNavigationCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.all(18),
+          child: Row(
+            children: [
+              CircleAvatar(radius: 26, child: Icon(Icons.insights, size: 28)),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'My emotional patterns',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'View mood trends and your most frequently recorded emotions.',
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 8),
+              Icon(Icons.arrow_forward_ios, size: 18),
+            ],
+          ),
         ),
       ),
     );

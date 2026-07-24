@@ -3,6 +3,7 @@ import '../models/create_journal_entry_request.dart';
 import '../models/journal_entry_model.dart';
 import '../models/journal_paged_response.dart';
 import '../models/update_journal_entry_request.dart';
+import '../../../therapist/data/models/therapist_mood_trend_model.dart';
 
 class JournalApiService {
   final ApiClient apiClient;
@@ -67,5 +68,31 @@ class JournalApiService {
 
   Future<void> deleteJournalEntry(int id) async {
     await apiClient.delete('/JournalEntries/$id');
+  }
+
+  Future<TherapistMoodTrendModel> getMyEmotionalAnalytics({
+    required DateTime fromUtc,
+    required DateTime toUtc,
+  }) async {
+    final uri = Uri(
+      path: '/JournalEntries/analytics/mine',
+      queryParameters: {
+        'fromUtc': fromUtc.toUtc().toIso8601String(),
+        'toUtc': toUtc.toUtc().toIso8601String(),
+      },
+    );
+
+    final response = await apiClient.get(uri.toString());
+
+    if (response is! Map) {
+      throw const FormatException(
+        'The server returned an invalid '
+        'emotional analytics response.',
+      );
+    }
+
+    return TherapistMoodTrendModel.fromJson(
+      Map<String, dynamic>.from(response),
+    );
   }
 }

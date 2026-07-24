@@ -13,6 +13,9 @@ class TherapistMoodTrendModel {
   final String? mostFrequentEmotion;
 
   final int totalEntries;
+  final MoodTrendPointModel? bestDay;
+
+  final MoodTrendPointModel? hardestDay;
 
   final String trend;
 
@@ -40,6 +43,8 @@ class TherapistMoodTrendModel {
     this.trendDifference,
     this.previousAverageMood,
     this.recentAverageMood,
+    this.bestDay,
+    this.hardestDay,
   });
 
   factory TherapistMoodTrendModel.fromJson(Map<String, dynamic> json) {
@@ -83,6 +88,8 @@ class TherapistMoodTrendModel {
       recentAverageMood: _toNullableDouble(json['recentAverageMood']),
       points: points,
       emotions: emotions,
+      bestDay: _toNullablePoint(json['bestDay']),
+      hardestDay: _toNullablePoint(json['hardestDay']),
     );
   }
 
@@ -136,5 +143,17 @@ class TherapistMoodTrendModel {
     }
 
     return DateTime.tryParse(text);
+  }
+
+  static MoodTrendPointModel? _toNullablePoint(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return MoodTrendPointModel.fromJson(value);
+    }
+
+    if (value is Map) {
+      return MoodTrendPointModel.fromJson(Map<String, dynamic>.from(value));
+    }
+
+    return null;
   }
 }

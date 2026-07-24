@@ -38,6 +38,18 @@ public sealed class TherapistMoodTrendResponseDto
         set;
     }
 
+    public MoodTrendPointDto? BestDay
+    {
+        get;
+        set;
+    }
+
+    public MoodTrendPointDto? HardestDay
+    {
+        get;
+        set;
+    }
+
     public List<MoodTrendPointDto> Points
     {
         get;

@@ -30,6 +30,12 @@ public interface IJournalEntryService
         int clientUserId,
         int journalEntryId);
 
+    Task<TherapistMoodTrendResponseDto>
+    GetMyAnalyticsAsync(
+        int clientUserId,
+        DateTime fromUtc,
+        DateTime toUtc);
+
     Task<PagedResponse<TherapistMoodEntryResponseDto>>
         GetClientHistoryForTherapistAsync(
             int therapistUserId,

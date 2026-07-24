@@ -3,6 +3,7 @@ import '../models/journal_entry_model.dart';
 import '../models/journal_paged_response.dart';
 import '../models/update_journal_entry_request.dart';
 import '../services/journal_api_service.dart';
+import 'package:mindbloom_mobile/features/therapist/data/models/therapist_mood_trend_model.dart';
 
 class JournalRepository {
   final JournalApiService apiService;
@@ -47,5 +48,12 @@ class JournalRepository {
 
   Future<void> deleteJournalEntry(int id) {
     return apiService.deleteJournalEntry(id);
+  }
+
+  Future<TherapistMoodTrendModel> getMyEmotionalAnalytics({
+    required DateTime fromUtc,
+    required DateTime toUtc,
+  }) {
+    return apiService.getMyEmotionalAnalytics(fromUtc: fromUtc, toUtc: toUtc);
   }
 }

@@ -204,5 +204,35 @@ public class JournalEntriesController
         return userId;
     }
 
+    [Authorize(Roles = RoleConstants.Client)]
+    [HttpGet("analytics/mine")]
+    public async Task<IActionResult>
+    GetMyAnalytics(
+        [FromQuery]
+        JournalEntryAnalyticsQueryDto query)
+    {
+        var userId =
+            GetAuthenticatedUserId();
+
+        var toUtc =
+            query.ToUtc ??
+            DateTime.UtcNow.Date
+                .AddDays(1)
+                .AddTicks(-1);
+
+        var fromUtc =
+            query.FromUtc ??
+            DateTime.UtcNow.Date
+                .AddDays(-29);
+
+        var result =
+            await _journalEntryService
+                .GetMyAnalyticsAsync(
+                    userId,
+                    fromUtc,
+                    toUtc);
+
+        return Ok(result);
+    }
 
 }
