@@ -126,14 +126,11 @@ public class TherapistService : ITherapistService
                 Biography = x.Biography,
                 HourlyRate = x.HourlyRate,
                 ExperienceYears = x.ExperienceYears,
-                AverageRating = x.Reviews.Any() ? Math.Round(x.Reviews.Average(r => r.Rating), 1)
-        : 0,
-
-                TotalReviews =
-    x.Reviews.Count,
+                AverageRating = x.Reviews.Any() ? Math.Round(x.Reviews.Average(r => r.Rating), 1): 0,
+                TotalReviews = x.Reviews.Count,
                 VerificationStatus = x.VerificationStatus.ToString(),
                 VerificationNotes = x.VerificationNotes,
-                ProfileImageUrl = x.ProfileImagePath,
+                ProfileImageUrl = x.User.ProfileImageUrl ?? x.ProfileImagePath,
                 Country = x.Country,
                 City = x.City,
                 Address = x.Address,
@@ -660,11 +657,8 @@ public class TherapistService : ITherapistService
                                 1)
                             : 0,
 
-                    TotalReviews =
-                        x.Reviews.Count,
-
-                    ProfileImageUrl = x.ProfileImagePath,
-
+                    TotalReviews = x.Reviews.Count,
+                    ProfileImageUrl = x.User.ProfileImageUrl ?? x.ProfileImagePath,
                     Country = x.Country,
                     City = x.City,
                     Address = x.Address,

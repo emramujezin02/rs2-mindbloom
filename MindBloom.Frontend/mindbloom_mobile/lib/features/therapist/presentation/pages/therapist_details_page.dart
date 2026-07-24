@@ -165,7 +165,7 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                 TherapistProfileImage(
                   fullName: therapist.displayName,
                   profileImageUrl: therapist.profileImageUrl,
-                  radius: 54,
+                  radius: 62,
                 ),
                 const SizedBox(height: 20),
                 Text(

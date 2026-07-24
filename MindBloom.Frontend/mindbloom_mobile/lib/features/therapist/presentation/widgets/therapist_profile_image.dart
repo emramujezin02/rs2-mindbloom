@@ -11,77 +11,120 @@ class TherapistProfileImage extends StatelessWidget {
     super.key,
     required this.fullName,
     required this.profileImageUrl,
-    this.radius = 32,
+    this.radius = 42,
   });
 
   @override
   Widget build(BuildContext context) {
-    final resolvedImageUrl = _resolveImageUrl(profileImageUrl);
+    final imageUrl = _buildFullImageUrl(profileImageUrl);
 
-    if (resolvedImageUrl == null) {
-      return _buildFallbackAvatar(context);
-    }
+    return Semantics(
+      image: true,
+      label: '$fullName profile image',
+      child: SizedBox(
+        width: radius * 2,
+        height: radius * 2,
+        child: ClipOval(
+          child: imageUrl == null
+              ? _buildInitialsFallback()
+              : Image.network(
+                  imageUrl,
+                  width: radius * 2,
+                  height: radius * 2,
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) {
+                      return child;
+                    }
 
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: ClipOval(
-        child: Image.network(
-          resolvedImageUrl,
-          width: radius * 2,
-          height: radius * 2,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return _buildFallbackContent(context);
-          },
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) {
-              return child;
-            }
-
-            return SizedBox(
-              width: radius * 2,
-              height: radius * 2,
-              child: Center(
-                child: SizedBox(
-                  width: radius * 0.7,
-                  height: radius * 0.7,
-                  child: const CircularProgressIndicator(strokeWidth: 2),
+                    return _buildLoadingPlaceholder(loadingProgress);
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildInitialsFallback();
+                  },
                 ),
-              ),
-            );
-          },
         ),
       ),
     );
   }
 
-  Widget _buildFallbackAvatar(BuildContext context) {
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-      child: _buildFallbackContent(context),
-    );
-  }
+  Widget _buildLoadingPlaceholder(ImageChunkEvent loadingProgress) {
+    final expectedTotalBytes = loadingProgress.expectedTotalBytes;
 
-  Widget _buildFallbackContent(BuildContext context) {
+    final progress = expectedTotalBytes == null
+        ? null
+        : loadingProgress.cumulativeBytesLoaded / expectedTotalBytes;
+
     return Container(
       width: radius * 2,
       height: radius * 2,
       alignment: Alignment.center,
-      color: Theme.of(context).colorScheme.primaryContainer,
+      color: const Color(0xFFE4D8F3),
+      child: SizedBox(
+        width: radius * 0.65,
+        height: radius * 0.65,
+        child: CircularProgressIndicator(strokeWidth: 2.5, value: progress),
+      ),
+    );
+  }
+
+  Widget _buildInitialsFallback() {
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      alignment: Alignment.center,
+      color: const Color(0xFFE4D8F3),
       child: Text(
-        _initials,
+        _buildInitials(fullName),
+        textAlign: TextAlign.center,
         style: TextStyle(
-          fontSize: radius * 0.62,
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.onPrimaryContainer,
+          color: const Color(0xFF65468B),
+          fontSize: radius * 0.55,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
 
-  String get _initials {
+  static String? _buildFullImageUrl(String? imageUrl) {
+    if (imageUrl == null) {
+      return null;
+    }
+
+    final normalizedUrl = imageUrl.trim();
+
+    if (normalizedUrl.isEmpty) {
+      return null;
+    }
+
+    final parsedUrl = Uri.tryParse(normalizedUrl);
+
+    if (parsedUrl == null) {
+      return null;
+    }
+
+    if (parsedUrl.hasScheme &&
+        (parsedUrl.scheme == 'http' || parsedUrl.scheme == 'https')) {
+      return normalizedUrl;
+    }
+
+    final baseUri = Uri.tryParse(ApiConstants.apiBaseUrl);
+
+    if (baseUri == null || !baseUri.hasScheme || baseUri.host.isEmpty) {
+      return null;
+    }
+
+    final normalizedPath = normalizedUrl.startsWith('/')
+        ? normalizedUrl
+        : '/$normalizedUrl';
+
+    return baseUri
+        .replace(path: normalizedPath, query: null, fragment: null)
+        .toString();
+  }
+
+  static String _buildInitials(String fullName) {
     final nameParts = fullName
         .trim()
         .split(RegExp(r'\s+'))
@@ -93,37 +136,13 @@ class TherapistProfileImage extends StatelessWidget {
     }
 
     if (nameParts.length == 1) {
-      return nameParts.first[0].toUpperCase();
+      return nameParts.first.substring(0, 1).toUpperCase();
     }
 
-    return '${nameParts.first[0]}${nameParts.last[0]}'.toUpperCase();
-  }
+    final firstInitial = nameParts.first.substring(0, 1).toUpperCase();
 
-  String? _resolveImageUrl(String? imagePath) {
-    if (imagePath == null || imagePath.trim().isEmpty) {
-      return null;
-    }
+    final lastInitial = nameParts.last.substring(0, 1).toUpperCase();
 
-    final normalizedPath = imagePath.trim();
-    final imageUri = Uri.tryParse(normalizedPath);
-
-    if (imageUri != null &&
-        (imageUri.scheme == 'http' || imageUri.scheme == 'https')) {
-      return normalizedPath;
-    }
-
-    final apiUri = Uri.tryParse(ApiConstants.apiBaseUrl);
-
-    if (apiUri == null || apiUri.host.isEmpty) {
-      return null;
-    }
-
-    final normalizedImagePath = normalizedPath.startsWith('/')
-        ? normalizedPath
-        : '/$normalizedPath';
-
-    return apiUri
-        .replace(path: normalizedImagePath, query: null, fragment: null)
-        .toString();
+    return '$firstInitial$lastInitial';
   }
 }
