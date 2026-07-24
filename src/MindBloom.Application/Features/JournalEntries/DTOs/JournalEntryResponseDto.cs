@@ -10,8 +10,7 @@ public class JournalEntryResponseDto
 
     public int Mood { get; set; }
 
-    public string Emotion { get; set; } =
-        string.Empty;
+    public List<string> Emotions { get; set; } = [];
 
     public string Note { get; set; } =
         string.Empty;

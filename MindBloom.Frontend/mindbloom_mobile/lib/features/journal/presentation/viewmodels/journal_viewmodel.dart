@@ -12,6 +12,8 @@ class JournalViewModel extends ChangeNotifier {
   bool isLoading = false;
   bool isLoadingMore = false;
   bool isSaving = false;
+  DateTime? fromDate;
+  DateTime? toDate;
 
   String? error;
 
@@ -33,16 +35,31 @@ class JournalViewModel extends ChangeNotifier {
       final response = await repository.getMyJournal(
         pageNumber: pageNumber,
         pageSize: pageSize,
+        fromUtc: fromDate == null
+            ? null
+            : DateTime(fromDate!.year, fromDate!.month, fromDate!.day).toUtc(),
+        toUtc: toDate == null
+            ? null
+            : DateTime(
+                toDate!.year,
+                toDate!.month,
+                toDate!.day,
+                23,
+                59,
+                59,
+                999,
+              ).toUtc(),
       );
 
       entries = response.items;
+      pageNumber = response.pageNumber;
       totalPages = response.totalPages;
     } catch (exception) {
-      error = exception.toString();
+      error = exception.toString().replaceFirst('Exception: ', '');
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 
   Future<void> loadMore() async {
@@ -60,6 +77,20 @@ class JournalViewModel extends ChangeNotifier {
       final response = await repository.getMyJournal(
         pageNumber: nextPage,
         pageSize: pageSize,
+        fromUtc: fromDate == null
+            ? null
+            : DateTime(fromDate!.year, fromDate!.month, fromDate!.day).toUtc(),
+        toUtc: toDate == null
+            ? null
+            : DateTime(
+                toDate!.year,
+                toDate!.month,
+                toDate!.day,
+                23,
+                59,
+                59,
+                999,
+              ).toUtc(),
       );
 
       entries.addAll(response.items);
@@ -87,7 +118,7 @@ class JournalViewModel extends ChangeNotifier {
 
   Future<bool> createEntry({
     required int mood,
-    required String emotion,
+    required List<String> emotions,
     required String note,
   }) async {
     isSaving = true;
@@ -96,7 +127,7 @@ class JournalViewModel extends ChangeNotifier {
 
     try {
       await repository.createJournalEntry(
-        CreateJournalEntryRequest(mood: mood, emotion: emotion, note: note),
+        CreateJournalEntryRequest(mood: mood, emotions: emotions, note: note),
       );
 
       isSaving = false;
@@ -115,7 +146,7 @@ class JournalViewModel extends ChangeNotifier {
   Future<bool> updateEntry({
     required int id,
     required int mood,
-    required String emotion,
+    required List<String> emotions,
     required String note,
   }) async {
     isSaving = true;
@@ -126,7 +157,7 @@ class JournalViewModel extends ChangeNotifier {
       await repository.updateJournalEntry(
         id: id,
         mood: mood,
-        emotion: emotion,
+        emotions: emotions,
         note: note,
       );
 
@@ -160,5 +191,17 @@ class JournalViewModel extends ChangeNotifier {
 
       return false;
     }
+  }
+
+  Future<void> applyPeriod({DateTime? from, DateTime? to}) async {
+    fromDate = from;
+    toDate = to;
+    await loadEntries();
+  }
+
+  Future<void> clearPeriod() async {
+    fromDate = null;
+    toDate = null;
+    await loadEntries();
   }
 }

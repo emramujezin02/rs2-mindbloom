@@ -13,7 +13,9 @@ public interface IJournalEntryService
         GetMineAsync(
             int clientUserId,
             int pageNumber,
-            int pageSize);
+            int pageSize,
+            DateTime? fromUtc,
+            DateTime? toUtc);
 
     Task<JournalEntryResponseDto> GetByIdAsync(
         int clientUserId,

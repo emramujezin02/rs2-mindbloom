@@ -12,8 +12,15 @@ class JournalRepository {
   Future<JournalPagedResponse> getMyJournal({
     required int pageNumber,
     required int pageSize,
+    DateTime? fromUtc,
+    DateTime? toUtc,
   }) {
-    return apiService.getMyJournal(pageNumber: pageNumber, pageSize: pageSize);
+    return apiService.getMyJournal(
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+      fromUtc: fromUtc,
+      toUtc: toUtc,
+    );
   }
 
   Future<JournalEntryModel> getJournalEntry(int id) {
@@ -29,12 +36,12 @@ class JournalRepository {
   Future<JournalEntryModel> updateJournalEntry({
     required int id,
     required int mood,
-    required String emotion,
+    required List<String> emotions,
     required String note,
   }) {
     return apiService.updateJournalEntry(
       id,
-      UpdateJournalEntryRequest(mood: mood, emotion: emotion, note: note),
+      UpdateJournalEntryRequest(mood: mood, emotions: emotions, note: note),
     );
   }
 

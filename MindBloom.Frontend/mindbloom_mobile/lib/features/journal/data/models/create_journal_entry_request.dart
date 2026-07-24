@@ -1,15 +1,15 @@
 class CreateJournalEntryRequest {
   final int mood;
-  final String emotion;
+  final List<String> emotions;
   final String note;
 
-  CreateJournalEntryRequest({
+  const CreateJournalEntryRequest({
     required this.mood,
-    required this.emotion,
+    required this.emotions,
     required this.note,
   });
 
   Map<String, dynamic> toJson() {
-    return {'mood': mood, 'emotion': emotion, 'note': note};
+    return {'mood': mood, 'emotions': emotions, 'note': note.trim()};
   }
 }

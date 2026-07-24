@@ -55,7 +55,9 @@ public class JournalEntriesController
                 .GetMineAsync(
                     userId,
                     query.PageNumber,
-                    query.PageSize);
+                    query.PageSize,
+                    query.FromUtc,
+                    query.ToUtc);
 
         return Ok(result);
     }

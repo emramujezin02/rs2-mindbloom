@@ -14,7 +14,24 @@ public class JournalEntryService
 {
 
     private readonly ApplicationDbContext _context;
-
+    private static readonly HashSet<string>
+    AllowedEmotions =
+        new(
+            StringComparer.OrdinalIgnoreCase)
+        {
+            "Happy",
+            "Calm",
+            "Hopeful",
+            "Excited",
+            "Grateful",
+            "Sad",
+            "Anxious",
+            "Angry",
+            "Lonely",
+            "Tired",
+            "Stressed",
+            "Confused"
+        };
     public JournalEntryService(
         ApplicationDbContext context)
     {
@@ -22,10 +39,14 @@ public class JournalEntryService
     }
 
     public async Task<JournalEntryResponseDto>
-        CreateAsync(
-            int clientUserId,
-            CreateJournalEntryDto request)
+    CreateAsync(
+        int clientUserId,
+        CreateJournalEntryDto request)
     {
+        ValidateRequest(
+            request.Mood,
+            request.Emotions,
+            request.Note);
 
         var client =
             await GetClientAsync(
@@ -35,8 +56,10 @@ public class JournalEntryService
         {
             ClientId = client.Id,
             MoodScore = request.Mood,
-            Emotion = request.Emotion.Trim(),
-            Notes = request.Note.Trim()
+            Emotion = NormalizeEmotions(
+                request.Emotions),
+            Notes = NormalizeNote(
+                request.Note)
         };
 
         _context.MoodEntries.Add(entry);
@@ -47,17 +70,26 @@ public class JournalEntryService
     }
 
     public async Task<
-        PagedResponse<JournalEntryResponseDto>>
-        GetMineAsync(
-            int clientUserId,
-            int pageNumber,
-            int pageSize)
+     PagedResponse<JournalEntryResponseDto>>
+     GetMineAsync(
+         int clientUserId,
+         int pageNumber,
+         int pageSize,
+         DateTime? fromUtc,
+         DateTime? toUtc)
     {
-        var pagination =
-        PaginationHelper.Normalize(
-            pageNumber,
-            pageSize);
+        if (fromUtc.HasValue &&
+            toUtc.HasValue &&
+            fromUtc.Value > toUtc.Value)
+        {
+            throw new BusinessException(
+                "Start date cannot be later than end date.");
+        }
 
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
 
         var client =
             await GetClientAsync(
@@ -70,6 +102,20 @@ public class JournalEntryService
                     x.ClientId == client.Id &&
                     !x.IsDeleted);
 
+        if (fromUtc.HasValue)
+        {
+            query = query.Where(x =>
+                x.CreatedAtUtc >=
+                fromUtc.Value);
+        }
+
+        if (toUtc.HasValue)
+        {
+            query = query.Where(x =>
+                x.CreatedAtUtc <=
+                toUtc.Value);
+        }
+
         var totalCount =
             await query.CountAsync();
 
@@ -77,30 +123,19 @@ public class JournalEntryService
             await query
                 .OrderByDescending(x =>
                     x.CreatedAtUtc)
-.Skip(
-    pagination.Skip)
-.Take(
-    pagination.PageSize)
-                .Select(x =>
-                    new JournalEntryResponseDto
-                    {
-                        Id = x.Id,
-                        CreatedAtUtc =
-                            x.CreatedAtUtc,
-                        UpdatedAtUtc =
-                            x.UpdatedAtUtc,
-                        Mood =
-                            x.MoodScore,
-                        Emotion =
-                            x.Emotion,
-                        Note =
-                            x.Notes
-                    })
+                .Skip(pagination.Skip)
+                .Take(pagination.PageSize)
                 .ToListAsync();
 
-        return PagedResponse<JournalEntryResponseDto>
+        var responseItems =
+            items
+                .Select(MapToDto)
+                .ToList();
+
+        return PagedResponse<
+                JournalEntryResponseDto>
             .Create(
-                items,
+                responseItems,
                 pagination.PageNumber,
                 pagination.PageSize,
                 totalCount);
@@ -133,11 +168,15 @@ public class JournalEntryService
     }
 
     public async Task<JournalEntryResponseDto>
-        UpdateAsync(
-            int clientUserId,
-            int journalEntryId,
-            UpdateJournalEntryDto request)
+    UpdateAsync(
+        int clientUserId,
+        int journalEntryId,
+        UpdateJournalEntryDto request)
     {
+        ValidateRequest(
+            request.Mood,
+            request.Emotions,
+            request.Note);
 
         var client =
             await GetClientAsync(
@@ -160,10 +199,12 @@ public class JournalEntryService
             request.Mood;
 
         entry.Emotion =
-            request.Emotion.Trim();
+            NormalizeEmotions(
+                request.Emotions);
 
         entry.Notes =
-            request.Note.Trim();
+            NormalizeNote(
+                request.Note);
 
         await _context.SaveChangesAsync();
 
@@ -321,13 +362,11 @@ public class JournalEntryService
 
         var emotionGroups =
             entries
-                .Where(x =>
-                    !string.IsNullOrWhiteSpace(
-                        x.Emotion))
+                .SelectMany(x =>
+                    SplitEmotions(x.Emotion))
                 .GroupBy(
-                    x => x.Emotion.Trim(),
-                    StringComparer
-                        .OrdinalIgnoreCase)
+                    emotion => emotion,
+                    StringComparer.OrdinalIgnoreCase)
                 .Select(group => new
                 {
                     Emotion = group.Key,
@@ -338,6 +377,7 @@ public class JournalEntryService
                 .ThenBy(x =>
                     x.Emotion)
                 .ToList();
+
 
         var emotionEntryCount =
             emotionGroups.Sum(x => x.Count);
@@ -545,7 +585,7 @@ public class JournalEntryService
         return client;
     }
 
-   
+
 
     private static JournalEntryResponseDto
         MapToDto(
@@ -560,8 +600,9 @@ public class JournalEntryService
                 entry.UpdatedAtUtc,
             Mood =
                 entry.MoodScore,
-            Emotion =
-                entry.Emotion,
+            Emotions =
+                SplitEmotions(
+                    entry.Emotion),
             Note =
                 entry.Notes
         };
@@ -612,5 +653,98 @@ public class JournalEntryService
             throw new UnauthorizedAccessException(
                 "You do not have permission to access this client's emotional tracker.");
         }
+    }
+
+    private static void ValidateRequest(
+    int mood,
+    IEnumerable<string>? emotions,
+    string? note)
+    {
+        if (mood < 1 || mood > 5)
+        {
+            throw new BusinessException(
+                "Mood must be between 1 and 5.");
+        }
+
+        var normalizedEmotions =
+            NormalizeEmotionList(emotions);
+
+        if (normalizedEmotions.Count == 0)
+        {
+            throw new BusinessException(
+                "At least one emotion must be selected.");
+        }
+
+        if (normalizedEmotions.Count > 5)
+        {
+            throw new BusinessException(
+                "You may select at most 5 emotions.");
+        }
+
+        var invalidEmotion =
+            normalizedEmotions
+                .FirstOrDefault(x =>
+                    !AllowedEmotions.Contains(x));
+
+        if (invalidEmotion != null)
+        {
+            throw new BusinessException(
+                $"Emotion '{invalidEmotion}' is not supported.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(note) &&
+            note.Trim().Length > 500)
+        {
+            throw new BusinessException(
+                "Note may contain at most 500 characters.");
+        }
+    }
+
+    private static string NormalizeEmotions(
+        IEnumerable<string>? emotions)
+    {
+        return string.Join(
+            ",",
+            NormalizeEmotionList(emotions));
+    }
+
+    private static List<string>
+        NormalizeEmotionList(
+            IEnumerable<string>? emotions)
+    {
+        return emotions?
+            .Where(x =>
+                !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .Distinct(
+                StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            ?? [];
+    }
+
+    private static List<string> SplitEmotions(
+        string? emotions)
+    {
+        if (string.IsNullOrWhiteSpace(emotions))
+        {
+            return [];
+        }
+
+        return emotions
+            .Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries |
+                StringSplitOptions.TrimEntries)
+            .Distinct(
+                StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string NormalizeNote(
+        string? note)
+    {
+        return string.IsNullOrWhiteSpace(note)
+            ? string.Empty
+            : note.Trim();
     }
 }

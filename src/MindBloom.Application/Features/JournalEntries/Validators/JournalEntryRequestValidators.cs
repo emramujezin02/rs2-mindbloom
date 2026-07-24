@@ -1,17 +1,17 @@
 ﻿using FluentValidation;
-using MindBloom.Application.Features
-    .JournalEntries.DTOs;
+using MindBloom.Application.Features.JournalEntries.DTOs;
 
-namespace MindBloom.Application.Features
-    .JournalEntries.Validators;
+namespace MindBloom.Application.Features.JournalEntries.Validators;
 
 public static class JournalEntryValidationRules
 {
     public const int MinimumMood = 1;
     public const int MaximumMood = 5;
 
-    public const int MaximumEmotionLength = 100;
-    public const int MaximumNoteLength = 2000;
+    public const int MinimumEmotionCount = 1;
+    public const int MaximumEmotionCount = 5;
+    public const int MaximumEmotionLength = 50;
+    public const int MaximumNoteLength = 500;
 
     public const int MaximumPageSize = 50;
 
@@ -38,26 +38,37 @@ public sealed class CreateJournalEntryDtoValidator
             .WithMessage(
                 "Mood must be between 1 and 5.");
 
-        RuleFor(x => x.Emotion)
+        RuleFor(x => x.Emotions)
+            .NotNull()
+            .WithMessage(
+                "At least one emotion must be selected.")
+            .Must(emotions =>
+                emotions != null &&
+                emotions.Count >=
+                JournalEntryValidationRules.MinimumEmotionCount)
+            .WithMessage(
+                "At least one emotion must be selected.")
+            .Must(emotions =>
+                emotions == null ||
+                emotions.Count <=
+                JournalEntryValidationRules.MaximumEmotionCount)
+            .WithMessage(
+                "You may select at most 5 emotions.");
+
+        RuleForEach(x => x.Emotions)
             .NotEmpty()
             .WithMessage(
-                "Emotion is required.")
-            .Must(value =>
-                !string.IsNullOrWhiteSpace(value))
-            .WithMessage(
-                "Emotion is required.")
+                "Emotion cannot be empty.")
             .MaximumLength(
-                JournalEntryValidationRules
-                    .MaximumEmotionLength)
+                JournalEntryValidationRules.MaximumEmotionLength)
             .WithMessage(
-                "Emotion may contain at most 100 characters.");
+                "Each emotion may contain at most 50 characters.");
 
         RuleFor(x => x.Note)
             .MaximumLength(
-                JournalEntryValidationRules
-                    .MaximumNoteLength)
+                JournalEntryValidationRules.MaximumNoteLength)
             .WithMessage(
-                "Note may contain at most 2000 characters.");
+                "Note may contain at most 500 characters.");
     }
 }
 
@@ -73,26 +84,37 @@ public sealed class UpdateJournalEntryDtoValidator
             .WithMessage(
                 "Mood must be between 1 and 5.");
 
-        RuleFor(x => x.Emotion)
+        RuleFor(x => x.Emotions)
+            .NotNull()
+            .WithMessage(
+                "At least one emotion must be selected.")
+            .Must(emotions =>
+                emotions != null &&
+                emotions.Count >=
+                JournalEntryValidationRules.MinimumEmotionCount)
+            .WithMessage(
+                "At least one emotion must be selected.")
+            .Must(emotions =>
+                emotions == null ||
+                emotions.Count <=
+                JournalEntryValidationRules.MaximumEmotionCount)
+            .WithMessage(
+                "You may select at most 5 emotions.");
+
+        RuleForEach(x => x.Emotions)
             .NotEmpty()
             .WithMessage(
-                "Emotion is required.")
-            .Must(value =>
-                !string.IsNullOrWhiteSpace(value))
-            .WithMessage(
-                "Emotion is required.")
+                "Emotion cannot be empty.")
             .MaximumLength(
-                JournalEntryValidationRules
-                    .MaximumEmotionLength)
+                JournalEntryValidationRules.MaximumEmotionLength)
             .WithMessage(
-                "Emotion may contain at most 100 characters.");
+                "Each emotion may contain at most 50 characters.");
 
         RuleFor(x => x.Note)
             .MaximumLength(
-                JournalEntryValidationRules
-                    .MaximumNoteLength)
+                JournalEntryValidationRules.MaximumNoteLength)
             .WithMessage(
-                "Note may contain at most 2000 characters.");
+                "Note may contain at most 500 characters.");
     }
 }
 
@@ -109,10 +131,17 @@ public sealed class JournalEntryPagingQueryDtoValidator
         RuleFor(x => x.PageSize)
             .InclusiveBetween(
                 1,
-                JournalEntryValidationRules
-                    .MaximumPageSize)
+                JournalEntryValidationRules.MaximumPageSize)
             .WithMessage(
                 "Page size must be between 1 and 50.");
+
+        RuleFor(x => x)
+            .Must(query =>
+                !query.FromUtc.HasValue ||
+                !query.ToUtc.HasValue ||
+                query.FromUtc.Value <= query.ToUtc.Value)
+            .WithMessage(
+                "Start date cannot be later than end date.");
     }
 }
 

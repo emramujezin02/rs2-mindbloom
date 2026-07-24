@@ -12,11 +12,25 @@ class JournalApiService {
   Future<JournalPagedResponse> getMyJournal({
     required int pageNumber,
     required int pageSize,
+    DateTime? fromUtc,
+    DateTime? toUtc,
   }) async {
+    final parameters = <String>['pageNumber=$pageNumber', 'pageSize=$pageSize'];
+
+    if (fromUtc != null) {
+      parameters.add(
+        'fromUtc=${Uri.encodeQueryComponent(fromUtc.toUtc().toIso8601String())}',
+      );
+    }
+
+    if (toUtc != null) {
+      parameters.add(
+        'toUtc=${Uri.encodeQueryComponent(toUtc.toUtc().toIso8601String())}',
+      );
+    }
+
     final response = await apiClient.get(
-      '/JournalEntries/mine'
-      '?pageNumber=$pageNumber'
-      '&pageSize=$pageSize',
+      '/JournalEntries/mine?${parameters.join('&')}',
     );
 
     return JournalPagedResponse.fromJson(response as Map<String, dynamic>);

@@ -647,6 +647,31 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         });
     });
 
+        builder.Entity<MoodEntry>(entity =>
+        {
+            entity.Property(x => x.MoodScore)
+                .IsRequired();
+
+            entity.Property(x => x.Emotion)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(x => x.Notes)
+                .HasMaxLength(500);
+
+            entity.HasOne(x => x.Client)
+                .WithMany(x => x.MoodEntries)
+                .HasForeignKey(x => x.ClientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => new
+            {
+                x.ClientId,
+                x.CreatedAtUtc,
+                x.IsDeleted
+            });
+        });
+
         builder.Entity<Therapist>()
             .HasOne(x => x.SpecializationReference)
             .WithMany(x => x.Therapists)
