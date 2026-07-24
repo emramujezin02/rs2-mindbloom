@@ -17,4 +17,16 @@ public class UserProfileDto
     public DateTime DateOfBirth { get; set; }
 
     public string? ProfileImageUrl { get; set; }
+
+    public string? Location { get; set; }
+
+    public string? PreferredTherapistGender { get; set; }
+
+    public string? PreferredSessionType { get; set; }
+
+    public decimal? MinimumPricePerSession { get; set; }
+
+    public decimal? MaximumPricePerSession { get; set; }
+
+    public List<string> PreferredLanguages { get; set; } = [];
 }

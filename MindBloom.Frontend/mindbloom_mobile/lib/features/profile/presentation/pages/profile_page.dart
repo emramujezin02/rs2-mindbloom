@@ -6,6 +6,8 @@ import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../viewmodels/profile_viewmodel.dart';
+import '../../data/models/profile_model.dart';
+import '../../../session/presentation/viewmodels/session_scope.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -107,6 +109,29 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  String _formatPriceRange(ProfileModel profile) {
+    final minimum = profile.minimumPricePerSession;
+
+    final maximum = profile.maximumPricePerSession;
+
+    if (minimum == null && maximum == null) {
+      return 'No preference';
+    }
+
+    if (minimum != null && maximum != null) {
+      return '${minimum.toStringAsFixed(2)} - '
+          '${maximum.toStringAsFixed(2)} BAM';
+    }
+
+    if (minimum != null) {
+      return 'From '
+          '${minimum.toStringAsFixed(2)} BAM';
+    }
+
+    return 'Up to '
+        '${maximum!.toStringAsFixed(2)} BAM';
+  }
+
   String? _buildImageUrl(String? relativeUrl) {
     if (relativeUrl == null || relativeUrl.trim().isEmpty) {
       return null;
@@ -125,6 +150,49 @@ class _ProfilePageState extends State<ProfilePage> {
     return baseUri
         .replace(path: normalizedPath, query: null, fragment: null)
         .toString();
+  }
+
+  Future<void> _logout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Log out'),
+          content: const Text('Are you sure you want to log out?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text('Log out'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final session = SessionScope.of(context);
+
+    await session.logout();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(AppRouter.login, (route) => false);
   }
 
   @override
@@ -252,6 +320,87 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
 
+            const SizedBox(height: 20),
+
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Therapy preferences',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.location_on_outlined),
+                      title: const Text('Location'),
+                      subtitle: Text(
+                        profile.location == null ||
+                                profile.location!.trim().isEmpty
+                            ? 'Not added'
+                            : profile.location!,
+                      ),
+                    ),
+
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.person_search_outlined),
+                      title: const Text('Preferred therapist gender'),
+                      subtitle: Text(
+                        profile.preferredTherapistGender == null ||
+                                profile.preferredTherapistGender!
+                                        .toLowerCase() ==
+                                    'any'
+                            ? 'No preference'
+                            : profile.preferredTherapistGender!,
+                      ),
+                    ),
+
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.video_call_outlined),
+                      title: const Text('Preferred session type'),
+                      subtitle: Text(
+                        profile.preferredSessionType == null ||
+                                profile.preferredSessionType!.toLowerCase() ==
+                                    'any'
+                            ? 'No preference'
+                            : profile.preferredSessionType == 'InPerson'
+                            ? 'In person'
+                            : profile.preferredSessionType!,
+                      ),
+                    ),
+
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.payments_outlined),
+                      title: const Text('Preferred price range'),
+                      subtitle: Text(_formatPriceRange(profile)),
+                    ),
+
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.language),
+                      title: const Text('Preferred languages'),
+                      subtitle: Text(
+                        profile.preferredLanguages.isEmpty
+                            ? 'No preference'
+                            : profile.preferredLanguages.join(', '),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             if (_therapistProfileViewModel.profile != null) ...[
               const SizedBox(height: 20),
 
@@ -305,6 +454,17 @@ class _ProfilePageState extends State<ProfilePage> {
                 },
                 icon: const Icon(Icons.reviews),
                 label: const Text('My reviews'),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _logout,
+                icon: const Icon(Icons.logout),
+                label: const Text('Log out'),
               ),
             ),
           ],

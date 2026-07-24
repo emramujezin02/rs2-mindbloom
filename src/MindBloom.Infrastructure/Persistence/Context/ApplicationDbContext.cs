@@ -680,6 +680,27 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         });
     });
 
+        builder.Entity<Client>(entity =>
+        {
+            entity.Property(x => x.Location)
+                .HasMaxLength(200);
+
+            entity.Property(x => x.PreferredTherapistGender)
+                .HasMaxLength(20);
+
+            entity.Property(x => x.PreferredSessionType)
+                .HasMaxLength(20);
+
+            entity.Property(x => x.MinimumPricePerSession)
+                .HasPrecision(18, 2);
+
+            entity.Property(x => x.MaximumPricePerSession)
+                .HasPrecision(18, 2);
+
+            entity.Property(x => x.PreferredLanguages)
+                .HasMaxLength(1000);
+        });
+
         builder.Entity<Therapist>()
     .Property(x => x.Specialization)
     .IsRequired()

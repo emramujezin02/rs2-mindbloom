@@ -35,7 +35,18 @@ class ProfileViewModel extends ChangeNotifier {
     required String firstName,
     required String lastName,
     required String phoneNumber,
+    required DateTime dateOfBirth,
+    required String location,
+    required String preferredTherapistGender,
+    required String preferredSessionType,
+    required double? minimumPricePerSession,
+    required double? maximumPricePerSession,
+    required List<String> preferredLanguages,
   }) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
     error = null;
     notifyListeners();
@@ -46,19 +57,24 @@ class ProfileViewModel extends ChangeNotifier {
           firstName: firstName,
           lastName: lastName,
           phoneNumber: phoneNumber,
+          dateOfBirth: dateOfBirth,
+          location: location,
+          preferredTherapistGender: preferredTherapistGender,
+          preferredSessionType: preferredSessionType,
+          minimumPricePerSession: minimumPricePerSession,
+          maximumPricePerSession: maximumPricePerSession,
+          preferredLanguages: preferredLanguages,
         ),
       );
 
-      isLoading = false;
-      notifyListeners();
-
       return true;
     } catch (exception) {
-      error = exception.toString();
-      isLoading = false;
-      notifyListeners();
+      error = exception.toString().replaceFirst('Exception: ', '');
 
       return false;
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
   }
 

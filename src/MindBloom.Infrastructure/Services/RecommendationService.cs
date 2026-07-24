@@ -56,6 +56,25 @@ public sealed class RecommendationService : IRecommendationService
                 "Client profile was not found for the authenticated user.");
         }
 
+        var preferredTherapistGender =
+    NormalizeOptionalPreference(
+        client.PreferredTherapistGender);
+
+        var preferredSessionType =
+            NormalizeOptionalPreference(
+                client.PreferredSessionType);
+
+        var preferredLanguages =
+            SplitPreferenceLanguages(
+                client.PreferredLanguages);
+
+        var minimumPricePerSession =
+    client.MinimumPricePerSession;
+
+        var maximumPricePerSession =
+            request.MaximumPricePerSession
+            ?? client.MaximumPricePerSession;
+
         var preferredSpecializationIds = request
             .PreferredSpecializationIds
             .Where(x => x > 0)
@@ -112,17 +131,25 @@ public sealed class RecommendationService : IRecommendationService
 
         var recommendations = therapists
             .Where(IsApprovedTherapist)
+            .Where(therapist =>
+                MatchesStoredPreferences(
+                    therapist,
+                    preferredTherapistGender,
+                    preferredSessionType,
+                    preferredLanguages,
+                    minimumPricePerSession,
+                    maximumPricePerSession))
             .Select(therapist =>
                 CreateRecommendation(
                     therapist,
                     preferredSpecializationIds,
                     assessmentFocusAreas,
                     preferredDays,
-                    request.MaximumPricePerSession,
+                    maximumPricePerSession,
                     request.MinimumExperienceYears,
                     previousTherapistIds.Contains(therapist.Id),
                     favoriteTherapistIds.Contains(therapist.Id)))
-            .OrderByDescending(x => x.Score)
+                    .OrderByDescending(x => x.Score)
             .ThenByDescending(x => x.AverageRating)
             .ThenByDescending(x => x.ExperienceYears)
             .ThenBy(x => x.PricePerSession)
@@ -702,4 +729,116 @@ public sealed class RecommendationService : IRecommendationService
                 Explanation = explanation
             });
     }
+
+    private static bool MatchesStoredPreferences(
+     Therapist therapist,
+     string? preferredTherapistGender,
+     string? preferredSessionType,
+     IReadOnlySet<string> preferredLanguages,
+     decimal? minimumPricePerSession,
+     decimal? maximumPricePerSession)
+    {
+        if (!string.IsNullOrWhiteSpace(
+                preferredTherapistGender) &&
+            !preferredTherapistGender.Equals(
+                "Any",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var therapistGender =
+                therapist.User.Gender?.Trim();
+
+            if (!string.Equals(
+                    therapistGender,
+                    preferredTherapistGender,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        if (preferredSessionType?.Equals(
+                "Online",
+                StringComparison.OrdinalIgnoreCase) == true &&
+            !therapist.OffersOnline)
+        {
+            return false;
+        }
+
+        if (preferredSessionType?.Equals(
+                "InPerson",
+                StringComparison.OrdinalIgnoreCase) == true &&
+            !therapist.OffersInPerson)
+        {
+            return false;
+        }
+
+        if (preferredLanguages.Count > 0)
+        {
+            var therapistLanguages =
+                SplitPreferenceLanguages(
+                    therapist.Languages);
+
+            if (!therapistLanguages.Overlaps(
+                    preferredLanguages))
+            {
+                return false;
+            }
+        }
+
+        var therapistPrice =
+            GetTherapistPrice(therapist);
+
+        if (minimumPricePerSession.HasValue &&
+            therapistPrice <
+            minimumPricePerSession.Value)
+        {
+            return false;
+        }
+
+        if (maximumPricePerSession.HasValue &&
+            therapistPrice >
+            maximumPricePerSession.Value)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static decimal GetTherapistPrice(
+        Therapist therapist)
+    {
+        return therapist.PricePerSession > 0
+            ? therapist.PricePerSession
+            : therapist.HourlyRate;
+    }
+
+    private static string? NormalizeOptionalPreference(
+        string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim();
+    }
+
+    private static HashSet<string>
+        SplitPreferenceLanguages(
+            string? languages)
+    {
+        if (string.IsNullOrWhiteSpace(languages))
+        {
+            return new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+        }
+
+        return languages
+            .Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries |
+                StringSplitOptions.TrimEntries)
+            .ToHashSet(
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    
 }
