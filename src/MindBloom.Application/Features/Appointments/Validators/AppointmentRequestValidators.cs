@@ -45,19 +45,7 @@ public sealed class CreateAppointmentDtoValidator
             .WithMessage(
                 "Appointment type is not valid.");
 
-        RuleFor(x => x.MeetingLink)
-            .NotEmpty()
-            .WithMessage(
-                "Meeting link is required for online appointments.")
-            .MaximumLength(2000)
-            .WithMessage(
-                "Meeting link may contain at most 2000 characters.")
-            .Must(BeValidAbsoluteHttpUrl)
-            .WithMessage(
-                "Meeting link must be a valid HTTP or HTTPS URL.")
-            .When(x =>
-                x.Type ==
-                AppointmentType.Online);
+
 
         RuleFor(x => x.Location)
             .NotEmpty()
@@ -78,10 +66,21 @@ public sealed class CreateAppointmentDtoValidator
                 !string.IsNullOrWhiteSpace(
                     x.Location));
 
+        RuleFor(x => x.Notes)
+    .MaximumLength(2000)
+    .WithMessage(
+        "Appointment notes may contain at most 2000 characters.")
+    .When(x =>
+        !string.IsNullOrWhiteSpace(
+            x.Notes));
+
         RuleFor(x => x.MeetingLink)
             .MaximumLength(2000)
             .WithMessage(
                 "Meeting link may contain at most 2000 characters.")
+            .Must(BeValidAbsoluteHttpUrl)
+            .WithMessage(
+                "Meeting link must be a valid HTTP or HTTPS URL.")
             .When(x =>
                 !string.IsNullOrWhiteSpace(
                     x.MeetingLink));

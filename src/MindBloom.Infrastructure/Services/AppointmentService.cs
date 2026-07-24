@@ -163,9 +163,26 @@ public class AppointmentService : IAppointmentService
             Status = AppointmentStatus.Pending,
             Type = request.Type,
 
-            MeetingLink = request.MeetingLink,
+            MeetingLink =
+    string.IsNullOrWhiteSpace(
+        request.MeetingLink)
+        ? null
+        : request.MeetingLink.Trim(),
 
-            Location = request.Location,
+            Location =
+    string.IsNullOrWhiteSpace(
+        request.Location)
+        ? null
+        : request.Location.Trim(),
+
+            Notes =
+    string.IsNullOrWhiteSpace(
+        request.Notes)
+        ? null
+        : request.Notes.Trim(),
+            AppointmentDateUtc = request.StartUtc,
+
+            Price = therapist.HourlyRate,
         };
 
         _context.Appointments.Add(appointment);

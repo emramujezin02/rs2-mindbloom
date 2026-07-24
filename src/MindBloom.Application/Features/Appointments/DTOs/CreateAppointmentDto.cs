@@ -15,4 +15,6 @@ public class CreateAppointmentDto
     public string? MeetingLink { get; set; }
 
     public string? Location { get; set; }
+
+    public string? Notes { get; set; }
 }

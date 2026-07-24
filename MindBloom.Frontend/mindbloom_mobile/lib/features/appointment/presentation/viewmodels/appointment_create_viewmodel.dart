@@ -264,41 +264,47 @@ class AppointmentCreateViewModel extends ChangeNotifier {
   }
 
   Future<bool> createAppointment({
-    required int therapistId,
-    required DateTime startUtc,
-    required DateTime endUtc,
-    required int type,
-    String? meetingLink,
-    String? location,
-  }) async {
-    isLoading = true;
-    error = null;
+  required int therapistId,
+  required DateTime startUtc,
+  required DateTime endUtc,
+  required int type,
+  String? meetingLink,
+  String? location,
+  String? notes,
+}) async {
+  if (isLoading) {
+    return false;
+  }
+
+  isLoading = true;
+  error = null;
+  notifyListeners();
+
+  try {
+    await repository.createAppointment(
+      AppointmentCreateRequest(
+        therapistId: therapistId,
+        startUtc: startUtc,
+        endUtc: endUtc,
+        type: type,
+        meetingLink: meetingLink,
+        location: location,
+        notes: notes,
+      ),
+    );
+
+    isLoading = false;
     notifyListeners();
 
-    try {
-      await repository.createAppointment(
-        AppointmentCreateRequest(
-          therapistId: therapistId,
-          startUtc: startUtc,
-          endUtc: endUtc,
-          type: type,
-          meetingLink: meetingLink,
-          location: location,
-        ),
-      );
+    return true;
+  } catch (exception) {
+    error = exception.toString();
+    isLoading = false;
+    notifyListeners();
 
-      isLoading = false;
-      notifyListeners();
-
-      return true;
-    } catch (exception) {
-      error = exception.toString();
-      isLoading = false;
-      notifyListeners();
-
-      return false;
-    }
+    return false;
   }
+}
 
   static int _toBackendDayOfWeek(int dartWeekday) {
     return dartWeekday == DateTime.sunday ? 0 : dartWeekday;

@@ -5,6 +5,7 @@ class AppointmentCreateRequest {
   final int type;
   final String? meetingLink;
   final String? location;
+  final String? notes;
 
   AppointmentCreateRequest({
     required this.therapistId,
@@ -13,6 +14,7 @@ class AppointmentCreateRequest {
     required this.type,
     this.meetingLink,
     this.location,
+    this.notes,
   });
 
   Map<String, dynamic> toJson() {
@@ -23,6 +25,7 @@ class AppointmentCreateRequest {
       'type': type,
       'meetingLink': meetingLink,
       'location': location,
+      'notes': notes,
     };
   }
 }
