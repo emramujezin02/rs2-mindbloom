@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import 'package:mindbloom_mobile/features/payment/data/models/payment_model.dart';
+import '../../../membership/presentation/pages/membership_receipt_page.dart';
 import '../../../../app/di/injection.dart';
 import '../viewmodels/payment_list_viewmodel.dart';
 import 'payment_receipt_page.dart';
@@ -41,12 +42,26 @@ class _PaymentListPageState extends State<PaymentListPage> {
     await _viewModel.loadPayments();
   }
 
-  void _openReceipt(int paymentId) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PaymentReceiptPage(paymentId: paymentId),
-      ),
-    );
+  void _openTransaction(PaymentModel payment) {
+    if (payment.isAppointmentPayment) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PaymentReceiptPage(paymentId: payment.id),
+        ),
+      );
+
+      return;
+    }
+
+    final membershipId = payment.membershipId;
+
+    if (payment.isMembershipPayment && membershipId != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => MembershipReceiptPage(membershipId: membershipId),
+        ),
+      );
+    }
   }
 
   IconData _statusIcon(String status) {
@@ -141,29 +156,47 @@ class _PaymentListPageState extends State<PaymentListPage> {
             child: ListTile(
               onTap: receiptAvailable
                   ? () {
-                      _openReceipt(payment.id);
+                      _openTransaction(payment);
                     }
                   : null,
               leading: Icon(_statusIcon(payment.status)),
               title: Text(payment.therapistName),
               subtitle: Text(
-                '${formatter.format(payment.createdAtUtc.toLocal())}\n'
-                'Appointment #${payment.appointmentId}'
-                '${receiptAvailable ? '\nTap to view receipt' : ''}',
+                '${payment.displayType}\n'
+                '${payment.purpose}\n'
+                '${formatter.format(payment.createdAtUtc.toLocal())}'
+                '${payment.isAppointmentPayment && payment.appointmentId != null ? '\nAppointment #${payment.appointmentId}' : ''}'
+                '${payment.isMembershipPayment && payment.membershipId != null ? '\nMembership #${payment.membershipId}' : ''}'
+                '${receiptAvailable ? '\nTap to view transaction details' : ''}',
               ),
-              isThreeLine: true,
+              isThreeLine: false,
               trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${payment.amount.toStringAsFixed(2)} KM',
+                    '${payment.amount.toStringAsFixed(2)} '
+                    '${payment.currency}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(payment.displayStatus),
                   if (receiptAvailable)
                     const Icon(Icons.chevron_right, size: 18),
+                  if (payment.isRefundPending)
+                    const Text(
+                      'Refund processing',
+                      style: TextStyle(fontSize: 11),
+                    ),
+
+                  if (payment.isRefunded && payment.refundedAtUtc != null)
+                    const Text(
+                      'Amount returned',
+                      style: TextStyle(fontSize: 11),
+                    ),
+
+                  if (payment.isRefundFailed)
+                    const Text('Refund failed', style: TextStyle(fontSize: 11)),
                 ],
               ),
             ),

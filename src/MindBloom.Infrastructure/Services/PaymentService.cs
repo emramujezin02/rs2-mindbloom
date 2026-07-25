@@ -59,6 +59,7 @@ public class PaymentService : IPaymentService
         var appointment =
             await _context.Appointments
                 .Include(x => x.Therapist)
+    .ThenInclude(x => x.User)
                 .FirstOrDefaultAsync(x =>
                     x.Id == request.AppointmentId);
 
@@ -154,10 +155,24 @@ public class PaymentService : IPaymentService
                     return new PaymentIntentResponseDto
                     {
                         ClientSecret =
-                            existingPaymentIntent.ClientSecret,
+         existingPaymentIntent.ClientSecret,
 
                         PaymentIntentId =
-                            existingPaymentIntent.Id
+         existingPaymentIntent.Id,
+
+                        AppointmentId =
+         appointment.Id,
+
+                        Amount =
+         existingPayment.Amount,
+
+                        Currency =
+         PaymentCurrency,
+
+                        Purpose =
+         $"Therapy appointment with "
+         + $"{appointment.Therapist.User.FirstName} "
+         + $"{appointment.Therapist.User.LastName}"
                     };
                 }
 
@@ -172,7 +187,21 @@ public class PaymentService : IPaymentService
                             existingPaymentIntent.ClientSecret,
 
                         PaymentIntentId =
-                            existingPaymentIntent.Id
+                            existingPaymentIntent.Id,
+
+                        AppointmentId =
+                            appointment.Id,
+
+                        Amount =
+                            existingPayment.Amount,
+
+                        Currency =
+                            PaymentCurrency,
+
+                        Purpose =
+                            $"Therapy appointment with "
+                            + $"{appointment.Therapist.User.FirstName} "
+                            + $"{appointment.Therapist.User.LastName}"
                     };
                 }
 
@@ -238,9 +267,25 @@ public class PaymentService : IPaymentService
         var paymentIntentService =
             new PaymentIntentService();
 
+        var idempotencySource =
+    existingPayment == null
+        ? "initial"
+        : $"after-{existingPayment.StripePaymentIntentId}";
+
+        var requestOptions =
+            new RequestOptions
+            {
+                IdempotencyKey =
+                    $"mindbloom-appointment-payment-"
+                    + $"{appointment.Id}-"
+                    + idempotencySource
+            };
+
         var paymentIntent =
             await paymentIntentService
-                .CreateAsync(options);
+                .CreateAsync(
+                    options,
+                    requestOptions);
 
         if (existingPayment != null)
         {
@@ -294,7 +339,21 @@ public class PaymentService : IPaymentService
                 paymentIntent.ClientSecret,
 
             PaymentIntentId =
-                paymentIntent.Id
+                paymentIntent.Id,
+
+            AppointmentId =
+                appointment.Id,
+
+            Amount =
+                amount,
+
+            Currency =
+                PaymentCurrency,
+
+            Purpose =
+                $"Therapy appointment with "
+                + $"{appointment.Therapist.User.FirstName} "
+                + $"{appointment.Therapist.User.LastName}"
         };
     }
 
@@ -483,13 +542,14 @@ public class PaymentService : IPaymentService
     }
 
     public async Task<List<PaymentHistoryDto>>
-        GetMyPaymentsAsync(
-            int clientUserId)
+    GetMyPaymentsAsync(
+        int clientUserId)
     {
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == clientUserId);
+                    x.UserId == clientUserId &&
+                    !x.IsDeleted);
 
         if (client == null)
         {
@@ -497,46 +557,158 @@ public class PaymentService : IPaymentService
                 "Client not found.");
         }
 
-        return await _context.Payments
-            .AsNoTracking()
-            .Include(x => x.Appointment)
-            .ThenInclude(x => x.Therapist)
-            .ThenInclude(x => x.User)
-            .Where(x =>
-                x.Appointment.ClientId ==
-                client.Id)
+        var appointmentPayments =
+            await _context.Payments
+                .AsNoTracking()
+                .Include(x => x.Appointment)
+                    .ThenInclude(x => x.Therapist)
+                        .ThenInclude(x => x.User)
+                .Where(x =>
+                    x.Appointment.ClientId ==
+                        client.Id &&
+                    !x.IsDeleted)
+                .Select(x =>
+                    new PaymentHistoryDto
+                    {
+                        Id =
+                            x.Id,
+
+                        PaymentType =
+                            "Appointment",
+
+                        AppointmentId =
+                            x.AppointmentId,
+
+                        MembershipId =
+                            null,
+
+                        Amount =
+                            x.Amount,
+
+                        Currency =
+                            PaymentCurrency
+                                .ToUpperInvariant(),
+
+                        Purpose =
+                            "Therapy appointment with "
+                            + x.Appointment
+                                .Therapist.User.FirstName
+                            + " "
+                            + x.Appointment
+                                .Therapist.User.LastName,
+
+                        Status =
+                            x.Status.ToString(),
+
+                        CreatedAtUtc =
+                            x.CreatedAtUtc,
+
+                        PaidAtUtc =
+                            x.PaidAtUtc,
+
+                        TherapistName =
+                            x.Appointment
+                                .Therapist.User.FirstName
+                            + " "
+                            + x.Appointment
+                                .Therapist.User.LastName,
+
+                        RefundReason =
+                            x.RefundReason,
+
+                        RefundRequestedAtUtc =
+                            x.RefundRequestedAtUtc,
+
+                        RefundedAtUtc =
+                            x.RefundedAtUtc,
+
+                        RefundFailureReason =
+                            x.RefundFailureReason
+                    })
+                .ToListAsync();
+
+        var membershipPayments =
+            await _context.MembershipPayments
+                .AsNoTracking()
+                .Include(x =>
+                    x.ClientMembership)
+                    .ThenInclude(x =>
+                        x.Therapist)
+                        .ThenInclude(x =>
+                            x.User)
+                .Where(x =>
+                    x.ClientMembership.ClientId ==
+                        client.Id &&
+                    !x.IsDeleted &&
+                    !x.ClientMembership.IsDeleted)
+                .Select(x =>
+                    new PaymentHistoryDto
+                    {
+                        Id =
+                            x.Id,
+
+                        PaymentType =
+                            "Membership",
+
+                        AppointmentId =
+                            null,
+
+                        MembershipId =
+                            x.ClientMembershipId,
+
+                        Amount =
+                            x.Amount,
+
+                        Currency =
+                            x.Currency
+                                .ToUpper(),
+
+                        Purpose =
+                            x.ClientMembership.PlanType
+                                .ToString()
+                            + " membership with "
+                            + x.ClientMembership
+                                .Therapist.User.FirstName
+                            + " "
+                            + x.ClientMembership
+                                .Therapist.User.LastName,
+
+                        Status =
+                            x.Status.ToString(),
+
+                        CreatedAtUtc =
+                            x.CreatedAtUtc,
+
+                        PaidAtUtc =
+                            x.PaidAtUtc,
+
+                        TherapistName =
+                            x.ClientMembership
+                                .Therapist.User.FirstName
+                            + " "
+                            + x.ClientMembership
+                                .Therapist.User.LastName,
+
+                        RefundReason =
+                            null,
+
+                        RefundRequestedAtUtc =
+                            null,
+
+                        RefundedAtUtc =
+                            null,
+
+                        RefundFailureReason =
+                            null
+                    })
+                .ToListAsync();
+
+        return appointmentPayments
+            .Concat(membershipPayments)
             .OrderByDescending(x =>
+                x.PaidAtUtc ??
                 x.CreatedAtUtc)
-            .Select(x =>
-                new PaymentHistoryDto
-                {
-                    Id =
-                        x.Id,
-
-                    Amount =
-                        x.Amount,
-
-                    Status =
-                        x.Status.ToString(),
-
-                    CreatedAtUtc =
-                        x.CreatedAtUtc,
-
-                    AppointmentId =
-                        x.AppointmentId,
-
-                    TherapistName =
-                        x.Appointment
-                            .Therapist
-                            .User
-                            .FirstName
-                        + " "
-                        + x.Appointment
-                            .Therapist
-                            .User
-                            .LastName
-                })
-            .ToListAsync();
+            .ToList();
     }
 
     public async Task<PaymentReceiptDto>
@@ -623,7 +795,36 @@ public class PaymentService : IPaymentService
                     .LastName,
 
             InvoiceNumber =
-                $"INV-{payment.Id:D6}"
+                $"INV-{payment.Id:D6}",
+
+            Currency =
+    PaymentCurrency.ToUpperInvariant(),
+
+            Purpose =
+    "Therapy appointment with "
+    + payment.Appointment
+        .Therapist.User.FirstName
+    + " "
+    + payment.Appointment
+        .Therapist.User.LastName,
+
+            StripePaymentIntentId =
+    payment.StripePaymentIntentId,
+
+            StripeRefundId =
+    payment.StripeRefundId,
+
+            RefundReason =
+    payment.RefundReason,
+
+            RefundRequestedAtUtc =
+    payment.RefundRequestedAtUtc,
+
+            RefundedAtUtc =
+    payment.RefundedAtUtc,
+
+            RefundFailureReason =
+    payment.RefundFailureReason,
         };
     }
 

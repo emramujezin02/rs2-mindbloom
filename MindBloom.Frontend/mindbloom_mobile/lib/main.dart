@@ -13,11 +13,18 @@ Future<void> main() async {
 
   const stripePublishableKey = String.fromEnvironment('STRIPE_PUBLISHABLE_KEY');
 
-  if (stripePublishableKey.isEmpty) {
+  if (stripePublishableKey.trim().isEmpty) {
     throw StateError(
       'STRIPE_PUBLISHABLE_KEY is not configured. '
       'Start the application using '
-      '--dart-define=STRIPE_PUBLISHABLE_KEY=pk_test_...',
+      '--dart-define=STRIPE_PUBLISHABLE_KEY=4242 4242 4242 4242',
+    );
+  }
+
+  if (!stripePublishableKey.startsWith('pk_test_')) {
+    throw StateError(
+      'MindBloom mobile payments must use a Stripe sandbox key. '
+      'STRIPE_PUBLISHABLE_KEY must start with pk_test_.',
     );
   }
 

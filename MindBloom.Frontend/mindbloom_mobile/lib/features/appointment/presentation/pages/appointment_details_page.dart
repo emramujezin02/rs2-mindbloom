@@ -119,8 +119,11 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         return AlertDialog(
           title: const Text('Confirm payment'),
           content: Text(
-            'Are you sure you want to pay for the appointment with '
-            '${_viewModel.currentAppointment.therapistName}?',
+            'Purpose:\n'
+            'Therapy appointment with '
+            '${_viewModel.currentAppointment.therapistName}\n\n'
+            'Amount:\n'
+            '${_viewModel.currentAppointment.price.toStringAsFixed(2)} BAM',
           ),
           actions: [
             TextButton(
@@ -157,6 +160,29 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         const SnackBar(content: Text('Payment completed successfully.')),
       );
     }
+
+    if (success) {
+      await _viewModel.loadDetails();
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment was confirmed successfully by the server.'),
+        ),
+      );
+
+      return;
+    }
+
+    final message =
+        _paymentViewModel.errorMessage ?? 'Payment could not be completed.';
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _openReceipt() {
