@@ -303,7 +303,7 @@ public class ReviewService : IReviewService
     {
         var reviews =
             await _context.Reviews
-                .Where(x => x.TherapistId == therapistId && !x.IsDeleted)
+                .Where(x => x.TherapistId == therapistId && x.IsApproved && !x.IsDeleted)
                 .ToListAsync();
 
         if (!reviews.Any())
@@ -326,6 +326,98 @@ public class ReviewService : IReviewService
                     1),
 
             TotalReviews = reviews.Count
+        };
+    }
+
+    public async Task<ReviewEligibilityDto>
+    GetEligibilityAsync(
+        int clientUserId,
+        int appointmentId)
+    {
+        var client =
+            await _context.Clients
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == clientUserId &&
+                    !x.IsDeleted);
+
+        if (client == null)
+        {
+            throw new NotFoundException(
+                "Client not found.");
+        }
+
+        var appointment =
+            await _context.Appointments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.Id == appointmentId);
+
+        if (appointment == null)
+        {
+            throw new NotFoundException(
+                "Appointment not found.");
+        }
+
+        if (appointment.ClientId != client.Id)
+        {
+            return new ReviewEligibilityDto
+            {
+                AppointmentId = appointmentId,
+                CanReview = false,
+                Message =
+                    "You can review only your own appointment."
+            };
+        }
+
+        if (appointment.Status !=
+            AppointmentStatus.Completed)
+        {
+            return new ReviewEligibilityDto
+            {
+                AppointmentId = appointmentId,
+                CanReview = false,
+                Message =
+                    "A review can only be submitted after the appointment is completed."
+            };
+        }
+
+        var existingReview =
+            await _context.Reviews
+                .AsNoTracking()
+                .Where(x =>
+                    x.AppointmentId == appointmentId &&
+                    !x.IsDeleted)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.IsApproved
+                })
+                .FirstOrDefaultAsync();
+
+        if (existingReview != null)
+        {
+            return new ReviewEligibilityDto
+            {
+                AppointmentId = appointmentId,
+                CanReview = false,
+                ExistingReviewId =
+                    existingReview.Id,
+                ModerationStatus =
+                    existingReview.IsApproved
+                        ? "Approved"
+                        : "Pending moderation",
+                Message =
+                    "A review has already been submitted for this appointment."
+            };
+        }
+
+        return new ReviewEligibilityDto
+        {
+            AppointmentId = appointmentId,
+            CanReview = true,
+            Message =
+                "You can submit a review for this appointment."
         };
     }
 
@@ -478,34 +570,50 @@ public class ReviewService : IReviewService
                 .Take(
                     pagination.PageSize)
                 .Select(x =>
-                    new ClientReviewDto
-                    {
-                        Id =
-                            x.Id,
+new ClientReviewDto
+{
+    Id = x.Id,
 
-                        TherapistId =
-                            x.TherapistId,
+    AppointmentId =
+        x.AppointmentId,
 
-                        TherapistName =
-                            x.Therapist.User.FirstName
-                            + " "
-                            + x.Therapist.User.LastName,
+    TherapistId =
+        x.TherapistId,
 
-                        Rating =
-                            x.Rating,
+    TherapistName =
+        x.Therapist.User.FirstName
+        + " "
+        + x.Therapist.User.LastName,
 
-                        Comment =
-                            x.Comment,
+    Rating =
+        x.Rating,
 
-                        CreatedAtUtc =
-                            x.CreatedAtUtc,
+    Comment =
+        x.Comment,
 
-                        TherapistReply =
-                            x.TherapistReply,
+    CreatedAtUtc =
+        x.CreatedAtUtc,
 
-                        TherapistReplyCreatedAtUtc =
-                            x.TherapistReplyCreatedAtUtc
-                    })
+    IsApproved =
+        x.IsApproved,
+
+    ModerationStatus =
+        x.IsApproved
+            ? "Approved"
+            : "Pending moderation",
+
+    CanEdit =
+        true,
+
+    ModerationReason =
+        x.ModerationReason,
+
+    TherapistReply =
+        x.TherapistReply,
+
+    TherapistReplyCreatedAtUtc =
+        x.TherapistReplyCreatedAtUtc
+})
                 .ToListAsync();
 
         return PagedResponse<ClientReviewDto>

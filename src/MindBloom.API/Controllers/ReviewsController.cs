@@ -87,6 +87,24 @@ public class ReviewsController : ControllerBase
     }
 
     [Authorize(Roles = "Client")]
+    [HttpGet("eligibility/{appointmentId}")]
+    public async Task<IActionResult>
+    GetEligibility(
+        int appointmentId)
+    {
+        var userId =
+            GetCurrentUserId();
+
+        var result =
+            await _reviewService
+                .GetEligibilityAsync(
+                    userId,
+                    appointmentId);
+
+        return Ok(result);
+    }
+
+    [Authorize(Roles = "Client")]
     [HttpDelete("{reviewId}")]
     public async Task<IActionResult>
         Delete(

@@ -22,6 +22,11 @@ public interface IReviewService
         GetTherapistRatingAsync(
             int therapistId);
 
+    Task<ReviewEligibilityDto>
+        GetEligibilityAsync(
+            int clientUserId,
+            int appointmentId);
+
     Task DeleteAsync(
         int clientUserId,
         int reviewId);

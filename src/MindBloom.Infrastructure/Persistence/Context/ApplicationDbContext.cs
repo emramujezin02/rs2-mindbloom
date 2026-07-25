@@ -676,6 +676,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             entity.Property(x => x.IsApproved)
     .HasDefaultValue(false);
 
+            entity.HasOne(x => x.Appointment)
+    .WithOne()
+    .HasForeignKey<Review>(x => x.AppointmentId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => x.AppointmentId)
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+
             entity.HasIndex(x => new
             {
                 x.IsApproved,

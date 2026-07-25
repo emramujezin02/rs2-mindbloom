@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../data/models/review_model.dart';
 import '../viewmodels/my_reviews_viewmodel.dart';
+import 'edit_review_page.dart';
 
 class MyReviewsPage extends StatefulWidget {
   const MyReviewsPage({super.key});
@@ -27,6 +29,8 @@ class _MyReviewsPageState extends State<MyReviewsPage> {
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
 
+    _viewModel.dispose();
+
     super.dispose();
   }
 
@@ -36,8 +40,14 @@ class _MyReviewsPageState extends State<MyReviewsPage> {
     }
   }
 
-  Future<void> _refresh() async {
-    await _viewModel.loadReviews();
+  Future<void> _openEdit(ReviewModel review) async {
+    final updated = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => EditReviewPage(review: review)),
+    );
+
+    if (updated == true && mounted) {
+      await _viewModel.loadReviews();
+    }
   }
 
   @override
@@ -53,7 +63,7 @@ class _MyReviewsPageState extends State<MyReviewsPage> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_viewModel.error != null) {
+    if (_viewModel.error != null && _viewModel.reviews.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -76,42 +86,66 @@ class _MyReviewsPageState extends State<MyReviewsPage> {
       );
     }
 
-    if (_viewModel.reviews.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'You have not submitted any reviews yet.',
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
-
     return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView.separated(
+      onRefresh: _viewModel.loadReviews,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
-        itemCount: _viewModel.reviews.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final review = _viewModel.reviews[index];
+        children: [
+          if (_viewModel.reviews.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 80),
+              child: Text(
+                'You have not submitted any reviews yet.',
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
+            ..._viewModel.reviews.map(
+              (review) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _ReviewCard(
+                  review: review,
+                  onEdit: review.canEdit ? () => _openEdit(review) : null,
+                ),
+              ),
+            ),
 
-          return _ReviewCard(review: review);
-        },
+          if (_viewModel.error != null && _viewModel.reviews.isNotEmpty) ...[
+            Text(
+              _viewModel.error!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          if (_viewModel.hasMore)
+            OutlinedButton(
+              onPressed: _viewModel.isLoadingMore ? null : _viewModel.loadMore,
+              child: _viewModel.isLoadingMore
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Load more'),
+            ),
+        ],
       ),
     );
   }
 }
 
 class _ReviewCard extends StatelessWidget {
-  final dynamic review;
+  final ReviewModel review;
+  final VoidCallback? onEdit;
 
-  const _ReviewCard({required this.review});
+  const _ReviewCard({required this.review, this.onEdit});
 
   @override
   Widget build(BuildContext context) {
-    final dateFormatter = DateFormat('dd.MM.yyyy. HH:mm');
+    final formatter = DateFormat('dd.MM.yyyy. HH:mm');
 
     final therapistName = review.therapistName.isEmpty
         ? 'Therapist'
@@ -135,6 +169,15 @@ class _ReviewCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                ),
+                Chip(
+                  avatar: Icon(
+                    review.isApproved
+                        ? Icons.check_circle
+                        : Icons.hourglass_top,
+                    size: 18,
+                  ),
+                  label: Text(review.moderationStatus),
                 ),
               ],
             ),
@@ -161,40 +204,42 @@ class _ReviewCard extends StatelessWidget {
             const SizedBox(height: 10),
 
             Text(
-              dateFormatter.format(review.createdAtUtc.toLocal()),
+              formatter.format(review.createdAtUtc.toLocal()),
               style: Theme.of(context).textTheme.bodySmall,
             ),
+
+            if (review.moderationReason != null &&
+                review.moderationReason!.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Moderation note: '
+                '${review.moderationReason}',
+              ),
+            ],
 
             if (review.therapistReply != null &&
                 review.therapistReply!.trim().isNotEmpty) ...[
               const SizedBox(height: 14),
               const Divider(),
               const SizedBox(height: 8),
-
-              const Row(
-                children: [
-                  Icon(Icons.reply, size: 19),
-                  SizedBox(width: 6),
-                  Text(
-                    'Therapist reply',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
+              const Text(
+                'Therapist reply',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
-
               const SizedBox(height: 8),
+              Text(review.therapistReply!),
+            ],
 
-              Text(review.therapistReply!, style: const TextStyle(height: 1.4)),
-
-              if (review.therapistReplyCreatedAtUtc != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  dateFormatter.format(
-                    review.therapistReplyCreatedAtUtc!.toLocal(),
-                  ),
-                  style: Theme.of(context).textTheme.bodySmall,
+            if (onEdit != null) ...[
+              const SizedBox(height: 14),
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Edit review'),
                 ),
-              ],
+              ),
             ],
           ],
         ),
