@@ -594,13 +594,17 @@ public class MembershipService : IMembershipService
         await _context.SaveChangesAsync();
 
         await _businessNotificationService
-    .PublishAsync(
-        clientUserId,
-        "Membership purchased",
-        $"Your {GetPlanName(membership.PlanType)} "
-        + $"for {membership.Therapist.User.FirstName} "
-        + $"{membership.Therapist.User.LastName} "
-        + "has been activated.");
+            .PublishAsync(
+                clientUserId,
+                "Membership purchased",
+                $"Your {GetPlanName(membership.PlanType)} "
+                + $"for {membership.Therapist.User.FirstName} "
+                + $"{membership.Therapist.User.LastName} "
+                + "has been activated.",
+                actionType:
+                    NotificationActionType.Membership,
+                resourceId:
+                    membership.Id);
 
         if (membership.Therapist.UserId !=
             clientUserId)
@@ -610,7 +614,11 @@ public class MembershipService : IMembershipService
                     membership.Therapist.UserId,
                     "New membership purchase",
                     $"A client purchased your "
-                    + $"{GetPlanName(membership.PlanType)}.");
+                    + $"{GetPlanName(membership.PlanType)}.",
+                    actionType:
+                        NotificationActionType.Membership,
+                    resourceId:
+                        membership.Id);
         }
 
         return MapMembership(
@@ -1051,14 +1059,15 @@ public class MembershipService : IMembershipService
         }
 
         await _businessNotificationService
-    .PublishAsync(
-        clientUserId,
-        "Membership session reserved",
-        $"One membership session with "
-        + $"{therapistName} "
-        + "has been reserved for your appointment. "
-        + $"Remaining sessions: {remainingSessions}.",
-        request.AppointmentId);
+            .PublishAsync(
+                clientUserId,
+                "Membership session reserved",
+                $"One membership session with "
+                + $"{therapistName} "
+                + "has been reserved for your appointment. "
+                + $"Remaining sessions: {remainingSessions}.",
+                request.AppointmentId,
+                NotificationActionType.Appointment);
 
         if (therapistUserId > 0 &&
             therapistUserId != clientUserId)
@@ -1069,7 +1078,8 @@ public class MembershipService : IMembershipService
                     "Membership used for appointment",
                     "A client reserved a membership session "
                     + "for an accepted appointment.",
-                    request.AppointmentId);
+                    request.AppointmentId,
+                    NotificationActionType.Appointment);
         }
     }
 

@@ -448,4 +448,10 @@ class AppInjection {
       ),
     );
   }
+
+  static AppointmentRepository createAppointmentRepository() {
+    return AppointmentRepository(
+      apiService: AppointmentApiService(apiClient: apiClient),
+    );
+  }
 }

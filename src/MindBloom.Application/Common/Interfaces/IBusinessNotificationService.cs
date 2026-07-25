@@ -1,4 +1,6 @@
-﻿namespace MindBloom.Application.Common.Interfaces;
+﻿using MindBloom.Domain.Enums;
+
+namespace MindBloom.Application.Common.Interfaces;
 
 public interface IBusinessNotificationService
 {
@@ -6,5 +8,8 @@ public interface IBusinessNotificationService
         int userId,
         string title,
         string message,
-        int? appointmentId = null);
+        int? appointmentId = null,
+        NotificationActionType actionType =
+            NotificationActionType.None,
+        int? resourceId = null);
 }

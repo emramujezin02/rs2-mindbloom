@@ -93,11 +93,55 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Entity<Notification>()
-            .HasOne(x => x.User)
-            .WithMany()
-            .HasForeignKey(x => x.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<Notification>(
+            entity =>
+            {
+                entity.Property(x =>
+                        x.Title)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(x =>
+                        x.Message)
+                    .IsRequired()
+                    .HasMaxLength(2000);
+
+                entity.Property(x =>
+                        x.ActionType)
+                    .HasConversion<int>();
+
+                entity.HasOne(x =>
+                        x.User)
+                    .WithMany()
+                    .HasForeignKey(x =>
+                        x.UserId)
+                    .OnDelete(
+                        DeleteBehavior.Cascade);
+
+                entity.HasOne(x =>
+                        x.Appointment)
+                    .WithMany()
+                    .HasForeignKey(x =>
+                        x.AppointmentId)
+                    .OnDelete(
+                        DeleteBehavior.SetNull);
+
+                entity.HasIndex(x => new
+                {
+                    x.UserId,
+                    x.IsRead,
+                    x.CreatedAtUtc
+                });
+
+                entity.HasIndex(x =>
+                    x.ResourceId);
+
+                entity.HasIndex(x => new
+                {
+                    x.UserId,
+                    x.CreatedAtUtc
+                });
+            });
 
         builder.Entity<Review>()
             .HasOne(x => x.Client)

@@ -7,6 +7,8 @@ import '../../data/repositories/notification_repository.dart';
 import '../../data/services/notification_realtime_service.dart';
 
 class NotificationViewModel extends ChangeNotifier {
+  static const int _pageSize = 20;
+
   final NotificationRepository repository;
 
   late final NotificationRealtimeService realtimeService;
@@ -23,19 +25,19 @@ class NotificationViewModel extends ChangeNotifier {
   }) {
     realtimeService = realtimeServiceFactory(
       onNotificationReceived: () async {
-        await loadNotifications(showLoading: false);
+        await refresh();
       },
       onReconnected: () async {
-        await loadNotifications(showLoading: false);
+        await refresh();
       },
       onConnectionStatusChanged: _setConnectionStatus,
     );
   }
 
   bool isLoading = false;
-
   bool isRefreshing = false;
-
+  bool isLoadingMore = false;
+  bool isMarkingAllRead = false;
   bool isInitialized = false;
 
   String? error;
@@ -45,10 +47,15 @@ class NotificationViewModel extends ChangeNotifier {
 
   List<NotificationModel> notifications = [];
 
+  int unreadCount = 0;
+
+  int _currentPage = 0;
+  int _totalPages = 0;
+
   Timer? _pollingTimer;
 
-  int get unreadCount {
-    return notifications.where((notification) => !notification.isRead).length;
+  bool get hasMoreNotifications {
+    return _currentPage < _totalPages;
   }
 
   bool get isRealtimeConnected {
@@ -71,14 +78,14 @@ class NotificationViewModel extends ChangeNotifier {
 
     isInitialized = true;
 
-    await loadNotifications();
+    await loadFirstPage();
 
     await realtimeService.start();
 
     _startPolling();
   }
 
-  Future<void> loadNotifications({bool showLoading = true}) async {
+  Future<void> loadFirstPage({bool showLoading = true}) async {
     if (isRefreshing) {
       return;
     }
@@ -94,18 +101,65 @@ class NotificationViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final loadedNotifications = await repository.getNotifications();
-
-      loadedNotifications.sort(
-        (first, second) => second.createdAtUtc.compareTo(first.createdAtUtc),
+      final response = await repository.getNotifications(
+        pageNumber: 1,
+        pageSize: _pageSize,
       );
 
-      notifications = loadedNotifications;
+      notifications = response.items;
+
+      _currentPage = response.pageNumber;
+
+      _totalPages = response.totalPages;
+
+      unreadCount = response.unreadCount;
     } catch (exception) {
-      error = exception.toString();
+      error = _normalizeError(exception);
     } finally {
       isLoading = false;
       isRefreshing = false;
+
+      notifyListeners();
+    }
+  }
+
+  Future<void> refresh() {
+    return loadFirstPage(showLoading: false);
+  }
+
+  Future<void> loadMore() async {
+    if (isLoadingMore || !hasMoreNotifications) {
+      return;
+    }
+
+    isLoadingMore = true;
+    error = null;
+
+    notifyListeners();
+
+    try {
+      final response = await repository.getNotifications(
+        pageNumber: _currentPage + 1,
+        pageSize: _pageSize,
+      );
+
+      final existingIds = notifications.map((item) => item.id).toSet();
+
+      final newItems = response.items
+          .where((item) => !existingIds.contains(item.id))
+          .toList();
+
+      notifications = [...notifications, ...newItems];
+
+      _currentPage = response.pageNumber;
+
+      _totalPages = response.totalPages;
+
+      unreadCount = response.unreadCount;
+    } catch (exception) {
+      error = _normalizeError(exception);
+    } finally {
+      isLoadingMore = false;
 
       notifyListeners();
     }
@@ -120,9 +174,9 @@ class NotificationViewModel extends ChangeNotifier {
       return false;
     }
 
-    final currentNotification = notifications[index];
+    final current = notifications[index];
 
-    if (currentNotification.isRead) {
+    if (current.isRead) {
       return true;
     }
 
@@ -131,19 +185,17 @@ class NotificationViewModel extends ChangeNotifier {
     try {
       await repository.markAsRead(id);
 
-      notifications[index] = NotificationModel(
-        id: currentNotification.id,
-        title: currentNotification.title,
-        message: currentNotification.message,
-        isRead: true,
-        createdAtUtc: currentNotification.createdAtUtc,
-      );
+      notifications[index] = current.copyWith(isRead: true);
+
+      if (unreadCount > 0) {
+        unreadCount--;
+      }
 
       notifyListeners();
 
       return true;
     } catch (exception) {
-      error = exception.toString();
+      error = _normalizeError(exception);
 
       notifyListeners();
 
@@ -151,11 +203,42 @@ class NotificationViewModel extends ChangeNotifier {
     }
   }
 
+  Future<bool> markAllAsRead() async {
+    if (isMarkingAllRead || unreadCount == 0) {
+      return true;
+    }
+
+    isMarkingAllRead = true;
+    error = null;
+
+    notifyListeners();
+
+    try {
+      await repository.markAllAsRead();
+
+      notifications = notifications
+          .map((notification) => notification.copyWith(isRead: true))
+          .toList();
+
+      unreadCount = 0;
+
+      return true;
+    } catch (exception) {
+      error = _normalizeError(exception);
+
+      return false;
+    } finally {
+      isMarkingAllRead = false;
+
+      notifyListeners();
+    }
+  }
+
   void _startPolling() {
     _pollingTimer?.cancel();
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      unawaited(loadNotifications(showLoading: false));
+      unawaited(refresh());
     });
   }
 
@@ -165,6 +248,16 @@ class NotificationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  String _normalizeError(Object exception) {
+    final text = exception.toString();
+
+    if (text.startsWith('Exception: ')) {
+      return text.substring('Exception: '.length);
+    }
+
+    return text;
+  }
+
   Future<void> stop() async {
     _pollingTimer?.cancel();
     _pollingTimer = null;
@@ -172,10 +265,14 @@ class NotificationViewModel extends ChangeNotifier {
     await realtimeService.stop();
 
     notifications = [];
+    unreadCount = 0;
     error = null;
     isLoading = false;
     isRefreshing = false;
+    isLoadingMore = false;
+    isMarkingAllRead = false;
     isInitialized = false;
+
     connectionStatus = NotificationConnectionStatus.disconnected;
 
     notifyListeners();

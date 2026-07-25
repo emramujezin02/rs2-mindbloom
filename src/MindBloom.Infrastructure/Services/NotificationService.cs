@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Common.Exceptions;
+using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Features.Notifications.DTOs;
 using MindBloom.Application.Features.Notifications.Interfaces;
+using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 
 namespace MindBloom.Infrastructure.Services;
@@ -18,36 +20,124 @@ public sealed class NotificationService
         _context = context;
     }
 
-    public async Task<
-        List<NotificationResponseDto>>
+    public async Task<NotificationPageResponseDto>
         GetMyNotificationsAsync(
-            int userId)
+            int userId,
+            NotificationQueryDto request)
     {
-        return await _context
-            .Notifications
-            .Where(x =>
-                x.UserId == userId)
-            .OrderByDescending(x =>
-                x.CreatedAtUtc)
-            .Select(x =>
-                new NotificationResponseDto
-                {
-                    Id =
-                        x.Id,
+        var pagination =
+            PaginationHelper.Normalize(
+                request.PageNumber,
+                request.PageSize);
 
-                    Title =
-                        x.Title,
+        var query =
+            _context.Notifications
+                .AsNoTracking()
+                .Where(notification =>
+                    notification.UserId == userId &&
+                    !notification.IsDeleted);
 
-                    Message =
-                        x.Message,
+        if (request.IsRead.HasValue)
+        {
+            query = query.Where(notification =>
+                notification.IsRead ==
+                request.IsRead.Value);
+        }
 
-                    IsRead =
-                        x.IsRead,
+        var totalCount =
+            await query.CountAsync();
 
-                    CreatedAtUtc =
-                        x.CreatedAtUtc
-                })
-            .ToListAsync();
+        var unreadCount =
+            await _context.Notifications
+                .AsNoTracking()
+                .CountAsync(notification =>
+                    notification.UserId == userId &&
+                    !notification.IsDeleted &&
+                    !notification.IsRead);
+
+        var notifications =
+            await query
+                .OrderByDescending(notification =>
+                    notification.CreatedAtUtc)
+                .ThenByDescending(notification =>
+                    notification.Id)
+                .Skip(pagination.Skip)
+                .Take(pagination.PageSize)
+                .Select(notification =>
+                    new NotificationResponseDto
+                    {
+                        Id =
+                            notification.Id,
+
+                        Title =
+                            notification.Title,
+
+                        Message =
+                            notification.Message,
+
+                        IsRead =
+                            notification.IsRead,
+
+                        CreatedAtUtc =
+                            notification.CreatedAtUtc,
+
+                        ActionType =
+                            notification.ActionType
+                                .ToString(),
+
+                        AppointmentId =
+                            notification.AppointmentId,
+
+                        ResourceId =
+                            notification.ResourceId,
+
+                        IsActionAvailable =
+                            true
+                    })
+                .ToListAsync();
+
+        await ResolveActionAvailabilityAsync(
+            userId,
+            notifications);
+
+        var totalPages =
+            totalCount == 0
+                ? 0
+                : (int)Math.Ceiling(
+                    totalCount /
+                    (double)pagination.PageSize);
+
+        return new NotificationPageResponseDto
+        {
+            Items =
+                notifications,
+
+            PageNumber =
+                pagination.PageNumber,
+
+            PageSize =
+                pagination.PageSize,
+
+            TotalCount =
+                totalCount,
+
+            TotalPages =
+                totalPages,
+
+            UnreadCount =
+                unreadCount
+        };
+    }
+
+    public Task<int> GetUnreadCountAsync(
+        int userId)
+    {
+        return _context.Notifications
+            .AsNoTracking()
+            .CountAsync(notification =>
+                notification.UserId == userId &&
+                !notification.IsDeleted &&
+                !notification.IsRead);
     }
 
     public async Task MarkAsReadAsync(
@@ -55,13 +145,11 @@ public sealed class NotificationService
         int notificationId)
     {
         var notification =
-            await _context
-                .Notifications
+            await _context.Notifications
                 .FirstOrDefaultAsync(x =>
-                    x.Id ==
-                        notificationId &&
-                    x.UserId ==
-                        userId);
+                    x.Id == notificationId &&
+                    x.UserId == userId &&
+                    !x.IsDeleted);
 
         if (notification == null)
         {
@@ -74,10 +162,171 @@ public sealed class NotificationService
             return;
         }
 
-        notification.IsRead =
-            true;
+        notification.IsRead = true;
 
-        await _context
-            .SaveChangesAsync();
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task MarkAllAsReadAsync(
+        int userId)
+    {
+        var notifications =
+            await _context.Notifications
+                .Where(notification =>
+                    notification.UserId == userId &&
+                    !notification.IsDeleted &&
+                    !notification.IsRead)
+                .ToListAsync();
+
+        if (notifications.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var notification
+                 in notifications)
+        {
+            notification.IsRead = true;
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task
+        ResolveActionAvailabilityAsync(
+            int userId,
+            List<NotificationResponseDto>
+                notifications)
+    {
+        foreach (var notification
+                 in notifications)
+        {
+            switch (ParseActionType(
+                        notification.ActionType))
+            {
+                case NotificationActionType.None:
+                case NotificationActionType.Payment:
+                case NotificationActionType.Membership:
+                case NotificationActionType.Review:
+                case NotificationActionType.TherapistProfile:
+                    notification.IsActionAvailable =
+                        true;
+
+                    break;
+
+                case NotificationActionType.Appointment:
+                case NotificationActionType.Chat:
+                    await ResolveAppointmentActionAsync(
+                        userId,
+                        notification);
+
+                    break;
+
+                case NotificationActionType.Workshop:
+                    await ResolveWorkshopActionAsync(
+                        notification);
+
+                    break;
+
+                default:
+                    notification.IsActionAvailable =
+                        false;
+
+                    notification.UnavailableReason =
+                        "The linked resource is not available.";
+
+                    break;
+            }
+        }
+    }
+
+    private async Task
+        ResolveAppointmentActionAsync(
+            int userId,
+            NotificationResponseDto notification)
+    {
+        var appointmentId =
+            notification.AppointmentId ??
+            notification.ResourceId;
+
+        if (!appointmentId.HasValue)
+        {
+            notification.IsActionAvailable =
+                false;
+
+            notification.UnavailableReason =
+                "The linked appointment is not available.";
+
+            return;
+        }
+
+        var isAvailable =
+            await _context.Appointments
+                .AsNoTracking()
+                .AnyAsync(appointment =>
+                    appointment.Id ==
+                        appointmentId.Value &&
+                    !appointment.IsDeleted &&
+                    (
+                        appointment.Client.UserId ==
+                            userId ||
+                        appointment.Therapist.UserId ==
+                            userId
+                    ));
+
+        notification.IsActionAvailable =
+            isAvailable;
+
+        if (!isAvailable)
+        {
+            notification.UnavailableReason =
+                "This appointment no longer exists or is not available to you.";
+        }
+    }
+
+    private async Task
+        ResolveWorkshopActionAsync(
+            NotificationResponseDto notification)
+    {
+        if (!notification.ResourceId.HasValue)
+        {
+            notification.IsActionAvailable =
+                false;
+
+            notification.UnavailableReason =
+                "The linked workshop is not available.";
+
+            return;
+        }
+
+        var isAvailable =
+            await _context.Workshops
+                .AsNoTracking()
+                .AnyAsync(workshop =>
+                    workshop.Id ==
+                        notification.ResourceId.Value &&
+                    !workshop.IsDeleted);
+
+        notification.IsActionAvailable =
+            isAvailable;
+
+        if (!isAvailable)
+        {
+            notification.UnavailableReason =
+                "This workshop no longer exists or has been removed.";
+        }
+    }
+
+    private static NotificationActionType
+        ParseActionType(
+            string actionType)
+    {
+        return Enum.TryParse<
+                NotificationActionType>(
+                actionType,
+                true,
+                out var parsed)
+            ? parsed
+            : NotificationActionType.None;
     }
 }

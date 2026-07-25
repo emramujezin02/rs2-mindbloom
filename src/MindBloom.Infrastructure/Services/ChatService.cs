@@ -7,6 +7,7 @@ using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Application.Common.Pagination;
+using MindBloom.Application.Common.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -14,11 +15,18 @@ public sealed class ChatService : IChatService
 {
     private readonly ApplicationDbContext
         _context;
+    private readonly IBusinessNotificationService
+    _businessNotificationService;
 
     public ChatService(
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+        IBusinessNotificationService
+            businessNotificationService)
     {
         _context = context;
+
+        _businessNotificationService =
+            businessNotificationService;
     }
 
     public async Task<List<ConversationListItemDto>>
@@ -170,7 +178,7 @@ public sealed class ChatService : IChatService
                     .ThenInclude(x => x.User)
                 .Include(x => x.Therapist)
                     .ThenInclude(x => x.User)
-                .Include(x => x.Conversation)
+                .Include(x => x.Conversation!)
                     .ThenInclude(x => x.Participants)
                 .FirstOrDefaultAsync(x =>
                     x.Id == appointmentId &&
@@ -251,6 +259,11 @@ public sealed class ChatService : IChatService
                 conversation;
         }
 
+        var resolvedConversation =
+    appointment.Conversation
+    ?? throw new NotFoundException(
+        "Conversation could not be created.");
+
         var otherParticipantName =
             currentUserId ==
                 appointment.Client.UserId
@@ -264,7 +277,7 @@ public sealed class ChatService : IChatService
         return new ConversationResponseDto
         {
             Id =
-                appointment.Conversation.Id,
+                resolvedConversation.Id,
 
             AppointmentId =
                 appointment.Id,
@@ -273,10 +286,10 @@ public sealed class ChatService : IChatService
                 otherParticipantName,
 
             IsClosed =
-                appointment.Conversation.IsClosed,
+                resolvedConversation.IsClosed,
 
             CreatedAtUtc =
-                appointment.Conversation.CreatedAtUtc
+                resolvedConversation.CreatedAtUtc
         };
     }
 
@@ -505,6 +518,30 @@ public sealed class ChatService : IChatService
                 existingMessage,
                 sender,
                 currentUserId);
+        }
+
+        var recipientUserId =
+            conversation.Participants
+                .Where(participant =>
+                    participant.UserId !=
+                        currentUserId &&
+                    participant.IsActive &&
+                    !participant.IsDeleted)
+                .Select(participant =>
+                    participant.UserId)
+                .FirstOrDefault();
+
+        if (recipientUserId > 0)
+        {
+            await _businessNotificationService
+                .PublishAsync(
+                    recipientUserId,
+                    "New chat message",
+                    $"{sender.FirstName} "
+                    + $"{sender.LastName} "
+                    + "sent you a message.",
+                    conversation.AppointmentId,
+                    NotificationActionType.Chat);
         }
 
         return MapMessage(

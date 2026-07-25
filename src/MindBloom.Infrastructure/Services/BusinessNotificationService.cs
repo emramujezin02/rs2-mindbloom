@@ -1,5 +1,6 @@
 ﻿using MindBloom.Application.Common.Interfaces;
 using MindBloom.Domain.Entities;
+using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 
 namespace MindBloom.Infrastructure.Services;
@@ -27,7 +28,10 @@ public sealed class BusinessNotificationService
         int userId,
         string title,
         string message,
-        int? appointmentId = null)
+        int? appointmentId = null,
+        NotificationActionType actionType =
+            NotificationActionType.None,
+        int? resourceId = null)
     {
         if (userId <= 0)
         {
@@ -60,6 +64,14 @@ public sealed class BusinessNotificationService
                 nameof(message));
         }
 
+        if (actionType ==
+                NotificationActionType.None &&
+            appointmentId.HasValue)
+        {
+            actionType =
+                NotificationActionType.Appointment;
+        }
+
         var notification =
             new Notification
             {
@@ -68,6 +80,12 @@ public sealed class BusinessNotificationService
 
                 AppointmentId =
                     appointmentId,
+
+                ActionType =
+                    actionType,
+
+                ResourceId =
+                    resourceId,
 
                 Title =
                     normalizedTitle,

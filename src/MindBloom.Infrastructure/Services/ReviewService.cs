@@ -682,7 +682,10 @@ new ClientReviewDto
                 review.Client.UserId,
                 "Therapist replied to your review",
                 "Your therapist has replied to one of your reviews.",
-                review.AppointmentId);
+                actionType:
+                    NotificationActionType.Review,
+                resourceId:
+                    review.Id);
     }
 
     private static string

@@ -538,7 +538,8 @@ public class PaymentService : IPaymentService
                 + $"{payment.Amount:F2} "
                 + $"{PaymentCurrency.ToUpperInvariant()} "
                 + "was completed successfully.",
-                payment.AppointmentId);
+                payment.AppointmentId,
+                NotificationActionType.Payment);
     }
 
     public async Task<List<PaymentHistoryDto>>
@@ -944,7 +945,8 @@ public class PaymentService : IPaymentService
                             + $"{payment.Amount:F2} "
                             + $"{PaymentCurrency.ToUpperInvariant()} "
                             + "has been refunded.",
-                            payment.AppointmentId);
+                            payment.AppointmentId,
+                            NotificationActionType.Payment);
 
                     return;
                 }
@@ -1203,7 +1205,8 @@ public class PaymentService : IPaymentService
                     + $"{payment.Amount:F2} "
                     + $"{PaymentCurrency.ToUpperInvariant()} "
                     + "has been refunded.",
-                    payment.AppointmentId);
+                    payment.AppointmentId,
+                    NotificationActionType.Payment);
         }
     }
 

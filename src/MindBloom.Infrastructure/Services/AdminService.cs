@@ -26,12 +26,16 @@ public class AdminService : IAdminService
     private readonly IPaymentService _paymentService;
 
     private readonly IMembershipService _membershipService;
+    private readonly IBusinessNotificationService
+    _businessNotificationService;
     public AdminService(
-    UserManager<ApplicationUser> userManager,
-    ApplicationDbContext context,
-    INotificationSender notificationSender,
-    IPaymentService paymentService,
-    IMembershipService membershipService)
+        UserManager<ApplicationUser> userManager,
+        ApplicationDbContext context,
+        INotificationSender notificationSender,
+        IBusinessNotificationService
+            businessNotificationService,
+        IPaymentService paymentService,
+        IMembershipService membershipService)
     {
         _userManager =
             userManager;
@@ -47,6 +51,9 @@ public class AdminService : IAdminService
 
         _membershipService =
             membershipService;
+
+        _businessNotificationService =
+    businessNotificationService;
     }
 
     public async Task<PagedResponse<UserListDto>>
@@ -471,6 +478,13 @@ public class AdminService : IAdminService
                 {
                     UserId =
                         therapist.UserId,
+
+                    ActionType =
+    NotificationActionType
+        .TherapistProfile,
+
+                    ResourceId =
+    therapist.Id,
 
                     Title =
                         approved
@@ -1266,12 +1280,16 @@ public class AdminService : IAdminService
             throw;
         }
 
-        await _notificationSender
-            .SendToUserAsync(
+        await _businessNotificationService
+            .PublishAsync(
                 review.Client.UserId,
                 "Review approved",
                 "Your review has been approved "
-                + "for public display.");
+                + "for public display.",
+                actionType:
+                    NotificationActionType.Review,
+                resourceId:
+                    review.Id);
     }
 
     public async Task DeleteReviewAsync(
@@ -1385,11 +1403,14 @@ public class AdminService : IAdminService
                     UserId =
                         review.Client.UserId,
 
-                    AppointmentId =
-                        review.AppointmentId,
+                    ActionType =
+    NotificationActionType.Review,
+
+                    ResourceId =
+    review.Id,
 
                     Title =
-                        "Review removed",
+    "Review removed",
 
                     Message =
                         "Your review was removed by an administrator. "
@@ -1969,6 +1990,9 @@ public class AdminService : IAdminService
                 AppointmentId =
                     appointment.Id,
 
+                ActionType =
+    NotificationActionType.Appointment,
+
                 Title =
                     "Appointment cancelled by administrator",
 
@@ -1983,28 +2007,31 @@ public class AdminService : IAdminService
                 SentAtUtc =
                     now
             },
-            new Notification
-            {
-                UserId =
-                    appointment.Therapist.UserId,
+new Notification
+{
+    UserId =
+        appointment.Therapist.UserId,
 
-                AppointmentId =
-                    appointment.Id,
+    AppointmentId =
+        appointment.Id,
 
-                Title =
-                    "Appointment cancelled by administrator",
+    ActionType =
+        NotificationActionType.Appointment,
 
-                Message =
-                    "An appointment was cancelled "
-                    + "by an administrator. "
-                    + $"Reason: {reason}",
+    Title =
+        "Appointment cancelled by administrator",
 
-                IsRead =
-                    false,
+    Message =
+        "An appointment was cancelled "
+        + "by an administrator. "
+        + $"Reason: {reason}",
 
-                SentAtUtc =
-                    now
-            });
+    IsRead =
+        false,
+
+    SentAtUtc =
+        now
+});
 
         await _context.SaveChangesAsync();
 

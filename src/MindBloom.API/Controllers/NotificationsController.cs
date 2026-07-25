@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MindBloom.Application.Common.Exceptions;
+using MindBloom.Application.Features.Notifications.DTOs;
 using MindBloom.Application.Features.Notifications.Interfaces;
-using System.Security.Claims;
 
 namespace MindBloom.API.Controllers;
 
@@ -23,7 +25,9 @@ public sealed class NotificationsController
 
     [HttpGet]
     public async Task<IActionResult>
-        GetMyNotifications()
+        GetMyNotifications(
+            [FromQuery]
+            NotificationQueryDto query)
     {
         var userId =
             GetAuthenticatedUserId();
@@ -31,9 +35,28 @@ public sealed class NotificationsController
         var result =
             await _notificationService
                 .GetMyNotificationsAsync(
-                    userId);
+                    userId,
+                    query);
 
         return Ok(result);
+    }
+
+    [HttpGet("unread-count")]
+    public async Task<IActionResult>
+        GetUnreadCount()
+    {
+        var userId =
+            GetAuthenticatedUserId();
+
+        var unreadCount =
+            await _notificationService
+                .GetUnreadCountAsync(
+                    userId);
+
+        return Ok(new
+        {
+            unreadCount
+        });
     }
 
     [HttpPut("{notificationId:int}/read")]
@@ -56,6 +79,24 @@ public sealed class NotificationsController
         });
     }
 
+    [HttpPut("read-all")]
+    public async Task<IActionResult>
+        MarkAllAsRead()
+    {
+        var userId =
+            GetAuthenticatedUserId();
+
+        await _notificationService
+            .MarkAllAsReadAsync(
+                userId);
+
+        return Ok(new
+        {
+            message =
+                "All notifications marked as read."
+        });
+    }
+
     private int GetAuthenticatedUserId()
     {
         var userIdValue =
@@ -66,7 +107,7 @@ public sealed class NotificationsController
                 userIdValue,
                 out var userId))
         {
-            throw new UnauthorizedAccessException(
+            throw new UnauthorizedException(
                 "Authenticated user identifier is invalid.");
         }
 

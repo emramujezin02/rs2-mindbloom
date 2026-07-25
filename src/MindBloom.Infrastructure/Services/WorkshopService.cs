@@ -829,19 +829,27 @@ public class WorkshopService : IWorkshopService
         }
 
         await _businessNotificationService
-            .PublishAsync(
-                clientUserId,
-                "Workshop registration confirmed",
-                $"You have successfully registered for \"{workshopTitle}\".");
+     .PublishAsync(
+         clientUserId,
+         "Workshop registration confirmed",
+         $"You have successfully registered for \"{workshopTitle}\".",
+         actionType:
+             NotificationActionType.Workshop,
+         resourceId:
+             workshopId);
 
         if (organizerUserId > 0 &&
             organizerUserId != clientUserId)
         {
             await _businessNotificationService
-                .PublishAsync(
-                    organizerUserId,
-                    "New workshop registration",
-                    $"A new participant registered for \"{workshopTitle}\".");
+    .PublishAsync(
+        organizerUserId,
+        "New workshop registration",
+        $"A new participant registered for \"{workshopTitle}\".",
+        actionType:
+            NotificationActionType.Workshop,
+        resourceId:
+            workshopId);
         }
     }
 
@@ -915,7 +923,11 @@ public class WorkshopService : IWorkshopService
                 "Workshop registration cancelled",
                 $"Your registration for "
                 + $"\"{workshop.Title}\" "
-                + "has been cancelled.");
+                + "has been cancelled.",
+                actionType:
+                    NotificationActionType.Workshop,
+                resourceId:
+                    workshop.Id);
 
         if (workshop.OrganizerUserId > 0 &&
             workshop.OrganizerUserId !=
@@ -926,7 +938,11 @@ public class WorkshopService : IWorkshopService
                     workshop.OrganizerUserId,
                     "Workshop registration cancelled",
                     $"A participant cancelled their registration for "
-                    + $"\"{workshop.Title}\".");
+                    + $"\"{workshop.Title}\".",
+                    actionType:
+                        NotificationActionType.Workshop,
+                    resourceId:
+                        workshop.Id);
         }
     }
 
