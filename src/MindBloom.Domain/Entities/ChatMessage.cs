@@ -20,4 +20,6 @@ public class ChatMessage : BaseEntity
     public DateTime? EditedAtUtc { get; set; }
 
     public bool IsEdited { get; set; }
+
+    public string? ClientMessageId { get; set; }
 }

@@ -618,6 +618,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                     .OnDelete(
                         DeleteBehavior.Restrict);
 
+                entity.Property(x =>
+        x.ClientMessageId)
+    .HasMaxLength(100);
+
+                entity.HasIndex(x => new
+                {
+                    x.ConversationId,
+                    x.ClientMessageId
+                })
+                    .IsUnique()
+                    .HasFilter(
+                        "[ClientMessageId] IS NOT NULL");
+
                 entity.HasIndex(x =>
                     new
                     {

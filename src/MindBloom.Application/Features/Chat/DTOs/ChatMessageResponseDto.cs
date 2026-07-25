@@ -19,4 +19,6 @@ public class ChatMessageResponseDto
     public bool IsMine { get; set; }
 
     public bool IsEdited { get; set; }
+
+    public string? ClientMessageId { get; set; }
 }

@@ -7,6 +7,7 @@ public static class ChatValidationRules
 {
     public const int MaximumMessageLength = 2000;
     public const int MaximumPageSize = 100;
+    public const int MaximumClientMessageIdLength = 100;
 }
 
 public sealed class SendChatMessageDtoValidator
@@ -31,6 +32,20 @@ public sealed class SendChatMessageDtoValidator
                 ChatValidationRules.MaximumMessageLength)
             .WithMessage(
                 "Message may contain at most 2000 characters.");
+
+        RuleFor(x => x.ClientMessageId)
+        .NotEmpty()
+        .WithMessage(
+            "Client message identifier is required.")
+        .MaximumLength(
+            ChatValidationRules
+                .MaximumClientMessageIdLength)
+        .WithMessage(
+            "Client message identifier may contain at most 100 characters.")
+        .Matches(
+            @"^[a-zA-Z0-9\-_:]+$")
+        .WithMessage(
+            "Client message identifier has an invalid format.");
     }
 }
 

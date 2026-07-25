@@ -316,7 +316,8 @@ app.MapHub<NotificationHub>(
     .RequireAuthorization();
 
 app.MapHub<ChatHub>(
-    "/hubs/chat");
+        "/hubs/chat")
+    .RequireAuthorization();
 
 using (var scope =
        app.Services.CreateScope())

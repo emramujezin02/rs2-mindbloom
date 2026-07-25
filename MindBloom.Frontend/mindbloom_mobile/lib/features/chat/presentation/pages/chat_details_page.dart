@@ -15,7 +15,7 @@ class ChatDetailsPage extends StatefulWidget {
 
 class _ChatDetailsPageState extends State<ChatDetailsPage> {
   late final ChatDetailsViewModel _viewModel;
-
+  bool _isLoadingOlderFromScroll = false;
   final TextEditingController _messageController = TextEditingController();
 
   final ScrollController _scrollController = ScrollController();
@@ -82,12 +82,12 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) {
+    if (!_scrollController.hasClients || _isLoadingOlderFromScroll) {
       return;
     }
 
     if (_scrollController.position.pixels <= 100) {
-      _viewModel.loadOlderMessages();
+      _loadOlderPreservingPosition();
     }
   }
 
@@ -123,6 +123,38 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
         _scrollToBottom();
       });
     }
+  }
+
+  Future<void> _loadOlderPreservingPosition() async {
+    if (!_scrollController.hasClients || _isLoadingOlderFromScroll) {
+      return;
+    }
+
+    _isLoadingOlderFromScroll = true;
+
+    final previousMaxExtent = _scrollController.position.maxScrollExtent;
+
+    await _viewModel.loadOlderMessages();
+
+    if (!mounted) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) {
+        _isLoadingOlderFromScroll = false;
+
+        return;
+      }
+
+      final newMaxExtent = _scrollController.position.maxScrollExtent;
+
+      final addedExtent = newMaxExtent - previousMaxExtent;
+
+      _scrollController.jumpTo(_scrollController.position.pixels + addedExtent);
+
+      _isLoadingOlderFromScroll = false;
+    });
   }
 
   @override
@@ -201,7 +233,7 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
 
         if (_viewModel.hasMoreMessages && !_viewModel.isLoadingMore)
           TextButton.icon(
-            onPressed: _viewModel.loadOlderMessages,
+            onPressed: _loadOlderPreservingPosition,
             icon: const Icon(Icons.history),
             label: const Text('Load older messages'),
           ),
@@ -222,7 +254,16 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
                   ),
                   itemCount: _viewModel.messages.length,
                   itemBuilder: (context, index) {
-                    return _MessageBubble(message: _viewModel.messages[index]);
+                    final message = _viewModel.messages[index];
+
+                    return _MessageBubble(
+                      message: message,
+                      onRetry: message.hasFailed
+                          ? () {
+                              _viewModel.retryMessage(message);
+                            }
+                          : null,
+                    );
                   },
                 ),
         ),
@@ -274,14 +315,8 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
                   ),
                   const SizedBox(width: 8),
                   IconButton.filled(
-                    onPressed: _viewModel.isSending ? null : _sendMessage,
-                    icon: _viewModel.isSending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send),
+                    onPressed: _sendMessage,
+                    icon: const Icon(Icons.send),
                   ),
                 ],
               ),
@@ -294,8 +329,9 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
 
 class _MessageBubble extends StatelessWidget {
   final ChatMessageModel message;
+  final VoidCallback? onRetry;
 
-  const _MessageBubble({required this.message});
+  const _MessageBubble({required this.message, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -308,7 +344,9 @@ class _MessageBubble extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: message.isMine
+          color: message.hasFailed
+              ? Theme.of(context).colorScheme.errorContainer
+              : message.isMine
               ? Theme.of(context).colorScheme.primaryContainer
               : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(14),
@@ -327,8 +365,11 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ),
               ),
+
             Text(message.content),
+
             const SizedBox(height: 5),
+
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -336,12 +377,46 @@ class _MessageBubble extends StatelessWidget {
                   formatter.format(message.sentAtUtc.toLocal()),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
+
                 if (message.isEdited) ...[
                   const SizedBox(width: 4),
                   const Text('edited', style: TextStyle(fontSize: 10)),
                 ],
+
+                if (message.isMine) ...[
+                  const SizedBox(width: 6),
+
+                  if (message.isSending)
+                    const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 1.5),
+                    )
+                  else if (message.hasFailed)
+                    const Icon(Icons.error_outline, size: 16)
+                  else
+                    const Icon(Icons.done, size: 16),
+                ],
               ],
             ),
+
+            if (message.hasFailed) ...[
+              const SizedBox(height: 6),
+
+              Text(
+                message.sendingError ?? 'Message could not be sent.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                  fontSize: 11,
+                ),
+              ),
+
+              TextButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Try again'),
+              ),
+            ],
           ],
         ),
       ),

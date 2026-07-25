@@ -167,12 +167,16 @@ class ChatRealtimeService {
   Future<void> sendMessage({
     required int conversationId,
     required String content,
+    required String clientMessageId,
   }) async {
     if (!isConnected) {
       throw StateError('Chat connection is not available.');
     }
 
-    await _connection!.invoke('SendMessage', args: [conversationId, content]);
+    await _connection!.invoke(
+      'SendMessage',
+      args: [conversationId, content, clientMessageId],
+    );
   }
 
   Future<void> leaveConversation() async {

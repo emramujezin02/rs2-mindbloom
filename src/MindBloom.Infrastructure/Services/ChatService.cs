@@ -348,7 +348,10 @@ public sealed class ChatService : IChatService
                             currentUserId,
 
                         IsEdited =
-                            x.IsEdited
+                            x.IsEdited,
+
+                        ClientMessageId =
+    x.ClientMessageId,
                     })
                 .ToListAsync();
 
@@ -367,12 +370,15 @@ public sealed class ChatService : IChatService
     }
 
     public async Task<ChatMessageResponseDto>
-        SendMessageAsync(
-            int currentUserId,
-            SendChatMessageDto request)
+    SendMessageAsync(
+        int currentUserId,
+        SendChatMessageDto request)
     {
         var content =
-     request.Content.Trim();
+            request.Content.Trim();
+
+        var clientMessageId =
+            request.ClientMessageId.Trim();
 
         var conversation =
             await _context.Conversations
@@ -426,6 +432,24 @@ public sealed class ChatService : IChatService
                 : conversation.Appointment
                     .Therapist.User;
 
+        var existingMessage =
+            await _context.ChatMessages
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.ConversationId ==
+                        conversation.Id &&
+                    x.ClientMessageId ==
+                        clientMessageId &&
+                    !x.IsDeleted);
+
+        if (existingMessage != null)
+        {
+            return MapMessage(
+                existingMessage,
+                sender,
+                currentUserId);
+        }
+
         var message =
             new ChatMessage
             {
@@ -442,7 +466,10 @@ public sealed class ChatService : IChatService
                     DateTime.UtcNow,
 
                 IsEdited =
-                    false
+                    false,
+
+                ClientMessageId =
+                    clientMessageId
             };
 
         _context.ChatMessages.Add(
@@ -451,36 +478,39 @@ public sealed class ChatService : IChatService
         participant.LastReadAtUtc =
             DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
-
-        return new ChatMessageResponseDto
+        try
         {
-            Id =
-                message.Id,
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            _context.ChangeTracker.Clear();
 
-            ConversationId =
-                message.ConversationId,
+            existingMessage =
+                await _context.ChatMessages
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x =>
+                        x.ConversationId ==
+                            conversation.Id &&
+                        x.ClientMessageId ==
+                            clientMessageId &&
+                        !x.IsDeleted);
 
-            SenderUserId =
-                message.SenderUserId,
+            if (existingMessage == null)
+            {
+                throw;
+            }
 
-            SenderName =
-                sender.FirstName
-                + " "
-                + sender.LastName,
+            return MapMessage(
+                existingMessage,
+                sender,
+                currentUserId);
+        }
 
-            Content =
-                message.Content,
-
-            SentAtUtc =
-                message.SentAtUtc,
-
-            IsMine =
-                true,
-
-            IsEdited =
-                message.IsEdited
-        };
+        return MapMessage(
+            message,
+            sender,
+            currentUserId);
     }
 
     public async Task MarkConversationAsReadAsync(
@@ -573,6 +603,46 @@ public sealed class ChatService : IChatService
             throw new Exception(
                 "Chat is available only for accepted or completed appointments.");
         }
+    }
+
+    private static ChatMessageResponseDto
+    MapMessage(
+        ChatMessage message,
+        ApplicationUser sender,
+        int currentUserId)
+    {
+        return new ChatMessageResponseDto
+        {
+            Id =
+                message.Id,
+
+            ConversationId =
+                message.ConversationId,
+
+            SenderUserId =
+                message.SenderUserId,
+
+            SenderName =
+                sender.FirstName
+                + " "
+                + sender.LastName,
+
+            Content =
+                message.Content,
+
+            SentAtUtc =
+                message.SentAtUtc,
+
+            IsMine =
+                message.SenderUserId ==
+                currentUserId,
+
+            IsEdited =
+                message.IsEdited,
+
+            ClientMessageId =
+                message.ClientMessageId
+        };
     }
 
 }

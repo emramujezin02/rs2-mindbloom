@@ -33,9 +33,14 @@ class ChatRepository {
   Future<ChatMessageModel> sendMessage({
     required int conversationId,
     required String content,
+    required String clientMessageId,
   }) {
     return apiService.sendMessage(
-      SendChatMessageRequest(conversationId: conversationId, content: content),
+      SendChatMessageRequest(
+        conversationId: conversationId,
+        content: content,
+        clientMessageId: clientMessageId,
+      ),
     );
   }
 

@@ -1,11 +1,10 @@
 ﻿using System.Security.Claims;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Chat.DTOs;
 using MindBloom.Application.Features.Chat.Interfaces;
-using FluentValidation;
-using MindBloom.Application.Features.Chat.DTOs;
 
 namespace MindBloom.Infrastructure.Realtime;
 
@@ -16,7 +15,7 @@ public sealed class ChatHub : Hub
         _chatService;
 
     private readonly IValidator<SendChatMessageDto>
-    _messageValidator;
+        _messageValidator;
 
     public ChatHub(
         IChatService chatService,
@@ -84,8 +83,9 @@ public sealed class ChatHub : Hub
     }
 
     public async Task SendMessage(
-     int conversationId,
-     string content)
+        int conversationId,
+        string content,
+        string clientMessageId)
     {
         var userId =
             GetCurrentUserId();
@@ -97,7 +97,10 @@ public sealed class ChatHub : Hub
                     conversationId,
 
                 Content =
-                    content
+                    content,
+
+                ClientMessageId =
+                    clientMessageId
             };
 
         var validationResult =
@@ -124,13 +127,48 @@ public sealed class ChatHub : Hub
                     userId,
                     request);
 
+        await Clients.Caller.SendAsync(
+            "ReceiveMessage",
+            result);
+
+        var recipientResult =
+            new ChatMessageResponseDto
+            {
+                Id =
+                    result.Id,
+
+                ConversationId =
+                    result.ConversationId,
+
+                SenderUserId =
+                    result.SenderUserId,
+
+                SenderName =
+                    result.SenderName,
+
+                Content =
+                    result.Content,
+
+                SentAtUtc =
+                    result.SentAtUtc,
+
+                IsMine =
+                    false,
+
+                IsEdited =
+                    result.IsEdited,
+
+                ClientMessageId =
+                    result.ClientMessageId
+            };
+
         await Clients
-            .Group(
+            .OthersInGroup(
                 GetConversationGroupName(
                     conversationId))
             .SendAsync(
                 "ReceiveMessage",
-                result);
+                recipientResult);
     }
 
     private int GetCurrentUserId()

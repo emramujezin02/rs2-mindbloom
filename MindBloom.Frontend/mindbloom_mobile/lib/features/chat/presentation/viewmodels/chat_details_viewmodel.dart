@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
@@ -35,15 +36,11 @@ class ChatDetailsViewModel extends ChangeNotifier {
   List<ChatMessageModel> messages = [];
 
   bool isLoading = false;
-
   bool isLoadingMore = false;
-
-  bool isSending = false;
 
   String? errorMessage;
 
   int _currentPage = 0;
-
   int _totalPages = 0;
 
   ChatConnectionStatus connectionStatus = ChatConnectionStatus.disconnected;
@@ -80,10 +77,9 @@ class ChatDetailsViewModel extends ChangeNotifier {
 
       await realtimeService.connect(conversation!.id);
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = _normalizeError(error);
     } finally {
       isLoading = false;
-
       notifyListeners();
     }
   }
@@ -105,10 +101,9 @@ class ChatDetailsViewModel extends ChangeNotifier {
 
       await realtimeService.connect(initialConversation.id);
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = _normalizeError(error);
     } finally {
       isLoading = false;
-
       notifyListeners();
     }
   }
@@ -126,11 +121,29 @@ class ChatDetailsViewModel extends ChangeNotifier {
       pageSize: _pageSize,
     );
 
-    messages = response.items;
+    _mergeFirstPage(response.items);
 
     _currentPage = response.pageNumber;
 
     _totalPages = response.totalPages;
+  }
+
+  void _mergeFirstPage(List<ChatMessageModel> serverMessages) {
+    final serverClientIds = serverMessages
+        .map((message) => message.clientMessageId)
+        .whereType<String>()
+        .toSet();
+
+    final localTransientMessages = messages.where((message) {
+      final clientId = message.clientMessageId;
+
+      return message.deliveryStatus != ChatMessageDeliveryStatus.sent &&
+          (clientId == null || !serverClientIds.contains(clientId));
+    }).toList();
+
+    messages = [...serverMessages, ...localTransientMessages];
+
+    _sortMessages();
   }
 
   Future<void> loadOlderMessages() async {
@@ -154,22 +167,26 @@ class ChatDetailsViewModel extends ChangeNotifier {
         pageSize: _pageSize,
       );
 
-      final existingIds = messages.map((message) => message.id).toSet();
+      final existingServerIds = messages
+          .where((message) => message.id > 0)
+          .map((message) => message.id)
+          .toSet();
 
       final olderMessages = response.items
-          .where((message) => !existingIds.contains(message.id))
+          .where((message) => !existingServerIds.contains(message.id))
           .toList();
 
       messages = [...olderMessages, ...messages];
+
+      _sortMessages();
 
       _currentPage = response.pageNumber;
 
       _totalPages = response.totalPages;
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = _normalizeError(error);
     } finally {
       isLoadingMore = false;
-
       notifyListeners();
     }
   }
@@ -179,7 +196,15 @@ class ChatDetailsViewModel extends ChangeNotifier {
 
     final normalizedContent = content.trim();
 
-    if (conversationId == null || normalizedContent.isEmpty || isSending) {
+    if (conversationId == null || normalizedContent.isEmpty) {
+      return false;
+    }
+
+    if (conversation?.isClosed == true) {
+      errorMessage = 'This conversation is closed.';
+
+      notifyListeners();
+
       return false;
     }
 
@@ -193,8 +218,19 @@ class ChatDetailsViewModel extends ChangeNotifier {
       return false;
     }
 
-    isSending = true;
     errorMessage = null;
+
+    final clientMessageId = _createClientMessageId();
+
+    final optimisticMessage = ChatMessageModel.optimistic(
+      conversationId: conversationId,
+      content: normalizedContent,
+      clientMessageId: clientMessageId,
+    );
+
+    messages = [...messages, optimisticMessage];
+
+    _sortMessages();
 
     notifyListeners();
 
@@ -203,25 +239,69 @@ class ChatDetailsViewModel extends ChangeNotifier {
         await realtimeService.sendMessage(
           conversationId: conversationId,
           content: normalizedContent,
+          clientMessageId: clientMessageId,
         );
       } else {
-        final message = await repository.sendMessage(
+        final serverMessage = await repository.sendMessage(
           conversationId: conversationId,
           content: normalizedContent,
+          clientMessageId: clientMessageId,
         );
 
-        _addMessageIfMissing(message);
+        _reconcileMessage(serverMessage);
       }
 
       return true;
     } catch (error) {
-      errorMessage = error.toString();
+      _markMessageAsFailed(clientMessageId, _normalizeError(error));
 
       return false;
-    } finally {
-      isSending = false;
+    }
+  }
 
-      notifyListeners();
+  Future<bool> retryMessage(ChatMessageModel message) async {
+    if (!message.hasFailed) {
+      return false;
+    }
+
+    final clientMessageId = message.clientMessageId;
+
+    final conversationId = conversation?.id;
+
+    if (clientMessageId == null || conversationId == null) {
+      return false;
+    }
+
+    _updateMessage(
+      clientMessageId,
+      message.copyWith(
+        deliveryStatus: ChatMessageDeliveryStatus.sending,
+        clearSendingError: true,
+      ),
+    );
+
+    try {
+      if (realtimeService.isConnected) {
+        await realtimeService.sendMessage(
+          conversationId: conversationId,
+          content: message.content,
+          clientMessageId: clientMessageId,
+        );
+      } else {
+        final serverMessage = await repository.sendMessage(
+          conversationId: conversationId,
+          content: message.content,
+          clientMessageId: clientMessageId,
+        );
+
+        _reconcileMessage(serverMessage);
+      }
+
+      return true;
+    } catch (error) {
+      _markMessageAsFailed(clientMessageId, _normalizeError(error));
+
+      return false;
     }
   }
 
@@ -237,8 +317,7 @@ class ChatDetailsViewModel extends ChangeNotifier {
 
       notifyListeners();
     } catch (_) {
-      // Polling i sljedeći reconnect
-      // ponovo će pokušati učitavanje.
+      // Sljedeći reconnect ponovo pokušava.
     }
   }
 
@@ -249,22 +328,78 @@ class ChatDetailsViewModel extends ChangeNotifier {
       return;
     }
 
-    _addMessageIfMissing(message);
+    _reconcileMessage(message);
 
     unawaited(repository.markAsRead(conversationId));
   }
 
-  void _addMessageIfMissing(ChatMessageModel message) {
-    final exists = messages.any(
-      (existingMessage) => existingMessage.id == message.id,
+  void _reconcileMessage(ChatMessageModel serverMessage) {
+    final clientMessageId = serverMessage.clientMessageId;
+
+    if (clientMessageId != null) {
+      final localIndex = messages.indexWhere(
+        (message) => message.clientMessageId == clientMessageId,
+      );
+
+      if (localIndex >= 0) {
+        messages[localIndex] = serverMessage.copyWith(
+          deliveryStatus: ChatMessageDeliveryStatus.sent,
+          clearSendingError: true,
+        );
+
+        _sortMessages();
+        notifyListeners();
+
+        return;
+      }
+    }
+
+    final serverMessageExists = messages.any(
+      (message) => message.id == serverMessage.id && serverMessage.id > 0,
     );
 
-    if (exists) {
+    if (serverMessageExists) {
       return;
     }
 
-    messages = [...messages, message];
+    messages = [...messages, serverMessage];
 
+    _sortMessages();
+    notifyListeners();
+  }
+
+  void _markMessageAsFailed(String clientMessageId, String error) {
+    final index = messages.indexWhere(
+      (message) => message.clientMessageId == clientMessageId,
+    );
+
+    if (index < 0) {
+      return;
+    }
+
+    messages[index] = messages[index].copyWith(
+      deliveryStatus: ChatMessageDeliveryStatus.failed,
+      sendingError: error,
+    );
+
+    notifyListeners();
+  }
+
+  void _updateMessage(String clientMessageId, ChatMessageModel updatedMessage) {
+    final index = messages.indexWhere(
+      (message) => message.clientMessageId == clientMessageId,
+    );
+
+    if (index < 0) {
+      return;
+    }
+
+    messages[index] = updatedMessage;
+
+    notifyListeners();
+  }
+
+  void _sortMessages() {
     messages.sort((first, second) {
       final dateComparison = first.sentAtUtc.compareTo(second.sentAtUtc);
 
@@ -274,14 +409,30 @@ class ChatDetailsViewModel extends ChangeNotifier {
 
       return first.id.compareTo(second.id);
     });
+  }
 
-    notifyListeners();
+  String _createClientMessageId() {
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+
+    final random = Random.secure().nextInt(0x7fffffff);
+
+    return 'mobile-$timestamp-$random';
   }
 
   void _setConnectionStatus(ChatConnectionStatus status) {
     connectionStatus = status;
 
     notifyListeners();
+  }
+
+  String _normalizeError(Object error) {
+    final message = error.toString();
+
+    if (message.startsWith('Exception: ')) {
+      return message.substring('Exception: '.length);
+    }
+
+    return message;
   }
 
   Future<void> close() async {
