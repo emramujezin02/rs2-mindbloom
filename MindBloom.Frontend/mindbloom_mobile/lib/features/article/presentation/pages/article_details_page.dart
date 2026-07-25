@@ -158,11 +158,28 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                     ),
                   ],
                 ),
+                if (article.articleCategoryName.trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Chip(
+                    avatar: const Icon(Icons.category, size: 17),
+                    label: Text(article.articleCategoryName),
+                  ),
+                ],
                 const Divider(height: 32),
-                Text(
-                  article.content,
-                  style: const TextStyle(fontSize: 16, height: 1.6),
-                ),
+                ...article.content
+                    .split(RegExp(r'\n\s*\n'))
+                    .map((paragraph) => paragraph.trim())
+                    .where((paragraph) => paragraph.isNotEmpty)
+                    .map(
+                      (paragraph) => Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: SelectableText(
+                          paragraph,
+                          textAlign: TextAlign.justify,
+                          style: const TextStyle(fontSize: 16, height: 1.65),
+                        ),
+                      ),
+                    ),
               ],
             ),
           ),

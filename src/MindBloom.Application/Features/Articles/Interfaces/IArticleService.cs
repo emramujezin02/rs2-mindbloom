@@ -13,6 +13,9 @@ public interface IArticleService
         GetByIdAsync(
             int articleId);
 
+    Task<List<ArticleCategoryResponseDto>>
+        GetCategoriesAsync();
+
     Task<PagedResponse<ArticleResponseDto>>
         GetManagementAsync(
             ArticleManagementQueryDto query);

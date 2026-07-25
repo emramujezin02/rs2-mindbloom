@@ -6,6 +6,8 @@ public class ArticleQueryDto
 
     public int? TherapistId { get; set; }
 
+    public int? ArticleCategoryId { get; set; }
+
     public int PageNumber { get; set; } = 1;
 
     public int PageSize { get; set; } = 10;

@@ -22,6 +22,10 @@ public class Article : BaseEntity
 
     public Therapist? Therapist { get; set; }
 
+    public int? ArticleCategoryId { get; set; }
+
+    public ArticleCategory? ArticleCategory { get; set; }
+
     public DateTime PublishedAtUtc { get; set; }
 
     public bool IsPublished { get; set; } = true;

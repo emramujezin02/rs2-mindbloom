@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/models/article_category_model.dart';
 import '../../data/models/article_model.dart';
 import '../../data/repositories/article_repository.dart';
 
@@ -11,10 +12,13 @@ class ArticleViewModel extends ChangeNotifier {
   bool isLoading = false;
   bool isLoadingMore = false;
   bool isLoadingDetails = false;
+  bool isLoadingCategories = false;
 
   String? error;
+  String? categoriesError;
 
   List<ArticleModel> articles = [];
+  List<ArticleCategoryModel> categories = [];
 
   ArticleModel? selectedArticle;
 
@@ -24,15 +28,50 @@ class ArticleViewModel extends ChangeNotifier {
 
   String currentSearch = '';
 
+  int? selectedArticleCategoryId;
+
   bool get hasMorePages {
     return pageNumber < totalPages;
   }
 
-  Future<void> loadArticles({String search = ''}) async {
+  Future<void> loadInitialData() async {
+    await loadCategories();
+    await loadArticles();
+  }
+
+  Future<void> loadCategories() async {
+    if (isLoadingCategories) {
+      return;
+    }
+
+    isLoadingCategories = true;
+    categoriesError = null;
+
+    notifyListeners();
+
+    try {
+      categories = await repository.getCategories();
+    } catch (exception) {
+      categories = [];
+      categoriesError = _normalizeError(exception);
+    } finally {
+      isLoadingCategories = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadArticles({String? search}) async {
+    if (isLoading) {
+      return;
+    }
+
     isLoading = true;
     error = null;
-    currentSearch = search;
     pageNumber = 1;
+
+    if (search != null) {
+      currentSearch = search.trim();
+    }
 
     notifyListeners();
 
@@ -41,26 +80,29 @@ class ArticleViewModel extends ChangeNotifier {
         pageNumber: pageNumber,
         pageSize: pageSize,
         search: currentSearch,
+        articleCategoryId: selectedArticleCategoryId,
       );
 
       articles = response.items;
       pageNumber = response.pageNumber;
       totalPages = response.totalPages;
     } catch (exception) {
-      error = exception.toString();
+      articles = [];
+      error = _normalizeError(exception);
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 
   Future<void> loadMore() async {
-    if (isLoadingMore || !hasMorePages) {
+    if (isLoading || isLoadingMore || !hasMorePages) {
       return;
     }
 
     isLoadingMore = true;
     error = null;
+
     notifyListeners();
 
     try {
@@ -68,20 +110,47 @@ class ArticleViewModel extends ChangeNotifier {
         pageNumber: pageNumber + 1,
         pageSize: pageSize,
         search: currentSearch,
+        articleCategoryId: selectedArticleCategoryId,
       );
 
       articles.addAll(response.items);
       pageNumber = response.pageNumber;
       totalPages = response.totalPages;
     } catch (exception) {
-      error = exception.toString();
+      error = _normalizeError(exception);
+    } finally {
+      isLoadingMore = false;
+      notifyListeners();
     }
+  }
 
-    isLoadingMore = false;
-    notifyListeners();
+  Future<void> searchArticles(String search) async {
+    currentSearch = search.trim();
+
+    await loadArticles();
+  }
+
+  Future<void> clearSearch() async {
+    currentSearch = '';
+
+    await loadArticles();
+  }
+
+  Future<void> filterByCategory(int? categoryId) async {
+    selectedArticleCategoryId = categoryId;
+
+    await loadArticles();
+  }
+
+  Future<void> refreshArticles() async {
+    await loadArticles(search: currentSearch);
   }
 
   Future<void> loadArticleDetails(int articleId) async {
+    if (isLoadingDetails) {
+      return;
+    }
+
     isLoadingDetails = true;
     error = null;
     selectedArticle = null;
@@ -91,10 +160,18 @@ class ArticleViewModel extends ChangeNotifier {
     try {
       selectedArticle = await repository.getArticle(articleId);
     } catch (exception) {
-      error = exception.toString();
+      selectedArticle = null;
+      error = _normalizeError(exception);
+    } finally {
+      isLoadingDetails = false;
+      notifyListeners();
     }
+  }
 
-    isLoadingDetails = false;
-    notifyListeners();
+  String _normalizeError(Object exception) {
+    return exception
+        .toString()
+        .replaceFirst('Exception: ', '')
+        .replaceFirst('FormatException: ', '');
   }
 }

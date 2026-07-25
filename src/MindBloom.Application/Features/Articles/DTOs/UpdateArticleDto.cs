@@ -13,5 +13,7 @@ public class UpdateArticleDto
 
     public string? ImageUrl { get; set; }
 
+    public int ArticleCategoryId { get; set; }
+
     public bool IsPublished { get; set; }
 }

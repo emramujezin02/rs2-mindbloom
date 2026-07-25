@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/widgets/public_footer.dart';
+
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/constants/api_constants.dart';
+import '../../../../core/widgets/public_footer.dart';
 import '../../data/models/article_model.dart';
 import '../viewmodels/article_viewmodel.dart';
 
@@ -29,7 +30,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
 
     _scrollController.addListener(_onScroll);
 
-    _viewModel.loadArticles();
+    _viewModel.loadInitialData();
   }
 
   @override
@@ -40,6 +41,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
 
     _searchController.dispose();
     _scrollController.dispose();
+    _viewModel.dispose();
 
     super.dispose();
   }
@@ -65,7 +67,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
   Future<void> _search() async {
     FocusScope.of(context).unfocus();
 
-    await _viewModel.loadArticles(search: _searchController.text.trim());
+    await _viewModel.searchArticles(_searchController.text);
   }
 
   Future<void> _clearSearch() async {
@@ -73,11 +75,11 @@ class _ArticleListPageState extends State<ArticleListPage> {
 
     FocusScope.of(context).unfocus();
 
-    await _viewModel.loadArticles();
+    await _viewModel.clearSearch();
   }
 
   Future<void> _refresh() async {
-    await _viewModel.loadArticles(search: _viewModel.currentSearch);
+    await _viewModel.refreshArticles();
   }
 
   String? _buildImageUrl(String imageUrl) {
@@ -93,7 +95,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
 
     final normalizedPath = value.startsWith('/') ? value : '/$value';
 
-    return '${ApiConstants.baseUrl}$normalizedPath';
+    return '${ApiConstants.baseUrl}'
+        '$normalizedPath';
   }
 
   @override
@@ -102,40 +105,84 @@ class _ArticleListPageState extends State<ArticleListPage> {
       appBar: AppBar(title: const Text('Articles')),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (_) {
-                      _search();
-                    },
-                    decoration: const InputDecoration(
-                      labelText: 'Search articles',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.search),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: _viewModel.isLoading ? null : _search,
-                  tooltip: 'Search',
-                  icon: const Icon(Icons.search),
-                ),
-                IconButton(
-                  onPressed: _viewModel.isLoading ? null : _clearSearch,
-                  tooltip: 'Clear search',
-                  icon: const Icon(Icons.clear),
-                ),
-              ],
-            ),
-          ),
+          _buildSearch(),
+          _buildCategoryFilter(),
           Expanded(child: _buildBody()),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearch() {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) {
+                _search();
+              },
+              decoration: const InputDecoration(
+                labelText: 'Search articles',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.search),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            onPressed: _viewModel.isLoading ? null : _search,
+            tooltip: 'Search',
+            icon: const Icon(Icons.search),
+          ),
+          IconButton(
+            onPressed: _viewModel.isLoading ? null : _clearSearch,
+            tooltip: 'Clear search',
+            icon: const Icon(Icons.clear),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilter() {
+    if (_viewModel.isLoadingCategories) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
+        child: LinearProgressIndicator(),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: DropdownButtonFormField<int?>(
+        initialValue: _viewModel.selectedArticleCategoryId,
+        isExpanded: true,
+        decoration: const InputDecoration(
+          labelText: 'Article category',
+          prefixIcon: Icon(Icons.category),
+          border: OutlineInputBorder(),
+        ),
+        items: [
+          const DropdownMenuItem<int?>(
+            value: null,
+            child: Text('All categories'),
+          ),
+          ..._viewModel.categories.map(
+            (category) => DropdownMenuItem<int?>(
+              value: category.id,
+              child: Text(category.name),
+            ),
+          ),
+        ],
+        onChanged: _viewModel.isLoading
+            ? null
+            : (value) {
+                _viewModel.filterByCategory(value);
+              },
       ),
     );
   }
@@ -154,15 +201,18 @@ class _ArticleListPageState extends State<ArticleListPage> {
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
+                const Icon(Icons.error_outline, size: 52),
+                const SizedBox(height: 12),
                 Text(
                   _viewModel.error!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 const SizedBox(height: 12),
-                ElevatedButton(
+                ElevatedButton.icon(
                   onPressed: _refresh,
-                  child: const Text('Try again'),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Try again'),
                 ),
               ],
             ),
@@ -179,7 +229,9 @@ class _ArticleListPageState extends State<ArticleListPage> {
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
-            SizedBox(height: 180),
+            SizedBox(height: 150),
+            Icon(Icons.article_outlined, size: 60),
+            SizedBox(height: 16),
             Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24),
@@ -189,7 +241,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
                 ),
               ),
             ),
-            SizedBox(height: 180),
+            SizedBox(height: 150),
             PublicFooter(),
           ],
         ),
@@ -287,6 +339,13 @@ class _ArticleCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (article.articleCategoryName.trim().isNotEmpty) ...[
+                    Chip(
+                      avatar: const Icon(Icons.category, size: 17),
+                      label: Text(article.articleCategoryName),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   Text(
                     article.title,
                     style: const TextStyle(
@@ -300,6 +359,13 @@ class _ArticleCard extends StatelessWidget {
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (article.articleCategoryName.trim().isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Chip(
+                      avatar: const Icon(Icons.category, size: 17),
+                      label: Text(article.articleCategoryName),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Row(
                     children: [

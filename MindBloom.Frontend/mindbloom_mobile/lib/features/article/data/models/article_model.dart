@@ -9,6 +9,8 @@ class ArticleModel {
   final String authorName;
   final DateTime publishedAtUtc;
   final bool isPublished;
+  final int? articleCategoryId;
+  final String articleCategoryName;
 
   ArticleModel({
     required this.id,
@@ -21,20 +23,44 @@ class ArticleModel {
     required this.authorName,
     required this.publishedAtUtc,
     required this.isPublished,
+    required this.articleCategoryId,
+    required this.articleCategoryName,
   });
 
-  factory ArticleModel.fromJson(Map<String, dynamic> json) {
+  factory ArticleModel.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return ArticleModel(
       id: _parseInt(json['id']),
       title: json['title']?.toString() ?? '',
-      description: json['description']?.toString() ?? '',
-      content: json['content']?.toString() ?? '',
-      imageUrl: json['imageUrl']?.toString() ?? '',
-      authorUserId: _parseInt(json['authorUserId']),
-      therapistId: _parseNullableInt(json['therapistId']),
-      authorName: json['authorName']?.toString() ?? '',
-      publishedAtUtc: _parseDateTime(json['publishedAtUtc']),
-      isPublished: json['isPublished'] == true,
+      description:
+          json['description']?.toString() ?? '',
+      content:
+          json['content']?.toString() ?? '',
+      imageUrl:
+          json['imageUrl']?.toString() ?? '',
+      authorUserId:
+          _parseInt(json['authorUserId']),
+      therapistId:
+          _parseNullableInt(
+        json['therapistId'],
+      ),
+      authorName:
+          json['authorName']?.toString() ?? '',
+      publishedAtUtc:
+          _parseDateTime(
+        json['publishedAtUtc'],
+      ),
+      isPublished:
+          json['isPublished'] == true,
+      articleCategoryId:
+          _parseNullableInt(
+        json['articleCategoryId'],
+      ),
+      articleCategoryName:
+          json['articleCategoryName']
+                  ?.toString() ??
+              '',
     );
   }
 
@@ -43,10 +69,15 @@ class ArticleModel {
       return value;
     }
 
-    return int.tryParse(value?.toString() ?? '') ?? 0;
+    return int.tryParse(
+          value?.toString() ?? '',
+        ) ??
+        0;
   }
 
-  static int? _parseNullableInt(dynamic value) {
+  static int? _parseNullableInt(
+    dynamic value,
+  ) {
     if (value == null) {
       return null;
     }
@@ -55,12 +86,23 @@ class ArticleModel {
       return value;
     }
 
-    return int.tryParse(value.toString());
+    return int.tryParse(
+      value.toString(),
+    );
   }
 
-  static DateTime _parseDateTime(dynamic value) {
-    final parsedDate = DateTime.tryParse(value?.toString() ?? '');
+  static DateTime _parseDateTime(
+    dynamic value,
+  ) {
+    final parsedDate =
+        DateTime.tryParse(
+      value?.toString() ?? '',
+    );
 
-    return parsedDate ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    return parsedDate ??
+        DateTime.fromMillisecondsSinceEpoch(
+          0,
+          isUtc: true,
+        );
   }
 }

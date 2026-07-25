@@ -207,4 +207,16 @@ public class ArticlesController : ControllerBase
 
         return userId;
     }
+
+    [AllowAnonymous]
+    [HttpGet("categories")]
+    public async Task<IActionResult>
+    GetCategories()
+    {
+        var result =
+            await _articleService
+                .GetCategoriesAsync();
+
+        return Ok(result);
+    }
 }

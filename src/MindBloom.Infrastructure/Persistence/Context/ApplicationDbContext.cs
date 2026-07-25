@@ -42,6 +42,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<TherapistVerificationAudit> TherapistVerificationAudits=> Set<TherapistVerificationAudit>();
     public DbSet<AppointmentStatusAudit> AppointmentStatusAudits => Set<AppointmentStatusAudit>();
     public DbSet<ReviewModerationAudit> ReviewModerationAudits => Set<ReviewModerationAudit>();
+    public DbSet<ArticleCategory> ArticleCategories =>
+    Set<ArticleCategory>();
     public DbSet<TherapistSpecialization> TherapistSpecializations => Set<TherapistSpecialization>();
     public DbSet<PrivateJournalEntry>
     PrivateJournalEntries =>
@@ -102,6 +104,29 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany()
             .HasForeignKey(x => x.ClientId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<ArticleCategory>(entity =>
+        {
+            entity.Property(x => x.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(x => x.Description)
+                .HasMaxLength(500);
+
+            entity.Property(x => x.IsActive)
+                .HasDefaultValue(true);
+
+            entity.HasIndex(x => x.Name)
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+
+            entity.HasIndex(x => new
+            {
+                x.IsActive,
+                x.IsDeleted
+            });
+        });
 
         builder.Entity<Review>()
             .HasOne(x => x.Therapist)
@@ -287,6 +312,18 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 .WithMany(x => x.Articles)
                 .HasForeignKey(x => x.TherapistId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.ArticleCategory)
+    .WithMany(x => x.Articles)
+    .HasForeignKey(x => x.ArticleCategoryId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => new
+            {
+                x.ArticleCategoryId,
+                x.IsPublished,
+                x.IsDeleted
+            });
 
             entity.HasIndex(x => x.PublishedAtUtc);
 

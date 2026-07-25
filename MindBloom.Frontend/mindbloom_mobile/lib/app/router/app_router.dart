@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mindbloom_mobile/features/about/presentation/page/about_page.dart';
-import 'package:mindbloom_mobile/features/private_journal/presentation/pages/private_jorunal_page.dart';
+import 'package:mindbloom_mobile/features/private_journal/presentation/pages/private_journal_page.dart';
 import '../../screens/home_screen.dart';
 
 import '../../features/auth/presentation/pages/login_page.dart';

@@ -1,17 +1,16 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.Models;
+using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Features.Articles.DTOs;
 using MindBloom.Application.Features.Articles.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
-using MindBloom.Application.Common.Pagination;
 
 namespace MindBloom.Infrastructure.Services;
 
 public class ArticleService : IArticleService
 {
-
     private readonly ApplicationDbContext _context;
 
     public ArticleService(
@@ -20,8 +19,7 @@ public class ArticleService : IArticleService
         _context = context;
     }
 
-    public async Task<
-        PagedResponse<ArticleResponseDto>>
+    public async Task<PagedResponse<ArticleResponseDto>>
         GetPublicAsync(
             ArticleQueryDto query)
     {
@@ -33,33 +31,23 @@ public class ArticleService : IArticleService
         var articles =
             _context.Articles
                 .AsNoTracking()
-                .Include(x =>
-                    x.AuthorUser)
                 .Where(x =>
                     !x.IsDeleted &&
-                    x.IsPublished);
+                    x.IsPublished)
+                .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(
-                query.Search))
+        if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var search =
-                query.Search
-                    .Trim()
-                    .ToLower();
+                query.Search.Trim().ToLower();
 
             articles =
                 articles.Where(x =>
-                    x.Title
-                        .ToLower()
-                        .Contains(search)
+                    x.Title.ToLower().Contains(search)
                     ||
-                    x.Description
-                        .ToLower()
-                        .Contains(search)
+                    x.Description.ToLower().Contains(search)
                     ||
-                    x.Content
-                        .ToLower()
-                        .Contains(search)
+                    x.Content.ToLower().Contains(search)
                     ||
                     (
                         x.AuthorUser.FirstName
@@ -78,6 +66,14 @@ public class ArticleService : IArticleService
                     query.TherapistId.Value);
         }
 
+        if (query.ArticleCategoryId.HasValue)
+        {
+            articles =
+                articles.Where(x =>
+                    x.ArticleCategoryId ==
+                    query.ArticleCategoryId.Value);
+        }
+
         return await CreatePagedResponseAsync(
             articles,
             pagination);
@@ -90,12 +86,14 @@ public class ArticleService : IArticleService
         var article =
             await _context.Articles
                 .AsNoTracking()
-                .Include(x =>
-                    x.AuthorUser)
+                .Include(x => x.AuthorUser)
+                .Include(x => x.ArticleCategory)
                 .FirstOrDefaultAsync(x =>
                     x.Id == articleId
-                    && !x.IsDeleted
-                    && x.IsPublished);
+                    &&
+                    !x.IsDeleted
+                    &&
+                    x.IsPublished);
 
         if (article == null)
         {
@@ -106,8 +104,25 @@ public class ArticleService : IArticleService
         return MapToDto(article);
     }
 
-    public async Task<
-        PagedResponse<ArticleResponseDto>>
+    public async Task<List<ArticleCategoryResponseDto>>
+        GetCategoriesAsync()
+    {
+        return await _context.ArticleCategories
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted &&
+                x.IsActive)
+            .OrderBy(x => x.Name)
+            .Select(x =>
+                new ArticleCategoryResponseDto
+                {
+                    Id = x.Id,
+                    Name = x.Name
+                })
+            .ToListAsync();
+    }
+
+    public async Task<PagedResponse<ArticleResponseDto>>
         GetManagementAsync(
             ArticleManagementQueryDto query)
     {
@@ -119,32 +134,21 @@ public class ArticleService : IArticleService
         var articles =
             _context.Articles
                 .AsNoTracking()
-                .Include(x =>
-                    x.AuthorUser)
-                .Where(x =>
-                    !x.IsDeleted);
+                .Where(x => !x.IsDeleted)
+                .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(
-                query.Search))
+        if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var search =
-                query.Search
-                    .Trim()
-                    .ToLower();
+                query.Search.Trim().ToLower();
 
             articles =
                 articles.Where(x =>
-                    x.Title
-                        .ToLower()
-                        .Contains(search)
+                    x.Title.ToLower().Contains(search)
                     ||
-                    x.Description
-                        .ToLower()
-                        .Contains(search)
+                    x.Description.ToLower().Contains(search)
                     ||
-                    x.Content
-                        .ToLower()
-                        .Contains(search)
+                    x.Content.ToLower().Contains(search)
                     ||
                     (
                         x.AuthorUser.FirstName
@@ -182,11 +186,12 @@ public class ArticleService : IArticleService
         var article =
             await _context.Articles
                 .AsNoTracking()
-                .Include(x =>
-                    x.AuthorUser)
+                .Include(x => x.AuthorUser)
+                .Include(x => x.ArticleCategory)
                 .FirstOrDefaultAsync(x =>
                     x.Id == articleId
-                    && !x.IsDeleted);
+                    &&
+                    !x.IsDeleted);
 
         if (article == null)
         {
@@ -203,20 +208,22 @@ public class ArticleService : IArticleService
             bool isAdmin,
             CreateArticleDto request)
     {
-       
-
         var user =
             await _context.Users
                 .FirstOrDefaultAsync(x =>
-                    x.Id ==
-                    authorUserId
-                    && !x.IsBlocked);
+                    x.Id == authorUserId
+                    &&
+                    !x.IsBlocked);
 
         if (user == null)
         {
             throw new NotFoundException(
                 "Author not found.");
         }
+
+        var category =
+            await GetActiveCategoryAsync(
+                request.ArticleCategoryId);
 
         int? therapistId = null;
 
@@ -225,9 +232,9 @@ public class ArticleService : IArticleService
             var therapist =
                 await _context.Therapists
                     .FirstOrDefaultAsync(x =>
-                        x.UserId ==
-                        authorUserId
-                        && !x.IsDeleted);
+                        x.UserId == authorUserId
+                        &&
+                        !x.IsDeleted);
 
             if (therapist == null)
             {
@@ -235,12 +242,8 @@ public class ArticleService : IArticleService
                     "Therapist profile not found.");
             }
 
-            therapistId =
-                therapist.Id;
+            therapistId = therapist.Id;
         }
-
-        var now =
-            DateTime.UtcNow;
 
         var article =
             new Article
@@ -264,23 +267,24 @@ public class ArticleService : IArticleService
                 TherapistId =
                     therapistId,
 
-                IsPublished =
-                    request.IsPublished,
+                ArticleCategoryId =
+                    category.Id,
 
                 PublishedAtUtc =
-                    now
+                    DateTime.UtcNow,
+
+                IsPublished =
+                    request.IsPublished
             };
 
-        _context.Articles.Add(
-            article);
+        _context.Articles.Add(article);
 
         await _context.SaveChangesAsync();
 
-        article.AuthorUser =
-            user;
+        article.AuthorUser = user;
+        article.ArticleCategory = category;
 
-        return MapToDto(
-            article);
+        return MapToDto(article);
     }
 
     public async Task<ArticleResponseDto>
@@ -290,16 +294,14 @@ public class ArticleService : IArticleService
             int articleId,
             UpdateArticleDto request)
     {
-        
-
         var article =
             await _context.Articles
-                .Include(x =>
-                    x.AuthorUser)
+                .Include(x => x.AuthorUser)
+                .Include(x => x.ArticleCategory)
                 .FirstOrDefaultAsync(x =>
-                    x.Id ==
-                    articleId
-                    && !x.IsDeleted);
+                    x.Id == articleId
+                    &&
+                    !x.IsDeleted);
 
         if (article == null)
         {
@@ -311,6 +313,10 @@ public class ArticleService : IArticleService
             article,
             authorUserId,
             isAdmin);
+
+        var category =
+            await GetActiveCategoryAsync(
+                request.ArticleCategoryId);
 
         article.Title =
             request.Title.Trim();
@@ -325,8 +331,14 @@ public class ArticleService : IArticleService
             NormalizeImageUrl(
                 request.ImageUrl);
 
-        if (!article.IsPublished
-            && request.IsPublished)
+        article.ArticleCategoryId =
+            category.Id;
+
+        article.ArticleCategory =
+            category;
+
+        if (!article.IsPublished &&
+            request.IsPublished)
         {
             article.PublishedAtUtc =
                 DateTime.UtcNow;
@@ -337,8 +349,7 @@ public class ArticleService : IArticleService
 
         await _context.SaveChangesAsync();
 
-        return MapToDto(
-            article);
+        return MapToDto(article);
     }
 
     public async Task<ArticleResponseDto>
@@ -350,12 +361,12 @@ public class ArticleService : IArticleService
     {
         var article =
             await _context.Articles
-                .Include(x =>
-                    x.AuthorUser)
+                .Include(x => x.AuthorUser)
+                .Include(x => x.ArticleCategory)
                 .FirstOrDefaultAsync(x =>
-                    x.Id ==
-                    articleId
-                    && !x.IsDeleted);
+                    x.Id == articleId
+                    &&
+                    !x.IsDeleted);
 
         if (article == null)
         {
@@ -371,8 +382,7 @@ public class ArticleService : IArticleService
         if (article.IsPublished ==
             request.IsPublished)
         {
-            return MapToDto(
-                article);
+            return MapToDto(article);
         }
 
         article.IsPublished =
@@ -386,8 +396,7 @@ public class ArticleService : IArticleService
 
         await _context.SaveChangesAsync();
 
-        return MapToDto(
-            article);
+        return MapToDto(article);
     }
 
     public async Task DeleteAsync(
@@ -398,9 +407,9 @@ public class ArticleService : IArticleService
         var article =
             await _context.Articles
                 .FirstOrDefaultAsync(x =>
-                    x.Id ==
-                    articleId
-                    && !x.IsDeleted);
+                    x.Id == articleId
+                    &&
+                    !x.IsDeleted);
 
         if (article == null)
         {
@@ -413,13 +422,32 @@ public class ArticleService : IArticleService
             authorUserId,
             isAdmin);
 
-        article.IsDeleted =
-            true;
-
-        article.IsPublished =
-            false;
+        article.IsDeleted = true;
+        article.IsPublished = false;
 
         await _context.SaveChangesAsync();
+    }
+
+    private async Task<ArticleCategory>
+        GetActiveCategoryAsync(
+            int articleCategoryId)
+    {
+        var category =
+            await _context.ArticleCategories
+                .FirstOrDefaultAsync(x =>
+                    x.Id == articleCategoryId
+                    &&
+                    !x.IsDeleted
+                    &&
+                    x.IsActive);
+
+        if (category == null)
+        {
+            throw new NotFoundException(
+                "Article category not found.");
+        }
+
+        return category;
     }
 
     private static void EnsureCanManageArticle(
@@ -428,8 +456,7 @@ public class ArticleService : IArticleService
         bool isAdmin)
     {
         if (!isAdmin &&
-            article.AuthorUserId !=
-            authenticatedUserId)
+            article.AuthorUserId != authenticatedUserId)
         {
             throw new UnauthorizedAccessException(
                 "You can manage only your own articles.");
@@ -437,10 +464,10 @@ public class ArticleService : IArticleService
     }
 
     private static async Task<
-    PagedResponse<ArticleResponseDto>>
-    CreatePagedResponseAsync(
-        IQueryable<Article> query,
-        PaginationParameters pagination)
+        PagedResponse<ArticleResponseDto>>
+        CreatePagedResponseAsync(
+            IQueryable<Article> query,
+            PaginationParameters pagination)
     {
         var totalCount =
             await query.CountAsync();
@@ -451,10 +478,8 @@ public class ArticleService : IArticleService
                     x.PublishedAtUtc)
                 .ThenByDescending(x =>
                     x.Id)
-                .Skip(
-                    pagination.Skip)
-                .Take(
-                    pagination.PageSize)
+                .Skip(pagination.Skip)
+                .Take(pagination.PageSize)
                 .Select(x =>
                     new ArticleResponseDto
                     {
@@ -489,7 +514,15 @@ public class ArticleService : IArticleService
                             x.PublishedAtUtc,
 
                         IsPublished =
-                            x.IsPublished
+                            x.IsPublished,
+
+                        ArticleCategoryId =
+                            x.ArticleCategoryId,
+
+                        ArticleCategoryName =
+                            x.ArticleCategory != null
+                                ? x.ArticleCategory.Name
+                                : string.Empty
                     })
                 .ToListAsync();
 
@@ -505,8 +538,7 @@ public class ArticleService : IArticleService
         NormalizeImageUrl(
             string? imageUrl)
     {
-        return string.IsNullOrWhiteSpace(
-                imageUrl)
+        return string.IsNullOrWhiteSpace(imageUrl)
             ? null
             : imageUrl.Trim();
     }
@@ -548,7 +580,14 @@ public class ArticleService : IArticleService
                 article.PublishedAtUtc,
 
             IsPublished =
-                article.IsPublished
+                article.IsPublished,
+
+            ArticleCategoryId =
+                article.ArticleCategoryId,
+
+            ArticleCategoryName =
+                article.ArticleCategory?.Name
+                ?? string.Empty
         };
     }
 }

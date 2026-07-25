@@ -129,6 +129,11 @@ public sealed class CreateArticleDtoValidator
             .When(x =>
                 !string.IsNullOrWhiteSpace(
                     x.ImageUrl));
+
+        RuleFor(x => x.ArticleCategoryId)
+    .GreaterThan(0)
+    .WithMessage(
+        "Article category ID must be greater than zero.");
     }
 }
 
@@ -245,6 +250,13 @@ public sealed class ArticleQueryDtoValidator
                     .MaximumPageSize)
             .WithMessage(
                 "Page size must be between 1 and 50.");
+
+        RuleFor(x => x.ArticleCategoryId)
+    .GreaterThan(0)
+    .WithMessage(
+        "Article category ID must be greater than zero.")
+    .When(x =>
+        x.ArticleCategoryId.HasValue);
     }
 }
 

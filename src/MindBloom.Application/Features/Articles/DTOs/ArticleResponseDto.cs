@@ -26,4 +26,9 @@ public class ArticleResponseDto
     public DateTime PublishedAtUtc { get; set; }
 
     public bool IsPublished { get; set; }
+
+    public int? ArticleCategoryId { get; set; }
+
+    public string ArticleCategoryName { get; set; } =
+        string.Empty;
 }
