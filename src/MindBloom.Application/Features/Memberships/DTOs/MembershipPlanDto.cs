@@ -8,6 +8,8 @@ public class MembershipPlanDto
 
     public string Name { get; set; } = string.Empty;
 
+    public string Description { get; set; } = string.Empty;
+
     public int TotalSessions { get; set; }
 
     public int FreeSessions { get; set; }
@@ -15,4 +17,10 @@ public class MembershipPlanDto
     public decimal Price { get; set; }
 
     public decimal PricePerSession { get; set; }
+
+    public int DurationMonths { get; set; }
+
+    public bool IsActive { get; set; }
+
+    public List<string> Benefits { get; set; } = [];
 }

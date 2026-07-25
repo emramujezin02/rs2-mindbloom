@@ -21,10 +21,17 @@ class MembershipApiService {
       requiresAuth: false,
     );
 
-    return (response as List)
+    if (response is! List) {
+      return [];
+    }
+
+    return response
+        .whereType<Map>()
         .map(
-          (item) => MembershipPlanModel.fromJson(item as Map<String, dynamic>),
+          (item) =>
+              MembershipPlanModel.fromJson(Map<String, dynamic>.from(item)),
         )
+        .where((plan) => plan.isActive)
         .toList();
   }
 

@@ -160,43 +160,100 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
 
         return Card(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  plan.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    const Icon(Icons.card_membership, size: 30),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        plan.name,
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (plan.description.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(plan.description, style: const TextStyle(height: 1.4)),
+                ],
+
+                const SizedBox(height: 16),
+
+                _PlanInfoRow(
+                  icon: Icons.event_available,
+                  text: '${plan.totalSessions} included sessions',
                 ),
 
                 const SizedBox(height: 8),
 
-                Text('${plan.totalSessions} total sessions'),
-
-                Text('${plan.freeSessions} free sessions included'),
+                _PlanInfoRow(
+                  icon: Icons.redeem,
+                  text:
+                      '${plan.freeSessions} free '
+                      '${plan.freeSessions == 1 ? 'session' : 'sessions'}',
+                ),
 
                 const SizedBox(height: 8),
+
+                _PlanInfoRow(
+                  icon: Icons.schedule,
+                  text: 'Valid for ${plan.durationMonths} months',
+                ),
+
+                if (plan.benefits.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Benefits',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  ...plan.benefits.map(
+                    (benefit) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.check_circle_outline, size: 19),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(benefit)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+
+                const Divider(height: 28),
 
                 Text(
                   'Total price: '
                   '${plan.price.toStringAsFixed(2)} KM',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+
+                const SizedBox(height: 5),
 
                 Text(
                   'Price per session: '
                   '${plan.pricePerSession.toStringAsFixed(2)} KM',
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: _viewModel.isPurchasing
+                    onPressed: _viewModel.isPurchasing || !plan.isActive
                         ? null
                         : () {
                             _purchase(plan);
@@ -220,6 +277,24 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
           ),
         );
       },
+    );
+  }
+}
+
+class _PlanInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _PlanInfoRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 20),
+        const SizedBox(width: 9),
+        Expanded(child: Text(text)),
+      ],
     );
   }
 }

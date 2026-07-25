@@ -16,6 +16,7 @@ namespace MindBloom.Infrastructure.Services;
 public class MembershipService : IMembershipService
 {
     private const string PaymentCurrency = "usd";
+    private const int MembershipDurationMonths = 6;
 
     private readonly ApplicationDbContext _context;
 
@@ -38,14 +39,17 @@ public class MembershipService : IMembershipService
     }
 
     public async Task<List<MembershipPlanDto>>
-        GetPlansForTherapistAsync(
-            int therapistId)
+     GetPlansForTherapistAsync(
+         int therapistId)
     {
         var therapist =
             await _context.Therapists
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x =>
                     x.Id == therapistId &&
-                    !x.IsDeleted);
+                    !x.IsDeleted &&
+                    !x.User.IsBlocked &&
+                    x.User.IsActive);
 
         if (therapist == null)
         {
@@ -58,33 +62,43 @@ public class MembershipService : IMembershipService
 
         if (sessionPrice <= 0)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Therapist session price is invalid.");
         }
 
-        return new List<MembershipPlanDto>
-        {
-            CreatePlan(
-                MembershipPlanType.TenSessions,
-                "10 sessions package",
-                10,
-                1,
-                sessionPrice),
+        var plans = new List<MembershipPlanDto>
+    {
+        CreatePlan(
+            MembershipPlanType.TenSessions,
+            "10 sessions package",
+            "A starter package for regular therapy sessions.",
+            totalSessions: 10,
+            freeSessions: 1,
+            sessionPrice: sessionPrice,
+            isActive: true),
 
-            CreatePlan(
-                MembershipPlanType.TwentySessions,
-                "20 sessions package",
-                20,
-                2,
-                sessionPrice),
+        CreatePlan(
+            MembershipPlanType.TwentySessions,
+            "20 sessions package",
+            "A larger package for continued therapeutic work.",
+            totalSessions: 20,
+            freeSessions: 2,
+            sessionPrice: sessionPrice,
+            isActive: true),
 
-            CreatePlan(
-                MembershipPlanType.ThirtySessions,
-                "30 sessions package",
-                30,
-                3,
-                sessionPrice)
-        };
+        CreatePlan(
+            MembershipPlanType.ThirtySessions,
+            "30 sessions package",
+            "The largest package with the highest included benefit.",
+            totalSessions: 30,
+            freeSessions: 3,
+            sessionPrice: sessionPrice,
+            isActive: true)
+    };
+
+        return plans
+            .Where(x => x.IsActive)
+            .ToList();
     }
 
     public async Task<MembershipPaymentIntentResponseDto>
@@ -215,11 +229,19 @@ public class MembershipService : IMembershipService
                 request.PlanType,
                 GetPlanName(
                     request.PlanType),
+                GetPlanDescription(
+                    request.PlanType),
                 GetTotalSessions(
                     request.PlanType),
                 GetFreeSessions(
                     request.PlanType),
-                therapist.HourlyRate);
+                therapist.HourlyRate,
+                IsPlanActive(
+                    request.PlanType));
+
+        BusinessRuleGuard.Against(
+            !plan.IsActive,
+            "Selected membership plan is not currently available.");
 
         if (plan.Price <= 0)
         {
@@ -566,7 +588,8 @@ public class MembershipService : IMembershipService
             DateTime.UtcNow;
 
         membership.ExpiresAtUtc =
-            DateTime.UtcNow.AddMonths(6);
+            DateTime.UtcNow.AddMonths(
+                MembershipDurationMonths);
 
         await _context.SaveChangesAsync();
 
@@ -597,8 +620,8 @@ public class MembershipService : IMembershipService
     }
 
     public async Task<List<MembershipResponseDto>>
-        GetMyMembershipsAsync(
-            int clientUserId)
+    GetMyMembershipsAsync(
+        int clientUserId)
     {
         var client =
             await _context.Clients
@@ -612,18 +635,62 @@ public class MembershipService : IMembershipService
                 "Client not found.");
         }
 
-        return await _context.ClientMemberships
-            .Include(x => x.Therapist)
-                .ThenInclude(x => x.User)
-            .Include(x => x.Payment)
-            .Where(x =>
-                x.ClientId == client.Id &&
-                !x.IsDeleted)
-            .OrderByDescending(x =>
-                x.PurchasedAtUtc ??
-                x.CreatedAtUtc)
+        var nowUtc =
+            DateTime.UtcNow;
+
+        var memberships =
+            await _context.ClientMemberships
+                .Include(x => x.Therapist)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Payment)
+                .Where(x =>
+                    x.ClientId == client.Id &&
+                    !x.IsDeleted)
+                .OrderByDescending(x =>
+                    x.PurchasedAtUtc ??
+                    x.CreatedAtUtc)
+                .ToListAsync();
+
+        var stateChanged =
+            false;
+
+        foreach (var membership in memberships)
+        {
+            var isExpired =
+                membership.ExpiresAtUtc != null &&
+                membership.ExpiresAtUtc <= nowUtc;
+
+            var hasNoRemainingSessions =
+                membership.RemainingSessions <= 0;
+
+            if (membership.IsActive &&
+                (isExpired ||
+                 hasNoRemainingSessions))
+            {
+                membership.IsActive =
+                    false;
+
+                membership.UpdatedAtUtc =
+                    nowUtc;
+
+                stateChanged =
+                    true;
+            }
+        }
+
+        if (stateChanged)
+        {
+            await _context.SaveChangesAsync();
+        }
+
+        return memberships
             .Select(x =>
-                new MembershipResponseDto
+            {
+                var isExpired =
+                    x.ExpiresAtUtc != null &&
+                    x.ExpiresAtUtc <= nowUtc;
+
+                return new MembershipResponseDto
                 {
                     Id =
                         x.Id,
@@ -639,22 +706,37 @@ public class MembershipService : IMembershipService
                     PlanType =
                         x.PlanType.ToString(),
 
+                    PlanName =
+                        GetPlanName(
+                            x.PlanType),
+
                     TotalSessions =
                         x.TotalSessions,
 
                     RemainingSessions =
                         x.RemainingSessions,
 
+                    UsedSessions =
+                        Math.Max(
+                            0,
+                            x.TotalSessions -
+                            x.RemainingSessions),
+
                     Price =
                         x.Price,
 
                     IsActive =
-                        x.IsActive,
+                        x.IsActive &&
+                        !isExpired &&
+                        x.RemainingSessions > 0,
 
                     IsPaid =
                         x.Payment != null &&
                         x.Payment.Status ==
                             PaymentStatus.Paid,
+
+                    IsExpired =
+                        isExpired,
 
                     PaymentStatus =
                         x.Payment == null
@@ -667,8 +749,9 @@ public class MembershipService : IMembershipService
 
                     ExpiresAtUtc =
                         x.ExpiresAtUtc
-                })
-            .ToListAsync();
+                };
+            })
+            .ToList();
     }
 
     public async Task<MembershipReceiptDto>
@@ -1260,11 +1343,13 @@ public class MembershipService : IMembershipService
     }
 
     private static MembershipPlanDto CreatePlan(
-        MembershipPlanType planType,
-        string name,
-        int totalSessions,
-        int freeSessions,
-        decimal sessionPrice)
+     MembershipPlanType planType,
+     string name,
+     string description,
+     int totalSessions,
+     int freeSessions,
+     decimal sessionPrice,
+     bool isActive)
     {
         var paidSessions =
             totalSessions - freeSessions;
@@ -1280,6 +1365,9 @@ public class MembershipService : IMembershipService
             Name =
                 name,
 
+            Description =
+                description,
+
             TotalSessions =
                 totalSessions,
 
@@ -1292,11 +1380,27 @@ public class MembershipService : IMembershipService
             PricePerSession =
                 totalSessions == 0
                     ? 0
-                    : price /
-                      totalSessions
+                    : price / totalSessions,
+
+            DurationMonths =
+                MembershipDurationMonths,
+
+            IsActive =
+                isActive,
+
+            Benefits =
+            [
+                $"{totalSessions} therapy sessions",
+            $"{freeSessions} free "
+            + (freeSessions == 1
+                ? "session"
+                : "sessions"),
+            $"{MembershipDurationMonths} months validity",
+            "Sessions can be reserved for accepted appointments",
+            "A reserved session is restored after a timely cancellation"
+            ]
         };
     }
-
 
 
     private static int GetTotalSessions(
@@ -1357,11 +1461,16 @@ public class MembershipService : IMembershipService
     }
 
     private static MembershipResponseDto
-        MapMembership(
-            ClientMembership membership,
-            Therapist therapist,
-            MembershipPayment? payment)
+    MapMembership(
+        ClientMembership membership,
+        Therapist therapist,
+        MembershipPayment? payment)
     {
+        var isExpired =
+            membership.ExpiresAtUtc != null &&
+            membership.ExpiresAtUtc <=
+                DateTime.UtcNow;
+
         return new MembershipResponseDto
         {
             Id =
@@ -1376,8 +1485,11 @@ public class MembershipService : IMembershipService
                 + therapist.User.LastName,
 
             PlanType =
-                membership.PlanType
-                    .ToString(),
+                membership.PlanType.ToString(),
+
+            PlanName =
+                GetPlanName(
+                    membership.PlanType),
 
             TotalSessions =
                 membership.TotalSessions,
@@ -1385,15 +1497,26 @@ public class MembershipService : IMembershipService
             RemainingSessions =
                 membership.RemainingSessions,
 
+            UsedSessions =
+                Math.Max(
+                    0,
+                    membership.TotalSessions -
+                    membership.RemainingSessions),
+
             Price =
                 membership.Price,
 
             IsActive =
-                membership.IsActive,
+                membership.IsActive &&
+                !isExpired &&
+                membership.RemainingSessions > 0,
 
             IsPaid =
                 payment?.Status ==
                     PaymentStatus.Paid,
+
+            IsExpired =
+                isExpired,
 
             PaymentStatus =
                 payment?.Status
@@ -1417,5 +1540,33 @@ public class MembershipService : IMembershipService
                 0,
                 MidpointRounding
                     .AwayFromZero));
+    }
+
+    private static bool IsPlanActive(
+    MembershipPlanType planType)
+    {
+        return planType is
+            MembershipPlanType.TenSessions or
+            MembershipPlanType.TwentySessions or
+            MembershipPlanType.ThirtySessions;
+    }
+
+    private static string GetPlanDescription(
+        MembershipPlanType planType)
+    {
+        return planType switch
+        {
+            MembershipPlanType.TenSessions =>
+                "A starter package for regular therapy sessions.",
+
+            MembershipPlanType.TwentySessions =>
+                "A larger package for continued therapeutic work.",
+
+            MembershipPlanType.ThirtySessions =>
+                "The largest package with the highest included benefit.",
+
+            _ =>
+                "Membership package"
+        };
     }
 }

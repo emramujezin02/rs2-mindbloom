@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
+import '../../../../core/error/app_exception.dart';
 import '../../data/models/membership_model.dart';
 import '../../data/models/membership_plan_model.dart';
 import '../../data/models/membership_receipt_model.dart';
@@ -22,10 +23,30 @@ class MembershipViewModel extends ChangeNotifier {
 
   List<MembershipPlanModel> plans = [];
 
+  List<MembershipModel> get activeMemberships {
+    return memberships
+        .where(
+          (membership) =>
+              membership.isActive &&
+              membership.isPaid &&
+              !membership.isExpired &&
+              membership.remainingSessions > 0,
+        )
+        .toList();
+  }
+
+  List<MembershipModel> get membershipHistory {
+    return memberships
+        .where(
+          (membership) =>
+              !activeMemberships.any((active) => active.id == membership.id),
+        )
+        .toList();
+  }
+
   Future<void> loadMyMemberships() async {
     isLoading = true;
     error = null;
-
     notifyListeners();
 
     try {
@@ -34,7 +55,6 @@ class MembershipViewModel extends ChangeNotifier {
       error = _normalizeError(exception);
     } finally {
       isLoading = false;
-
       notifyListeners();
     }
   }
@@ -42,16 +62,16 @@ class MembershipViewModel extends ChangeNotifier {
   Future<void> loadPlans(int therapistId) async {
     isLoading = true;
     error = null;
-
     notifyListeners();
 
     try {
-      plans = await repository.getPlansForTherapist(therapistId);
+      final result = await repository.getPlansForTherapist(therapistId);
+
+      plans = result.where((plan) => plan.isActive).toList();
     } catch (exception) {
       error = _normalizeError(exception);
     } finally {
       isLoading = false;
-
       notifyListeners();
     }
   }
@@ -66,7 +86,6 @@ class MembershipViewModel extends ChangeNotifier {
 
     isPurchasing = true;
     error = null;
-
     notifyListeners();
 
     try {
@@ -75,21 +94,20 @@ class MembershipViewModel extends ChangeNotifier {
       );
 
       if (paymentIntent.clientSecret.trim().isEmpty) {
-        throw Exception('Stripe client secret was not returned.');
+        throw AppException(message: 'Stripe client secret was not returned.');
       }
 
       if (paymentIntent.paymentIntentId.trim().isEmpty) {
-        throw Exception('Stripe PaymentIntent ID was not returned.');
+        throw AppException(
+          message: 'Stripe PaymentIntent ID was not returned.',
+        );
       }
 
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
           paymentIntentClientSecret: paymentIntent.clientSecret,
-
           merchantDisplayName: 'MindBloom',
-
           style: ThemeMode.system,
-
           primaryButtonLabel: 'Purchase membership',
         ),
       );
@@ -117,7 +135,6 @@ class MembershipViewModel extends ChangeNotifier {
       return false;
     } finally {
       isPurchasing = false;
-
       notifyListeners();
     }
   }
@@ -129,7 +146,6 @@ class MembershipViewModel extends ChangeNotifier {
   Future<bool> useMembership({required int appointmentId}) async {
     isLoading = true;
     error = null;
-
     notifyListeners();
 
     try {
@@ -144,12 +160,15 @@ class MembershipViewModel extends ChangeNotifier {
       return false;
     } finally {
       isLoading = false;
-
       notifyListeners();
     }
   }
 
   String _normalizeError(Object exception) {
+    if (exception is AppException) {
+      return exception.message;
+    }
+
     final message = exception.toString();
 
     if (message.startsWith('Exception: ')) {
