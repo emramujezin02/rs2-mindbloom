@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mindbloom_mobile/features/about/presentation/page/about_page.dart';
 import 'package:mindbloom_mobile/features/private_journal/presentation/pages/private_journal_page.dart';
+import 'package:mindbloom_mobile/features/profile/presentation/pages/edit_profile_page.dart';
 import '../../screens/home_screen.dart';
 
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -29,7 +30,6 @@ import '../../features/review/presentation/pages/my_reviews_page.dart';
 
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/data/models/profile_model.dart';
-import '../../features/profile/presentation/pages/edit_profile_page.dart';
 
 import '../../features/dashboard/presentation/pages/client_dashboard_page.dart';
 

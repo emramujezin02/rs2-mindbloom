@@ -5,6 +5,7 @@ import '../../../therapy_approach/data/repositories/therapy_approach_repository.
 import '../../data/models/client_onboarding_model.dart';
 import '../../data/models/save_client_onboarding_request.dart';
 import '../../data/repositories/client_onboarding_repository.dart';
+import '../../../../core/error/app_exception.dart';
 
 class ClientOnboardingViewModel extends ChangeNotifier {
   final ClientOnboardingRepository repository;
@@ -20,6 +21,21 @@ class ClientOnboardingViewModel extends ChangeNotifier {
   bool isSaving = false;
 
   String? error;
+
+  Map<String, List<String>> fieldErrors = {};
+
+  String? fieldError(String fieldName) {
+    final requested = _normalizeFieldName(fieldName);
+
+    for (final entry in fieldErrors.entries) {
+      if (_normalizeFieldName(entry.key) == requested &&
+          entry.value.isNotEmpty) {
+        return entry.value.first;
+      }
+    }
+
+    return null;
+  }
 
   ClientOnboardingModel? onboarding;
 
@@ -59,6 +75,7 @@ class ClientOnboardingViewModel extends ChangeNotifier {
 
     isSaving = true;
     error = null;
+    fieldErrors = {};
 
     notifyListeners();
 
@@ -67,7 +84,7 @@ class ClientOnboardingViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      error = _normalizeError(exception);
+      _setError(exception, fallback: 'Preference nije moguće sačuvati.');
 
       return false;
     } finally {
@@ -77,6 +94,30 @@ class ClientOnboardingViewModel extends ChangeNotifier {
   }
 
   String _normalizeError(Object exception) {
-    return exception.toString().replaceFirst('Exception: ', '');
+    if (exception is AppException) {
+      return exception.message;
+    }
+
+    return exception.toString().replaceFirst('Exception: ', '').trim();
+  }
+
+  void _setError(Object exception, {required String fallback}) {
+    if (exception is AppException) {
+      error = exception.message.trim().isEmpty
+          ? fallback
+          : exception.message.trim();
+
+      fieldErrors = Map<String, List<String>>.from(exception.fieldErrors);
+
+      return;
+    }
+
+    final message = exception.toString().replaceFirst('Exception: ', '').trim();
+
+    error = message.isEmpty ? fallback : message;
+  }
+
+  String _normalizeFieldName(String value) {
+    return value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
   }
 }

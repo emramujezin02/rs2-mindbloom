@@ -42,6 +42,15 @@ class CreateReviewViewModel extends ChangeNotifier {
     error = null;
     notifyListeners();
 
+    if (isLoading) {
+      return false;
+    }
+
+    isLoading = true;
+    error = null;
+    fieldErrors = {};
+    notifyListeners();
+
     try {
       await repository.createReview(
         CreateReviewRequest(
@@ -51,17 +60,12 @@ class CreateReviewViewModel extends ChangeNotifier {
         ),
       );
 
-      isLoading = false;
-      notifyListeners();
-
       return true;
     } catch (exception) {
-      error = _getErrorMessage(exception);
-      isLoading = false;
-      notifyListeners();
+      _setError(exception, fallback: 'Recenziju nije moguće sačuvati.');
 
       return false;
-    }
+    } finally {}
   }
 
   Future<bool> updateReview({
@@ -73,23 +77,27 @@ class CreateReviewViewModel extends ChangeNotifier {
     error = null;
     notifyListeners();
 
+    if (isLoading) {
+      return false;
+    }
+
+    isLoading = true;
+    error = null;
+    fieldErrors = {};
+    notifyListeners();
+
     try {
       await repository.updateReview(
         reviewId: reviewId,
         request: UpdateReviewRequest(rating: rating, comment: comment),
       );
 
-      isLoading = false;
-      notifyListeners();
-
       return true;
     } catch (exception) {
-      error = _getErrorMessage(exception);
-      isLoading = false;
-      notifyListeners();
+      _setError(exception, fallback: 'Recenziju nije moguće sačuvati.');
 
       return false;
-    }
+    } finally {}
   }
 
   String _getErrorMessage(Object exception) {
@@ -98,5 +106,40 @@ class CreateReviewViewModel extends ChangeNotifier {
     }
 
     return exception.toString();
+  }
+
+  Map<String, List<String>> fieldErrors = {};
+
+  String? fieldError(String fieldName) {
+    final requested = _normalizeFieldName(fieldName);
+
+    for (final entry in fieldErrors.entries) {
+      if (_normalizeFieldName(entry.key) == requested &&
+          entry.value.isNotEmpty) {
+        return entry.value.first;
+      }
+    }
+
+    return null;
+  }
+
+  void _setError(Object exception, {required String fallback}) {
+    if (exception is AppException) {
+      error = exception.message.trim().isEmpty
+          ? fallback
+          : exception.message.trim();
+
+      fieldErrors = Map<String, List<String>>.from(exception.fieldErrors);
+
+      return;
+    }
+
+    final message = exception.toString().replaceFirst('Exception: ', '').trim();
+
+    error = message.isEmpty ? fallback : message;
+  }
+
+  String _normalizeFieldName(String value) {
+    return value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
   }
 }

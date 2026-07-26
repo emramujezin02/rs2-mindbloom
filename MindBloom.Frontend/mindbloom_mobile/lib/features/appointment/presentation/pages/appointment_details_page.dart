@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-
+import '../../../../core/validation/app_validators.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../payment/presentation/pages/payment_receipt_page.dart';
@@ -259,17 +259,8 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                     alignLabelWithHint: true,
                   ),
                   validator: (value) {
-                    final reason = value?.trim() ?? '';
-
-                    if (reason.isEmpty) {
-                      return 'Cancellation reason is required.';
-                    }
-
-                    if (reason.length < 5) {
-                      return 'Reason must contain at least 5 characters.';
-                    }
-
-                    return null;
+                    return _viewModel.fieldError('Reason') ??
+                        AppValidators.cancellationReason(value);
                   },
                 ),
               ],
@@ -344,11 +335,21 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
     final success = await _viewModel.cancelAppointment(reason);
 
+    if (!success && mounted) {
+      formKey.currentState?.validate();
+    }
+
     if (!mounted) {
       return;
     }
 
     if (!success) {
+      final message = _viewModel.errorMessage ?? 'Termin nije moguće otkazati.';
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+
       return;
     }
 

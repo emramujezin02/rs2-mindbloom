@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/validation/app_validators.dart';
 import '../../data/models/review_model.dart';
 import '../viewmodels/create_review_viewmodel.dart';
 
@@ -17,7 +18,7 @@ class _EditReviewPageState extends State<EditReviewPage> {
   final CreateReviewViewModel _viewModel =
       AppInjection.createCreateReviewViewModel();
 
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _commentController;
 
@@ -37,8 +38,10 @@ class _EditReviewPageState extends State<EditReviewPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
-    _viewModel.dispose();
+
     _commentController.dispose();
+
+    _viewModel.dispose();
 
     super.dispose();
   }
@@ -50,6 +53,10 @@ class _EditReviewPageState extends State<EditReviewPage> {
   }
 
   Future<void> _save() async {
+    if (_viewModel.isLoading) {
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -60,6 +67,10 @@ class _EditReviewPageState extends State<EditReviewPage> {
       comment: _commentController.text.trim(),
     );
 
+    if (!success && mounted) {
+      _formKey.currentState?.validate();
+    }
+
     if (!mounted) {
       return;
     }
@@ -67,12 +78,18 @@ class _EditReviewPageState extends State<EditReviewPage> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Review updated and sent for moderation again.'),
+          content: Text('Review updated and submitted for moderation again.'),
         ),
       );
 
       Navigator.of(context).pop(true);
+
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_viewModel.error ?? 'Unable to update review.')),
+    );
   }
 
   @override
@@ -91,9 +108,7 @@ class _EditReviewPageState extends State<EditReviewPage> {
                 'moderation again.',
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: 20),
-
               DropdownButtonFormField<int>(
                 initialValue: _rating,
                 decoration: const InputDecoration(
@@ -103,48 +118,40 @@ class _EditReviewPageState extends State<EditReviewPage> {
                 items: List.generate(5, (index) {
                   final value = index + 1;
 
-                  return DropdownMenuItem(
+                  return DropdownMenuItem<int>(
                     value: value,
                     child: Text('$value / 5'),
                   );
                 }),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _rating = value;
-                    });
-                  }
-                },
+                onChanged: _viewModel.isLoading
+                    ? null
+                    : (value) {
+                        if (value == null) {
+                          return;
+                        }
+
+                        setState(() {
+                          _rating = value;
+                        });
+                      },
               ),
-
               const SizedBox(height: 16),
-
               TextFormField(
                 controller: _commentController,
                 minLines: 4,
                 maxLines: 7,
                 maxLength: 1000,
+                enabled: !_viewModel.isLoading,
                 decoration: const InputDecoration(
                   labelText: 'Comment',
                   border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
                 validator: (value) {
-                  final comment = value?.trim() ?? '';
-
-                  if (comment.isEmpty) {
-                    return 'Comment is required.';
-                  }
-
-                  if (comment.length > 1000) {
-                    return 'Comment may contain at most '
-                        '1000 characters.';
-                  }
-
-                  return null;
+                  return _viewModel.fieldError('Comment') ??
+                      AppValidators.reviewComment(value);
                 },
               ),
-
               if (_viewModel.error != null) ...[
                 const SizedBox(height: 12),
                 Text(
@@ -153,9 +160,7 @@ class _EditReviewPageState extends State<EditReviewPage> {
                   style: const TextStyle(color: Colors.red),
                 ),
               ],
-
               const SizedBox(height: 16),
-
               ElevatedButton.icon(
                 onPressed: _viewModel.isLoading ? null : _save,
                 icon: _viewModel.isLoading

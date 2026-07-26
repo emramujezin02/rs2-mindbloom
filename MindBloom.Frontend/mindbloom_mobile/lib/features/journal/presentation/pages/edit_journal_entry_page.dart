@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/validation/app_validators.dart';
 import '../../data/models/journal_entry_model.dart';
 import '../constants/mood_options.dart';
 import '../viewmodels/journal_viewmodel.dart';
@@ -17,7 +18,7 @@ class EditJournalEntryPage extends StatefulWidget {
 class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
   final JournalViewModel _viewModel = AppInjection.createJournalViewModel();
 
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   final Set<String> _selectedEmotions = {};
 
@@ -41,7 +42,9 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
+
     _noteController.dispose();
+
     _viewModel.dispose();
 
     super.dispose();
@@ -69,6 +72,10 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
       note: _noteController.text.trim(),
     );
 
+    if (!success && mounted) {
+      _formKey.currentState?.validate();
+    }
+
     if (!mounted) {
       return;
     }
@@ -79,6 +86,7 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
       );
 
       Navigator.of(context).pop(true);
+
       return;
     }
 
@@ -106,7 +114,6 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
                 'Mood',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
               ),
-
               Slider(
                 value: _mood.toDouble(),
                 min: 1,
@@ -121,16 +128,13 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
                         });
                       },
               ),
-
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(selectedMood.icon, size: 36),
                 title: Text(selectedMood.label),
                 subtitle: Text(selectedMood.description),
               ),
-
               const SizedBox(height: 20),
-
               FormField<Set<String>>(
                 initialValue: _selectedEmotions,
                 validator: (_) {
@@ -139,7 +143,7 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
                   }
 
                   if (_selectedEmotions.length > 5) {
-                    return 'Select at most 5 emotions.';
+                    return 'You may select at most 5 emotions.';
                   }
 
                   return null;
@@ -155,9 +159,7 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-
                       const SizedBox(height: 10),
-
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -189,7 +191,6 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
                           );
                         }).toList(),
                       ),
-
                       if (field.hasError) ...[
                         const SizedBox(height: 8),
                         Text(
@@ -204,9 +205,7 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
                   );
                 },
               ),
-
               const SizedBox(height: 20),
-
               TextFormField(
                 controller: _noteController,
                 minLines: 4,
@@ -217,8 +216,11 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
                   labelText: 'Short note',
                   border: OutlineInputBorder(),
                 ),
+                validator: (value) {
+                  return _viewModel.fieldError('Note') ??
+                      AppValidators.journalNote(value);
+                },
               ),
-
               if (_viewModel.error != null) ...[
                 const SizedBox(height: 12),
                 Text(
@@ -227,9 +229,7 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
                   style: const TextStyle(color: Colors.red),
                 ),
               ],
-
               const SizedBox(height: 24),
-
               ElevatedButton.icon(
                 onPressed: _viewModel.isSaving ? null : _save,
                 icon: _viewModel.isSaving

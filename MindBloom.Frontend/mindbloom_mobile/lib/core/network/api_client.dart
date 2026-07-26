@@ -279,63 +279,122 @@ class ApiClient {
       }
     }
 
+    final errorData = _extractErrorData(response);
+
     throw AppException(
-      message: _extractErrorMessage(response),
+      message: errorData.message,
       statusCode: response.statusCode,
+      fieldErrors: errorData.fieldErrors,
     );
   }
 
-  String _extractErrorMessage(http.Response response) {
+  _ApiErrorData _extractErrorData(http.Response response) {
     if (response.body.trim().isEmpty) {
-      if (response.statusCode == 401) {
-        return 'Your session has expired. Please log in again.';
-      }
-
-      return 'Request failed with status ${response.statusCode}.';
+      return _ApiErrorData(message: _defaultErrorMessage(response.statusCode));
     }
 
     try {
       final decoded = jsonDecode(response.body);
 
       if (decoded is Map<String, dynamic>) {
-        final message = decoded['message'];
+        final fieldErrors = _extractFieldErrors(decoded['errors']);
 
-        if (message is String && message.trim().isNotEmpty) {
-          return message;
-        }
+        final directMessage = _readMessage(decoded['message']);
 
-        final title = decoded['title'];
+        final title = _readMessage(decoded['title']);
 
-        if (title is String && title.trim().isNotEmpty) {
-          return title;
-        }
+        final detail = _readMessage(decoded['detail']);
 
-        final errors = decoded['errors'];
+        final message =
+            directMessage ??
+            detail ??
+            title ??
+            (fieldErrors.isNotEmpty
+                ? 'Provjerite označena polja.'
+                : _defaultErrorMessage(response.statusCode));
 
-        if (errors is Map) {
-          final messages = <String>[];
-
-          for (final value in errors.values) {
-            if (value is List) {
-              messages.addAll(value.map((item) => item.toString()));
-            } else if (value != null) {
-              messages.add(value.toString());
-            }
-          }
-
-          if (messages.isNotEmpty) {
-            return messages.join('\n');
-          }
-        }
+        return _ApiErrorData(message: message, fieldErrors: fieldErrors);
       }
 
       if (decoded is String && decoded.trim().isNotEmpty) {
-        return decoded;
+        return _ApiErrorData(message: decoded.trim());
       }
     } on FormatException {
-      return response.body;
+      final body = response.body.trim();
+
+      if (body.isNotEmpty) {
+        return _ApiErrorData(message: body);
+      }
     }
 
-    return response.body;
+    return _ApiErrorData(message: _defaultErrorMessage(response.statusCode));
   }
+
+  Map<String, List<String>> _extractFieldErrors(dynamic rawErrors) {
+    if (rawErrors is! Map) {
+      return {};
+    }
+
+    final result = <String, List<String>>{};
+
+    for (final entry in rawErrors.entries) {
+      final fieldName = entry.key.toString();
+
+      final value = entry.value;
+
+      final messages = <String>[];
+
+      if (value is List) {
+        messages.addAll(
+          value
+              .map((item) => item.toString().trim())
+              .where((item) => item.isNotEmpty),
+        );
+      } else if (value != null) {
+        final message = value.toString().trim();
+
+        if (message.isNotEmpty) {
+          messages.add(message);
+        }
+      }
+
+      if (messages.isNotEmpty) {
+        result[fieldName] = messages;
+      }
+    }
+
+    return result;
+  }
+
+  String? _readMessage(dynamic value) {
+    if (value is! String) {
+      return null;
+    }
+
+    final normalized = value.trim();
+
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  String _defaultErrorMessage(int statusCode) {
+    return switch (statusCode) {
+      400 => 'Zahtjev sadrži neispravne podatke.',
+      401 => 'Sesija je istekla. Prijavite se ponovo.',
+      403 => 'Nemate dozvolu za ovu radnju.',
+      404 => 'Traženi podatak nije pronađen.',
+      409 => 'Radnja se ne može završiti zbog konflikta podataka.',
+      422 => 'Provjerite unesene podatke.',
+      429 => 'Previše pokušaja. Pokušajte ponovo kasnije.',
+      >= 500 => 'Došlo je do greške na serveru. Pokušajte ponovo.',
+      _ => 'Zahtjev nije uspješno izvršen.',
+    };
+  }
+}
+
+class _ApiErrorData {
+  final String message;
+
+  final Map<String, List<String>> fieldErrors;
+
+  const _ApiErrorData({required this.message, this.fieldErrors = const {}});
 }

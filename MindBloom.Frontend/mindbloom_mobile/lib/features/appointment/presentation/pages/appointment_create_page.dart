@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import '../../../../core/validation/app_validators.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../therapist/data/models/therapist_model.dart';
@@ -377,6 +377,10 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
       location: _type == 2 ? widget.therapist.address.trim() : null,
       notes: notes.isEmpty ? null : notes,
     );
+
+    if (!success && mounted) {
+      _formKey.currentState?.validate();
+    }
 
     if (!mounted) {
       return;
@@ -777,19 +781,17 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
       minLines: 4,
       maxLines: 7,
       maxLength: 2000,
+      enabled: !_isSubmitting,
       decoration: const InputDecoration(
-        labelText: 'Notes for the therapist',
+        labelText: 'Napomena za terapeuta',
         hintText:
-            'Briefly describe what you would like to discuss or add any important information.',
+            'Ukratko opišite o čemu biste željeli razgovarati ili dodajte važne informacije.',
         alignLabelWithHint: true,
         border: OutlineInputBorder(),
       ),
       validator: (value) {
-        if ((value?.trim().length ?? 0) > 2000) {
-          return 'Notes may contain at most 2000 characters.';
-        }
-
-        return null;
+        return _viewModel.fieldError('Notes') ??
+            AppValidators.appointmentNotes(value);
       },
     );
   }

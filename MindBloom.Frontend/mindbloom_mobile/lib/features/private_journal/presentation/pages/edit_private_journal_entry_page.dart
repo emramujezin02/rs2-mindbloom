@@ -2,40 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/validation/app_validators.dart';
 import '../../../journal/data/models/journal_entry_model.dart';
 import '../../../journal/presentation/constants/mood_options.dart';
 import '../../data/models/private_journal_entry_model.dart';
 import '../viewmodels/private_journal_viewmodel.dart';
 
-class EditPrivateJournalEntryPage
-    extends StatefulWidget {
+class EditPrivateJournalEntryPage extends StatefulWidget {
   final PrivateJournalEntryModel entry;
 
-  const EditPrivateJournalEntryPage({
-    super.key,
-    required this.entry,
-  });
+  const EditPrivateJournalEntryPage({super.key, required this.entry});
 
   @override
-  State<EditPrivateJournalEntryPage>
-      createState() =>
-          _EditPrivateJournalEntryPageState();
+  State<EditPrivateJournalEntryPage> createState() =>
+      _EditPrivateJournalEntryPageState();
 }
 
 class _EditPrivateJournalEntryPageState
-    extends State<
-        EditPrivateJournalEntryPage> {
+    extends State<EditPrivateJournalEntryPage> {
   final PrivateJournalViewModel _viewModel =
       AppInjection.createPrivateJournalViewModel();
 
-  final GlobalKey<FormState> _formKey =
-      GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  late final TextEditingController
-      _titleController;
+  late final TextEditingController _titleController;
 
-  late final TextEditingController
-      _contentController;
+  late final TextEditingController _contentController;
 
   late DateTime _entryDate;
 
@@ -47,21 +39,13 @@ class _EditPrivateJournalEntryPageState
 
     _viewModel.addListener(_refresh);
 
-    _titleController =
-        TextEditingController(
-      text: widget.entry.title,
-    );
+    _titleController = TextEditingController(text: widget.entry.title);
 
-    _contentController =
-        TextEditingController(
-      text: widget.entry.content,
-    );
+    _contentController = TextEditingController(text: widget.entry.content);
 
-    _entryDate =
-        widget.entry.entryDateUtc.toLocal();
+    _entryDate = widget.entry.entryDateUtc.toLocal();
 
-    _selectedMoodEntryId =
-        widget.entry.moodEntryId;
+    _selectedMoodEntryId = widget.entry.moodEntryId;
 
     _viewModel.loadMoodEntries();
   }
@@ -71,7 +55,9 @@ class _EditPrivateJournalEntryPageState
     _viewModel.removeListener(_refresh);
 
     _titleController.dispose();
+
     _contentController.dispose();
+
     _viewModel.dispose();
 
     super.dispose();
@@ -84,8 +70,11 @@ class _EditPrivateJournalEntryPageState
   }
 
   Future<void> _selectDate() async {
-    final selected =
-        await showDatePicker(
+    if (_viewModel.isSaving) {
+      return;
+    }
+
+    final selected = await showDatePicker(
       context: context,
       initialDate: _entryDate,
       firstDate: DateTime(2020),
@@ -116,160 +105,110 @@ class _EditPrivateJournalEntryPageState
       return;
     }
 
-    final success =
-        await _viewModel.updateEntry(
+    final success = await _viewModel.updateEntry(
       id: widget.entry.id,
-      title: _titleController.text,
-      content: _contentController.text,
+      title: _titleController.text.trim(),
+      content: _contentController.text.trim(),
       entryDate: _entryDate,
-      moodEntryId:
-          _selectedMoodEntryId,
+      moodEntryId: _selectedMoodEntryId,
     );
+
+    if (!success && mounted) {
+      _formKey.currentState?.validate();
+    }
 
     if (!mounted) {
       return;
     }
 
     if (success) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Private journal entry updated.',
-          ),
+          content: Text('Private journal entry updated successfully.'),
         ),
       );
 
       Navigator.of(context).pop(true);
+
       return;
     }
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
-      SnackBar(
-        content: Text(
-          _viewModel.error ??
-              'Unable to update entry.',
-        ),
-      ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_viewModel.error ?? 'Unable to update entry.')),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Edit private entry',
-        ),
-      ),
+      appBar: AppBar(title: const Text('Edit private entry')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextFormField(
-                controller:
-                    _titleController,
+                controller: _titleController,
                 maxLength: 150,
-                enabled:
-                    !_viewModel.isSaving,
-                decoration:
-                    const InputDecoration(
+                enabled: !_viewModel.isSaving,
+                decoration: const InputDecoration(
                   labelText: 'Title',
-                  border:
-                      OutlineInputBorder(),
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if ((value?.trim() ?? '')
-                      .isEmpty) {
-                    return 'Title is required.';
-                  }
-
-                  return null;
+                  return _viewModel.fieldError('Title') ??
+                      AppValidators.journalTitle(value);
                 },
               ),
               const SizedBox(height: 12),
               TextFormField(
-                controller:
-                    _contentController,
+                controller: _contentController,
                 minLines: 10,
                 maxLines: 20,
                 maxLength: 10000,
-                enabled:
-                    !_viewModel.isSaving,
-                decoration:
-                    const InputDecoration(
+                enabled: !_viewModel.isSaving,
+                decoration: const InputDecoration(
                   labelText: 'Content',
                   alignLabelWithHint: true,
-                  border:
-                      OutlineInputBorder(),
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if ((value?.trim() ?? '')
-                      .isEmpty) {
-                    return 'Journal content is required.';
-                  }
-
-                  return null;
+                  return _viewModel.fieldError('Content') ??
+                      AppValidators.journalContent(value);
                 },
               ),
               const SizedBox(height: 12),
               Card(
                 child: ListTile(
-                  leading: const Icon(
-                    Icons.calendar_month,
-                  ),
-                  title: const Text(
-                    'Entry date',
-                  ),
-                  subtitle: Text(
-                    DateFormat(
-                      'dd.MM.yyyy.',
-                    ).format(_entryDate),
-                  ),
-                  onTap: _viewModel.isSaving
-                      ? null
-                      : _selectDate,
+                  leading: const Icon(Icons.calendar_month),
+                  title: const Text('Entry date'),
+                  subtitle: Text(DateFormat('dd.MM.yyyy.').format(_entryDate)),
+                  onTap: _viewModel.isSaving ? null : _selectDate,
                 ),
               ),
               const SizedBox(height: 12),
               _buildMoodSelection(),
-              if (_viewModel.error !=
-                  null) ...[
+              if (_viewModel.error != null) ...[
                 const SizedBox(height: 12),
                 Text(
                   _viewModel.error!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.red,
-                  ),
+                  style: const TextStyle(color: Colors.red),
                 ),
               ],
               const SizedBox(height: 20),
               ElevatedButton.icon(
-                onPressed:
-                    _viewModel.isSaving
-                    ? null
-                    : _save,
+                onPressed: _viewModel.isSaving ? null : _save,
                 icon: _viewModel.isSaving
                     ? const SizedBox(
                         width: 22,
                         height: 22,
-                        child:
-                            CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.save),
-                label: Text(
-                  _viewModel.isSaving
-                      ? 'Saving...'
-                      : 'Save changes',
-                ),
+                label: Text(_viewModel.isSaving ? 'Saving...' : 'Save changes'),
               ),
             ],
           ),
@@ -280,9 +219,7 @@ class _EditPrivateJournalEntryPageState
 
   Widget _buildMoodSelection() {
     if (_viewModel.isLoadingMoodEntries) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     return DropdownButtonFormField<int?>(
@@ -295,18 +232,14 @@ class _EditPrivateJournalEntryPageState
       items: [
         const DropdownMenuItem<int?>(
           value: null,
-          child: Text(
-            'No linked mood entry',
-          ),
+          child: Text('No linked mood entry'),
         ),
         ..._viewModel.moodEntries.map(
-          (entry) =>
-              DropdownMenuItem<int?>(
+          (entry) => DropdownMenuItem<int?>(
             value: entry.id,
             child: Text(
               _moodEntryLabel(entry),
-              overflow:
-                  TextOverflow.ellipsis,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ),
@@ -315,24 +248,16 @@ class _EditPrivateJournalEntryPageState
           ? null
           : (value) {
               setState(() {
-                _selectedMoodEntryId =
-                    value;
+                _selectedMoodEntryId = value;
               });
             },
     );
   }
 
-  String _moodEntryLabel(
-    JournalEntryModel entry,
-  ) {
-    final mood =
-        moodOptionFor(entry.mood);
+  String _moodEntryLabel(JournalEntryModel entry) {
+    final mood = moodOptionFor(entry.mood);
 
-    final date = DateFormat(
-      'dd.MM.yyyy.',
-    ).format(
-      entry.createdAtUtc.toLocal(),
-    );
+    final date = DateFormat('dd.MM.yyyy.').format(entry.createdAtUtc.toLocal());
 
     return '$date · ${mood.label} · '
         '${entry.emotions.join(', ')}';

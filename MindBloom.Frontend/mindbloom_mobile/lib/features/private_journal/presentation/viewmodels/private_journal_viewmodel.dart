@@ -4,9 +4,9 @@ import '../../../journal/data/models/journal_entry_model.dart';
 import '../../../journal/data/repositories/journal_repository.dart';
 import '../../data/models/private_journal_entry_model.dart';
 import '../../data/repositories/private_journal_repository.dart';
+import '../../../../core/error/app_exception.dart';
 
-class PrivateJournalViewModel
-    extends ChangeNotifier {
+class PrivateJournalViewModel extends ChangeNotifier {
   final PrivateJournalRepository repository;
   final JournalRepository journalRepository;
 
@@ -39,12 +39,9 @@ class PrivateJournalViewModel
   final int pageSize = 10;
   int totalPages = 0;
 
-  bool get hasMorePages =>
-      pageNumber < totalPages;
+  bool get hasMorePages => pageNumber < totalPages;
 
-  Future<void> loadEntries({
-    String? search,
-  }) async {
+  Future<void> loadEntries({String? search}) async {
     isLoading = true;
     error = null;
     pageNumber = 1;
@@ -56,8 +53,7 @@ class PrivateJournalViewModel
     notifyListeners();
 
     try {
-      final response =
-          await repository.getMyEntries(
+      final response = await repository.getMyEntries(
         pageNumber: pageNumber,
         pageSize: pageSize,
         search: currentSearch,
@@ -86,8 +82,7 @@ class PrivateJournalViewModel
     notifyListeners();
 
     try {
-      final response =
-          await repository.getMyEntries(
+      final response = await repository.getMyEntries(
         pageNumber: pageNumber + 1,
         pageSize: pageSize,
         search: currentSearch,
@@ -115,10 +110,7 @@ class PrivateJournalViewModel
     await loadEntries(search: '');
   }
 
-  Future<void> applyDateFilter({
-    DateTime? from,
-    DateTime? to,
-  }) async {
+  Future<void> applyDateFilter({DateTime? from, DateTime? to}) async {
     fromDate = from;
     toDate = to;
 
@@ -138,8 +130,7 @@ class PrivateJournalViewModel
     notifyListeners();
 
     try {
-      selectedEntry =
-          await repository.getById(id);
+      selectedEntry = await repository.getById(id);
     } catch (exception) {
       selectedEntry = null;
       error = _normalizeError(exception);
@@ -159,8 +150,7 @@ class PrivateJournalViewModel
     notifyListeners();
 
     try {
-      final response =
-          await journalRepository.getMyJournal(
+      final response = await journalRepository.getMyJournal(
         pageNumber: 1,
         pageSize: 50,
       );
@@ -186,6 +176,7 @@ class PrivateJournalViewModel
 
     isSaving = true;
     error = null;
+    fieldErrors = {};
     notifyListeners();
 
     try {
@@ -198,13 +189,33 @@ class PrivateJournalViewModel
 
       return true;
     } catch (exception) {
-      error = _normalizeError(exception);
+      _setError(exception, fallback: 'Privatni zapis nije moguće sačuvati.');
 
       return false;
     } finally {
       isSaving = false;
       notifyListeners();
     }
+  }
+
+  void _setError(Object exception, {required String fallback}) {
+    if (exception is AppException) {
+      error = exception.message.trim().isEmpty
+          ? fallback
+          : exception.message.trim();
+
+      fieldErrors = Map<String, List<String>>.from(exception.fieldErrors);
+
+      return;
+    }
+
+    final message = exception.toString().replaceFirst('Exception: ', '').trim();
+
+    error = message.isEmpty ? fallback : message;
+  }
+
+  String _normalizeFieldName(String value) {
+    return value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
   }
 
   Future<bool> updateEntry({
@@ -220,11 +231,11 @@ class PrivateJournalViewModel
 
     isSaving = true;
     error = null;
+    fieldErrors = {};
     notifyListeners();
 
     try {
-      selectedEntry =
-          await repository.update(
+      selectedEntry = await repository.update(
         id: id,
         title: title,
         content: content,
@@ -234,7 +245,7 @@ class PrivateJournalViewModel
 
       return true;
     } catch (exception) {
-      error = _normalizeError(exception);
+      _setError(exception, fallback: 'Privatni zapis nije moguće sačuvati.');
 
       return false;
     } finally {
@@ -255,9 +266,7 @@ class PrivateJournalViewModel
     try {
       await repository.delete(id);
 
-      entries.removeWhere(
-        (entry) => entry.id == id,
-      );
+      entries.removeWhere((entry) => entry.id == id);
 
       if (selectedEntry?.id == id) {
         selectedEntry = null;
@@ -281,11 +290,7 @@ class PrivateJournalViewModel
       return null;
     }
 
-    return DateTime(
-      date.year,
-      date.month,
-      date.day,
-    ).toUtc();
+    return DateTime(date.year, date.month, date.day).toUtc();
   }
 
   DateTime? get _normalizedToUtc {
@@ -295,15 +300,7 @@ class PrivateJournalViewModel
       return null;
     }
 
-    return DateTime(
-      date.year,
-      date.month,
-      date.day,
-      23,
-      59,
-      59,
-      999,
-    ).toUtc();
+    return DateTime(date.year, date.month, date.day, 23, 59, 59, 999).toUtc();
   }
 
   String _normalizeError(Object exception) {
@@ -311,5 +308,20 @@ class PrivateJournalViewModel
         .toString()
         .replaceFirst('Exception: ', '')
         .replaceFirst('FormatException: ', '');
+  }
+
+  Map<String, List<String>> fieldErrors = {};
+
+  String? fieldError(String fieldName) {
+    final requested = _normalizeFieldName(fieldName);
+
+    for (final entry in fieldErrors.entries) {
+      if (_normalizeFieldName(entry.key) == requested &&
+          entry.value.isNotEmpty) {
+        return entry.value.first;
+      }
+    }
+
+    return null;
   }
 }

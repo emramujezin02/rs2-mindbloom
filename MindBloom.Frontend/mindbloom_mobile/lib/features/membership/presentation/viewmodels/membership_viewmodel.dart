@@ -15,6 +15,7 @@ class MembershipViewModel extends ChangeNotifier {
   MembershipViewModel({required this.repository});
 
   bool isLoading = false;
+
   bool isPurchasing = false;
 
   String? error;
@@ -45,8 +46,14 @@ class MembershipViewModel extends ChangeNotifier {
   }
 
   Future<void> loadMyMemberships() async {
+    if (isLoading) {
+      return;
+    }
+
     isLoading = true;
+
     error = null;
+
     notifyListeners();
 
     try {
@@ -55,13 +62,20 @@ class MembershipViewModel extends ChangeNotifier {
       error = _normalizeError(exception);
     } finally {
       isLoading = false;
+
       notifyListeners();
     }
   }
 
   Future<void> loadPlans(int therapistId) async {
+    if (isLoading) {
+      return;
+    }
+
     isLoading = true;
+
     error = null;
+
     notifyListeners();
 
     try {
@@ -72,6 +86,7 @@ class MembershipViewModel extends ChangeNotifier {
       error = _normalizeError(exception);
     } finally {
       isLoading = false;
+
       notifyListeners();
     }
   }
@@ -85,7 +100,9 @@ class MembershipViewModel extends ChangeNotifier {
     }
 
     isPurchasing = true;
+
     error = null;
+
     notifyListeners();
 
     try {
@@ -94,11 +111,13 @@ class MembershipViewModel extends ChangeNotifier {
       );
 
       if (paymentIntent.clientSecret.trim().isEmpty) {
-        throw AppException(message: 'Stripe client secret was not returned.');
+        throw const AppException(
+          message: 'Stripe client secret was not returned.',
+        );
       }
 
       if (paymentIntent.paymentIntentId.trim().isEmpty) {
-        throw AppException(
+        throw const AppException(
           message: 'Stripe PaymentIntent ID was not returned.',
         );
       }
@@ -135,6 +154,7 @@ class MembershipViewModel extends ChangeNotifier {
       return false;
     } finally {
       isPurchasing = false;
+
       notifyListeners();
     }
   }
@@ -144,8 +164,14 @@ class MembershipViewModel extends ChangeNotifier {
   }
 
   Future<bool> useMembership({required int appointmentId}) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
+
     error = null;
+
     notifyListeners();
 
     try {
@@ -160,6 +186,7 @@ class MembershipViewModel extends ChangeNotifier {
       return false;
     } finally {
       isLoading = false;
+
       notifyListeners();
     }
   }
@@ -169,12 +196,6 @@ class MembershipViewModel extends ChangeNotifier {
       return exception.message;
     }
 
-    final message = exception.toString();
-
-    if (message.startsWith('Exception: ')) {
-      return message.substring('Exception: '.length);
-    }
-
-    return message;
+    return exception.toString().replaceFirst('Exception: ', '').trim();
   }
 }

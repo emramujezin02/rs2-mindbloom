@@ -8,17 +8,14 @@ import '../../../journal/data/models/journal_entry_model.dart';
 import '../../../journal/presentation/constants/mood_options.dart';
 import '../../data/services/private_journal_draft_service.dart';
 import '../viewmodels/private_journal_viewmodel.dart';
+import '../../../../core/validation/app_validators.dart';
 
-class AddPrivateJournalEntryPage
-    extends StatefulWidget {
-  const AddPrivateJournalEntryPage({
-    super.key,
-  });
+class AddPrivateJournalEntryPage extends StatefulWidget {
+  const AddPrivateJournalEntryPage({super.key});
 
   @override
-  State<AddPrivateJournalEntryPage>
-      createState() =>
-          _AddPrivateJournalEntryPageState();
+  State<AddPrivateJournalEntryPage> createState() =>
+      _AddPrivateJournalEntryPageState();
 }
 
 class _AddPrivateJournalEntryPageState
@@ -26,20 +23,13 @@ class _AddPrivateJournalEntryPageState
   final PrivateJournalViewModel _viewModel =
       AppInjection.createPrivateJournalViewModel();
 
-  final PrivateJournalDraftService
-      _draftService =
-      PrivateJournalDraftService();
+  final PrivateJournalDraftService _draftService = PrivateJournalDraftService();
 
-  final GlobalKey<FormState> _formKey =
-      GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  final TextEditingController
-      _titleController =
-      TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
 
-  final TextEditingController
-      _contentController =
-      TextEditingController();
+  final TextEditingController _contentController = TextEditingController();
 
   DateTime _entryDate = DateTime.now();
 
@@ -55,22 +45,15 @@ class _AddPrivateJournalEntryPageState
 
     _viewModel.addListener(_refresh);
 
-    _titleController.addListener(
-      _scheduleDraftSave,
-    );
+    _titleController.addListener(_scheduleDraftSave);
 
-    _contentController.addListener(
-      _scheduleDraftSave,
-    );
+    _contentController.addListener(_scheduleDraftSave);
 
     _initialize();
   }
 
   Future<void> _initialize() async {
-    await Future.wait([
-      _restoreDraft(),
-      _viewModel.loadMoodEntries(),
-    ]);
+    await Future.wait([_restoreDraft(), _viewModel.loadMoodEntries()]);
 
     if (!mounted) {
       return;
@@ -87,13 +70,9 @@ class _AddPrivateJournalEntryPageState
 
     _viewModel.removeListener(_refresh);
 
-    _titleController.removeListener(
-      _scheduleDraftSave,
-    );
+    _titleController.removeListener(_scheduleDraftSave);
 
-    _contentController.removeListener(
-      _scheduleDraftSave,
-    );
+    _contentController.removeListener(_scheduleDraftSave);
 
     _titleController.dispose();
     _contentController.dispose();
@@ -109,19 +88,16 @@ class _AddPrivateJournalEntryPageState
   }
 
   Future<void> _restoreDraft() async {
-    final draft =
-        await _draftService.load();
+    final draft = await _draftService.load();
 
     if (draft == null || !mounted) {
       return;
     }
 
     _titleController.text = draft.title;
-    _contentController.text =
-        draft.content;
+    _contentController.text = draft.content;
     _entryDate = draft.entryDate;
-    _selectedMoodEntryId =
-        draft.moodEntryId;
+    _selectedMoodEntryId = draft.moodEntryId;
   }
 
   void _scheduleDraftSave() {
@@ -131,22 +107,15 @@ class _AddPrivateJournalEntryPageState
 
     _draftTimer?.cancel();
 
-    _draftTimer = Timer(
-      const Duration(milliseconds: 500),
-      _saveDraft,
-    );
+    _draftTimer = Timer(const Duration(milliseconds: 500), _saveDraft);
   }
 
   Future<void> _saveDraft() async {
-    final title =
-        _titleController.text.trim();
+    final title = _titleController.text.trim();
 
-    final content =
-        _contentController.text.trim();
+    final content = _contentController.text.trim();
 
-    if (title.isEmpty &&
-        content.isEmpty &&
-        _selectedMoodEntryId == null) {
+    if (title.isEmpty && content.isEmpty && _selectedMoodEntryId == null) {
       await _draftService.clear();
       return;
     }
@@ -156,15 +125,13 @@ class _AddPrivateJournalEntryPageState
         title: _titleController.text,
         content: _contentController.text,
         entryDate: _entryDate,
-        moodEntryId:
-            _selectedMoodEntryId,
+        moodEntryId: _selectedMoodEntryId,
       ),
     );
   }
 
   Future<void> _selectDate() async {
-    final selected =
-        await showDatePicker(
+    final selected = await showDatePicker(
       context: context,
       initialDate: _entryDate,
       firstDate: DateTime(2020),
@@ -197,13 +164,11 @@ class _AddPrivateJournalEntryPageState
       return;
     }
 
-    final success =
-        await _viewModel.createEntry(
+    final success = await _viewModel.createEntry(
       title: _titleController.text,
       content: _contentController.text,
       entryDate: _entryDate,
-      moodEntryId:
-          _selectedMoodEntryId,
+      moodEntryId: _selectedMoodEntryId,
     );
 
     if (!mounted) {
@@ -217,61 +182,38 @@ class _AddPrivateJournalEntryPageState
         return;
       }
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Private journal entry saved.',
-          ),
-        ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Private journal entry saved.')),
       );
 
       Navigator.of(context).pop(true);
       return;
     }
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
-      SnackBar(
-        content: Text(
-          _viewModel.error ??
-              'Unable to save entry.',
-        ),
-      ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_viewModel.error ?? 'Unable to save entry.')),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoadingDraft) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'New private journal entry',
-        ),
-      ),
+      appBar: AppBar(title: const Text('New private journal entry')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Card(
                 child: ListTile(
-                  leading:
-                      Icon(Icons.lock_outline),
-                  title: Text(
-                    'Private by default',
-                  ),
+                  leading: Icon(Icons.lock_outline),
+                  title: Text('Private by default'),
                   subtitle: Text(
                     'Your therapist cannot '
                     'automatically see this text.',
@@ -280,126 +222,68 @@ class _AddPrivateJournalEntryPageState
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller:
-                    _titleController,
+                controller: _titleController,
                 maxLength: 150,
-                enabled:
-                    !_viewModel.isSaving,
-                decoration:
-                    const InputDecoration(
-                  labelText: 'Title',
-                  hintText:
-                      'Give this entry a title',
-                  border:
-                      OutlineInputBorder(),
+                enabled: !_viewModel.isSaving,
+                decoration: const InputDecoration(
+                  labelText: 'Naslov',
+                  hintText: 'Unesite naslov zapisa',
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  final normalized =
-                      value?.trim() ?? '';
-
-                  if (normalized.isEmpty) {
-                    return 'Title is required.';
-                  }
-
-                  if (normalized.length > 150) {
-                    return 'Title may contain at most 150 characters.';
-                  }
-
-                  return null;
+                  return _viewModel.fieldError('Title') ??
+                      AppValidators.journalTitle(value);
                 },
               ),
               const SizedBox(height: 12),
               TextFormField(
-                controller:
-                    _contentController,
+                controller: _contentController,
                 minLines: 10,
                 maxLines: 20,
                 maxLength: 10000,
-                enabled:
-                    !_viewModel.isSaving,
-                decoration:
-                    const InputDecoration(
-                  labelText: 'Content',
-                  hintText:
-                      'Write your thoughts privately...',
+                enabled: !_viewModel.isSaving,
+                decoration: const InputDecoration(
+                  labelText: 'Sadržaj',
+                  hintText: 'Zapišite svoje misli...',
                   alignLabelWithHint: true,
-                  border:
-                      OutlineInputBorder(),
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  final normalized =
-                      value?.trim() ?? '';
-
-                  if (normalized.isEmpty) {
-                    return 'Journal content is required.';
-                  }
-
-                  if (normalized.length >
-                      10000) {
-                    return 'Content may contain at most 10000 characters.';
-                  }
-
-                  return null;
+                  return _viewModel.fieldError('Content') ??
+                      AppValidators.journalContent(value);
                 },
               ),
               const SizedBox(height: 12),
               Card(
                 child: ListTile(
-                  leading: const Icon(
-                    Icons.calendar_month,
-                  ),
-                  title: const Text(
-                    'Entry date',
-                  ),
-                  subtitle: Text(
-                    DateFormat(
-                      'dd.MM.yyyy.',
-                    ).format(_entryDate),
-                  ),
-                  trailing: const Icon(
-                    Icons.edit_calendar,
-                  ),
-                  onTap: _viewModel.isSaving
-                      ? null
-                      : _selectDate,
+                  leading: const Icon(Icons.calendar_month),
+                  title: const Text('Entry date'),
+                  subtitle: Text(DateFormat('dd.MM.yyyy.').format(_entryDate)),
+                  trailing: const Icon(Icons.edit_calendar),
+                  onTap: _viewModel.isSaving ? null : _selectDate,
                 ),
               ),
               const SizedBox(height: 12),
               _buildMoodSelection(),
-              if (_viewModel.error !=
-                  null) ...[
+              if (_viewModel.error != null) ...[
                 const SizedBox(height: 12),
                 Text(
                   _viewModel.error!,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .error,
-                  ),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
               const SizedBox(height: 20),
               ElevatedButton.icon(
-                onPressed:
-                    _viewModel.isSaving
-                    ? null
-                    : _save,
+                onPressed: _viewModel.isSaving ? null : _save,
                 icon: _viewModel.isSaving
                     ? const SizedBox(
                         width: 22,
                         height: 22,
-                        child:
-                            CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.save),
-                label: Text(
-                  _viewModel.isSaving
-                      ? 'Saving...'
-                      : 'Save entry',
-                ),
+                label: Text(_viewModel.isSaving ? 'Saving...' : 'Save entry'),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -419,10 +303,7 @@ class _AddPrivateJournalEntryPageState
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(20),
-          child: Center(
-            child:
-                CircularProgressIndicator(),
-          ),
+          child: Center(child: CircularProgressIndicator()),
         ),
       );
     }
@@ -431,15 +312,11 @@ class _AddPrivateJournalEntryPageState
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Related mood entry',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             const Text(
@@ -449,30 +326,23 @@ class _AddPrivateJournalEntryPageState
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<int?>(
-              initialValue:
-                  _selectedMoodEntryId,
+              initialValue: _selectedMoodEntryId,
               isExpanded: true,
-              decoration:
-                  const InputDecoration(
-                border:
-                    OutlineInputBorder(),
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
                 labelText: 'Mood entry',
               ),
               items: [
                 const DropdownMenuItem<int?>(
                   value: null,
-                  child: Text(
-                    'No linked mood entry',
-                  ),
+                  child: Text('No linked mood entry'),
                 ),
                 ..._viewModel.moodEntries.map(
-                  (entry) =>
-                      DropdownMenuItem<int?>(
+                  (entry) => DropdownMenuItem<int?>(
                     value: entry.id,
                     child: Text(
                       _moodEntryLabel(entry),
-                      overflow:
-                          TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
@@ -481,8 +351,7 @@ class _AddPrivateJournalEntryPageState
                   ? null
                   : (value) {
                       setState(() {
-                        _selectedMoodEntryId =
-                            value;
+                        _selectedMoodEntryId = value;
                       });
 
                       _saveDraft();
@@ -494,22 +363,16 @@ class _AddPrivateJournalEntryPageState
     );
   }
 
-  String _moodEntryLabel(
-    JournalEntryModel entry,
-  ) {
-    final mood =
-        moodOptionFor(entry.mood);
+  String _moodEntryLabel(JournalEntryModel entry) {
+    final mood = moodOptionFor(entry.mood);
 
-    final emotions =
-        entry.emotions.isEmpty
+    final emotions = entry.emotions.isEmpty
         ? 'No emotions'
         : entry.emotions.join(', ');
 
     final date = DateFormat(
       'dd.MM.yyyy. HH:mm',
-    ).format(
-      entry.createdAtUtc.toLocal(),
-    );
+    ).format(entry.createdAtUtc.toLocal());
 
     return '$date · ${mood.label} · $emotions';
   }

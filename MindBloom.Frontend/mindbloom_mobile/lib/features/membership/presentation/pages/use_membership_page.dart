@@ -21,12 +21,16 @@ class _UseMembershipPageState extends State<UseMembershipPage> {
   @override
   void initState() {
     super.initState();
+
     _viewModel.addListener(_refresh);
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
+
+    _viewModel.dispose();
+
     super.dispose();
   }
 
@@ -37,6 +41,10 @@ class _UseMembershipPageState extends State<UseMembershipPage> {
   }
 
   Future<void> _useMembership() async {
+    if (_viewModel.isLoading) {
+      return;
+    }
+
     final success = await _viewModel.useMembership(
       appointmentId: widget.appointment.id,
     );
@@ -53,7 +61,13 @@ class _UseMembershipPageState extends State<UseMembershipPage> {
       Navigator.of(
         context,
       ).pushNamedAndRemoveUntil(AppRouter.myAppointments, (route) => false);
+
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_viewModel.error ?? 'Unable to use membership.')),
+    );
   }
 
   @override
@@ -72,16 +86,12 @@ class _UseMembershipPageState extends State<UseMembershipPage> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 20),
-
             const Text(
               'If you have an active membership for this therapist, one session will be used for this appointment.',
               textAlign: TextAlign.center,
             ),
-
             const SizedBox(height: 20),
-
             if (_viewModel.error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -91,23 +101,22 @@ class _UseMembershipPageState extends State<UseMembershipPage> {
                   textAlign: TextAlign.center,
                 ),
               ),
-
             ElevatedButton.icon(
               onPressed: canUse && !_viewModel.isLoading
                   ? _useMembership
                   : null,
-              icon: const Icon(Icons.card_membership),
-              label: _viewModel.isLoading
+              icon: _viewModel.isLoading
                   ? const SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Use membership'),
+                  : const Icon(Icons.card_membership),
+              label: Text(
+                _viewModel.isLoading ? 'Processing...' : 'Use membership',
+              ),
             ),
-
             const SizedBox(height: 12),
-
             if (!canUse)
               const Text(
                 'Membership can only be used for accepted appointments.',

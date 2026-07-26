@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../../../../core/validation/app_validators.dart';
 import '../../../../app/di/injection.dart';
 import '../../data/models/profile_model.dart';
 import '../viewmodels/profile_viewmodel.dart';
@@ -152,26 +152,41 @@ class _EditProfilePageState extends State<EditProfilePage> {
       return;
     }
 
-    final minimumPrice = _parseNullablePrice(_minimumPriceController.text);
+    final dateError = AppValidators.dateOfBirth(_dateOfBirth);
 
-    final maximumPrice = _parseNullablePrice(_maximumPriceController.text);
-
-    if (minimumPrice != null &&
-        maximumPrice != null &&
-        minimumPrice > maximumPrice) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Minimum price cannot be greater than maximum price.'),
-        ),
-      );
+    if (dateError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(dateError)));
 
       return;
     }
 
+    final rangeError = AppValidators.priceRange(
+      minimumValue: _minimumPriceController.text,
+      maximumValue: _maximumPriceController.text,
+    );
+
+    if (rangeError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(rangeError)));
+
+      return;
+    }
+
+    final minimumPrice = AppValidators.parseDecimal(
+      _minimumPriceController.text,
+    );
+
+    final maximumPrice = AppValidators.parseDecimal(
+      _maximumPriceController.text,
+    );
+
     final languages = _languagesController.text
         .split(',')
-        .map((x) => x.trim())
-        .where((x) => x.isNotEmpty)
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
         .toSet()
         .toList();
 
@@ -188,13 +203,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
       preferredLanguages: languages,
     );
 
+    if (!success && mounted) {
+      _formKey.currentState?.validate();
+    }
+
     if (!mounted) {
       return;
     }
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully.')),
+        const SnackBar(content: Text('Profil je uspješno izmijenjen.')),
       );
 
       Navigator.of(context).pop(true);
@@ -203,45 +222,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_viewModel.error ?? 'Profile could not be updated.'),
+        content: Text(_viewModel.error ?? 'Profil nije moguće izmijeniti.'),
       ),
     );
-  }
-
-  double? _parseNullablePrice(String value) {
-    final normalized = value.trim().replaceAll(',', '.');
-
-    if (normalized.isEmpty) {
-      return null;
-    }
-
-    return double.tryParse(normalized);
   }
 
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}.'
         '${date.month.toString().padLeft(2, '0')}.'
         '${date.year}.';
-  }
-
-  String? _validatePrice(String? value) {
-    final normalized = value?.trim().replaceAll(',', '.') ?? '';
-
-    if (normalized.isEmpty) {
-      return null;
-    }
-
-    final price = double.tryParse(normalized);
-
-    if (price == null) {
-      return 'Enter a valid price.';
-    }
-
-    if (price < 0) {
-      return 'Price cannot be negative.';
-    }
-
-    return null;
   }
 
   @override
@@ -263,21 +252,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  final firstName = value?.trim() ?? '';
-
-                  if (firstName.isEmpty) {
-                    return 'First name is required.';
-                  }
-
-                  if (firstName.length < 2) {
-                    return 'First name must contain at least 2 characters.';
-                  }
-
-                  if (firstName.length > 50) {
-                    return 'First name may contain at most 50 characters.';
-                  }
-
-                  return null;
+                  return _viewModel.fieldError('FirstName') ??
+                      AppValidators.textLength(
+                        value,
+                        fieldName: 'Ime',
+                        minimumLength: 2,
+                        maximumLength: 50,
+                      );
                 },
               ),
 
@@ -291,21 +272,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  final lastName = value?.trim() ?? '';
-
-                  if (lastName.isEmpty) {
-                    return 'Last name is required.';
-                  }
-
-                  if (lastName.length < 2) {
-                    return 'Last name must contain at least 2 characters.';
-                  }
-
-                  if (lastName.length > 50) {
-                    return 'Last name may contain at most 50 characters.';
-                  }
-
-                  return null;
+                  return _viewModel.fieldError('LastName') ??
+                      AppValidators.textLength(
+                        value,
+                        fieldName: 'Prezime',
+                        minimumLength: 2,
+                        maximumLength: 50,
+                      );
                 },
               ),
 
@@ -332,19 +305,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  final phoneNumber = value?.trim() ?? '';
-
-                  if (phoneNumber.isEmpty) {
-                    return null;
-                  }
-
-                  final phoneRegex = RegExp(r'^\+?[0-9][0-9\s\-]{6,19}$');
-
-                  if (!phoneRegex.hasMatch(phoneNumber)) {
-                    return 'Enter a valid phone number.';
-                  }
-
-                  return null;
+                  return _viewModel.fieldError('PhoneNumber') ??
+                      AppValidators.phone(value);
                 },
               ),
 
@@ -368,6 +330,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   hintText: 'City or location',
                   border: OutlineInputBorder(),
                 ),
+                validator: (value) {
+                  return _viewModel.fieldError('Location') ??
+                      AppValidators.location(value);
+                },
               ),
 
               const SizedBox(height: 8),
@@ -433,7 +399,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         suffixText: 'BAM',
                         border: OutlineInputBorder(),
                       ),
-                      validator: _validatePrice,
+                      validator: (value) {
+                        return _viewModel.fieldError(
+                              'MinimumPricePerSession',
+                            ) ??
+                            AppValidators.price(
+                              value,
+                              fieldName: 'Minimalna cijena',
+                            );
+                      },
                     ),
                   ),
 
@@ -450,7 +424,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         suffixText: 'BAM',
                         border: OutlineInputBorder(),
                       ),
-                      validator: _validatePrice,
+                      validator: (value) {
+                        return _viewModel.fieldError(
+                              'MaximumPricePerSession',
+                            ) ??
+                            AppValidators.price(
+                              value,
+                              fieldName: 'Maksimalna cijena',
+                            );
+                      },
                     ),
                   ),
                 ],

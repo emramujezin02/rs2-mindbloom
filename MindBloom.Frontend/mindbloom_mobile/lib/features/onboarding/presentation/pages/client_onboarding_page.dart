@@ -4,6 +4,7 @@ import '../../../../app/di/injection.dart';
 import '../../../therapy_approach/data/models/therapy_approach_model.dart';
 import '../../data/models/save_client_onboarding_request.dart';
 import '../viewmodels/client_onboarding_viewmodel.dart';
+import '../../../../core/validation/app_validators.dart';
 
 class ClientOnboardingPage extends StatefulWidget {
   final bool isRequired;
@@ -149,30 +150,26 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
     switch (_currentStep) {
       case 1:
         if (_focusAreas.isEmpty) {
-          message = 'Select at least one area where you would like support.';
+          message = 'Odaberite najmanje jedno područje podrške.';
         }
-
         break;
 
       case 2:
         if (_sessionType.trim().isEmpty) {
-          message = 'Select a preferred session type.';
+          message = 'Odaberite željeni tip terapijske sesije.';
         }
-
         break;
 
       case 3:
         if (_languages.isEmpty) {
-          message = 'Select at least one preferred language.';
+          message = 'Odaberite najmanje jedan željeni jezik.';
         }
-
         break;
 
       case 5:
         if (_therapyApproachIds.isEmpty) {
-          message = 'Select at least one therapy approach.';
+          message = 'Odaberite najmanje jedan terapijski pristup.';
         }
-
         break;
     }
 
@@ -188,6 +185,10 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
   }
 
   void _continue() {
+    if (_viewModel.isSaving) {
+      return;
+    }
+
     if (!_validateCurrentStep()) {
       return;
     }
@@ -204,18 +205,19 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
   }
 
   Future<void> _save() async {
-    final minimumPrice = _parsePrice(_minimumPriceController.text);
+    if (_viewModel.isSaving) {
+      return;
+    }
 
-    final maximumPrice = _parsePrice(_maximumPriceController.text);
+    final minimumPriceError =
+        _viewModel.fieldError('MinimumPricePerSession') ??
+        AppValidators.price(
+          _minimumPriceController.text,
+          fieldName: 'Minimalna cijena',
+        );
 
-    if (minimumPrice != null &&
-        maximumPrice != null &&
-        minimumPrice > maximumPrice) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Minimum price cannot be greater than maximum price.'),
-        ),
-      );
+    if (minimumPriceError != null) {
+      _showValidationMessage(minimumPriceError);
 
       setState(() {
         _currentStep = 4;
@@ -223,6 +225,60 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
 
       return;
     }
+
+    final maximumPriceError =
+        _viewModel.fieldError('MaximumPricePerSession') ??
+        AppValidators.price(
+          _maximumPriceController.text,
+          fieldName: 'Maksimalna cijena',
+        );
+
+    if (maximumPriceError != null) {
+      _showValidationMessage(maximumPriceError);
+
+      setState(() {
+        _currentStep = 4;
+      });
+
+      return;
+    }
+
+    final locationError =
+        _viewModel.fieldError('Location') ??
+        AppValidators.location(_locationController.text);
+
+    if (locationError != null) {
+      _showValidationMessage(locationError);
+
+      setState(() {
+        _currentStep = 4;
+      });
+
+      return;
+    }
+
+    final rangeError = AppValidators.priceRange(
+      minimumValue: _minimumPriceController.text,
+      maximumValue: _maximumPriceController.text,
+    );
+
+    if (rangeError != null) {
+      _showValidationMessage(rangeError);
+
+      setState(() {
+        _currentStep = 4;
+      });
+
+      return;
+    }
+
+    final minimumPrice = AppValidators.parseDecimal(
+      _minimumPriceController.text,
+    );
+
+    final maximumPrice = AppValidators.parseDecimal(
+      _maximumPriceController.text,
+    );
 
     final success = await _viewModel.save(
       SaveClientOnboardingRequest(
@@ -232,7 +288,7 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
         preferredLanguages: _languages.toList(),
         minimumPricePerSession: minimumPrice,
         maximumPricePerSession: maximumPrice,
-        location: _locationController.text,
+        location: _locationController.text.trim(),
         preferredDays: _preferredDays.toList(),
         preferredTherapyApproachIds: _therapyApproachIds.toList(),
       ),
@@ -243,38 +299,33 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
     }
 
     if (!success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_viewModel.error ?? 'Preferences could not be saved.'),
-        ),
+      _showValidationMessage(
+        _viewModel.error ?? 'Preference nije moguće sačuvati.',
       );
 
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Your therapy preferences have been saved.'),
-      ),
+      const SnackBar(content: Text('Preference su uspješno sačuvane.')),
     );
 
     if (widget.onCompleted != null) {
       widget.onCompleted!();
-
       return;
     }
 
     Navigator.of(context).pop(true);
   }
 
-  double? _parsePrice(String value) {
-    final normalized = value.trim().replaceAll(',', '.');
-
-    if (normalized.isEmpty) {
-      return null;
+  void _showValidationMessage(String message) {
+    if (!mounted) {
+      return;
     }
 
-    return double.tryParse(normalized);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override

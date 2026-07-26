@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/create_journal_entry_request.dart';
 import '../../data/models/journal_entry_model.dart';
 import '../../data/repositories/journal_repository.dart';
+import '../../../../core/error/app_exception.dart';
 
 class JournalViewModel extends ChangeNotifier {
   final JournalRepository repository;
@@ -135,11 +136,12 @@ class JournalViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      error = exception.toString();
-      isSaving = false;
-      notifyListeners();
+      _setError(exception, fallback: 'Zapis dnevnika nije moguće sačuvati.');
 
       return false;
+    } finally {
+      isSaving = false;
+      notifyListeners();
     }
   }
 
@@ -166,11 +168,12 @@ class JournalViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      error = exception.toString();
-      isSaving = false;
-      notifyListeners();
+      _setError(exception, fallback: 'Zapis dnevnika nije moguće sačuvati.');
 
       return false;
+    } finally {
+      isSaving = false;
+      notifyListeners();
     }
   }
 
@@ -203,5 +206,40 @@ class JournalViewModel extends ChangeNotifier {
     fromDate = null;
     toDate = null;
     await loadEntries();
+  }
+
+  Map<String, List<String>> fieldErrors = {};
+
+  String? fieldError(String fieldName) {
+    final requested = _normalizeFieldName(fieldName);
+
+    for (final entry in fieldErrors.entries) {
+      if (_normalizeFieldName(entry.key) == requested &&
+          entry.value.isNotEmpty) {
+        return entry.value.first;
+      }
+    }
+
+    return null;
+  }
+
+  void _setError(Object exception, {required String fallback}) {
+    if (exception is AppException) {
+      error = exception.message.trim().isEmpty
+          ? fallback
+          : exception.message.trim();
+
+      fieldErrors = Map<String, List<String>>.from(exception.fieldErrors);
+
+      return;
+    }
+
+    final message = exception.toString().replaceFirst('Exception: ', '').trim();
+
+    error = message.isEmpty ? fallback : message;
+  }
+
+  String _normalizeFieldName(String value) {
+    return value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
   }
 }

@@ -32,6 +32,8 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
 
+    _viewModel.dispose();
+
     super.dispose();
   }
 
@@ -42,6 +44,10 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
   }
 
   Future<void> _purchase(MembershipPlanModel plan) async {
+    if (_viewModel.isPurchasing) {
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -75,9 +81,12 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
       return;
     }
 
+    if (_viewModel.isPurchasing) {
+      return;
+    }
+
     final success = await _viewModel.purchaseMembership(
       therapistId: widget.therapist.id,
-
       planType: plan.planType,
     );
 
@@ -99,11 +108,11 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
       return;
     }
 
-    if (_viewModel.error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_viewModel.error!)));
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_viewModel.error ?? 'Unable to purchase membership.'),
+      ),
+    );
   }
 
   @override
@@ -133,9 +142,11 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
               ),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: () {
-                  _viewModel.loadPlans(widget.therapist.id);
-                },
+                onPressed: _viewModel.isLoading
+                    ? null
+                    : () {
+                        _viewModel.loadPlans(widget.therapist.id);
+                      },
                 child: const Text('Try again'),
               ),
             ],
@@ -150,11 +161,10 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
 
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-
       itemCount: _viewModel.plans.length,
-
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-
+      separatorBuilder: (context, index) {
+        return const SizedBox(height: 12);
+      },
       itemBuilder: (context, index) {
         final plan = _viewModel.plans[index];
 
@@ -179,35 +189,27 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
                     ),
                   ],
                 ),
-
                 if (plan.description.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Text(plan.description, style: const TextStyle(height: 1.4)),
                 ],
-
                 const SizedBox(height: 16),
-
                 _PlanInfoRow(
                   icon: Icons.event_available,
                   text: '${plan.totalSessions} included sessions',
                 ),
-
                 const SizedBox(height: 8),
-
                 _PlanInfoRow(
                   icon: Icons.redeem,
                   text:
                       '${plan.freeSessions} free '
                       '${plan.freeSessions == 1 ? 'session' : 'sessions'}',
                 ),
-
                 const SizedBox(height: 8),
-
                 _PlanInfoRow(
                   icon: Icons.schedule,
                   text: 'Valid for ${plan.durationMonths} months',
                 ),
-
                 if (plan.benefits.isNotEmpty) ...[
                   const SizedBox(height: 18),
                   const Text(
@@ -229,9 +231,7 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
                     ),
                   ),
                 ],
-
                 const Divider(height: 28),
-
                 Text(
                   'Total price: '
                   '${plan.price.toStringAsFixed(2)} KM',
@@ -240,16 +240,12 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 5),
-
                 Text(
                   'Price per session: '
                   '${plan.pricePerSession.toStringAsFixed(2)} KM',
                 ),
-
                 const SizedBox(height: 16),
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -283,6 +279,7 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
 
 class _PlanInfoRow extends StatelessWidget {
   final IconData icon;
+
   final String text;
 
   const _PlanInfoRow({required this.icon, required this.text});

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-
+import '../../../../core/error/app_exception.dart';
 import '../../data/models/change_password_request.dart';
 import '../../data/models/forgot_password_request.dart';
 import '../../data/models/login_request.dart';
@@ -11,29 +11,59 @@ import '../../data/repositories/auth_repository.dart';
 class AuthViewModel extends ChangeNotifier {
   final AuthRepository authRepository;
 
+  AuthViewModel({required this.authRepository});
+
   bool isLoading = false;
+
   String? errorMessage;
+
   String? successMessage;
+
+  Map<String, List<String>> fieldErrors = {};
+
   bool requiresTwoFactor = false;
+
   String? pendingTwoFactorEmail;
+
   bool isTwoFactorEnabled = false;
+
   bool needsEmailVerification = false;
+
   String? pendingVerificationEmail;
 
-  AuthViewModel({required this.authRepository});
+  String? fieldError(String fieldName) {
+    final requestedField = _normalizeFieldName(fieldName);
+
+    for (final entry in fieldErrors.entries) {
+      final backendField = _normalizeFieldName(entry.key);
+
+      if (backendField == requestedField && entry.value.isNotEmpty) {
+        return entry.value.first;
+      }
+    }
+
+    return null;
+  }
 
   Future<bool> login({
     required String email,
     required String password,
     required bool rememberMe,
   }) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
-    errorMessage = null;
+
+    _clearErrors();
+
     successMessage = null;
     requiresTwoFactor = false;
     pendingTwoFactorEmail = null;
     needsEmailVerification = false;
     pendingVerificationEmail = null;
+
     notifyListeners();
 
     try {
@@ -45,17 +75,17 @@ class AuthViewModel extends ChangeNotifier {
 
       if (requiresTwoFactor) {
         pendingTwoFactorEmail = email;
+
         successMessage = response.message;
       }
 
-      isLoading = false;
-      notifyListeners();
-
       return true;
     } catch (error) {
-      final message = error.toString();
+      _setError(error, fallback: 'Prijava nije uspjela.');
 
-      needsEmailVerification = message.toLowerCase().contains(
+      final normalizedError = errorMessage?.toLowerCase() ?? '';
+
+      needsEmailVerification = normalizedError.contains(
         'email is not verified',
       );
 
@@ -63,18 +93,25 @@ class AuthViewModel extends ChangeNotifier {
         pendingVerificationEmail = email;
       }
 
-      isLoading = false;
-      errorMessage = message;
-      notifyListeners();
-
       return false;
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
     }
   }
 
   Future<bool> verify2FA({required String email, required String code}) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
-    errorMessage = null;
+
+    _clearErrors();
+
     successMessage = null;
+
     notifyListeners();
 
     try {
@@ -84,39 +121,57 @@ class AuthViewModel extends ChangeNotifier {
 
       requiresTwoFactor = false;
       pendingTwoFactorEmail = null;
-      isLoading = false;
-      successMessage = 'Two-factor authentication completed.';
-      notifyListeners();
+
+      successMessage = 'Dvofaktorska autentifikacija je uspješno završena.';
 
       return true;
     } catch (error) {
-      isLoading = false;
-      errorMessage = error.toString();
-      notifyListeners();
+      _setError(error, fallback: 'Verifikacija koda nije uspjela.');
 
       return false;
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
     }
   }
 
   Future<void> load2FAStatus() async {
+    if (isLoading) {
+      return;
+    }
+
     isLoading = true;
-    errorMessage = null;
+
+    _clearErrors();
+
     notifyListeners();
 
     try {
       isTwoFactorEnabled = await authRepository.get2FAStatus();
     } catch (error) {
-      errorMessage = error.toString();
-    }
+      _setError(
+        error,
+        fallback: 'Status dvofaktorske autentifikacije nije moguće učitati.',
+      );
+    } finally {
+      isLoading = false;
 
-    isLoading = false;
-    notifyListeners();
+      notifyListeners();
+    }
   }
 
   Future<bool> set2FAEnabled(bool enabled) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
-    errorMessage = null;
+
+    _clearErrors();
+
     successMessage = null;
+
     notifyListeners();
 
     try {
@@ -127,19 +182,24 @@ class AuthViewModel extends ChangeNotifier {
       }
 
       isTwoFactorEnabled = enabled;
-      isLoading = false;
+
       successMessage = enabled
-          ? 'Two-factor authentication enabled.'
-          : 'Two-factor authentication disabled.';
-      notifyListeners();
+          ? 'Dvofaktorska autentifikacija je uključena.'
+          : 'Dvofaktorska autentifikacija je isključena.';
 
       return true;
     } catch (error) {
-      isLoading = false;
-      errorMessage = error.toString();
-      notifyListeners();
+      _setError(
+        error,
+        fallback:
+            'Postavke dvofaktorske autentifikacije nije moguće promijeniti.',
+      );
 
       return false;
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
     }
   }
 
@@ -151,8 +211,16 @@ class AuthViewModel extends ChangeNotifier {
     required String password,
     required DateTime dateOfBirth,
   }) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
-    errorMessage = null;
+
+    _clearErrors();
+
+    successMessage = null;
+
     notifyListeners();
 
     try {
@@ -167,35 +235,50 @@ class AuthViewModel extends ChangeNotifier {
         ),
       );
 
-      isLoading = false;
-      notifyListeners();
+      successMessage = 'Registracija je uspješno završena.';
+
       return true;
     } catch (error) {
-      isLoading = false;
-      errorMessage = error.toString();
-      notifyListeners();
+      _setError(error, fallback: 'Registracija nije uspjela.');
+
       return false;
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
     }
   }
 
   Future<bool> forgotPassword({required String email}) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
-    errorMessage = null;
+
+    _clearErrors();
+
     successMessage = null;
+
     notifyListeners();
 
     try {
       await authRepository.forgotPassword(ForgotPasswordRequest(email: email));
 
-      isLoading = false;
-      successMessage = 'Password reset code has been sent to your email.';
-      notifyListeners();
+      successMessage = 'Kod za promjenu lozinke poslan je na vaš email.';
+
       return true;
     } catch (error) {
-      isLoading = false;
-      errorMessage = error.toString();
-      notifyListeners();
+      _setError(
+        error,
+        fallback: 'Kod za promjenu lozinke nije moguće poslati.',
+      );
+
       return false;
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
     }
   }
 
@@ -204,9 +287,16 @@ class AuthViewModel extends ChangeNotifier {
     required String code,
     required String newPassword,
   }) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
-    errorMessage = null;
+
+    _clearErrors();
+
     successMessage = null;
+
     notifyListeners();
 
     try {
@@ -218,15 +308,17 @@ class AuthViewModel extends ChangeNotifier {
         ),
       );
 
-      isLoading = false;
-      successMessage = 'Password has been reset successfully.';
-      notifyListeners();
+      successMessage = 'Lozinka je uspješno promijenjena.';
+
       return true;
     } catch (error) {
-      isLoading = false;
-      errorMessage = error.toString();
-      notifyListeners();
+      _setError(error, fallback: 'Lozinku nije moguće promijeniti.');
+
       return false;
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
     }
   }
 
@@ -234,9 +326,16 @@ class AuthViewModel extends ChangeNotifier {
     required String currentPassword,
     required String newPassword,
   }) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
-    errorMessage = null;
+
+    _clearErrors();
+
     successMessage = null;
+
     notifyListeners();
 
     try {
@@ -247,38 +346,47 @@ class AuthViewModel extends ChangeNotifier {
         ),
       );
 
-      isLoading = false;
-      successMessage = 'Password changed successfully.';
-      notifyListeners();
+      successMessage = 'Lozinka je uspješno promijenjena.';
+
       return true;
     } catch (error) {
-      isLoading = false;
-      errorMessage = error.toString();
-      notifyListeners();
+      _setError(error, fallback: 'Lozinku nije moguće promijeniti.');
+
       return false;
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
     }
   }
 
   Future<bool> sendEmailVerificationCode({required String email}) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
-    errorMessage = null;
+
+    _clearErrors();
+
     successMessage = null;
+
     notifyListeners();
 
     try {
       await authRepository.sendEmailVerificationCode(email);
 
-      isLoading = false;
-      successMessage = 'A new verification code has been sent to your email.';
-      notifyListeners();
+      successMessage = 'Novi verifikacijski kod poslan je na vaš email.';
 
       return true;
     } catch (error) {
-      isLoading = false;
-      errorMessage = error.toString();
-      notifyListeners();
+      _setError(error, fallback: 'Verifikacijski kod nije moguće poslati.');
 
       return false;
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
     }
   }
 
@@ -286,9 +394,16 @@ class AuthViewModel extends ChangeNotifier {
     required String email,
     required String code,
   }) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
-    errorMessage = null;
+
+    _clearErrors();
+
     successMessage = null;
+
     notifyListeners();
 
     try {
@@ -297,17 +412,57 @@ class AuthViewModel extends ChangeNotifier {
       needsEmailVerification = false;
       pendingVerificationEmail = null;
 
-      isLoading = false;
-      successMessage = 'Email verified successfully. You can now log in.';
-      notifyListeners();
+      successMessage = 'Email je uspješno potvrđen. Sada se možete prijaviti.';
 
       return true;
     } catch (error) {
-      isLoading = false;
-      errorMessage = error.toString();
-      notifyListeners();
+      _setError(error, fallback: 'Email nije moguće potvrditi.');
 
       return false;
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
     }
+  }
+
+  void _clearErrors() {
+    errorMessage = null;
+    fieldErrors = {};
+  }
+
+  void _setError(Object error, {required String fallback}) {
+    if (error is AppException) {
+      errorMessage = error.message.trim().isEmpty
+          ? fallback
+          : error.message.trim();
+
+      fieldErrors = Map<String, List<String>>.from(error.fieldErrors);
+
+      return;
+    }
+
+    final normalizedMessage = error
+        .toString()
+        .replaceFirst('Exception: ', '')
+        .trim();
+
+    errorMessage = normalizedMessage.isEmpty ? fallback : normalizedMessage;
+  }
+
+  String _normalizeFieldName(String value) {
+    var normalized = value
+        .replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
+        .toLowerCase();
+
+    const prefixes = ['request', 'model', 'dto'];
+
+    for (final prefix in prefixes) {
+      if (normalized.startsWith(prefix)) {
+        normalized = normalized.substring(prefix.length);
+      }
+    }
+
+    return normalized;
   }
 }

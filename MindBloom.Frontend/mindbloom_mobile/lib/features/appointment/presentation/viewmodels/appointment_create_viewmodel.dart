@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../../../../core/error/app_exception.dart';
 import '../../../therapist/data/models/therapist_availability_model.dart';
 import '../../data/models/appointment_create_request.dart';
 import '../../data/models/occupied_slot_model.dart';
@@ -18,6 +18,21 @@ class AppointmentCreateViewModel extends ChangeNotifier {
   bool isLoadingPreview = false;
 
   String? error;
+
+  Map<String, List<String>> fieldErrors = {};
+
+  String? fieldError(String fieldName) {
+    final requested = _normalizeFieldName(fieldName);
+
+    for (final entry in fieldErrors.entries) {
+      if (_normalizeFieldName(entry.key) == requested &&
+          entry.value.isNotEmpty) {
+        return entry.value.first;
+      }
+    }
+
+    return null;
+  }
 
   List<TherapistAvailabilityModel> availabilities = [];
 
@@ -264,47 +279,47 @@ class AppointmentCreateViewModel extends ChangeNotifier {
   }
 
   Future<bool> createAppointment({
-  required int therapistId,
-  required DateTime startUtc,
-  required DateTime endUtc,
-  required int type,
-  String? meetingLink,
-  String? location,
-  String? notes,
-}) async {
-  if (isLoading) {
-    return false;
-  }
+    required int therapistId,
+    required DateTime startUtc,
+    required DateTime endUtc,
+    required int type,
+    String? meetingLink,
+    String? location,
+    String? notes,
+  }) async {
+    if (isLoading) {
+      return false;
+    }
 
-  isLoading = true;
-  error = null;
-  notifyListeners();
+    isLoading = true;
+    error = null;
+    fieldErrors = {};
 
-  try {
-    await repository.createAppointment(
-      AppointmentCreateRequest(
-        therapistId: therapistId,
-        startUtc: startUtc,
-        endUtc: endUtc,
-        type: type,
-        meetingLink: meetingLink,
-        location: location,
-        notes: notes,
-      ),
-    );
-
-    isLoading = false;
     notifyListeners();
 
-    return true;
-  } catch (exception) {
-    error = exception.toString();
-    isLoading = false;
-    notifyListeners();
+    try {
+      await repository.createAppointment(
+        AppointmentCreateRequest(
+          therapistId: therapistId,
+          startUtc: startUtc,
+          endUtc: endUtc,
+          type: type,
+          meetingLink: meetingLink?.trim(),
+          location: location?.trim(),
+          notes: notes?.trim(),
+        ),
+      );
 
-    return false;
+      return true;
+    } catch (exception) {
+      _setError(exception, fallback: 'Termin nije moguće kreirati.');
+
+      return false;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
-}
 
   static int _toBackendDayOfWeek(int dartWeekday) {
     return dartWeekday == DateTime.sunday ? 0 : dartWeekday;
@@ -326,5 +341,25 @@ class AppointmentCreateViewModel extends ChangeNotifier {
     }
 
     return (hour, minute);
+  }
+
+  void _setError(Object exception, {required String fallback}) {
+    if (exception is AppException) {
+      error = exception.message.trim().isEmpty
+          ? fallback
+          : exception.message.trim();
+
+      fieldErrors = Map<String, List<String>>.from(exception.fieldErrors);
+
+      return;
+    }
+
+    final message = exception.toString().replaceFirst('Exception: ', '').trim();
+
+    error = message.isEmpty ? fallback : message;
+  }
+
+  String _normalizeFieldName(String value) {
+    return value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
   }
 }

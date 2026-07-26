@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mindbloom_mobile/core/validation/app_validators.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../appointment/data/models/appointment_model.dart';
@@ -48,6 +49,10 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
   }
 
   Future<void> _submitReview() async {
+    if (_viewModel.isLoading) {
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -58,15 +63,17 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
       comment: _commentController.text.trim(),
     );
 
+    if (!success && mounted) {
+      _formKey.currentState?.validate();
+    }
+
     if (!mounted) {
       return;
     }
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Review submitted and sent for moderation.'),
-        ),
+        const SnackBar(content: Text('Recenzija je poslana na moderaciju.')),
       );
 
       Navigator.of(context).pop(true);
@@ -179,18 +186,8 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
                 alignLabelWithHint: true,
               ),
               validator: (value) {
-                final comment = value?.trim() ?? '';
-
-                if (comment.isEmpty) {
-                  return 'Comment is required.';
-                }
-
-                if (comment.length > 1000) {
-                  return 'Comment may contain at most '
-                      '1000 characters.';
-                }
-
-                return null;
+                return _viewModel.fieldError('Comment') ??
+                    AppValidators.reviewComment(value);
               },
             ),
 
