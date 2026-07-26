@@ -20,6 +20,8 @@ using MindBloom.Infrastructure.Recommendations;
 using MindBloom.Application.Features.PrivateJournalEntries.Interfaces;
 using MindBloom.Infrastructure.Services;
 using MindBloom.Application.Features.PrivateJournalEntries.Validators;
+using MindBloom.Application.Features.ClientOnboarding.Interfaces;
+using MindBloom.Application.Features.ClientOnboarding.Validators;
 
 
 Env.Load("../../.env");
@@ -39,6 +41,10 @@ builder.Services.Configure<RequestTimingOptions>(
 builder.Services
     .AddValidatorsFromAssemblyContaining<
         RegisterRequestDtoValidator>();
+
+builder.Services
+    .AddValidatorsFromAssemblyContaining<
+        SaveClientOnboardingDtoValidator>();
 
 builder.Services
     .AddScoped<FluentValidationFilter>();
@@ -118,6 +124,11 @@ builder.Services
     .AddScoped<
         IRecommendationService,
         RecommendationService>();
+
+builder.Services
+    .AddScoped<
+        IClientOnboardingService,
+        ClientOnboardingService>();
 
 builder.Services.AddCors(options =>
 {

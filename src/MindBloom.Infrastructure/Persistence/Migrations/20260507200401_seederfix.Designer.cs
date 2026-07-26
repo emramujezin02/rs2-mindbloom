@@ -13,7 +13,7 @@ namespace MindBloom.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20260507200401_seederfix")]
-    partial class seederfix
+    partial class Seederfix
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

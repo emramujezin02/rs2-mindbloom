@@ -10,4 +10,11 @@ public class TherapyApproach : BaseEntity
 
     public ICollection<TherapistTherapyApproach> TherapistTherapyApproaches
     { get; set; } = new List<TherapistTherapyApproach>();
+
+    public ICollection<ClientTherapyApproach>
+    ClientTherapyApproaches
+    {
+        get;
+        set;
+    } = new List<ClientTherapyApproach>();
 }

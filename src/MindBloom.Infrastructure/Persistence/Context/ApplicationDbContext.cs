@@ -42,8 +42,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<TherapistVerificationAudit> TherapistVerificationAudits=> Set<TherapistVerificationAudit>();
     public DbSet<AppointmentStatusAudit> AppointmentStatusAudits => Set<AppointmentStatusAudit>();
     public DbSet<ReviewModerationAudit> ReviewModerationAudits => Set<ReviewModerationAudit>();
-    public DbSet<ArticleCategory> ArticleCategories =>
-    Set<ArticleCategory>();
+    public DbSet<ArticleCategory> ArticleCategories => Set<ArticleCategory>();
+
+    public DbSet<TherapistTherapyApproach>
+    TherapistTherapyApproaches =>
+        Set<TherapistTherapyApproach>();
+    public DbSet<ClientTherapyApproach>
+    ClientTherapyApproaches =>
+        Set<ClientTherapyApproach>();
     public DbSet<TherapistSpecialization> TherapistSpecializations => Set<TherapistSpecialization>();
     public DbSet<PrivateJournalEntry>
     PrivateJournalEntries =>
@@ -51,8 +57,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<TherapyApproach> TherapyApproaches =>
     Set<TherapyApproach>();
 
-    public DbSet<TherapistTherapyApproach> TherapistTherapyApproaches =>
-        Set<TherapistTherapyApproach>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -377,6 +381,41 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 x.IsDeleted
             });
         });
+
+        builder.Entity<ClientTherapyApproach>(
+    entity =>
+    {
+        entity.HasOne(x =>
+                x.Client)
+            .WithMany(x =>
+                x.PreferredTherapyApproaches)
+            .HasForeignKey(x =>
+                x.ClientId)
+            .OnDelete(
+                DeleteBehavior.Cascade);
+
+        entity.HasOne(x =>
+                x.TherapyApproach)
+            .WithMany(x =>
+                x.ClientTherapyApproaches)
+            .HasForeignKey(x =>
+                x.TherapyApproachId)
+            .OnDelete(
+                DeleteBehavior.Restrict);
+
+        entity.HasIndex(x => new
+        {
+            x.ClientId,
+            x.TherapyApproachId
+        })
+            .IsUnique();
+
+        entity.HasIndex(x => new
+        {
+            x.ClientId,
+            x.IsDeleted
+        });
+    });
 
         builder.Entity<Workshop>(entity =>
         {
@@ -875,6 +914,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
             entity.Property(x => x.PreferredLanguages)
                 .HasMaxLength(1000);
+
+            entity.Property(x =>
+        x.AssessmentFocusAreas)
+    .HasMaxLength(1500);
+
+            entity.Property(x =>
+                    x.PreferredDays)
+                .HasMaxLength(50);
+
+            entity.HasIndex(x => new
+            {
+                x.UserId,
+                x.HasCompletedOnboarding,
+                x.IsDeleted
+            });
         });
 
         builder.Entity<Therapist>()

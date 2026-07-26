@@ -90,6 +90,10 @@ import '../../features/therapy_approach/data/services/therapy_approach_api_servi
 
 import '../../features/journal/presentation/viewmodels/client_emotional_analytics_viewmodel.dart';
 
+import '../../features/onboarding/data/repositories/client_onboarding_repository.dart';
+import '../../features/onboarding/data/services/client_onboarding_api_service.dart';
+import '../../features/onboarding/presentation/viewmodels/client_onboarding_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
   static final ApiClient apiClient = ApiClient(sessionStorage: sessionStorage);
@@ -452,6 +456,21 @@ class AppInjection {
   static AppointmentRepository createAppointmentRepository() {
     return AppointmentRepository(
       apiService: AppointmentApiService(apiClient: apiClient),
+    );
+  }
+
+  static ClientOnboardingRepository createClientOnboardingRepository() {
+    return ClientOnboardingRepository(
+      apiService: ClientOnboardingApiService(apiClient: apiClient),
+    );
+  }
+
+  static ClientOnboardingViewModel createClientOnboardingViewModel() {
+    return ClientOnboardingViewModel(
+      repository: createClientOnboardingRepository(),
+      therapyApproachRepository: TherapyApproachRepository(
+        apiService: TherapyApproachApiService(apiClient: apiClient),
+      ),
     );
   }
 }

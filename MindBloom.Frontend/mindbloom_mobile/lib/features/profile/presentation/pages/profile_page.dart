@@ -396,6 +396,29 @@ class _ProfilePageState extends State<ProfilePage> {
                             : profile.preferredLanguages.join(', '),
                       ),
                     ),
+
+                    const SizedBox(height: 8),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final result = await Navigator.of(
+                            context,
+                          ).pushNamed(AppRouter.onboarding);
+
+                          if (!mounted) {
+                            return;
+                          }
+
+                          if (result == true) {
+                            await _viewModel.loadProfile();
+                          }
+                        },
+                        icon: const Icon(Icons.tune),
+                        label: const Text('Edit recommendation preferences'),
+                      ),
+                    ),
                   ],
                 ),
               ),

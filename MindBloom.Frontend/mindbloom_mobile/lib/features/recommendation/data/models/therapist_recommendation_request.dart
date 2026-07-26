@@ -5,6 +5,7 @@ class TherapistRecommendationRequest {
   final double? maximumPricePerSession;
   final int? minimumExperienceYears;
   final int take;
+  final List<int> preferredTherapyApproachIds;
 
   const TherapistRecommendationRequest({
     this.preferredSpecializationIds = const [],
@@ -13,6 +14,7 @@ class TherapistRecommendationRequest {
     this.maximumPricePerSession,
     this.minimumExperienceYears,
     this.take = 10,
+    this.preferredTherapyApproachIds = const [],
   });
 
   Map<String, dynamic> toJson() {
@@ -23,6 +25,7 @@ class TherapistRecommendationRequest {
       'maximumPricePerSession': maximumPricePerSession,
       'minimumExperienceYears': minimumExperienceYears,
       'take': take,
+      'preferredTherapyApproachIds': preferredTherapyApproachIds,
     };
   }
 }

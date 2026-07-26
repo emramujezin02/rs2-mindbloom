@@ -21,4 +21,35 @@ public class Client : BaseEntity
     public decimal? MaximumPricePerSession { get; set; }
 
     public string? PreferredLanguages { get; set; }
+
+    public string? AssessmentFocusAreas
+    {
+        get;
+        set;
+    }
+
+    public string? PreferredDays
+    {
+        get;
+        set;
+    }
+
+    public bool HasCompletedOnboarding
+    {
+        get;
+        set;
+    }
+
+    public DateTime? OnboardingCompletedAtUtc
+    {
+        get;
+        set;
+    }
+
+    public ICollection<ClientTherapyApproach>
+        PreferredTherapyApproaches
+    {
+        get;
+        set;
+    } = new List<ClientTherapyApproach>();
 }

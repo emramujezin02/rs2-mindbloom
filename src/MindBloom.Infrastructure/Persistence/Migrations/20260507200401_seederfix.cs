@@ -4,7 +4,7 @@
 
 namespace MindBloom.Infrastructure.Migrations
 {
-    public partial class seederfix : Migration
+    public partial class Seederfix : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {

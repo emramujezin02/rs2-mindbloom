@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../features/onboarding/presentation/pages/client_onboarding_gate.dart';
 import '../features/landing/presentation/pages/landing_page.dart';
 import '../features/navigation/presentation/pages/client_navigation_shell.dart';
 import '../features/navigation/presentation/pages/therapist_navigation_shell.dart';
@@ -58,6 +58,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return const TherapistNavigationShell();
     }
 
-    return const ClientNavigationShell();
+    return const ClientOnboardingGate(child: ClientNavigationShell());
   }
 }

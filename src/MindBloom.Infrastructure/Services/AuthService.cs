@@ -532,8 +532,8 @@ public class AuthService : IAuthService
             Id=refreshToken.UserId,
             FirstName=refreshToken.User.FirstName,
             LastName=refreshToken.User.LastName,
-            Email=refreshToken.User.Email,
-            Role=roles.First()
+            Email = refreshToken.User.Email ?? string.Empty,
+            Role =roles.First()
         };
     }
 

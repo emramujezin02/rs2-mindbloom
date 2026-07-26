@@ -1,12 +1,10 @@
-﻿using MindBloom.Application.Common.Models;
+﻿namespace MindBloom.Infrastructure.Options;
 
-namespace MindBloom.Application.Common.Interfaces;
-
-public interface IGeocodingService
+public sealed class GoogleMapOptions
 {
-    Task<GeocodingResult> GeocodeAddressAsync(
-        string country,
-        string city,
-        string? address,
-        CancellationToken cancellationToken = default);
+    public string ApiKey { get; set; } =
+        string.Empty;
+
+    public string BaseUrl { get; set; } =
+        "https://maps.googleapis.com/maps/api";
 }

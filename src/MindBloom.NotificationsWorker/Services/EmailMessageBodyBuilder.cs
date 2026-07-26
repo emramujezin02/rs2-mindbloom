@@ -62,9 +62,13 @@ public sealed class EmailMessageBodyBuilder
     private static string GetTemplateIntroduction(
         EmailNotificationMessage message)
     {
-        return message.TemplateName
-            .Trim()
-            .ToLowerInvariant() switch
+        var templateName =
+            message.TemplateName?
+                .Trim()
+                .ToLowerInvariant()
+            ?? string.Empty;
+
+        return templateName switch
         {
             "appointment-approved" =>
                 "Your appointment has been approved.",

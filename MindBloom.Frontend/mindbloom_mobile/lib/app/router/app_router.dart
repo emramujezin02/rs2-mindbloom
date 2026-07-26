@@ -78,6 +78,7 @@ import '../../features/private_journal/data/models/private_journal_entry_model.d
 import '../../features/private_journal/presentation/pages/add_private_journal_entry_page.dart';
 import '../../features/private_journal/presentation/pages/edit_private_journal_entry_page.dart';
 import '../../features/private_journal/presentation/pages/private_journal_entry_details_page.dart';
+import '../../features/onboarding/presentation/pages/client_onboarding_page.dart';
 
 class AppRouter {
   static const String home = '/';
@@ -130,7 +131,7 @@ class AppRouter {
       '/therapist/clients/emotional-analytics';
   static const String clientEmotionalAnalytics = '/journal/analytics';
   static const String privateJournal = '/private-journal';
-
+  static const String onboarding = '/client-onboarding';
   static const String addPrivateJournalEntry = '/private-journal/add';
 
   static const String privateJournalEntryDetails = '/private-journal/details';
@@ -421,6 +422,12 @@ class AppRouter {
 
         return MaterialPageRoute(
           builder: (_) => EditPrivateJournalEntryPage(entry: entry),
+        );
+
+      case onboarding:
+        return MaterialPageRoute(
+          builder: (_) => const ClientOnboardingPage(),
+          settings: settings,
         );
 
       case home:

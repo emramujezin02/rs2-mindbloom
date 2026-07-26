@@ -99,6 +99,12 @@ public class AppointmentService : IAppointmentService
             availability == null,
             "Therapist is not available on this day.");
 
+        if (availability == null)
+        {
+            throw new NotFoundException(
+                "Therapist availability was not found.");
+        }
+
         var startTime =
             request.StartUtc.TimeOfDay;
 
