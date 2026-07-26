@@ -31,6 +31,8 @@ class _RecommendationPageState extends State<RecommendationPage> {
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
 
+    _viewModel.dispose();
+
     super.dispose();
   }
 
@@ -42,6 +44,16 @@ class _RecommendationPageState extends State<RecommendationPage> {
 
   Future<void> _refresh() async {
     await _viewModel.refresh();
+  }
+
+  Future<void> _editPreferences() async {
+    final result = await Navigator.of(context).pushNamed(AppRouter.onboarding);
+
+    if (!mounted || result != true) {
+      return;
+    }
+
+    await _viewModel.loadRecommendations();
   }
 
   String? _buildImageUrl(String? imagePath) {
@@ -66,6 +78,11 @@ class _RecommendationPageState extends State<RecommendationPage> {
       appBar: AppBar(
         title: const Text('Recommended therapists'),
         actions: [
+          IconButton(
+            onPressed: _viewModel.isLoading ? null : _editPreferences,
+            tooltip: 'Edit preferences',
+            icon: const Icon(Icons.tune),
+          ),
           IconButton(
             onPressed: _viewModel.isLoading ? null : _refresh,
             tooltip: 'Refresh',
@@ -372,8 +389,17 @@ class _RecommendationCard extends StatelessWidget {
         .take(3)
         .toList();
 
-    if (positiveReasons.isEmpty) {
-      return const SizedBox.shrink();
+    final displayedReasons = positiveReasons.isNotEmpty
+        ? positiveReasons
+        : recommendation.reasons.take(3).toList();
+
+    if (displayedReasons.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: Text(
+          'This therapist was selected based on the overall recommendation score.',
+        ),
+      );
     }
 
     return ExpansionTile(
@@ -383,7 +409,7 @@ class _RecommendationCard extends StatelessWidget {
         'Why is this therapist recommended?',
         style: TextStyle(fontWeight: FontWeight.w600),
       ),
-      children: positiveReasons
+      children: displayedReasons
           .map((reason) => _RecommendationReason(reason: reason))
           .toList(),
     );
