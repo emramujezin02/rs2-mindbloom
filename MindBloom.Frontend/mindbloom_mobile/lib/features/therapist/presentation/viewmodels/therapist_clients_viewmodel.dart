@@ -45,7 +45,7 @@ class TherapistClientsViewModel extends ChangeNotifier {
     } catch (error) {
       errorMessage = AppErrorMessage.from(
         error,
-        fallback: 'Klijente nije moguće učitati.',
+        fallback: 'Clients could not be loaded.',
       );
     } finally {
       isLoading = false;

@@ -1773,7 +1773,8 @@ public class TherapistService : ITherapistService
                 .Include(x => x.Client)
                     .ThenInclude(x => x.User)
                 .Where(x =>
-                    x.TherapistId == therapist.Id);
+    !x.IsDeleted &&
+    x.TherapistId == therapist.Id);
 
         if (!string.IsNullOrWhiteSpace(
                 normalizedSearch))
@@ -1918,9 +1919,10 @@ public class TherapistService : ITherapistService
                 .AsNoTracking()
                 .Include(x => x.Client)
                     .ThenInclude(x => x.User)
-                .Where(x =>
-                    x.TherapistId == therapist.Id &&
-                    x.ClientId == clientId)
+.Where(x =>
+    !x.IsDeleted &&
+    x.TherapistId == therapist.Id &&
+    x.ClientId == clientId)
                 .OrderByDescending(x =>
                     x.StartUtc)
                 .ToListAsync();

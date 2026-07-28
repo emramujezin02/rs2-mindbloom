@@ -11,6 +11,14 @@
       "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\controllers\\therapistscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\therapists\\dtos\\therapistclientdetailsdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\therapists\\dtos\\therapistclientdetailsdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\therapists\\dtos\\therapistclientlistdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\therapists\\dtos\\therapistclientlistdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\therapists\\interfaces\\itherapistservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\therapists\\interfaces\\itherapistservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -82,21 +90,8 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 0,
           "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "TherapistsController.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\TherapistsController.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\TherapistsController.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\TherapistsController.cs",
-              "RelativeToolTip": "src\\MindBloom.API\\Controllers\\TherapistsController.cs",
-              "ViewState": "AgIAACAAAAAAAAAAAAAuwDwAAAAgAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-28T17:45:14.031Z",
-              "EditorCaption": ""
-            },
             {
               "$type": "Document",
               "DocumentIndex": 0,
@@ -105,14 +100,53 @@
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\TherapistService.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\TherapistService.cs",
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\TherapistService.cs",
-              "ViewState": "AgIAAPIFAAAAAAAAAAAhwAgGAAAmAAAAAAAAAA==",
+              "ViewState": "AgIAAGoHAAAAAAAAAAAAAHwHAAAaAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-07-28T17:44:59.896Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "TherapistsController.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\TherapistsController.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\TherapistsController.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\TherapistsController.cs",
+              "RelativeToolTip": "src\\MindBloom.API\\Controllers\\TherapistsController.cs",
+              "ViewState": "AgIAAFsBAAAAAAAAAAAwwIIBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-28T17:45:14.031Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 2,
+              "Title": "TherapistClientDetailsDto.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Therapists\\DTOs\\TherapistClientDetailsDto.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\TherapistClientDetailsDto.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Therapists\\DTOs\\TherapistClientDetailsDto.cs",
+              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\TherapistClientDetailsDto.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAmwCMAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-28T22:05:33.68Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "TherapistClientListDto.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Therapists\\DTOs\\TherapistClientListDto.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\TherapistClientListDto.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Therapists\\DTOs\\TherapistClientListDto.cs",
+              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\TherapistClientListDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-28T22:05:15.412Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
               "Title": "ITherapistService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Therapists\\Interfaces\\ITherapistService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Therapists\\Interfaces\\ITherapistService.cs",
@@ -120,12 +154,11 @@
               "RelativeToolTip": "src\\MindBloom.Application\\Features\\Therapists\\Interfaces\\ITherapistService.cs",
               "ViewState": "AgIAAAYAAAAAAAAAAAAAABcAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-28T19:19:40.739Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-28T19:19:40.739Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "TherapistUnavailableDate.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\TherapistUnavailableDate.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\TherapistUnavailableDate.cs",
@@ -133,12 +166,11 @@
               "RelativeToolTip": "src\\MindBloom.Domain\\Entities\\TherapistUnavailableDate.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-28T19:32:27.733Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-28T19:32:27.733Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 6,
               "Title": "TherapistAvailability.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\TherapistAvailability.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\TherapistAvailability.cs",
@@ -146,12 +178,11 @@
               "RelativeToolTip": "src\\MindBloom.Domain\\Entities\\TherapistAvailability.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-28T19:32:05.437Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-28T19:32:05.437Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 7,
               "Title": "UnavailableDateResponseDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Therapists\\DTOs\\UnavailableDateResponseDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\UnavailableDateResponseDto.cs",
@@ -159,12 +190,11 @@
               "RelativeToolTip": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\UnavailableDateResponseDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-28T19:21:14.821Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-28T19:21:14.821Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 8,
               "Title": "CreateUnavailableDateDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Therapists\\DTOs\\CreateUnavailableDateDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\CreateUnavailableDateDto.cs",
@@ -172,12 +202,11 @@
               "RelativeToolTip": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\CreateUnavailableDateDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-28T19:20:55.598Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-28T19:20:55.598Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 9,
               "Title": "CreateAvailabilityDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Therapists\\DTOs\\CreateAvailabilityDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\CreateAvailabilityDto.cs",
@@ -185,12 +214,11 @@
               "RelativeToolTip": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\CreateAvailabilityDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-28T19:20:42.274Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-28T19:20:42.274Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 10,
               "Title": "AvailabilityResponseDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Therapists\\DTOs\\AvailabilityResponseDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\AvailabilityResponseDto.cs",
@@ -198,12 +226,11 @@
               "RelativeToolTip": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\AvailabilityResponseDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-28T19:20:24.425Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-28T19:20:24.425Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 11,
               "Title": "AppointmentService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\AppointmentService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\AppointmentService.cs",
@@ -211,12 +238,11 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\AppointmentService.cs",
               "ViewState": "AgIAAHoBAAAAAAAAAAAkwI8BAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-28T18:24:21.428Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-28T18:24:21.428Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 12,
               "Title": "AppointmentType.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Enums\\AppointmentType.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Enums\\AppointmentType.cs",
@@ -228,7 +254,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 13,
               "Title": "Appointment.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\Appointment.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\Appointment.cs",
@@ -240,7 +266,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 14,
               "Title": "UpdateAppointmentStatusDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Appointments\\DTOs\\UpdateAppointmentStatusDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Appointments\\DTOs\\UpdateAppointmentStatusDto.cs",
@@ -252,7 +278,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 15,
               "Title": "AppointmentResponseDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Appointments\\DTOs\\AppointmentResponseDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Appointments\\DTOs\\AppointmentResponseDto.cs",
@@ -264,7 +290,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 16,
               "Title": "AppointmentStatus.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Enums\\AppointmentStatus.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Enums\\AppointmentStatus.cs",
@@ -276,7 +302,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 17,
               "Title": "IAppointmentService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Appointments\\Interfaces\\IAppointmentService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Appointments\\Interfaces\\IAppointmentService.cs",
@@ -288,7 +314,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 18,
               "Title": "AppointmentsController.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\AppointmentsController.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\AppointmentsController.cs",
@@ -296,11 +322,12 @@
               "RelativeToolTip": "src\\MindBloom.API\\Controllers\\AppointmentsController.cs",
               "ViewState": "AgIAAM8AAAAAAAAAAAAwwPYAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-28T18:23:40.618Z"
+              "WhenOpened": "2026-07-28T18:23:40.618Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 19,
               "Title": "TherapistDashboardDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Therapists\\DTOs\\TherapistDashboardDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Therapists\\DTOs\\TherapistDashboardDto.cs",

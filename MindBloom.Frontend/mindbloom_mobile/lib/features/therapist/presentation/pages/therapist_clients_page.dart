@@ -405,7 +405,7 @@ class _SearchSection extends StatelessWidget {
       onChanged: onChanged,
       onSubmitted: onSubmitted,
       decoration: InputDecoration(
-        hintText: 'Search by name or email',
+        hintText: 'Search by name, email or phone',
         prefixIcon: const Icon(Icons.search),
         suffixIcon: hasSearch
             ? IconButton(
