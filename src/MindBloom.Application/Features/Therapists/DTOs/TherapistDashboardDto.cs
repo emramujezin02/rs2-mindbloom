@@ -2,15 +2,17 @@
 
 public class TherapistDashboardDto
 {
-    public int TotalAppointments { get; set; }
+    public int TodayAppointments { get; set; }
 
-    public int CompletedAppointments { get; set; }
+    public int UpcomingAppointments { get; set; }
 
-    public int PendingAppointments { get; set; }
+    public int TotalClients { get; set; }
+
+    public int NewRequests { get; set; }
+
+    public int UnreadMessages { get; set; }
 
     public double AverageRating { get; set; }
-
-    public int TotalReviews { get; set; }
 
     public decimal TotalEarnings { get; set; }
 }

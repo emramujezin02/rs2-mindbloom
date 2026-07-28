@@ -1,27 +1,30 @@
 class TherapistDashboardModel {
-  final int totalAppointments;
-  final int completedAppointments;
-  final int pendingAppointments;
+  final int todayAppointments;
+  final int upcomingAppointments;
+  final int totalClients;
+  final int newRequests;
+  final int unreadMessages;
   final double averageRating;
-  final int totalReviews;
   final double totalEarnings;
 
   const TherapistDashboardModel({
-    required this.totalAppointments,
-    required this.completedAppointments,
-    required this.pendingAppointments,
+    required this.todayAppointments,
+    required this.upcomingAppointments,
+    required this.totalClients,
+    required this.newRequests,
+    required this.unreadMessages,
     required this.averageRating,
-    required this.totalReviews,
     required this.totalEarnings,
   });
 
   factory TherapistDashboardModel.fromJson(Map<String, dynamic> json) {
     return TherapistDashboardModel(
-      totalAppointments: _toInt(json['totalAppointments']),
-      completedAppointments: _toInt(json['completedAppointments']),
-      pendingAppointments: _toInt(json['pendingAppointments']),
+      todayAppointments: _toInt(json['todayAppointments']),
+      upcomingAppointments: _toInt(json['upcomingAppointments']),
+      totalClients: _toInt(json['totalClients']),
+      newRequests: _toInt(json['newRequests']),
+      unreadMessages: _toInt(json['unreadMessages']),
       averageRating: _toDouble(json['averageRating']),
-      totalReviews: _toInt(json['totalReviews']),
       totalEarnings: _toDouble(json['totalEarnings']),
     );
   }

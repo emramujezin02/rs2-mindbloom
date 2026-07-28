@@ -1255,51 +1255,162 @@ public class TherapistService : ITherapistService
     }
 
     public async Task<TherapistDashboardDto>
-    GetDashboardAsync(int therapistUserId)
+      GetDashboardAsync(int therapistUserId)
     {
         var therapist =
             await _context.Therapists
-                .Include(x => x.Reviews)
-                .Include(x => x.Appointments)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == therapistUserId);
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
 
         if (therapist == null)
         {
-            throw new NotFoundException("Therapist not found.");
+            throw new NotFoundException(
+                "Therapist not found.");
         }
 
-        var completedAppointments =
-            therapist.Appointments
+        var todayStartUtc =
+            DateTime.UtcNow.Date;
+
+        var tomorrowStartUtc =
+            todayStartUtc.AddDays(1);
+
+        var todayAppointments =
+            await _context.Appointments
+                .AsNoTracking()
+                .CountAsync(x =>
+                    !x.IsDeleted &&
+                    x.TherapistId == therapist.Id &&
+                    x.Status ==
+                        AppointmentStatus.Accepted &&
+                    x.StartUtc >= todayStartUtc &&
+                    x.StartUtc < tomorrowStartUtc);
+
+        var upcomingAppointments =
+            await _context.Appointments
+                .AsNoTracking()
+                .CountAsync(x =>
+                    !x.IsDeleted &&
+                    x.TherapistId == therapist.Id &&
+                    x.Status ==
+                        AppointmentStatus.Accepted &&
+                    x.StartUtc >= tomorrowStartUtc);
+
+        var totalClients =
+            await _context.Appointments
+                .AsNoTracking()
                 .Where(x =>
-                    x.Status == AppointmentStatus.Completed)
-                .ToList();
+                    !x.IsDeleted &&
+                    x.TherapistId == therapist.Id &&
+                    (
+                        x.Status ==
+                            AppointmentStatus.Accepted ||
+                        x.Status ==
+                            AppointmentStatus.Completed
+                    ))
+                .Select(x => x.ClientId)
+                .Distinct()
+                .CountAsync();
+
+        var newRequests =
+            await _context.Appointments
+                .AsNoTracking()
+                .CountAsync(x =>
+                    !x.IsDeleted &&
+                    x.TherapistId == therapist.Id &&
+                    x.Status ==
+                        AppointmentStatus.Pending);
+
+        var unreadMessages =
+            await _context.Conversations
+                .AsNoTracking()
+                .Where(conversation =>
+                    !conversation.IsDeleted &&
+                    conversation.Participants.Any(
+                        participant =>
+                            participant.UserId ==
+                                therapistUserId &&
+                            participant.IsActive &&
+                            !participant.IsDeleted))
+                .SumAsync(conversation =>
+                    conversation.Messages.Count(message =>
+                        !message.IsDeleted &&
+                        message.SenderUserId !=
+                            therapistUserId &&
+                        (
+                            conversation.Participants
+                                .Where(participant =>
+                                    participant.UserId ==
+                                        therapistUserId &&
+                                    participant.IsActive &&
+                                    !participant.IsDeleted)
+                                .Select(participant =>
+                                    participant.LastReadAtUtc)
+                                .FirstOrDefault() == null
+                            ||
+                            message.SentAtUtc >
+                                conversation.Participants
+                                    .Where(participant =>
+                                        participant.UserId ==
+                                            therapistUserId &&
+                                        participant.IsActive &&
+                                        !participant.IsDeleted)
+                                    .Select(participant =>
+                                        participant.LastReadAtUtc)
+                                    .FirstOrDefault()
+                        )));
+
+        var averageRating =
+            await _context.Reviews
+                .AsNoTracking()
+                .Where(review =>
+                    !review.IsDeleted &&
+                    review.IsApproved &&
+                    review.TherapistId ==
+                        therapist.Id)
+                .Select(review =>
+                    (double?)review.Rating)
+                .AverageAsync()
+            ?? 0;
+
+        var totalEarnings =
+            await _context.Payments
+                .AsNoTracking()
+                .Where(payment =>
+                    !payment.IsDeleted &&
+                    payment.Status ==
+                        PaymentStatus.Paid &&
+                    payment.Appointment.TherapistId ==
+                        therapist.Id)
+                .SumAsync(payment =>
+                    (decimal?)payment.Amount)
+            ?? 0;
 
         return new TherapistDashboardDto
         {
-            TotalAppointments =
-                therapist.Appointments.Count,
+            TodayAppointments =
+                todayAppointments,
 
-            CompletedAppointments =
-                completedAppointments.Count,
+            UpcomingAppointments =
+                upcomingAppointments,
 
-            PendingAppointments =
-                therapist.Appointments.Count(x =>
-                    x.Status == AppointmentStatus.Pending),
+            TotalClients =
+                totalClients,
+
+            NewRequests =
+                newRequests,
+
+            UnreadMessages =
+                unreadMessages,
 
             AverageRating =
-                therapist.Reviews.Any()
-                    ? Math.Round(
-                        therapist.Reviews
-                            .Average(x => x.Rating),
-                        1)
-                    : 0,
-
-            TotalReviews =
-                therapist.Reviews.Count,
+                Math.Round(
+                    averageRating,
+                    1),
 
             TotalEarnings =
-                completedAppointments.Sum(x => 50)
+                totalEarnings
         };
     }
 
