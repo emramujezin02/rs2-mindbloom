@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../data/models/workshop_model.dart';
+
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
+import '../../data/models/workshop_model.dart';
 import '../viewmodels/workshop_viewmodel.dart';
 
 class WorkshopDetailsPage extends StatefulWidget {
@@ -22,13 +26,13 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
     super.initState();
 
     _viewModel.addListener(_onViewModelChanged);
-
     _viewModel.loadWorkshopDetails(widget.workshopId);
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
 
     super.dispose();
   }
@@ -39,11 +43,15 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
     }
   }
 
-  Future<void> _reload() async {
-    await _viewModel.loadWorkshopDetails(widget.workshopId);
+  Future<void> _reload() {
+    return _viewModel.loadWorkshopDetails(widget.workshopId);
   }
 
   Future<void> _register() async {
+    if (_viewModel.isSaving) {
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -70,7 +78,7 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
       },
     );
 
-    if (confirmed != true) {
+    if (confirmed != true || !mounted) {
       return;
     }
 
@@ -90,6 +98,10 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
   }
 
   Future<void> _cancelRegistration() async {
+    if (_viewModel.isSaving) {
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -116,7 +128,7 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
       },
     );
 
-    if (confirmed != true) {
+    if (confirmed != true || !mounted) {
       return;
     }
 
@@ -137,16 +149,31 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
     final uri = Uri.tryParse(link);
 
     if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The workshop link is invalid.')),
+      );
       return;
     }
 
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
-    if (!mounted) {
-      return;
-    }
+      if (!mounted) {
+        return;
+      }
 
-    if (!opened) {
+      if (!opened) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('The workshop link could not be opened.'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('The workshop link could not be opened.')),
       );
@@ -158,31 +185,45 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
     final workshop = _viewModel.selectedWorkshop;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Workshop details')),
-      body: _viewModel.isLoadingDetails && workshop == null
-          ? const Center(child: CircularProgressIndicator())
-          : workshop == null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _viewModel.error ?? 'Workshop could not be loaded.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _reload,
-                      child: const Text('Try again'),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : _buildWorkshop(workshop),
+      appBar: AppBar(
+        title: const Text('Workshop details'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _viewModel.isLoadingDetails ? null : _reload,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      body: _buildBody(workshop),
     );
+  }
+
+  Widget _buildBody(WorkshopModel? workshop) {
+    if (_viewModel.isLoadingDetails && workshop == null) {
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading workshop...',
+        skeletonItemCount: 5,
+      );
+    }
+
+    if (_viewModel.error != null && workshop == null) {
+      return AppErrorWidget(
+        title: 'Workshop could not be loaded',
+        error: _viewModel.error,
+        onRetry: _reload,
+      );
+    }
+
+    if (workshop == null) {
+      return const AppEmptyStateWidget(
+        title: 'Workshop unavailable',
+        message: 'The requested workshop is not available.',
+        icon: Icons.groups_outlined,
+      );
+    }
+
+    return _buildWorkshop(workshop);
   }
 
   Widget _buildWorkshop(WorkshopModel workshop) {
@@ -200,8 +241,16 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
     return RefreshIndicator(
       onRefresh: _reload,
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
         children: [
+          if (_viewModel.error != null)
+            AppInlineError(
+              title: 'Workshop could not be refreshed',
+              error: _viewModel.error,
+              onRetry: _reload,
+              margin: const EdgeInsets.only(bottom: 16),
+            ),
           Text(
             workshop.title,
             style: const TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
@@ -292,9 +341,17 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
           if (!workshop.isRegistered)
             ElevatedButton.icon(
               onPressed: canRegister && !_viewModel.isSaving ? _register : null,
-              icon: const Icon(Icons.app_registration),
+              icon: _viewModel.isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.app_registration),
               label: Text(
-                workshop.isFull
+                _viewModel.isSaving
+                    ? 'Registering...'
+                    : workshop.isFull
                     ? 'Workshop is full'
                     : canRegister
                     ? 'Register'
@@ -306,21 +363,21 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
               onPressed: canCancel && !_viewModel.isSaving
                   ? _cancelRegistration
                   : null,
-              icon: const Icon(Icons.cancel_outlined),
+              icon: _viewModel.isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.cancel_outlined),
               label: Text(
-                canCancel
+                _viewModel.isSaving
+                    ? 'Processing...'
+                    : canCancel
                     ? 'Cancel registration'
                     : 'Registration cannot be cancelled',
               ),
             ),
-          if (_viewModel.error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              _viewModel.error!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
-            ),
-          ],
         ],
       ),
     );

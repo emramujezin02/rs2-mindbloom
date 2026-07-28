@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/notification_model.dart';
 import '../../data/repositories/notification_repository.dart';
 import '../../data/services/notification_realtime_service.dart';
@@ -41,6 +42,7 @@ class NotificationViewModel extends ChangeNotifier {
   bool isInitialized = false;
 
   String? error;
+  String? loadMoreError;
 
   NotificationConnectionStatus connectionStatus =
       NotificationConnectionStatus.disconnected;
@@ -97,6 +99,7 @@ class NotificationViewModel extends ChangeNotifier {
     }
 
     error = null;
+    loadMoreError = null;
 
     notifyListeners();
 
@@ -107,14 +110,13 @@ class NotificationViewModel extends ChangeNotifier {
       );
 
       notifications = response.items;
-
       _currentPage = response.pageNumber;
-
       _totalPages = response.totalPages;
-
       unreadCount = response.unreadCount;
+
+      error = null;
     } catch (exception) {
-      error = _normalizeError(exception);
+      error = AppErrorMessage.from(exception);
     } finally {
       isLoading = false;
       isRefreshing = false;
@@ -133,7 +135,7 @@ class NotificationViewModel extends ChangeNotifier {
     }
 
     isLoadingMore = true;
-    error = null;
+    loadMoreError = null;
 
     notifyListeners();
 
@@ -152,17 +154,21 @@ class NotificationViewModel extends ChangeNotifier {
       notifications = [...notifications, ...newItems];
 
       _currentPage = response.pageNumber;
-
       _totalPages = response.totalPages;
-
       unreadCount = response.unreadCount;
+
+      loadMoreError = null;
     } catch (exception) {
-      error = _normalizeError(exception);
+      loadMoreError = AppErrorMessage.from(exception);
     } finally {
       isLoadingMore = false;
 
       notifyListeners();
     }
+  }
+
+  Future<void> retryLoadMore() {
+    return loadMore();
   }
 
   Future<bool> markAsRead(int id) async {
@@ -195,7 +201,7 @@ class NotificationViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      error = _normalizeError(exception);
+      error = AppErrorMessage.from(exception);
 
       notifyListeners();
 
@@ -221,10 +227,11 @@ class NotificationViewModel extends ChangeNotifier {
           .toList();
 
       unreadCount = 0;
+      error = null;
 
       return true;
     } catch (exception) {
-      error = _normalizeError(exception);
+      error = AppErrorMessage.from(exception);
 
       return false;
     } finally {
@@ -232,6 +239,24 @@ class NotificationViewModel extends ChangeNotifier {
 
       notifyListeners();
     }
+  }
+
+  void clearError() {
+    if (error == null) {
+      return;
+    }
+
+    error = null;
+    notifyListeners();
+  }
+
+  void clearLoadMoreError() {
+    if (loadMoreError == null) {
+      return;
+    }
+
+    loadMoreError = null;
+    notifyListeners();
   }
 
   void _startPolling() {
@@ -248,16 +273,6 @@ class NotificationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _normalizeError(Object exception) {
-    final text = exception.toString();
-
-    if (text.startsWith('Exception: ')) {
-      return text.substring('Exception: '.length);
-    }
-
-    return text;
-  }
-
   Future<void> stop() async {
     _pollingTimer?.cancel();
     _pollingTimer = null;
@@ -267,6 +282,7 @@ class NotificationViewModel extends ChangeNotifier {
     notifications = [];
     unreadCount = 0;
     error = null;
+    loadMoreError = null;
     isLoading = false;
     isRefreshing = false;
     isLoadingMore = false;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/error/app_exception.dart';
+import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/create_review_request.dart';
 import '../../data/models/review_eligibility_model.dart';
 import '../../data/models/update_review_request.dart';
@@ -18,19 +19,29 @@ class CreateReviewViewModel extends ChangeNotifier {
 
   ReviewEligibilityModel? eligibility;
 
+  Map<String, List<String>> fieldErrors = {};
+
   Future<void> checkEligibility(int appointmentId) async {
+    if (isCheckingEligibility) {
+      return;
+    }
+
     isCheckingEligibility = true;
     error = null;
     notifyListeners();
 
     try {
       eligibility = await repository.getEligibility(appointmentId);
+      error = null;
     } catch (exception) {
-      error = _getErrorMessage(exception);
+      error = AppErrorMessage.from(
+        exception,
+        fallback: 'Mogućnost ostavljanja recenzije nije moguće provjeriti.',
+      );
+    } finally {
+      isCheckingEligibility = false;
+      notifyListeners();
     }
-
-    isCheckingEligibility = false;
-    notifyListeners();
   }
 
   Future<bool> createReview({
@@ -38,10 +49,6 @@ class CreateReviewViewModel extends ChangeNotifier {
     required int rating,
     required String comment,
   }) async {
-    isLoading = true;
-    error = null;
-    notifyListeners();
-
     if (isLoading) {
       return false;
     }
@@ -56,16 +63,19 @@ class CreateReviewViewModel extends ChangeNotifier {
         CreateReviewRequest(
           appointmentId: appointmentId,
           rating: rating,
-          comment: comment,
+          comment: comment.trim(),
         ),
       );
 
+      error = null;
       return true;
     } catch (exception) {
       _setError(exception, fallback: 'Recenziju nije moguće sačuvati.');
-
       return false;
-    } finally {}
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<bool> updateReview({
@@ -73,10 +83,6 @@ class CreateReviewViewModel extends ChangeNotifier {
     required int rating,
     required String comment,
   }) async {
-    isLoading = true;
-    error = null;
-    notifyListeners();
-
     if (isLoading) {
       return false;
     }
@@ -89,26 +95,19 @@ class CreateReviewViewModel extends ChangeNotifier {
     try {
       await repository.updateReview(
         reviewId: reviewId,
-        request: UpdateReviewRequest(rating: rating, comment: comment),
+        request: UpdateReviewRequest(rating: rating, comment: comment.trim()),
       );
 
+      error = null;
       return true;
     } catch (exception) {
       _setError(exception, fallback: 'Recenziju nije moguće sačuvati.');
-
       return false;
-    } finally {}
-  }
-
-  String _getErrorMessage(Object exception) {
-    if (exception is AppException) {
-      return exception.message;
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-
-    return exception.toString();
   }
-
-  Map<String, List<String>> fieldErrors = {};
 
   String? fieldError(String fieldName) {
     final requested = _normalizeFieldName(fieldName);
@@ -123,6 +122,16 @@ class CreateReviewViewModel extends ChangeNotifier {
     return null;
   }
 
+  void clearError() {
+    if (error == null && fieldErrors.isEmpty) {
+      return;
+    }
+
+    error = null;
+    fieldErrors = {};
+    notifyListeners();
+  }
+
   void _setError(Object exception, {required String fallback}) {
     if (exception is AppException) {
       error = exception.message.trim().isEmpty
@@ -130,13 +139,11 @@ class CreateReviewViewModel extends ChangeNotifier {
           : exception.message.trim();
 
       fieldErrors = Map<String, List<String>>.from(exception.fieldErrors);
-
       return;
     }
 
-    final message = exception.toString().replaceFirst('Exception: ', '').trim();
-
-    error = message.isEmpty ? fallback : message;
+    fieldErrors = {};
+    error = AppErrorMessage.from(exception, fallback: fallback);
   }
 
   String _normalizeFieldName(String value) {

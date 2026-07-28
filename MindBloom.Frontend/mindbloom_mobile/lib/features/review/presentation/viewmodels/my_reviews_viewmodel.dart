@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/error/app_exception.dart';
+import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/review_model.dart';
 import '../../data/repositories/review_repository.dart';
 
@@ -16,16 +16,20 @@ class MyReviewsViewModel extends ChangeNotifier {
   bool hasMore = false;
 
   String? error;
+  String? loadMoreError;
 
   int _pageNumber = 1;
 
   List<ReviewModel> reviews = [];
 
   Future<void> loadReviews() async {
+    if (isLoading) {
+      return;
+    }
+
     isLoading = true;
     error = null;
-    _pageNumber = 1;
-    reviews = [];
+    loadMoreError = null;
     notifyListeners();
 
     try {
@@ -35,22 +39,26 @@ class MyReviewsViewModel extends ChangeNotifier {
       );
 
       reviews = result.items;
+      _pageNumber = 1;
       hasMore = result.hasMore;
-    } catch (exception) {
-      error = _getErrorMessage(exception);
-    }
 
-    isLoading = false;
-    notifyListeners();
+      error = null;
+      loadMoreError = null;
+    } catch (exception) {
+      error = AppErrorMessage.from(exception);
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> loadMore() async {
-    if (isLoadingMore || !hasMore) {
+    if (isLoadingMore || isLoading || !hasMore) {
       return;
     }
 
     isLoadingMore = true;
-    error = null;
+    loadMoreError = null;
     notifyListeners();
 
     try {
@@ -61,22 +69,45 @@ class MyReviewsViewModel extends ChangeNotifier {
         pageSize: _pageSize,
       );
 
-      reviews.addAll(result.items);
+      final existingReviewIds = reviews.map((review) => review.id).toSet();
+
+      final newReviews = result.items
+          .where((review) => !existingReviewIds.contains(review.id))
+          .toList();
+
+      reviews.addAll(newReviews);
+
       _pageNumber = nextPage;
       hasMore = result.hasMore;
+
+      loadMoreError = null;
     } catch (exception) {
-      error = _getErrorMessage(exception);
+      loadMoreError = AppErrorMessage.from(exception);
+    } finally {
+      isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> retryLoadMore() {
+    return loadMore();
+  }
+
+  void clearError() {
+    if (error == null) {
+      return;
     }
 
-    isLoadingMore = false;
+    error = null;
     notifyListeners();
   }
 
-  String _getErrorMessage(Object exception) {
-    if (exception is AppException) {
-      return exception.message;
+  void clearLoadMoreError() {
+    if (loadMoreError == null) {
+      return;
     }
 
-    return exception.toString();
+    loadMoreError = null;
+    notifyListeners();
   }
 }

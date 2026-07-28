@@ -3,6 +3,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../constants/mood_options.dart';
 import '../viewmodels/journal_viewmodel.dart';
 
@@ -38,6 +41,10 @@ class _JournalPageState extends State<JournalPage> {
     }
   }
 
+  Future<void> _reload() {
+    return viewModel.loadEntries();
+  }
+
   Future<void> _addEntry() async {
     final result = await Navigator.of(
       context,
@@ -48,7 +55,7 @@ class _JournalPageState extends State<JournalPage> {
     }
 
     if (result == true) {
-      await viewModel.loadEntries();
+      await _reload();
     }
   }
 
@@ -62,13 +69,12 @@ class _JournalPageState extends State<JournalPage> {
     }
 
     if (result == true) {
-      await viewModel.loadEntries();
+      await _reload();
     }
   }
 
   Future<void> _openPeriodFilter() async {
     DateTime? selectedFrom = viewModel.fromDate;
-
     DateTime? selectedTo = viewModel.toDate;
 
     final result = await showDialog<String>(
@@ -110,7 +116,6 @@ class _JournalPageState extends State<JournalPage> {
                       }
                     },
                   ),
-
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.event_outlined),
@@ -187,7 +192,7 @@ class _JournalPageState extends State<JournalPage> {
         actions: [
           IconButton(
             tooltip: 'Filter by period',
-            onPressed: _openPeriodFilter,
+            onPressed: viewModel.isLoading ? null : _openPeriodFilter,
             icon: Icon(
               hasFilter ? Icons.filter_alt : Icons.filter_alt_outlined,
             ),
@@ -195,7 +200,7 @@ class _JournalPageState extends State<JournalPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _addEntry,
+        onPressed: viewModel.isLoading ? null : _addEntry,
         child: const Icon(Icons.add),
       ),
       body: _buildBody(),
@@ -203,117 +208,117 @@ class _JournalPageState extends State<JournalPage> {
   }
 
   Widget _buildBody() {
-    if (viewModel.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+    if (viewModel.isLoading && viewModel.entries.isEmpty) {
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading mood and emotion entries...',
+        skeletonItemCount: 5,
+      );
     }
 
     if (viewModel.error != null && viewModel.entries.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                viewModel.error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: viewModel.loadEntries,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
-              ),
-            ],
-          ),
+      return RefreshIndicator(
+        onRefresh: _reload,
+        child: AppErrorWidget(
+          title: 'Journal entries could not be loaded',
+          error: viewModel.error,
+          onRetry: _reload,
         ),
       );
     }
 
     if (viewModel.entries.isEmpty) {
+      final hasFilter = viewModel.fromDate != null || viewModel.toDate != null;
+
       return RefreshIndicator(
-        onRefresh: viewModel.loadEntries,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 180),
-            Icon(Icons.sentiment_neutral, size: 54),
-            SizedBox(height: 16),
-            Center(child: Text('No journal entries found.')),
-          ],
+        onRefresh: _reload,
+        child: AppEmptyStateWidget(
+          title: hasFilter ? 'No entries in this period' : 'No journal entries',
+          message: hasFilter
+              ? 'No mood or emotion entries match the selected period.'
+              : 'Record your mood and emotions to start building your journal.',
+          icon: Icons.sentiment_neutral_outlined,
         ),
       );
     }
 
     return RefreshIndicator(
-      onRefresh: viewModel.loadEntries,
-      child: ListView.builder(
+      onRefresh: _reload,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(12),
-        itemCount: viewModel.entries.length + (viewModel.hasMorePages ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == viewModel.entries.length) {
+        children: [
+          if (viewModel.error != null)
+            AppInlineError(
+              title: viewModel.isLoadingMore
+                  ? 'More journal entries could not be loaded'
+                  : 'Journal entries could not be refreshed',
+              error: viewModel.error,
+              onRetry: viewModel.isLoadingMore ? viewModel.loadMore : _reload,
+              margin: const EdgeInsets.only(bottom: 12),
+            ),
+          ...viewModel.entries.map((entry) {
+            final moodOption = moodOptionFor(entry.mood);
+
             return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Center(
-                child: ElevatedButton(
-                  onPressed: viewModel.isLoadingMore
-                      ? null
-                      : viewModel.loadMore,
-                  child: viewModel.isLoadingMore
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Load more'),
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Card(
+                child: ListTile(
+                  onTap: () {
+                    _openEntry(entry.id);
+                  },
+                  leading: CircleAvatar(child: Icon(moodOption.icon)),
+                  title: Text(moodOption.label),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(
+                        entry.emotions.isEmpty
+                            ? 'No emotions selected.'
+                            : entry.emotions.join(', '),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        entry.note.trim().isEmpty
+                            ? 'No notes added.'
+                            : entry.note,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        DateFormat(
+                          'dd.MM.yyyy. HH:mm',
+                        ).format(entry.createdAtUtc.toLocal()),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
-          }
-
-          final entry = viewModel.entries[index];
-
-          final moodOption = moodOptionFor(entry.mood);
-
-          return Card(
-            child: ListTile(
-              onTap: () {
-                _openEntry(entry.id);
-              },
-              leading: CircleAvatar(child: Icon(moodOption.icon)),
-              title: Text(moodOption.label),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-
-                  Text(
-                    entry.emotions.isEmpty
-                        ? 'No emotions selected.'
-                        : entry.emotions.join(', '),
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  Text(
-                    entry.note.trim().isEmpty ? 'No notes added.' : entry.note,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  Text(
-                    DateFormat(
-                      'dd.MM.yyyy. HH:mm',
-                    ).format(entry.createdAtUtc.toLocal()),
-                  ),
-                ],
+          }),
+          if (viewModel.isLoadingMore)
+            const AppLoadMoreIndicator(
+              loadingMessage: 'Loading more entries...',
+            )
+          else if (viewModel.hasMorePages)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: OutlinedButton.icon(
+                onPressed: viewModel.loadMore,
+                icon: const Icon(Icons.expand_more),
+                label: const Text('Load more'),
+              ),
+            )
+          else
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                'All journal entries have been loaded.',
+                textAlign: TextAlign.center,
               ),
             ),
-          );
-        },
+        ],
       ),
     );
   }

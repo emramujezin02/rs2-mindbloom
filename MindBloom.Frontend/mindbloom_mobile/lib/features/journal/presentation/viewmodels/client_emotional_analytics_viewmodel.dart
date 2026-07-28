@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_error_message.dart';
 import '../../../therapist/data/models/therapist_mood_trend_model.dart';
 import '../../data/repositories/journal_repository.dart';
 
@@ -11,7 +12,6 @@ class ClientEmotionalAnalyticsViewModel extends ChangeNotifier {
   ClientEmotionalAnalyticsViewModel({required this.repository});
 
   bool isLoading = false;
-
   String? error;
 
   TherapistMoodTrendModel? analytics;
@@ -19,26 +19,21 @@ class ClientEmotionalAnalyticsViewModel extends ChangeNotifier {
   AnalyticsPeriodType selectedPeriod = AnalyticsPeriodType.month;
 
   DateTime? customFrom;
-
   DateTime? customTo;
 
   bool get hasData => analytics?.hasData ?? false;
 
-  Future<void> loadInitial() async {
-    await selectMonth();
-  }
+  Future<void> loadInitial() => selectMonth();
 
   Future<void> selectWeek() async {
     selectedPeriod = AnalyticsPeriodType.week;
 
     final now = DateTime.now();
-
     final from = DateTime(
       now.year,
       now.month,
       now.day,
     ).subtract(const Duration(days: 6));
-
     final to = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
 
     await _load(from: from, to: to);
@@ -48,13 +43,11 @@ class ClientEmotionalAnalyticsViewModel extends ChangeNotifier {
     selectedPeriod = AnalyticsPeriodType.month;
 
     final now = DateTime.now();
-
     final from = DateTime(
       now.year,
       now.month,
       now.day,
     ).subtract(const Duration(days: 29));
-
     final to = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
 
     await _load(from: from, to: to);
@@ -65,12 +58,10 @@ class ClientEmotionalAnalyticsViewModel extends ChangeNotifier {
     required DateTime to,
   }) async {
     selectedPeriod = AnalyticsPeriodType.custom;
-
     customFrom = from;
     customTo = to;
 
     final normalizedFrom = DateTime(from.year, from.month, from.day);
-
     final normalizedTo = DateTime(to.year, to.month, to.day, 23, 59, 59, 999);
 
     await _load(from: normalizedFrom, to: normalizedTo);
@@ -81,11 +72,9 @@ class ClientEmotionalAnalyticsViewModel extends ChangeNotifier {
       case AnalyticsPeriodType.week:
         await selectWeek();
         break;
-
       case AnalyticsPeriodType.month:
         await selectMonth();
         break;
-
       case AnalyticsPeriodType.custom:
         final from = customFrom;
         final to = customTo;
@@ -98,6 +87,10 @@ class ClientEmotionalAnalyticsViewModel extends ChangeNotifier {
   }
 
   Future<void> _load({required DateTime from, required DateTime to}) async {
+    if (isLoading) {
+      return;
+    }
+
     isLoading = true;
     error = null;
     notifyListeners();
@@ -107,14 +100,22 @@ class ClientEmotionalAnalyticsViewModel extends ChangeNotifier {
         fromUtc: from.toUtc(),
         toUtc: to.toUtc(),
       );
+
+      error = null;
     } catch (exception) {
-      error = exception
-          .toString()
-          .replaceFirst('Exception: ', '')
-          .replaceFirst('FormatException: ', '');
+      error = AppErrorMessage.from(
+        exception,
+        fallback: 'Emocionalnu analitiku nije moguće učitati.',
+      );
     } finally {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  void clearError() {
+    if (error == null) return;
+    error = null;
+    notifyListeners();
   }
 }

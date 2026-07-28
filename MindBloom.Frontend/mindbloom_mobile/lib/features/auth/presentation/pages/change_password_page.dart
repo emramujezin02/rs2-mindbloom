@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/app_error_widget.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
 class ChangePasswordPage extends StatefulWidget {
@@ -37,6 +38,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
 
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
@@ -52,9 +54,11 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   }
 
   Future<void> _changePassword() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_viewModel.isLoading || !_formKey.currentState!.validate()) {
       return;
     }
+
+    FocusScope.of(context).unfocus();
 
     final success = await _viewModel.changePassword(
       currentPassword: _currentPasswordController.text,
@@ -90,21 +94,22 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16),
               ),
-
               const SizedBox(height: 24),
-
               TextFormField(
                 controller: _currentPasswordController,
+                enabled: !_viewModel.isLoading,
                 obscureText: _hideCurrentPassword,
                 decoration: InputDecoration(
                   labelText: 'Current password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _hideCurrentPassword = !_hideCurrentPassword;
-                      });
-                    },
+                    onPressed: _viewModel.isLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              _hideCurrentPassword = !_hideCurrentPassword;
+                            });
+                          },
                     icon: Icon(
                       _hideCurrentPassword
                           ? Icons.visibility
@@ -120,21 +125,22 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   return null;
                 },
               ),
-
               const SizedBox(height: 16),
-
               TextFormField(
                 controller: _newPasswordController,
+                enabled: !_viewModel.isLoading,
                 obscureText: _hideNewPassword,
                 decoration: InputDecoration(
                   labelText: 'New password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _hideNewPassword = !_hideNewPassword;
-                      });
-                    },
+                    onPressed: _viewModel.isLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              _hideNewPassword = !_hideNewPassword;
+                            });
+                          },
                     icon: Icon(
                       _hideNewPassword
                           ? Icons.visibility
@@ -158,21 +164,22 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   return null;
                 },
               ),
-
               const SizedBox(height: 16),
-
               TextFormField(
                 controller: _confirmPasswordController,
+                enabled: !_viewModel.isLoading,
                 obscureText: _hideConfirmPassword,
                 decoration: InputDecoration(
                   labelText: 'Confirm new password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _hideConfirmPassword = !_hideConfirmPassword;
-                      });
-                    },
+                    onPressed: _viewModel.isLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              _hideConfirmPassword = !_hideConfirmPassword;
+                            });
+                          },
                     icon: Icon(
                       _hideConfirmPassword
                           ? Icons.visibility
@@ -191,30 +198,33 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
                   return null;
                 },
+                onFieldSubmitted: (_) {
+                  _changePassword();
+                },
               ),
-
-              const SizedBox(height: 16),
-
-              if (_viewModel.errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    _viewModel.errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red),
-                  ),
+              if (_viewModel.errorMessage != null) ...[
+                const SizedBox(height: 16),
+                AppInlineError(
+                  title: 'Password could not be changed',
+                  error: _viewModel.errorMessage,
+                  onRetry: _changePassword,
                 ),
-
+              ],
+              const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: _viewModel.isLoading ? null : _changePassword,
-                icon: const Icon(Icons.lock_reset),
-                label: _viewModel.isLoading
+                icon: _viewModel.isLoading
                     ? const SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Change password'),
+                    : const Icon(Icons.lock_reset),
+                label: Text(
+                  _viewModel.isLoading
+                      ? 'Changing password...'
+                      : 'Change password',
+                ),
               ),
             ],
           ),

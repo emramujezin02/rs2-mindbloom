@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../appointment/presentation/viewmodels/appointment_create_viewmodel.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/therapist_map_data.dart';
 import '../viewmodels/therapist_details_viewmodel.dart';
 import '../widgets/therapist_location_map.dart';
@@ -141,7 +142,10 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
 
   Widget _buildBody() {
     if (_viewModel.isLoading && _viewModel.therapist == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading therapist details...',
+        skeletonItemCount: 6,
+      );
     }
 
     if (_viewModel.errorMessage != null && _viewModel.therapist == null) {

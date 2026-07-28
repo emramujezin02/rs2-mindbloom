@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mindbloom_mobile/features/review/data/models/review_page_result.dart';
 
-import '../../../../core/error/app_exception.dart';
+import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/review_model.dart';
 import '../../data/models/therapist_rating_model.dart';
 import '../../data/repositories/review_repository.dart';
@@ -18,6 +18,7 @@ class ReviewListViewModel extends ChangeNotifier {
   bool hasMore = false;
 
   String? error;
+  String? loadMoreError;
 
   int _pageNumber = 1;
 
@@ -28,12 +29,12 @@ class ReviewListViewModel extends ChangeNotifier {
   Future<void> loadReviews(int therapistId) async {
     isLoading = true;
     error = null;
+    loadMoreError = null;
     _pageNumber = 1;
-    reviews = [];
     notifyListeners();
 
     try {
-      final results = await Future.wait([
+      final results = await Future.wait<Object>([
         repository.getTherapistReviews(
           therapistId: therapistId,
           pageNumber: 1,
@@ -44,16 +45,21 @@ class ReviewListViewModel extends ChangeNotifier {
 
       final page = results[0] as ReviewPageResult;
 
+      final loadedRating = results[1] as TherapistRatingModel;
+
       reviews = page.items;
+      rating = loadedRating;
       hasMore = page.hasMore;
+      _pageNumber = 1;
 
-      rating = results[1] as TherapistRatingModel;
+      error = null;
+      loadMoreError = null;
     } catch (exception) {
-      error = _getErrorMessage(exception);
+      error = AppErrorMessage.from(exception);
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 
   Future<void> loadMore(int therapistId) async {
@@ -62,7 +68,7 @@ class ReviewListViewModel extends ChangeNotifier {
     }
 
     isLoadingMore = true;
-    error = null;
+    loadMoreError = null;
     notifyListeners();
 
     try {
@@ -74,22 +80,45 @@ class ReviewListViewModel extends ChangeNotifier {
         pageSize: _pageSize,
       );
 
-      reviews.addAll(result.items);
+      final existingIds = reviews.map((review) => review.id).toSet();
+
+      final newReviews = result.items
+          .where((review) => !existingIds.contains(review.id))
+          .toList();
+
+      reviews.addAll(newReviews);
+
       _pageNumber = nextPage;
       hasMore = result.hasMore;
+
+      loadMoreError = null;
     } catch (exception) {
-      error = _getErrorMessage(exception);
+      loadMoreError = AppErrorMessage.from(exception);
+    } finally {
+      isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> retryLoadMore(int therapistId) {
+    return loadMore(therapistId);
+  }
+
+  void clearError() {
+    if (error == null) {
+      return;
     }
 
-    isLoadingMore = false;
+    error = null;
     notifyListeners();
   }
 
-  String _getErrorMessage(Object exception) {
-    if (exception is AppException) {
-      return exception.message;
+  void clearLoadMoreError() {
+    if (loadMoreError == null) {
+      return;
     }
 
-    return exception.toString();
+    loadMoreError = null;
+    notifyListeners();
   }
 }

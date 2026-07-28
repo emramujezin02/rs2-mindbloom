@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_error_widget.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
@@ -17,8 +18,9 @@ class Verify2FAPage extends StatefulWidget {
 class _Verify2FAPageState extends State<Verify2FAPage> {
   final AuthViewModel _viewModel = AppInjection.createAuthViewModel();
 
-  final _formKey = GlobalKey<FormState>();
-  final _codeController = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  final TextEditingController _codeController = TextEditingController();
 
   @override
   void initState() {
@@ -29,7 +31,9 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
+    _viewModel.dispose();
     _codeController.dispose();
+
     super.dispose();
   }
 
@@ -40,9 +44,11 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
   }
 
   Future<void> _verify() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_viewModel.isLoading || !_formKey.currentState!.validate()) {
       return;
     }
+
+    FocusScope.of(context).unfocus();
 
     final success = await _viewModel.verify2FA(
       email: widget.email,
@@ -54,7 +60,6 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
     }
 
     final session = SessionScope.of(context);
-
     await session.initialize();
 
     if (!mounted) {
@@ -86,11 +91,19 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
                     'Enter the six-digit code sent to your email.',
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.email,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _codeController,
+                    enabled: !_viewModel.isLoading,
                     keyboardType: TextInputType.number,
                     maxLength: 6,
+                    textInputAction: TextInputAction.done,
                     decoration: const InputDecoration(
                       labelText: 'Verification code',
                       border: OutlineInputBorder(),
@@ -109,27 +122,31 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
 
                       return null;
                     },
+                    onFieldSubmitted: (_) {
+                      _verify();
+                    },
                   ),
-                  const SizedBox(height: 16),
-                  if (_viewModel.errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        _viewModel.errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red),
-                      ),
+                  if (_viewModel.errorMessage != null) ...[
+                    const SizedBox(height: 16),
+                    AppInlineError(
+                      title: 'Verification failed',
+                      error: _viewModel.errorMessage,
+                      onRetry: _verify,
                     ),
+                  ],
+                  const SizedBox(height: 20),
                   ElevatedButton.icon(
                     onPressed: _viewModel.isLoading ? null : _verify,
-                    icon: const Icon(Icons.verified_user),
-                    label: _viewModel.isLoading
+                    icon: _viewModel.isLoading
                         ? const SizedBox(
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Verify'),
+                        : const Icon(Icons.verified_user),
+                    label: Text(
+                      _viewModel.isLoading ? 'Verifying...' : 'Verify',
+                    ),
                   ),
                 ],
               ),

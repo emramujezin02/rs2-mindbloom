@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/client_dashboard_model.dart';
 import '../../data/repositories/client_dashboard_repository.dart';
 
@@ -13,17 +14,33 @@ class ClientDashboardViewModel extends ChangeNotifier {
   ClientDashboardModel? dashboard;
 
   Future<void> loadDashboard() async {
+    if (isLoading) {
+      return;
+    }
+
     isLoading = true;
     error = null;
     notifyListeners();
 
     try {
       dashboard = await repository.getDashboard();
-    } catch (e) {
-      error = e.toString();
+      error = null;
+    } catch (exception) {
+      error = AppErrorMessage.from(
+        exception,
+        fallback: 'Početne podatke nije moguće učitati.',
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
+  }
 
-    isLoading = false;
+  Future<void> refresh() => loadDashboard();
+
+  void clearError() {
+    if (error == null) return;
+    error = null;
     notifyListeners();
   }
 }

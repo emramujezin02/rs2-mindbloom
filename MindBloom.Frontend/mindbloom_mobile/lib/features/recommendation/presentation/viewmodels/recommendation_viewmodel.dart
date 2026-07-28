@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/therapist_recommendation_model.dart';
 import '../../data/models/therapist_recommendation_request.dart';
 import '../../data/repositories/recommendation_repository.dart';
@@ -55,18 +56,26 @@ class RecommendationViewModel extends ChangeNotifier {
       });
 
       recommendations = loadedRecommendations;
-    } catch (exception) {
-      error = exception.toString().replaceFirst('Exception: ', '');
 
-      recommendations = [];
+      error = null;
+    } catch (exception) {
+      error = AppErrorMessage.from(exception);
     } finally {
       isLoading = false;
-
       notifyListeners();
     }
   }
 
-  Future<void> refresh() async {
-    await loadRecommendations(request: currentRequest);
+  Future<void> refresh() {
+    return loadRecommendations(request: currentRequest);
+  }
+
+  void clearError() {
+    if (error == null) {
+      return;
+    }
+
+    error = null;
+    notifyListeners();
   }
 }

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../data/models/article_model.dart';
+
 import '../../../../app/di/injection.dart';
 import '../../../../core/constants/api_constants.dart';
-import '../viewmodels/article_viewmodel.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../../../core/widgets/public_footer.dart';
+import '../viewmodels/article_viewmodel.dart';
 
 class ArticleDetailsPage extends StatefulWidget {
   final int articleId;
@@ -21,80 +24,78 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
   @override
   void initState() {
     super.initState();
-
     _viewModel.addListener(_onViewModelChanged);
-
     _viewModel.loadArticleDetails(widget.articleId);
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
-
+    _viewModel.dispose();
     super.dispose();
   }
 
   void _onViewModelChanged() {
-    if (mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
   }
 
-  Future<void> _reload() async {
-    await _viewModel.loadArticleDetails(widget.articleId);
+  Future<void> _reload() {
+    return _viewModel.loadArticleDetails(widget.articleId);
   }
 
   String? _buildImageUrl(String imageUrl) {
     final value = imageUrl.trim();
 
-    if (value.isEmpty) {
-      return null;
-    }
+    if (value.isEmpty) return null;
 
     if (value.startsWith('http://') || value.startsWith('https://')) {
       return value;
     }
 
     final normalizedPath = value.startsWith('/') ? value : '/$value';
-
     return '${ApiConstants.baseUrl}$normalizedPath';
   }
 
   @override
   Widget build(BuildContext context) {
-    final article = _viewModel.selectedArticle;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Article details')),
-      body: _buildBody(article),
+      appBar: AppBar(
+        title: const Text('Article details'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _viewModel.isLoadingDetails ? null : _reload,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      body: _buildBody(),
     );
   }
 
-  Widget _buildBody(ArticleModel? article) {
-    if (_viewModel.isLoadingDetails) {
-      return const Center(child: CircularProgressIndicator());
+  Widget _buildBody() {
+    final article = _viewModel.selectedArticle;
+
+    if (_viewModel.isLoadingDetails && article == null) {
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading article...',
+        skeletonItemCount: 5,
+      );
+    }
+
+    if (_viewModel.detailsError != null && article == null) {
+      return AppErrorWidget(
+        title: 'Article could not be loaded',
+        error: _viewModel.detailsError,
+        onRetry: _reload,
+      );
     }
 
     if (article == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _viewModel.error ?? 'Article could not be loaded.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _reload,
-                child: const Text('Try again'),
-              ),
-            ],
-          ),
-        ),
+      return const AppEmptyStateWidget(
+        title: 'Article unavailable',
+        message: 'The requested article is not available.',
+        icon: Icons.article_outlined,
       );
     }
 
@@ -103,7 +104,15 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     return RefreshIndicator(
       onRefresh: _reload,
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
+          if (_viewModel.detailsError != null)
+            AppInlineError(
+              title: 'Article could not be refreshed',
+              error: _viewModel.detailsError,
+              onRetry: _reload,
+              margin: const EdgeInsets.all(16),
+            ),
           if (imageUrl != null)
             Image.network(
               imageUrl,

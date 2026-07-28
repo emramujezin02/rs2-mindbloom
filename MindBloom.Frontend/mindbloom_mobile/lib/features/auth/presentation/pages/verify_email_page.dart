@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_error_widget.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
 class VerifyEmailPage extends StatefulWidget {
@@ -30,7 +31,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
-
+    _viewModel.dispose();
     _codeController.dispose();
 
     super.dispose();
@@ -43,9 +44,11 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   }
 
   Future<void> _verify() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_viewModel.isLoading || !_formKey.currentState!.validate()) {
       return;
     }
+
+    FocusScope.of(context).unfocus();
 
     final success = await _viewModel.verifyEmailCode(
       email: widget.email,
@@ -68,6 +71,10 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   }
 
   Future<void> _resendCode() async {
+    if (_viewModel.isLoading) {
+      return;
+    }
+
     final success = await _viewModel.sendEmailVerificationCode(
       email: widget.email,
     );
@@ -96,29 +103,25 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Icon(Icons.mark_email_read, size: 80),
-
                   const SizedBox(height: 20),
-
                   const Text(
                     'We sent a six-digit verification code to:',
                     textAlign: TextAlign.center,
                   ),
-
                   const SizedBox(height: 8),
-
                   Text(
                     widget.email,
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-
                   const SizedBox(height: 24),
-
                   TextFormField(
                     controller: _codeController,
+                    enabled: !_viewModel.isLoading,
                     keyboardType: TextInputType.number,
                     maxLength: 6,
                     textAlign: TextAlign.center,
+                    textInputAction: TextInputAction.done,
                     decoration: const InputDecoration(
                       labelText: 'Verification code',
                       hintText: '123456',
@@ -138,46 +141,46 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
 
                       return null;
                     },
+                    onFieldSubmitted: (_) {
+                      _verify();
+                    },
                   ),
-
-                  const SizedBox(height: 16),
-
-                  if (_viewModel.errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        _viewModel.errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red),
-                      ),
+                  if (_viewModel.errorMessage != null) ...[
+                    const SizedBox(height: 16),
+                    AppInlineError(
+                      title: 'Email verification failed',
+                      error: _viewModel.errorMessage,
+                      onRetry: _verify,
                     ),
-
+                  ],
+                  const SizedBox(height: 20),
                   ElevatedButton.icon(
                     onPressed: _viewModel.isLoading ? null : _verify,
-                    icon: const Icon(Icons.verified),
-                    label: _viewModel.isLoading
+                    icon: _viewModel.isLoading
                         ? const SizedBox(
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Verify email'),
+                        : const Icon(Icons.verified),
+                    label: Text(
+                      _viewModel.isLoading ? 'Verifying...' : 'Verify email',
+                    ),
                   ),
-
                   const SizedBox(height: 12),
-
                   TextButton(
                     onPressed: _viewModel.isLoading ? null : _resendCode,
                     child: const Text('Send a new code'),
                   ),
-
                   TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pushNamedAndRemoveUntil(
-                        AppRouter.login,
-                        (route) => false,
-                      );
-                    },
+                    onPressed: _viewModel.isLoading
+                        ? null
+                        : () {
+                            Navigator.of(context).pushNamedAndRemoveUntil(
+                              AppRouter.login,
+                              (route) => false,
+                            );
+                          },
                     child: const Text('Back to login'),
                   ),
                 ],

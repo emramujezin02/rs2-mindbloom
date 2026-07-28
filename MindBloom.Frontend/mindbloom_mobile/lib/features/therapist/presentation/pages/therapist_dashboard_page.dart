@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:mindbloom_mobile/app/di/injection.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/therapist_dashboard_model.dart';
 import '../viewmodels/therapist_dashboard_viewmodel.dart';
 
@@ -98,38 +101,27 @@ class _TherapistDashboardPageState extends State<TherapistDashboardPage> {
 
   Widget _buildBody() {
     if (viewModel.isLoading && viewModel.dashboard == null) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 240),
-          Center(child: CircularProgressIndicator()),
-        ],
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading therapist dashboard...',
+        skeletonItemCount: 6,
       );
     }
 
     if (viewModel.errorMessage != null && viewModel.dashboard == null) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
-        children: [
-          const SizedBox(height: 120),
-          _ErrorState(
-            message: viewModel.errorMessage!,
-            onRetry: viewModel.loadDashboard,
-          ),
-        ],
+      return AppErrorWidget(
+        title: 'Therapist dashboard could not be loaded',
+        error: viewModel.errorMessage,
+        onRetry: viewModel.loadDashboard,
       );
     }
 
     final dashboard = viewModel.dashboard;
 
     if (dashboard == null) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 220),
-          Center(child: Text('Dashboard data is currently unavailable.')),
-        ],
+      return const AppEmptyStateWidget(
+        title: 'Dashboard unavailable',
+        message: 'Dashboard data is currently unavailable.',
+        icon: Icons.dashboard_outlined,
       );
     }
 
@@ -756,46 +748,6 @@ class _SectionTitle extends StatelessWidget {
         const SizedBox(height: 5),
         Text(subtitle, style: const TextStyle(color: Color(0xFF756D79))),
       ],
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-
-  const _ErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 520),
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Column(
-          children: [
-            const Icon(Icons.error_outline, size: 55, color: Colors.redAccent),
-            const SizedBox(height: 17),
-            const Text(
-              'Dashboard could not be loaded',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

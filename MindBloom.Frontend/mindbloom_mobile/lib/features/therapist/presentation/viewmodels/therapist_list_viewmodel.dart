@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/widgets/app_error_message.dart';
 import '../../../favorite/data/models/favorite_model.dart';
 import '../../../favorite/data/repositories/favorite_repository.dart';
 import '../../data/models/therapist_filter_request.dart';
@@ -13,31 +14,36 @@ class TherapistListViewModel extends ChangeNotifier {
   bool isLoading = false;
   bool isLoadingMore = false;
   bool hasMore = true;
+
   String? errorMessage;
+  String? loadMoreErrorMessage;
+  String? favoriteErrorMessage;
 
   List<TherapistModel> therapists = [];
 
   final Set<int> favoriteTherapistIds = <int>{};
-  final Set<int> changingFavoriteTherapistIds =
-      <int>{};
+  final Set<int> changingFavoriteTherapistIds = <int>{};
 
   int currentPage = 1;
   final int pageSize = 10;
 
-  TherapistFilterRequest _activeRequest =
-      const TherapistFilterRequest();
+  TherapistFilterRequest _activeRequest = const TherapistFilterRequest();
 
   TherapistListViewModel({
     required this.therapistRepository,
     required this.favoriteRepository,
   });
 
-  Future<void> loadTherapists({
-    int? therapyApproachId,
-  }) async {
+  Future<void> loadTherapists({int? therapyApproachId}) async {
     await searchTherapists(
       therapyApproachId: therapyApproachId,
       resetPage: true,
+    );
+  }
+
+  Future<void> refresh() async {
+    await _loadFirstPage(
+      _activeRequest.copyWith(pageNumber: 1, pageSize: pageSize),
     );
   }
 
@@ -60,12 +66,9 @@ class TherapistListViewModel extends ChangeNotifier {
       return;
     }
 
-    if (resetPage) {
-      currentPage = 1;
-      hasMore = true;
-    }
+    final requestedPage = resetPage ? 1 : currentPage;
 
-    _activeRequest = TherapistFilterRequest(
+    final request = TherapistFilterRequest(
       searchText: searchText,
       specialization: specialization,
       therapyApproachId: therapyApproachId,
@@ -78,27 +81,43 @@ class TherapistListViewModel extends ChangeNotifier {
       minRating: minRating,
       availableDay: availableDay,
       sortBy: sortBy,
-      pageNumber: currentPage,
+      pageNumber: requestedPage,
       pageSize: pageSize,
     );
 
+    await _loadFirstPage(request);
+  }
+
+  Future<void> _loadFirstPage(TherapistFilterRequest request) async {
+    if (isLoading || isLoadingMore) {
+      return;
+    }
+
     isLoading = true;
     errorMessage = null;
+    loadMoreErrorMessage = null;
+    favoriteErrorMessage = null;
     notifyListeners();
 
     try {
-      final page =
-          await therapistRepository.searchTherapists(
-        _activeRequest,
-      );
+      final page = await therapistRepository.searchTherapists(request);
 
       therapists = _removeDuplicates(page.items);
       currentPage = page.pageNumber;
       hasMore = page.hasMore;
+      _activeRequest = request.copyWith(
+        pageNumber: page.pageNumber,
+        pageSize: pageSize,
+      );
 
       await _tryLoadFavoriteIds();
+
+      errorMessage = null;
     } catch (error) {
-      errorMessage = _normalizeError(error);
+      errorMessage = AppErrorMessage.from(
+        error,
+        fallback: 'Therapists could not be loaded.',
+      );
     } finally {
       isLoading = false;
       notifyListeners();
@@ -106,15 +125,12 @@ class TherapistListViewModel extends ChangeNotifier {
   }
 
   Future<void> loadMore() async {
-    if (isLoading ||
-        isLoadingMore ||
-        !hasMore ||
-        therapists.isEmpty) {
+    if (isLoading || isLoadingMore || !hasMore || therapists.isEmpty) {
       return;
     }
 
     isLoadingMore = true;
-    errorMessage = null;
+    loadMoreErrorMessage = null;
     notifyListeners();
 
     final nextPage = currentPage + 1;
@@ -124,33 +140,38 @@ class TherapistListViewModel extends ChangeNotifier {
     );
 
     try {
-      final page =
-          await therapistRepository.searchTherapists(
-        nextRequest,
-      );
+      final page = await therapistRepository.searchTherapists(nextRequest);
 
       final merged = <int, TherapistModel>{
-        for (final therapist in therapists)
-          therapist.id: therapist,
-        for (final therapist in page.items)
-          therapist.id: therapist,
+        for (final therapist in therapists) therapist.id: therapist,
+        for (final therapist in page.items) therapist.id: therapist,
       };
 
       therapists = merged.values.toList();
       currentPage = page.pageNumber;
       hasMore = page.hasMore;
-      _activeRequest = nextRequest;
+      _activeRequest = nextRequest.copyWith(
+        pageNumber: page.pageNumber,
+        pageSize: pageSize,
+      );
+
+      loadMoreErrorMessage = null;
     } catch (error) {
-      errorMessage = _normalizeError(error);
+      loadMoreErrorMessage = AppErrorMessage.from(
+        error,
+        fallback: 'More therapists could not be loaded.',
+      );
     } finally {
       isLoadingMore = false;
       notifyListeners();
     }
   }
 
-  List<TherapistModel> _removeDuplicates(
-    List<TherapistModel> items,
-  ) {
+  Future<void> retryLoadMore() async {
+    await loadMore();
+  }
+
+  List<TherapistModel> _removeDuplicates(List<TherapistModel> items) {
     final unique = <int, TherapistModel>{};
 
     for (final therapist in items) {
@@ -161,106 +182,74 @@ class TherapistListViewModel extends ChangeNotifier {
   }
 
   Future<void> loadFavoriteIds() async {
+    favoriteErrorMessage = null;
+
     try {
       await _loadFavoriteIdsWithoutNotification();
     } catch (error) {
-      errorMessage = _normalizeError(error);
+      favoriteErrorMessage = AppErrorMessage.from(
+        error,
+        fallback: 'Favorites could not be loaded.',
+      );
     }
 
     notifyListeners();
   }
 
-  Future<void> _loadFavoriteIdsWithoutNotification()
-      async {
-    final favorites =
-        await favoriteRepository.getMyFavorites();
+  Future<void> _loadFavoriteIdsWithoutNotification() async {
+    final favorites = await favoriteRepository.getMyFavorites();
 
     favoriteTherapistIds
       ..clear()
-      ..addAll(
-        favorites.map(
-          (FavoriteModel favorite) =>
-              favorite.therapistId,
-        ),
-      );
+      ..addAll(favorites.map((FavoriteModel favorite) => favorite.therapistId));
   }
 
   Future<void> _tryLoadFavoriteIds() async {
     try {
       await _loadFavoriteIdsWithoutNotification();
+      favoriteErrorMessage = null;
     } catch (_) {
       favoriteTherapistIds.clear();
     }
   }
 
   bool isFavorite(int therapistId) {
-    return favoriteTherapistIds.contains(
-      therapistId,
-    );
+    return favoriteTherapistIds.contains(therapistId);
   }
 
   bool isChangingFavorite(int therapistId) {
-    return changingFavoriteTherapistIds.contains(
-      therapistId,
-    );
+    return changingFavoriteTherapistIds.contains(therapistId);
   }
 
-  Future<bool> toggleFavorite(
-    int therapistId,
-  ) async {
+  Future<bool> toggleFavorite(int therapistId) async {
     if (isChangingFavorite(therapistId)) {
       return false;
     }
 
-    errorMessage = null;
-
-    changingFavoriteTherapistIds.add(
-      therapistId,
-    );
-
+    favoriteErrorMessage = null;
+    changingFavoriteTherapistIds.add(therapistId);
     notifyListeners();
 
     try {
       if (isFavorite(therapistId)) {
-        await favoriteRepository.removeFavorite(
-          therapistId,
-        );
-
-        favoriteTherapistIds.remove(
-          therapistId,
-        );
+        await favoriteRepository.removeFavorite(therapistId);
+        favoriteTherapistIds.remove(therapistId);
       } else {
-        await favoriteRepository.addFavorite(
-          therapistId,
-        );
-
-        favoriteTherapistIds.add(
-          therapistId,
-        );
+        await favoriteRepository.addFavorite(therapistId);
+        favoriteTherapistIds.add(therapistId);
       }
 
+      favoriteErrorMessage = null;
       return true;
     } catch (error) {
-      errorMessage = _normalizeError(error);
+      favoriteErrorMessage = AppErrorMessage.from(
+        error,
+        fallback: 'Favorite could not be updated.',
+      );
       return false;
     } finally {
-      changingFavoriteTherapistIds.remove(
-        therapistId,
-      );
-
+      changingFavoriteTherapistIds.remove(therapistId);
       notifyListeners();
     }
-  }
-
-  String _normalizeError(Object error) {
-    final message = error.toString();
-
-    if (message.startsWith('Exception: ')) {
-      return message.substring(
-        'Exception: '.length,
-      );
-    }
-
-    return message;
   }
 }

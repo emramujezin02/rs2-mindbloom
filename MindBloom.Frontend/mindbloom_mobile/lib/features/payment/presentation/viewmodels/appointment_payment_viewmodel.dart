@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
 import '../../../../core/error/app_exception.dart';
+import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/payment_model.dart';
 import '../../data/repositories/payment_repository.dart';
 
@@ -19,27 +20,30 @@ class AppointmentPaymentViewModel extends ChangeNotifier {
   PaymentModel? payment;
 
   bool get isPaid => payment?.isPaid == true;
-
   bool get isRefundPending => payment?.isRefundPending == true;
-
   bool get isRefunded => payment?.isRefunded == true;
-
   bool get isRefundFailed => payment?.isRefundFailed == true;
-
   bool get hasRefundProcess => payment?.hasRefundProcess == true;
-
   int? get paymentId => payment?.id;
 
   Future<void> loadPaymentStatus(int appointmentId) async {
+    if (isCheckingPayment) {
+      return;
+    }
+
     isCheckingPayment = true;
     errorMessage = null;
-
     notifyListeners();
 
     try {
-      payment = await repository.getPaymentForAppointment(appointmentId);
+      final loadedPayment = await repository.getPaymentForAppointment(
+        appointmentId,
+      );
+
+      payment = loadedPayment;
+      errorMessage = null;
     } catch (error) {
-      errorMessage = _normalizeError(error);
+      errorMessage = AppErrorMessage.from(error);
     } finally {
       isCheckingPayment = false;
       notifyListeners();
@@ -54,20 +58,19 @@ class AppointmentPaymentViewModel extends ChangeNotifier {
     isPaying = true;
     wasPaymentCancelled = false;
     errorMessage = null;
-
     notifyListeners();
 
     try {
       final paymentIntent = await repository.createPaymentIntent(appointmentId);
 
       if (paymentIntent.clientSecret.trim().isEmpty) {
-        throw AppException(
+        throw const AppException(
           message: 'Stripe client secret was not returned by the server.',
         );
       }
 
       if (paymentIntent.paymentIntentId.trim().isEmpty) {
-        throw AppException(
+        throw const AppException(
           message: 'Stripe PaymentIntent ID was not returned by the server.',
         );
       }
@@ -85,13 +88,14 @@ class AppointmentPaymentViewModel extends ChangeNotifier {
 
       await Stripe.instance.presentPaymentSheet();
 
-      // Lokalni Stripe callback nije dovoljan.
-      // Backend ponovo provjerava Stripe status,
-      // iznos, valutu i metadata.
       await repository.confirmPayment(paymentIntent.paymentIntentId);
 
-      // Status se ponovo učitava sa backenda.
-      await loadPaymentStatus(appointmentId);
+      final confirmedPayment = await repository.getPaymentForAppointment(
+        appointmentId,
+      );
+
+      payment = confirmedPayment;
+      errorMessage = null;
 
       return isPaid;
     } on StripeException catch (error) {
@@ -99,15 +103,17 @@ class AppointmentPaymentViewModel extends ChangeNotifier {
 
       wasPaymentCancelled = stripeCode.contains('cancel');
 
+      final localizedMessage = error.error.localizedMessage?.trim();
+
       errorMessage = wasPaymentCancelled
           ? 'Payment was cancelled.'
-          : error.error.localizedMessage ??
-                'Stripe payment could not be completed.';
+          : localizedMessage == null || localizedMessage.isEmpty
+          ? 'Stripe payment could not be completed.'
+          : localizedMessage;
 
       return false;
     } catch (error) {
-      errorMessage = _normalizeError(error);
-
+      errorMessage = AppErrorMessage.from(error);
       return false;
     } finally {
       isPaying = false;
@@ -115,17 +121,13 @@ class AppointmentPaymentViewModel extends ChangeNotifier {
     }
   }
 
-  String _normalizeError(Object error) {
-    if (error is AppException) {
-      return error.message;
+  void clearError() {
+    if (errorMessage == null && !wasPaymentCancelled) {
+      return;
     }
 
-    final message = error.toString();
-
-    if (message.startsWith('Exception: ')) {
-      return message.substring('Exception: '.length);
-    }
-
-    return message;
+    errorMessage = null;
+    wasPaymentCancelled = false;
+    notifyListeners();
   }
 }

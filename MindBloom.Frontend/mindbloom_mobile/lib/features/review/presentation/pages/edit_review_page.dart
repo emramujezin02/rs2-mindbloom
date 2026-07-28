@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../core/validation/app_validators.dart';
+import '../../../../core/widgets/app_error_widget.dart';
 import '../../data/models/review_model.dart';
 import '../viewmodels/create_review_viewmodel.dart';
 
@@ -29,7 +30,6 @@ class _EditReviewPageState extends State<EditReviewPage> {
     super.initState();
 
     _rating = widget.review.rating;
-
     _commentController = TextEditingController(text: widget.review.comment);
 
     _viewModel.addListener(_refresh);
@@ -38,9 +38,7 @@ class _EditReviewPageState extends State<EditReviewPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
-
     _commentController.dispose();
-
     _viewModel.dispose();
 
     super.dispose();
@@ -53,13 +51,11 @@ class _EditReviewPageState extends State<EditReviewPage> {
   }
 
   Future<void> _save() async {
-    if (_viewModel.isLoading) {
+    if (_viewModel.isLoading || !_formKey.currentState!.validate()) {
       return;
     }
 
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    FocusScope.of(context).unfocus();
 
     final success = await _viewModel.updateReview(
       reviewId: widget.review.id,
@@ -71,25 +67,17 @@ class _EditReviewPageState extends State<EditReviewPage> {
       _formKey.currentState?.validate();
     }
 
-    if (!mounted) {
-      return;
-    }
-
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Review updated and submitted for moderation again.'),
-        ),
-      );
-
-      Navigator.of(context).pop(true);
-
+    if (!mounted || !success) {
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_viewModel.error ?? 'Unable to update review.')),
+      const SnackBar(
+        content: Text('Review updated and submitted for moderation again.'),
+      ),
     );
+
+    Navigator.of(context).pop(true);
   }
 
   @override
@@ -104,8 +92,7 @@ class _EditReviewPageState extends State<EditReviewPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'Updating a review sends it through '
-                'moderation again.',
+                'Updating a review sends it through moderation again.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
@@ -154,10 +141,10 @@ class _EditReviewPageState extends State<EditReviewPage> {
               ),
               if (_viewModel.error != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  _viewModel.error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
+                AppInlineError(
+                  title: 'Review could not be updated',
+                  error: _viewModel.error,
+                  onRetry: _save,
                 ),
               ],
               const SizedBox(height: 16),

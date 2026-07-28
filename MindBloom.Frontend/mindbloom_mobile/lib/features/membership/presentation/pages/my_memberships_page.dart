@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/membership_model.dart';
 import '../viewmodels/membership_viewmodel.dart';
 import 'membership_receipt_page.dart';
@@ -22,14 +25,12 @@ class _MyMembershipsPageState extends State<MyMembershipsPage> {
     super.initState();
 
     _viewModel.addListener(_onViewModelChanged);
-
     _viewModel.loadMyMemberships();
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
-
     _viewModel.dispose();
 
     super.dispose();
@@ -56,40 +57,48 @@ class _MyMembershipsPageState extends State<MyMembershipsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My memberships')),
+      appBar: AppBar(
+        title: const Text('My memberships'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _viewModel.isLoading ? null : _refresh,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: _buildBody(),
     );
   }
 
   Widget _buildBody() {
     if (_viewModel.isLoading && _viewModel.memberships.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading memberships...',
+        skeletonItemCount: 4,
+      );
     }
 
     if (_viewModel.error != null && _viewModel.memberships.isEmpty) {
-      return _ErrorState(message: _viewModel.error!, onRetry: _refresh);
+      return AppErrorWidget(
+        title: 'Memberships could not be loaded',
+        error: _viewModel.error,
+        onRetry: _refresh,
+      );
     }
 
     if (_viewModel.memberships.isEmpty) {
       return RefreshIndicator(
         onRefresh: _refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 160),
-            Icon(Icons.card_membership_outlined, size: 64),
-            SizedBox(height: 16),
-            Text(
-              'You do not have memberships yet.',
-              textAlign: TextAlign.center,
-            ),
-          ],
+        child: const AppEmptyStateWidget(
+          title: 'No memberships',
+          message: 'You have not purchased a membership yet.',
+          icon: Icons.card_membership_outlined,
         ),
       );
     }
 
     final active = _viewModel.activeMemberships;
-
     final history = _viewModel.membershipHistory;
 
     return RefreshIndicator(
@@ -98,19 +107,19 @@ class _MyMembershipsPageState extends State<MyMembershipsPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         children: [
+          if (_viewModel.error != null)
+            AppInlineError(
+              title: 'Memberships could not be refreshed',
+              error: _viewModel.error,
+              onRetry: _refresh,
+              margin: const EdgeInsets.only(bottom: 16),
+            ),
           const _SectionTitle('Active membership'),
-
           const SizedBox(height: 10),
-
           if (active.isEmpty)
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(18),
-                child: Text(
-                  'You currently do not have an active membership.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
+            const _MembershipSectionEmptyState(
+              icon: Icons.card_membership_outlined,
+              message: 'You currently do not have an active membership.',
             )
           else
             ...active.map(
@@ -125,22 +134,13 @@ class _MyMembershipsPageState extends State<MyMembershipsPage> {
                 ),
               ),
             ),
-
           const SizedBox(height: 24),
-
           const _SectionTitle('Membership history'),
-
           const SizedBox(height: 10),
-
           if (history.isEmpty)
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(18),
-                child: Text(
-                  'There are no previous memberships.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
+            const _MembershipSectionEmptyState(
+              icon: Icons.history_outlined,
+              message: 'There are no previous memberships.',
             )
           else
             ...history.map(
@@ -155,16 +155,33 @@ class _MyMembershipsPageState extends State<MyMembershipsPage> {
                 ),
               ),
             ),
-
-          if (_viewModel.error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              _viewModel.error!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
-            ),
-          ],
         ],
+      ),
+    );
+  }
+}
+
+class _MembershipSectionEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String message;
+
+  const _MembershipSectionEmptyState({
+    required this.icon,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+        child: Column(
+          children: [
+            Icon(icon, size: 42),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+          ],
+        ),
       ),
     );
   }
@@ -193,6 +210,7 @@ class _MembershipCard extends StatelessWidget {
           );
 
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onReceipt,
         child: Padding(
@@ -216,46 +234,33 @@ class _MembershipCard extends StatelessWidget {
                   Chip(label: Text(membership.displayMembershipStatus)),
                 ],
               ),
-
               const SizedBox(height: 8),
-
               Text(
                 membership.therapistName,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-
               if (membership.isPaid) ...[
                 const SizedBox(height: 16),
-
                 LinearProgressIndicator(value: progress),
-
                 const SizedBox(height: 8),
-
                 Text(
                   '${membership.remainingSessions} of '
                   '${membership.totalSessions} sessions remaining',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-
                 const SizedBox(height: 5),
-
                 Text('${membership.usedSessions} sessions used'),
               ],
-
               const SizedBox(height: 12),
-
               Text(
                 'Price: '
                 '${membership.price.toStringAsFixed(2)} KM',
               ),
-
               const SizedBox(height: 6),
-
               Text(
                 'Payment: '
                 '${membership.displayPaymentStatus}',
               ),
-
               if (membership.purchasedAtUtc != null) ...[
                 const SizedBox(height: 6),
                 Text(
@@ -263,7 +268,6 @@ class _MembershipCard extends StatelessWidget {
                   '${formatter.format(membership.purchasedAtUtc!.toLocal())}',
                 ),
               ],
-
               if (membership.expiresAtUtc != null) ...[
                 const SizedBox(height: 6),
                 Text(
@@ -271,7 +275,6 @@ class _MembershipCard extends StatelessWidget {
                   '${formatter.format(membership.expiresAtUtc!.toLocal())}',
                 ),
               ],
-
               if (onReceipt != null) ...[
                 const SizedBox(height: 14),
                 const Align(
@@ -304,36 +307,6 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       value,
       style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-  final Future<void> Function() onRetry;
-
-  const _ErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 58),
-            const SizedBox(height: 14),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
-            ),
-            const SizedBox(height: 14),
-            ElevatedButton(onPressed: onRetry, child: const Text('Try again')),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import '../features/onboarding/presentation/pages/client_onboarding_gate.dart';
+
+import '../core/widgets/app_loading_widget.dart';
 import '../features/landing/presentation/pages/landing_page.dart';
 import '../features/navigation/presentation/pages/client_navigation_shell.dart';
 import '../features/navigation/presentation/pages/therapist_navigation_shell.dart';
 import '../features/notification/presentation/viewmodels/notification_scope.dart';
+import '../features/onboarding/presentation/pages/client_onboarding_gate.dart';
 import '../features/session/presentation/viewmodels/session_scope.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -47,7 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final session = SessionScope.of(context);
 
     if (!session.isInitialized) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: AppLoadingWidget(message: 'Loading MindBloom...'),
+      );
     }
 
     if (!session.isLoggedIn) {

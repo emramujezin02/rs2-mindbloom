@@ -3,6 +3,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/workshop_model.dart';
 import '../viewmodels/workshop_viewmodel.dart';
 
@@ -25,7 +28,6 @@ class _WorkshopPageState extends State<WorkshopPage> {
     super.initState();
 
     _viewModel.addListener(_onViewModelChanged);
-
     _scrollController.addListener(_onScroll);
 
     _viewModel.loadWorkshops();
@@ -34,11 +36,11 @@ class _WorkshopPageState extends State<WorkshopPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
-
     _scrollController.removeListener(_onScroll);
 
     _searchController.dispose();
     _scrollController.dispose();
+    _viewModel.dispose();
 
     super.dispose();
   }
@@ -75,6 +77,10 @@ class _WorkshopPageState extends State<WorkshopPage> {
     await _viewModel.loadWorkshops();
   }
 
+  Future<void> _refresh() {
+    return _viewModel.loadWorkshops(search: _viewModel.currentSearch);
+  }
+
   Future<void> _openWorkshop(int workshopId) async {
     await Navigator.of(
       context,
@@ -84,7 +90,7 @@ class _WorkshopPageState extends State<WorkshopPage> {
       return;
     }
 
-    await _viewModel.loadWorkshops(search: _viewModel.currentSearch);
+    await _refresh();
   }
 
   @override
@@ -102,6 +108,11 @@ class _WorkshopPageState extends State<WorkshopPage> {
             tooltip: 'My registrations',
             icon: const Icon(Icons.event_available),
           ),
+          IconButton(
+            onPressed: _viewModel.isLoading ? null : _refresh,
+            tooltip: 'Refresh',
+            icon: const Icon(Icons.refresh),
+          ),
         ],
       ),
       body: Column(
@@ -113,6 +124,7 @@ class _WorkshopPageState extends State<WorkshopPage> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
+                    enabled: !_viewModel.isLoading,
                     textInputAction: TextInputAction.search,
                     onSubmitted: (_) {
                       _search();
@@ -125,9 +137,12 @@ class _WorkshopPageState extends State<WorkshopPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton(onPressed: _search, icon: const Icon(Icons.search)),
                 IconButton(
-                  onPressed: _clearSearch,
+                  onPressed: _viewModel.isLoading ? null : _search,
+                  icon: const Icon(Icons.search),
+                ),
+                IconButton(
+                  onPressed: _viewModel.isLoading ? null : _clearSearch,
                   icon: const Icon(Icons.clear),
                 ),
               ],
@@ -140,51 +155,88 @@ class _WorkshopPageState extends State<WorkshopPage> {
   }
 
   Widget _buildBody() {
-    if (_viewModel.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+    if (_viewModel.isLoading && _viewModel.workshops.isEmpty) {
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading workshops...',
+        skeletonItemCount: 5,
+      );
     }
 
     if (_viewModel.error != null && _viewModel.workshops.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            _viewModel.error!,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.red),
-          ),
-        ),
+      return AppErrorWidget(
+        title: 'Workshops could not be loaded',
+        error: _viewModel.error,
+        onRetry: _refresh,
       );
     }
 
     if (_viewModel.workshops.isEmpty) {
-      return const Center(child: Text('No workshops were found.'));
+      return RefreshIndicator(
+        onRefresh: _refresh,
+        child: AppEmptyStateWidget(
+          title: _viewModel.currentSearch.trim().isNotEmpty
+              ? 'No matching workshops'
+              : 'No workshops available',
+          message: _viewModel.currentSearch.trim().isNotEmpty
+              ? 'No workshops match your search. Try another search term.'
+              : 'There are currently no available workshops.',
+          icon: _viewModel.currentSearch.trim().isNotEmpty
+              ? Icons.search_off_outlined
+              : Icons.groups_outlined,
+          actionLabel: _viewModel.currentSearch.trim().isNotEmpty
+              ? 'Clear search'
+              : 'Refresh',
+          onAction: _viewModel.currentSearch.trim().isNotEmpty
+              ? _clearSearch
+              : _refresh,
+        ),
+      );
     }
 
+    final extraItems =
+        (_viewModel.error != null ? 1 : 0) + (_viewModel.hasMorePages ? 1 : 0);
+
     return RefreshIndicator(
-      onRefresh: () =>
-          _viewModel.loadWorkshops(search: _viewModel.currentSearch),
+      onRefresh: _refresh,
       child: ListView.builder(
         controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(12),
-        itemCount:
-            _viewModel.workshops.length + (_viewModel.hasMorePages ? 1 : 0),
+        itemCount: _viewModel.workshops.length + extraItems,
         itemBuilder: (context, index) {
-          if (index == _viewModel.workshops.length) {
+          if (_viewModel.error != null && index == 0) {
             return Padding(
-              padding: const EdgeInsets.all(20),
-              child: Center(
-                child: _viewModel.isLoadingMore
-                    ? const CircularProgressIndicator()
-                    : ElevatedButton(
-                        onPressed: _viewModel.loadMoreWorkshops,
-                        child: const Text('Load more'),
-                      ),
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AppInlineError(
+                title: 'Workshops could not be refreshed',
+                error: _viewModel.error,
+                onRetry: _refresh,
               ),
             );
           }
 
-          final workshop = _viewModel.workshops[index];
+          final adjustedIndex = index - (_viewModel.error != null ? 1 : 0);
+
+          if (adjustedIndex >= _viewModel.workshops.length) {
+            if (_viewModel.isLoadingMore) {
+              return const AppLoadMoreIndicator(
+                loadingMessage: 'Loading more workshops...',
+              );
+            }
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: OutlinedButton.icon(
+                  onPressed: _viewModel.loadMoreWorkshops,
+                  icon: const Icon(Icons.expand_more),
+                  label: const Text('Load more'),
+                ),
+              ),
+            );
+          }
+
+          final workshop = _viewModel.workshops[adjustedIndex];
 
           return _WorkshopCard(
             workshop: workshop,

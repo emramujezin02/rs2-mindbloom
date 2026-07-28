@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/therapist_client_model.dart';
 import '../viewmodels/therapist_clients_viewmodel.dart';
 
@@ -106,26 +108,17 @@ class _TherapistClientsPageState extends State<TherapistClientsPage> {
 
   Widget _buildBody() {
     if (viewModel.isLoading && viewModel.totalClients == 0) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 240),
-          Center(child: CircularProgressIndicator()),
-        ],
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading clients...',
+        skeletonItemCount: 6,
       );
     }
 
     if (viewModel.errorMessage != null && viewModel.totalClients == 0) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
-        children: [
-          const SizedBox(height: 130),
-          _ErrorState(
-            message: viewModel.errorMessage!,
-            onRetry: viewModel.refresh,
-          ),
-        ],
+      return AppErrorWidget(
+        title: 'Clients could not be loaded',
+        error: viewModel.errorMessage,
+        onRetry: viewModel.refresh,
       );
     }
 
@@ -740,55 +733,6 @@ class _EmptyState extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-
-  const _ErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 520),
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFE5DBEF)),
-        ),
-        child: Column(
-          children: [
-            const Icon(Icons.error_outline, size: 58, color: Colors.redAccent),
-            const SizedBox(height: 18),
-            const Text(
-              'Clients could not be loaded',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF40334D),
-                fontSize: 21,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF756D79)),
-            ),
-            const SizedBox(height: 22),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
-            ),
-          ],
-        ),
       ),
     );
   }

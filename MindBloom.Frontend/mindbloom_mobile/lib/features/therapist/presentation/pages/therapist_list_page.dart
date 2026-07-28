@@ -8,6 +8,9 @@ import '../../../../app/router/app_router.dart';
 import '../viewmodels/therapist_list_viewmodel.dart';
 import '../../data/models/therapist_list_arguments.dart';
 import '../../../../core/widgets/public_footer.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 
 class TherapistListPage extends StatefulWidget {
   final TherapistListArguments? arguments;
@@ -655,78 +658,40 @@ class _TherapistListPageState extends State<TherapistListPage> {
   }
 
   Widget _buildBody() {
-    if (_viewModel.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+    if (_viewModel.isLoading && _viewModel.therapists.isEmpty) {
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading therapists...',
+        skeletonItemCount: 4,
+      );
     }
 
-    if (_viewModel.errorMessage != null) {
-      return RefreshIndicator(
-        onRefresh: _refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            const SizedBox(height: 120),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 52,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    'Therapists could not be loaded',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _viewModel.errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  FilledButton.icon(
-                    onPressed: _refresh,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Try again'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 120),
-            const PublicFooter(),
-          ],
-        ),
+    if (_viewModel.errorMessage != null && _viewModel.therapists.isEmpty) {
+      return AppErrorWidget(
+        title: 'Therapists could not be loaded',
+        error: _viewModel.errorMessage,
+        fallbackMessage: 'Therapists could not be loaded.',
+        onRetry: _refresh,
+        footer: const PublicFooter(),
       );
     }
 
     if (_viewModel.therapists.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          const SizedBox(height: 180),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                _hasActiveFilters
-                    ? 'No therapists match the selected filters.'
-                    : 'No therapists are currently available.',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-          const SizedBox(height: 180),
-          const PublicFooter(),
-        ],
+      return RefreshIndicator(
+        onRefresh: _refresh,
+        child: AppEmptyStateWidget(
+          title: _hasActiveFilters
+              ? 'No matching therapists'
+              : 'No therapists available',
+          message: _hasActiveFilters
+              ? 'No therapists match the selected filters. Try changing or clearing the filters.'
+              : 'No therapists are currently available. Pull down to refresh the list.',
+          icon: _hasActiveFilters
+              ? Icons.search_off_outlined
+              : Icons.psychology_outlined,
+          actionLabel: _hasActiveFilters ? 'Clear filters' : 'Refresh',
+          onAction: _hasActiveFilters ? _clearFilters : _refresh,
+          footer: const PublicFooter(),
+        ),
       );
     }
 
@@ -737,6 +702,16 @@ class _TherapistListPageState extends State<TherapistListPage> {
         padding: EdgeInsets.zero,
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
+          if (_viewModel.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: AppInlineError(
+                title: 'Therapists could not be refreshed',
+                error: _viewModel.errorMessage,
+                fallbackMessage: 'The existing therapists are still displayed.',
+                onRetry: _refresh,
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -824,7 +799,22 @@ class _TherapistListPageState extends State<TherapistListPage> {
                                           final success = await _viewModel
                                               .toggleFavorite(therapist.id);
 
-                                          if (!mounted || !success) {
+                                          if (!mounted) {
+                                            return;
+                                          }
+
+                                          if (!success) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  _viewModel
+                                                          .favoriteErrorMessage ??
+                                                      'Favorite could not be updated.',
+                                                ),
+                                              ),
+                                            );
                                             return;
                                           }
 
@@ -862,9 +852,7 @@ class _TherapistListPageState extends State<TherapistListPage> {
                                 ),
                               ],
                             ),
-
                             const SizedBox(height: 6),
-
                             Text(
                               therapist.specialization.trim().isEmpty
                                   ? 'Specialization not specified'
@@ -953,7 +941,6 @@ class _TherapistListPageState extends State<TherapistListPage> {
                               ],
                             ),
                             const SizedBox(height: 10),
-
                             Row(
                               children: [
                                 const Icon(Icons.work_outline, size: 19),
@@ -977,9 +964,17 @@ class _TherapistListPageState extends State<TherapistListPage> {
             ),
           ),
           if (_viewModel.isLoadingMore)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(child: CircularProgressIndicator()),
+            const AppLoadMoreIndicator(
+              loadingMessage: 'Loading more therapists...',
+            ),
+          if (_viewModel.loadMoreErrorMessage != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: AppLoadMoreError(
+                error: _viewModel.loadMoreErrorMessage,
+                fallbackMessage: 'More therapists could not be loaded.',
+                onRetry: _viewModel.retryLoadMore,
+              ),
             ),
           if (!_viewModel.hasMore && _viewModel.therapists.isNotEmpty)
             const Padding(

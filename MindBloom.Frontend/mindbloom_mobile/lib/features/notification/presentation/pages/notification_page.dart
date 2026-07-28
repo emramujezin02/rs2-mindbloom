@@ -3,6 +3,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../../appointment/data/models/appointment_model.dart';
 import '../../data/models/notification_model.dart';
 import '../viewmodels/notification_scope.dart';
@@ -45,7 +48,6 @@ class _NotificationPageState extends State<NotificationPage> {
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
-
     _scrollController.dispose();
 
     super.dispose();
@@ -130,7 +132,6 @@ class _NotificationPageState extends State<NotificationPage> {
         await _openAppointment(
           notification.appointmentId ?? notification.resourceId,
         );
-
         break;
 
       case NotificationActionType.chat:
@@ -144,17 +145,14 @@ class _NotificationPageState extends State<NotificationPage> {
         await Navigator.of(
           context,
         ).pushNamed(AppRouter.chatDetails, arguments: appointmentId);
-
         break;
 
       case NotificationActionType.payment:
         await Navigator.of(context).pushNamed(AppRouter.myPayments);
-
         break;
 
       case NotificationActionType.membership:
         await Navigator.of(context).pushNamed(AppRouter.myMemberships);
-
         break;
 
       case NotificationActionType.workshop:
@@ -167,22 +165,18 @@ class _NotificationPageState extends State<NotificationPage> {
         await Navigator.of(
           context,
         ).pushNamed(AppRouter.workshopDetails, arguments: workshopId);
-
         break;
 
       case NotificationActionType.review:
         await Navigator.of(context).pushNamed(AppRouter.myReviews);
-
         break;
 
       case NotificationActionType.therapistProfile:
         await Navigator.of(context).pushNamed(AppRouter.profile);
-
         break;
 
       case NotificationActionType.none:
         await _showNotificationDetails(notification);
-
         break;
     }
   }
@@ -265,7 +259,6 @@ class _NotificationPageState extends State<NotificationPage> {
                     )
                   : const Text('Read all'),
             ),
-
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Center(
@@ -292,50 +285,35 @@ class _NotificationPageState extends State<NotificationPage> {
 
   Widget _buildBody(NotificationViewModel viewModel) {
     if (viewModel.isLoading && viewModel.notifications.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading notifications...',
+        skeletonItemCount: 6,
+      );
     }
 
     if (viewModel.error != null && viewModel.notifications.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48),
-              const SizedBox(height: 12),
-              Text(
-                viewModel.error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _refresh,
-                child: const Text('Try again'),
-              ),
-            ],
-          ),
-        ),
+      return AppErrorWidget(
+        title: 'Notifications could not be loaded',
+        error: viewModel.error,
+        onRetry: _refresh,
       );
     }
 
     if (viewModel.notifications.isEmpty) {
       return RefreshIndicator(
         onRefresh: _refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 180),
-            Icon(Icons.notifications_none, size: 64),
-            SizedBox(height: 12),
-            Center(child: Text('You do not have any notifications.')),
-          ],
+        child: const AppEmptyStateWidget(
+          title: 'No notifications',
+          message: 'You do not have any notifications yet.',
+          icon: Icons.notifications_none,
         ),
       );
     }
 
     final formatter = DateFormat('dd.MM.yyyy. HH:mm');
+
+    final footerItemCount =
+        viewModel.isLoadingMore || viewModel.loadMoreError != null ? 1 : 0;
 
     return RefreshIndicator(
       onRefresh: _refresh,
@@ -344,17 +322,38 @@ class _NotificationPageState extends State<NotificationPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(12),
         itemCount:
-            viewModel.notifications.length + (viewModel.isLoadingMore ? 1 : 0),
-        separatorBuilder: (context, index) => const SizedBox(height: 8),
+            viewModel.notifications.length +
+            footerItemCount +
+            (viewModel.error != null ? 1 : 0),
+        separatorBuilder: (context, index) {
+          return const SizedBox(height: 8);
+        },
         itemBuilder: (context, index) {
-          if (index >= viewModel.notifications.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
+          if (viewModel.error != null && index == 0) {
+            return AppInlineError(
+              title: 'Notifications could not be refreshed',
+              error: viewModel.error,
+              onRetry: _refresh,
             );
           }
 
-          final item = viewModel.notifications[index];
+          final adjustedIndex = index - (viewModel.error != null ? 1 : 0);
+
+          if (adjustedIndex >= viewModel.notifications.length) {
+            if (viewModel.loadMoreError != null) {
+              return AppLoadMoreError(
+                error: viewModel.loadMoreError,
+                fallbackMessage: 'More notifications could not be loaded.',
+                onRetry: viewModel.retryLoadMore,
+              );
+            }
+
+            return const AppLoadMoreIndicator(
+              loadingMessage: 'Loading more notifications...',
+            );
+          }
+
+          final item = viewModel.notifications[adjustedIndex];
 
           return Card(
             child: ListTile(

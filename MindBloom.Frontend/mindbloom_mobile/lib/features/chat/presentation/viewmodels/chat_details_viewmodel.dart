@@ -3,6 +3,8 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/widgets/app_error_message.dart';
+
 import '../../data/models/chat_message_model.dart';
 import '../../data/models/conversation_details_model.dart';
 import '../../data/repositories/chat_repository.dart';
@@ -39,6 +41,7 @@ class ChatDetailsViewModel extends ChangeNotifier {
   bool isLoadingMore = false;
 
   String? errorMessage;
+  String? loadMoreErrorMessage;
 
   int _currentPage = 0;
   int _totalPages = 0;
@@ -77,7 +80,10 @@ class ChatDetailsViewModel extends ChangeNotifier {
 
       await realtimeService.connect(conversation!.id);
     } catch (error) {
-      errorMessage = _normalizeError(error);
+      errorMessage = AppErrorMessage.from(
+        error,
+        fallback: 'Razgovor nije moguće učitati.',
+      );
     } finally {
       isLoading = false;
       notifyListeners();
@@ -101,7 +107,10 @@ class ChatDetailsViewModel extends ChangeNotifier {
 
       await realtimeService.connect(initialConversation.id);
     } catch (error) {
-      errorMessage = _normalizeError(error);
+      errorMessage = AppErrorMessage.from(
+        error,
+        fallback: 'Razgovor nije moguće učitati.',
+      );
     } finally {
       isLoading = false;
       notifyListeners();
@@ -154,7 +163,7 @@ class ChatDetailsViewModel extends ChangeNotifier {
     }
 
     isLoadingMore = true;
-    errorMessage = null;
+    loadMoreErrorMessage = null;
 
     notifyListeners();
 
@@ -184,7 +193,10 @@ class ChatDetailsViewModel extends ChangeNotifier {
 
       _totalPages = response.totalPages;
     } catch (error) {
-      errorMessage = _normalizeError(error);
+      loadMoreErrorMessage = AppErrorMessage.from(
+        error,
+        fallback: 'Starije poruke nije moguće učitati.',
+      );
     } finally {
       isLoadingMore = false;
       notifyListeners();
@@ -426,13 +438,32 @@ class ChatDetailsViewModel extends ChangeNotifier {
   }
 
   String _normalizeError(Object error) {
-    final message = error.toString();
+    return AppErrorMessage.from(
+      error,
+      fallback: 'Radnju nije moguće završiti.',
+    );
+  }
 
-    if (message.startsWith('Exception: ')) {
-      return message.substring('Exception: '.length);
+  Future<void> retryLoadOlderMessages() {
+    return loadOlderMessages();
+  }
+
+  void clearError() {
+    if (errorMessage == null) {
+      return;
     }
 
-    return message;
+    errorMessage = null;
+    notifyListeners();
+  }
+
+  void clearLoadMoreError() {
+    if (loadMoreErrorMessage == null) {
+      return;
+    }
+
+    loadMoreErrorMessage = null;
+    notifyListeners();
   }
 
   Future<void> close() async {

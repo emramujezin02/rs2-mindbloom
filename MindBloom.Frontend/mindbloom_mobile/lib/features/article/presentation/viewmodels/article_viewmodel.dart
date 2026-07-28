@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/article_category_model.dart';
 import '../../data/models/article_model.dart';
 import '../../data/repositories/article_repository.dart';
@@ -15,6 +16,8 @@ class ArticleViewModel extends ChangeNotifier {
   bool isLoadingCategories = false;
 
   String? error;
+  String? loadMoreError;
+  String? detailsError;
   String? categoriesError;
 
   List<ArticleModel> articles = [];
@@ -27,16 +30,12 @@ class ArticleViewModel extends ChangeNotifier {
   int totalPages = 0;
 
   String currentSearch = '';
-
   int? selectedArticleCategoryId;
 
-  bool get hasMorePages {
-    return pageNumber < totalPages;
-  }
+  bool get hasMorePages => pageNumber < totalPages;
 
   Future<void> loadInitialData() async {
-    await loadCategories();
-    await loadArticles();
+    await Future.wait([loadCategories(), loadArticles()]);
   }
 
   Future<void> loadCategories() async {
@@ -46,14 +45,16 @@ class ArticleViewModel extends ChangeNotifier {
 
     isLoadingCategories = true;
     categoriesError = null;
-
     notifyListeners();
 
     try {
       categories = await repository.getCategories();
+      categoriesError = null;
     } catch (exception) {
-      categories = [];
-      categoriesError = _normalizeError(exception);
+      categoriesError = AppErrorMessage.from(
+        exception,
+        fallback: 'Kategorije članaka nije moguće učitati.',
+      );
     } finally {
       isLoadingCategories = false;
       notifyListeners();
@@ -67,6 +68,7 @@ class ArticleViewModel extends ChangeNotifier {
 
     isLoading = true;
     error = null;
+    loadMoreError = null;
     pageNumber = 1;
 
     if (search != null) {
@@ -77,7 +79,7 @@ class ArticleViewModel extends ChangeNotifier {
 
     try {
       final response = await repository.getArticles(
-        pageNumber: pageNumber,
+        pageNumber: 1,
         pageSize: pageSize,
         search: currentSearch,
         articleCategoryId: selectedArticleCategoryId,
@@ -86,9 +88,13 @@ class ArticleViewModel extends ChangeNotifier {
       articles = response.items;
       pageNumber = response.pageNumber;
       totalPages = response.totalPages;
+      error = null;
+      loadMoreError = null;
     } catch (exception) {
-      articles = [];
-      error = _normalizeError(exception);
+      error = AppErrorMessage.from(
+        exception,
+        fallback: 'Članke nije moguće učitati.',
+      );
     } finally {
       isLoading = false;
       notifyListeners();
@@ -101,8 +107,7 @@ class ArticleViewModel extends ChangeNotifier {
     }
 
     isLoadingMore = true;
-    error = null;
-
+    loadMoreError = null;
     notifyListeners();
 
     try {
@@ -113,37 +118,45 @@ class ArticleViewModel extends ChangeNotifier {
         articleCategoryId: selectedArticleCategoryId,
       );
 
-      articles.addAll(response.items);
+      final existingIds = articles.map((article) => article.id).toSet();
+
+      articles.addAll(
+        response.items.where((article) => !existingIds.contains(article.id)),
+      );
+
       pageNumber = response.pageNumber;
       totalPages = response.totalPages;
+      loadMoreError = null;
     } catch (exception) {
-      error = _normalizeError(exception);
+      loadMoreError = AppErrorMessage.from(
+        exception,
+        fallback: 'Dodatne članke nije moguće učitati.',
+      );
     } finally {
       isLoadingMore = false;
       notifyListeners();
     }
   }
 
+  Future<void> retryLoadMore() => loadMore();
+
   Future<void> searchArticles(String search) async {
     currentSearch = search.trim();
-
     await loadArticles();
   }
 
   Future<void> clearSearch() async {
     currentSearch = '';
-
     await loadArticles();
   }
 
   Future<void> filterByCategory(int? categoryId) async {
     selectedArticleCategoryId = categoryId;
-
     await loadArticles();
   }
 
-  Future<void> refreshArticles() async {
-    await loadArticles(search: currentSearch);
+  Future<void> refreshArticles() {
+    return loadArticles(search: currentSearch);
   }
 
   Future<void> loadArticleDetails(int articleId) async {
@@ -152,26 +165,38 @@ class ArticleViewModel extends ChangeNotifier {
     }
 
     isLoadingDetails = true;
-    error = null;
-    selectedArticle = null;
-
+    detailsError = null;
     notifyListeners();
 
     try {
       selectedArticle = await repository.getArticle(articleId);
+      detailsError = null;
     } catch (exception) {
-      selectedArticle = null;
-      error = _normalizeError(exception);
+      detailsError = AppErrorMessage.from(
+        exception,
+        fallback: 'Detalje članka nije moguće učitati.',
+      );
     } finally {
       isLoadingDetails = false;
       notifyListeners();
     }
   }
 
-  String _normalizeError(Object exception) {
-    return exception
-        .toString()
-        .replaceFirst('Exception: ', '')
-        .replaceFirst('FormatException: ', '');
+  void clearError() {
+    if (error == null) return;
+    error = null;
+    notifyListeners();
+  }
+
+  void clearLoadMoreError() {
+    if (loadMoreError == null) return;
+    loadMoreError = null;
+    notifyListeners();
+  }
+
+  void clearDetailsError() {
+    if (detailsError == null) return;
+    detailsError = null;
+    notifyListeners();
   }
 }

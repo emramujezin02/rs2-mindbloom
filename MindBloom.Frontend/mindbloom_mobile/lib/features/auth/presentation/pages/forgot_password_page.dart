@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_error_widget.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
@@ -14,9 +15,9 @@ class ForgotPasswordPage extends StatefulWidget {
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final AuthViewModel _viewModel = AppInjection.createAuthViewModel();
 
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  final _emailController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
 
   @override
   void initState() {
@@ -27,7 +28,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onChanged);
+    _viewModel.dispose();
     _emailController.dispose();
+
     super.dispose();
   }
 
@@ -38,23 +41,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   }
 
   Future<void> _sendCode() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_viewModel.isLoading || !_formKey.currentState!.validate()) {
       return;
     }
+
+    FocusScope.of(context).unfocus();
 
     final email = _emailController.text.trim();
 
     final success = await _viewModel.forgotPassword(email: email);
 
-    if (!mounted) {
+    if (!mounted || !success) {
       return;
     }
 
-    if (success) {
-      Navigator.of(
-        context,
-      ).pushNamed(AppRouter.resetPassword, arguments: email);
-    }
+    Navigator.of(context).pushNamed(AppRouter.resetPassword, arguments: email);
   }
 
   @override
@@ -76,47 +77,48 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
-
                   const SizedBox(height: 12),
-
                   const Text(
                     'Enter your email and we will send you a reset code.',
                     textAlign: TextAlign.center,
                   ),
-
                   const SizedBox(height: 24),
-
                   TextFormField(
                     controller: _emailController,
+                    enabled: !_viewModel.isLoading,
                     keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.email],
                     decoration: const InputDecoration(
                       labelText: 'Email',
                       border: OutlineInputBorder(),
                     ),
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
+                      final email = value?.trim() ?? '';
+
+                      if (email.isEmpty) {
                         return 'Email is required.';
                       }
 
-                      if (!value.contains('@')) {
+                      if (!email.contains('@')) {
                         return 'Enter a valid email address.';
                       }
 
                       return null;
                     },
+                    onFieldSubmitted: (_) {
+                      _sendCode();
+                    },
                   ),
-
-                  const SizedBox(height: 16),
-
-                  if (_viewModel.errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        _viewModel.errorMessage!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
+                  if (_viewModel.errorMessage != null) ...[
+                    const SizedBox(height: 16),
+                    AppInlineError(
+                      title: 'Reset code could not be sent',
+                      error: _viewModel.errorMessage,
+                      onRetry: _sendCode,
                     ),
-
+                  ],
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _viewModel.isLoading ? null : _sendCode,
                     child: _viewModel.isLoading

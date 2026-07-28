@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/workshop_model.dart';
 import '../../data/repositories/workshop_repository.dart';
 
@@ -14,9 +15,10 @@ class WorkshopViewModel extends ChangeNotifier {
   bool isSaving = false;
 
   String? error;
+  String? loadMoreError;
+  String? registrationLoadMoreError;
 
   List<WorkshopModel> workshops = [];
-
   List<WorkshopModel> myRegistrations = [];
 
   WorkshopModel? selectedWorkshop;
@@ -38,13 +40,14 @@ class WorkshopViewModel extends ChangeNotifier {
   Future<void> loadWorkshops({String search = ''}) async {
     isLoading = true;
     error = null;
+    loadMoreError = null;
     pageNumber = 1;
     currentSearch = search;
     notifyListeners();
 
     try {
       final response = await repository.getWorkshops(
-        pageNumber: pageNumber,
+        pageNumber: 1,
         pageSize: pageSize,
         search: currentSearch,
       );
@@ -52,12 +55,15 @@ class WorkshopViewModel extends ChangeNotifier {
       workshops = response.items;
       pageNumber = response.pageNumber;
       totalPages = response.totalPages;
-    } catch (exception) {
-      error = exception.toString();
-    }
 
-    isLoading = false;
-    notifyListeners();
+      error = null;
+      loadMoreError = null;
+    } catch (exception) {
+      error = AppErrorMessage.from(exception);
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> loadMoreWorkshops() async {
@@ -66,7 +72,7 @@ class WorkshopViewModel extends ChangeNotifier {
     }
 
     isLoadingMore = true;
-    error = null;
+    loadMoreError = null;
     notifyListeners();
 
     try {
@@ -76,17 +82,28 @@ class WorkshopViewModel extends ChangeNotifier {
         search: currentSearch,
       );
 
-      workshops.addAll(response.items);
+      final existingIds = workshops.map((item) => item.id).toSet();
+
+      final newItems = response.items
+          .where((item) => !existingIds.contains(item.id))
+          .toList();
+
+      workshops.addAll(newItems);
 
       pageNumber = response.pageNumber;
-
       totalPages = response.totalPages;
-    } catch (exception) {
-      error = exception.toString();
-    }
 
-    isLoadingMore = false;
-    notifyListeners();
+      loadMoreError = null;
+    } catch (exception) {
+      loadMoreError = AppErrorMessage.from(exception);
+    } finally {
+      isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> retryLoadMoreWorkshops() {
+    return loadMoreWorkshops();
   }
 
   Future<void> loadWorkshopDetails(int workshopId) async {
@@ -96,15 +113,21 @@ class WorkshopViewModel extends ChangeNotifier {
 
     try {
       selectedWorkshop = await repository.getWorkshop(workshopId);
-    } catch (exception) {
-      error = exception.toString();
-    }
 
-    isLoadingDetails = false;
-    notifyListeners();
+      error = null;
+    } catch (exception) {
+      error = AppErrorMessage.from(exception);
+    } finally {
+      isLoadingDetails = false;
+      notifyListeners();
+    }
   }
 
   Future<bool> register(int workshopId) async {
+    if (isSaving) {
+      return false;
+    }
+
     isSaving = true;
     error = null;
     notifyListeners();
@@ -112,22 +135,26 @@ class WorkshopViewModel extends ChangeNotifier {
     try {
       await repository.register(workshopId);
 
-      await loadWorkshopDetails(workshopId);
+      selectedWorkshop = await repository.getWorkshop(workshopId);
 
-      isSaving = false;
-      notifyListeners();
+      error = null;
 
       return true;
     } catch (exception) {
-      error = exception.toString();
-      isSaving = false;
-      notifyListeners();
+      error = AppErrorMessage.from(exception);
 
       return false;
+    } finally {
+      isSaving = false;
+      notifyListeners();
     }
   }
 
   Future<bool> cancelRegistration(int workshopId) async {
+    if (isSaving) {
+      return false;
+    }
+
     isSaving = true;
     error = null;
     notifyListeners();
@@ -135,30 +162,31 @@ class WorkshopViewModel extends ChangeNotifier {
     try {
       await repository.cancelRegistration(workshopId);
 
-      await loadWorkshopDetails(workshopId);
+      selectedWorkshop = await repository.getWorkshop(workshopId);
 
-      isSaving = false;
-      notifyListeners();
+      error = null;
 
       return true;
     } catch (exception) {
-      error = exception.toString();
-      isSaving = false;
-      notifyListeners();
+      error = AppErrorMessage.from(exception);
 
       return false;
+    } finally {
+      isSaving = false;
+      notifyListeners();
     }
   }
 
   Future<void> loadMyRegistrations() async {
     isLoading = true;
     error = null;
+    registrationLoadMoreError = null;
     registrationPageNumber = 1;
     notifyListeners();
 
     try {
       final response = await repository.getMyRegistrations(
-        pageNumber: registrationPageNumber,
+        pageNumber: 1,
         pageSize: pageSize,
       );
 
@@ -167,12 +195,15 @@ class WorkshopViewModel extends ChangeNotifier {
       registrationPageNumber = response.pageNumber;
 
       registrationTotalPages = response.totalPages;
-    } catch (exception) {
-      error = exception.toString();
-    }
 
-    isLoading = false;
-    notifyListeners();
+      error = null;
+      registrationLoadMoreError = null;
+    } catch (exception) {
+      error = AppErrorMessage.from(exception);
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> loadMoreMyRegistrations() async {
@@ -181,7 +212,7 @@ class WorkshopViewModel extends ChangeNotifier {
     }
 
     isLoadingMore = true;
-    error = null;
+    registrationLoadMoreError = null;
     notifyListeners();
 
     try {
@@ -190,16 +221,55 @@ class WorkshopViewModel extends ChangeNotifier {
         pageSize: pageSize,
       );
 
-      myRegistrations.addAll(response.items);
+      final existingIds = myRegistrations.map((item) => item.id).toSet();
+
+      final newItems = response.items
+          .where((item) => !existingIds.contains(item.id))
+          .toList();
+
+      myRegistrations.addAll(newItems);
 
       registrationPageNumber = response.pageNumber;
 
       registrationTotalPages = response.totalPages;
+
+      registrationLoadMoreError = null;
     } catch (exception) {
-      error = exception.toString();
+      registrationLoadMoreError = AppErrorMessage.from(exception);
+    } finally {
+      isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> retryLoadMoreMyRegistrations() {
+    return loadMoreMyRegistrations();
+  }
+
+  void clearError() {
+    if (error == null) {
+      return;
     }
 
-    isLoadingMore = false;
+    error = null;
+    notifyListeners();
+  }
+
+  void clearLoadMoreError() {
+    if (loadMoreError == null) {
+      return;
+    }
+
+    loadMoreError = null;
+    notifyListeners();
+  }
+
+  void clearRegistrationLoadMoreError() {
+    if (registrationLoadMoreError == null) {
+      return;
+    }
+
+    registrationLoadMoreError = null;
     notifyListeners();
   }
 }

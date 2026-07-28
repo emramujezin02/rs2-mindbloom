@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../core/validation/app_validators.dart';
+import '../../../../core/widgets/app_error_widget.dart';
 import '../../data/models/journal_entry_model.dart';
 import '../constants/mood_options.dart';
 import '../viewmodels/journal_viewmodel.dart';
@@ -33,7 +34,6 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
     _viewModel.addListener(_refresh);
 
     _mood = widget.entry.mood;
-
     _selectedEmotions.addAll(widget.entry.emotions);
 
     _noteController = TextEditingController(text: widget.entry.note);
@@ -44,7 +44,6 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
     _viewModel.removeListener(_refresh);
 
     _noteController.dispose();
-
     _viewModel.dispose();
 
     super.dispose();
@@ -65,6 +64,8 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
       return;
     }
 
+    FocusScope.of(context).unfocus();
+
     final success = await _viewModel.updateEntry(
       id: widget.entry.id,
       mood: _mood,
@@ -76,25 +77,15 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
       _formKey.currentState?.validate();
     }
 
-    if (!mounted) {
-      return;
-    }
-
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Journal entry updated successfully.')),
-      );
-
-      Navigator.of(context).pop(true);
-
+    if (!mounted || !success) {
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_viewModel.error ?? 'Unable to update journal entry.'),
-      ),
+      const SnackBar(content: Text('Journal entry updated successfully.')),
     );
+
+    Navigator.of(context).pop(true);
   }
 
   @override
@@ -136,7 +127,7 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
               ),
               const SizedBox(height: 20),
               FormField<Set<String>>(
-                initialValue: _selectedEmotions,
+                initialValue: Set<String>.from(_selectedEmotions),
                 validator: (_) {
                   if (_selectedEmotions.isEmpty) {
                     return 'Select at least one emotion.';
@@ -215,6 +206,7 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
                 decoration: const InputDecoration(
                   labelText: 'Short note',
                   border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
                 ),
                 validator: (value) {
                   return _viewModel.fieldError('Note') ??
@@ -223,10 +215,10 @@ class _EditJournalEntryPageState extends State<EditJournalEntryPage> {
               ),
               if (_viewModel.error != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  _viewModel.error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
+                AppInlineError(
+                  title: 'Journal entry could not be updated',
+                  error: _viewModel.error,
+                  onRetry: _save,
                 ),
               ],
               const SizedBox(height: 24),

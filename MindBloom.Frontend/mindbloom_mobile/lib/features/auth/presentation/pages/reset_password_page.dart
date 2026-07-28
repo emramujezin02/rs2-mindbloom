@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_error_widget.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
 class ResetPasswordPage extends StatefulWidget {
@@ -16,13 +17,17 @@ class ResetPasswordPage extends StatefulWidget {
 class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final AuthViewModel _viewModel = AppInjection.createAuthViewModel();
 
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  final _codeController = TextEditingController();
+  final TextEditingController _codeController = TextEditingController();
 
-  final _passwordController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
-  final _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
+  bool _obscurePassword = true;
+  bool _obscureConfirmation = true;
 
   @override
   void initState() {
@@ -33,9 +38,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onChanged);
+    _viewModel.dispose();
+
     _codeController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+
     super.dispose();
   }
 
@@ -46,9 +54,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   }
 
   Future<void> _resetPassword() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_viewModel.isLoading || !_formKey.currentState!.validate()) {
       return;
     }
+
+    FocusScope.of(context).unfocus();
 
     final success = await _viewModel.resetPassword(
       email: widget.email,
@@ -56,21 +66,17 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       newPassword: _passwordController.text,
     );
 
-    if (!mounted) {
+    if (!mounted || !success) {
       return;
     }
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password reset successful. Please login.'),
-        ),
-      );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Password reset successful. Please login.')),
+    );
 
-      Navigator.of(
-        context,
-      ).pushNamedAndRemoveUntil(AppRouter.login, (route) => false);
-    }
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(AppRouter.login, (route) => false);
   }
 
   @override
@@ -92,16 +98,14 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
-
                   const SizedBox(height: 12),
-
                   Text(widget.email, textAlign: TextAlign.center),
-
                   const SizedBox(height: 24),
-
                   TextFormField(
                     controller: _codeController,
+                    enabled: !_viewModel.isLoading,
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Reset code',
                       border: OutlineInputBorder(),
@@ -114,15 +118,28 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 14),
-
                   TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    enabled: !_viewModel.isLoading,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
                       labelText: 'New password',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        onPressed: _viewModel.isLoading
+                            ? null
+                            : () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -136,15 +153,28 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 14),
-
                   TextFormField(
                     controller: _confirmPasswordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    enabled: !_viewModel.isLoading,
+                    obscureText: _obscureConfirmation,
+                    decoration: InputDecoration(
                       labelText: 'Confirm password',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        onPressed: _viewModel.isLoading
+                            ? null
+                            : () {
+                                setState(() {
+                                  _obscureConfirmation = !_obscureConfirmation;
+                                });
+                              },
+                        icon: Icon(
+                          _obscureConfirmation
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -157,18 +187,19 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
                       return null;
                     },
+                    onFieldSubmitted: (_) {
+                      _resetPassword();
+                    },
                   ),
-
-                  const SizedBox(height: 14),
-
-                  if (_viewModel.errorMessage != null)
-                    Text(
-                      _viewModel.errorMessage!,
-                      style: const TextStyle(color: Colors.red),
+                  if (_viewModel.errorMessage != null) ...[
+                    const SizedBox(height: 14),
+                    AppInlineError(
+                      title: 'Password could not be reset',
+                      error: _viewModel.errorMessage,
+                      onRetry: _resetPassword,
                     ),
-
-                  const SizedBox(height: 14),
-
+                  ],
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _viewModel.isLoading ? null : _resetPassword,
                     child: _viewModel.isLoading

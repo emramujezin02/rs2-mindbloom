@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
 class TwoFactorSettingsPage extends StatefulWidget {
@@ -16,6 +18,7 @@ class _TwoFactorSettingsPageState extends State<TwoFactorSettingsPage> {
   @override
   void initState() {
     super.initState();
+
     _viewModel.addListener(_refresh);
     _viewModel.load2FAStatus();
   }
@@ -23,6 +26,8 @@ class _TwoFactorSettingsPageState extends State<TwoFactorSettingsPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
+    _viewModel.dispose();
+
     super.dispose();
   }
 
@@ -30,6 +35,10 @@ class _TwoFactorSettingsPageState extends State<TwoFactorSettingsPage> {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  Future<void> _reload() {
+    return _viewModel.load2FAStatus();
   }
 
   Future<void> _changeStatus(bool enabled) async {
@@ -61,7 +70,7 @@ class _TwoFactorSettingsPageState extends State<TwoFactorSettingsPage> {
       },
     );
 
-    if (confirmed != true) {
+    if (confirmed != true || !mounted) {
       return;
     }
 
@@ -85,39 +94,61 @@ class _TwoFactorSettingsPageState extends State<TwoFactorSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Two-factor authentication')),
-      body: _viewModel.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                const Icon(Icons.security, size: 80),
-                const SizedBox(height: 20),
-                const Text(
-                  'Two-factor authentication adds an email verification code to your login process.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                SwitchListTile(
-                  title: const Text('Enable two-factor authentication'),
-                  subtitle: Text(
-                    _viewModel.isTwoFactorEnabled
-                        ? 'Currently enabled'
-                        : 'Currently disabled',
-                  ),
-                  value: _viewModel.isTwoFactorEnabled,
-                  onChanged: _viewModel.isLoading ? null : _changeStatus,
-                ),
-                if (_viewModel.errorMessage != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    _viewModel.errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ],
-              ],
+      appBar: AppBar(
+        title: const Text('Two-factor authentication'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _viewModel.isLoading ? null : _reload,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_viewModel.isLoading && _viewModel.errorMessage == null) {
+      return const AppLoadingWidget(
+        message: 'Loading two-factor authentication settings...',
+      );
+    }
+
+    if (_viewModel.errorMessage != null) {
+      return AppErrorWidget(
+        title: 'Two-factor authentication settings could not be loaded',
+        error: _viewModel.errorMessage,
+        onRetry: _reload,
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _reload,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: [
+          const SizedBox(height: 20),
+          const Icon(Icons.security, size: 80),
+          const SizedBox(height: 20),
+          const Text(
+            'Two-factor authentication adds an email verification code to your login process.',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          SwitchListTile(
+            title: const Text('Enable two-factor authentication'),
+            subtitle: Text(
+              _viewModel.isTwoFactorEnabled
+                  ? 'Currently enabled'
+                  : 'Currently disabled',
             ),
+            value: _viewModel.isTwoFactorEnabled,
+            onChanged: _viewModel.isLoading ? null : _changeStatus,
+          ),
+        ],
+      ),
     );
   }
 }

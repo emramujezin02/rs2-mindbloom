@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../core/validation/app_validators.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../../journal/data/models/journal_entry_model.dart';
 import '../../../journal/presentation/constants/mood_options.dart';
 import '../../data/models/private_journal_entry_model.dart';
@@ -44,7 +46,6 @@ class _EditPrivateJournalEntryPageState
     _contentController = TextEditingController(text: widget.entry.content);
 
     _entryDate = widget.entry.entryDateUtc.toLocal();
-
     _selectedMoodEntryId = widget.entry.moodEntryId;
 
     _viewModel.loadMoodEntries();
@@ -55,7 +56,6 @@ class _EditPrivateJournalEntryPageState
     _viewModel.removeListener(_refresh);
 
     _titleController.dispose();
-
     _contentController.dispose();
 
     _viewModel.dispose();
@@ -105,6 +105,8 @@ class _EditPrivateJournalEntryPageState
       return;
     }
 
+    FocusScope.of(context).unfocus();
+
     final success = await _viewModel.updateEntry(
       id: widget.entry.id,
       title: _titleController.text.trim(),
@@ -117,25 +119,17 @@ class _EditPrivateJournalEntryPageState
       _formKey.currentState?.validate();
     }
 
-    if (!mounted) {
-      return;
-    }
-
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Private journal entry updated successfully.'),
-        ),
-      );
-
-      Navigator.of(context).pop(true);
-
+    if (!mounted || !success) {
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_viewModel.error ?? 'Unable to update entry.')),
+      const SnackBar(
+        content: Text('Private journal entry updated successfully.'),
+      ),
     );
+
+    Navigator.of(context).pop(true);
   }
 
   @override
@@ -192,10 +186,10 @@ class _EditPrivateJournalEntryPageState
               _buildMoodSelection(),
               if (_viewModel.error != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  _viewModel.error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
+                AppInlineError(
+                  title: 'Private journal entry could not be updated',
+                  error: _viewModel.error,
+                  onRetry: _save,
                 ),
               ],
               const SizedBox(height: 20),
@@ -219,7 +213,12 @@ class _EditPrivateJournalEntryPageState
 
   Widget _buildMoodSelection() {
     if (_viewModel.isLoadingMoodEntries) {
-      return const Center(child: CircularProgressIndicator());
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: AppInlineLoadingIndicator(message: 'Loading mood entries...'),
+        ),
+      );
     }
 
     return DropdownButtonFormField<int?>(
@@ -259,7 +258,6 @@ class _EditPrivateJournalEntryPageState
 
     final date = DateFormat('dd.MM.yyyy.').format(entry.createdAtUtc.toLocal());
 
-    return '$date · ${mood.label} · '
-        '${entry.emotions.join(', ')}';
+    return '$date · ${mood.label} · ${entry.emotions.join(', ')}';
   }
 }

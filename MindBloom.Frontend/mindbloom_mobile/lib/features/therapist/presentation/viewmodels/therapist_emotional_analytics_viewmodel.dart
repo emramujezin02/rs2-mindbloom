@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/therapist_mood_trend_model.dart';
 import '../../data/repositories/therapist_repository.dart';
 
@@ -11,11 +12,9 @@ class TherapistEmotionalAnalyticsViewModel extends ChangeNotifier {
   static const List<int> availablePeriods = [7, 14, 30, 90, 180, 365];
 
   bool isLoading = false;
-
   String? errorMessage;
 
   int selectedPeriod = 30;
-
   int? clientId;
 
   TherapistMoodTrendModel? analytics;
@@ -42,8 +41,13 @@ class TherapistEmotionalAnalyticsViewModel extends ChangeNotifier {
         clientId: clientId,
         days: selectedPeriod,
       );
+
+      errorMessage = null;
     } catch (error) {
-      errorMessage = _cleanError(error);
+      errorMessage = AppErrorMessage.from(
+        error,
+        fallback: 'Emocionalnu analitiku nije moguće učitati.',
+      );
     } finally {
       isLoading = false;
       notifyListeners();
@@ -64,7 +68,6 @@ class TherapistEmotionalAnalyticsViewModel extends ChangeNotifier {
     }
 
     selectedPeriod = normalizedDays;
-
     notifyListeners();
 
     await loadAnalytics(clientId: currentClientId, days: normalizedDays);
@@ -81,24 +84,12 @@ class TherapistEmotionalAnalyticsViewModel extends ChangeNotifier {
   }
 
   void clearError() {
+    if (errorMessage == null) return;
     errorMessage = null;
     notifyListeners();
   }
 
   int _normalizePeriod(int value) {
-    if (availablePeriods.contains(value)) {
-      return value;
-    }
-
-    return 30;
-  }
-
-  String _cleanError(Object error) {
-    return error
-        .toString()
-        .replaceFirst('Exception: ', '')
-        .replaceFirst('AppException: ', '')
-        .replaceFirst('FormatException: ', '')
-        .trim();
+    return availablePeriods.contains(value) ? value : 30;
   }
 }

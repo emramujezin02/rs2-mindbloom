@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/error/app_exception.dart';
+import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/create_journal_entry_request.dart';
 import '../../data/models/journal_entry_model.dart';
 import '../../data/repositories/journal_repository.dart';
-import '../../../../core/error/app_exception.dart';
 
 class JournalViewModel extends ChangeNotifier {
   final JournalRepository repository;
@@ -13,10 +14,12 @@ class JournalViewModel extends ChangeNotifier {
   bool isLoading = false;
   bool isLoadingMore = false;
   bool isSaving = false;
+
   DateTime? fromDate;
   DateTime? toDate;
 
   String? error;
+  String? loadMoreError;
 
   List<JournalEntryModel> entries = [];
 
@@ -24,39 +27,33 @@ class JournalViewModel extends ChangeNotifier {
   final int pageSize = 10;
   int totalPages = 0;
 
+  Map<String, List<String>> fieldErrors = {};
+
   bool get hasMorePages => pageNumber < totalPages;
 
   Future<void> loadEntries() async {
+    if (isLoading) return;
+
     isLoading = true;
     error = null;
-    pageNumber = 1;
+    loadMoreError = null;
     notifyListeners();
 
     try {
       final response = await repository.getMyJournal(
-        pageNumber: pageNumber,
+        pageNumber: 1,
         pageSize: pageSize,
-        fromUtc: fromDate == null
-            ? null
-            : DateTime(fromDate!.year, fromDate!.month, fromDate!.day).toUtc(),
-        toUtc: toDate == null
-            ? null
-            : DateTime(
-                toDate!.year,
-                toDate!.month,
-                toDate!.day,
-                23,
-                59,
-                59,
-                999,
-              ).toUtc(),
+        fromUtc: _fromUtc,
+        toUtc: _toUtc,
       );
 
       entries = response.items;
       pageNumber = response.pageNumber;
       totalPages = response.totalPages;
+      error = null;
+      loadMoreError = null;
     } catch (exception) {
-      error = exception.toString().replaceFirst('Exception: ', '');
+      error = AppErrorMessage.from(exception);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -64,54 +61,48 @@ class JournalViewModel extends ChangeNotifier {
   }
 
   Future<void> loadMore() async {
-    if (isLoadingMore || !hasMorePages) {
-      return;
-    }
+    if (isLoadingMore || isLoading || !hasMorePages) return;
 
     isLoadingMore = true;
+    loadMoreError = null;
+    notifyListeners();
+
+    try {
+      final response = await repository.getMyJournal(
+        pageNumber: pageNumber + 1,
+        pageSize: pageSize,
+        fromUtc: _fromUtc,
+        toUtc: _toUtc,
+      );
+
+      final existingIds = entries.map((entry) => entry.id).toSet();
+      entries.addAll(
+        response.items.where((entry) => !existingIds.contains(entry.id)),
+      );
+
+      pageNumber = response.pageNumber;
+      totalPages = response.totalPages;
+      loadMoreError = null;
+    } catch (exception) {
+      loadMoreError = AppErrorMessage.from(exception);
+    } finally {
+      isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> retryLoadMore() => loadMore();
+
+  Future<JournalEntryModel?> getEntry(int id) async {
     error = null;
     notifyListeners();
 
     try {
-      final nextPage = pageNumber + 1;
-
-      final response = await repository.getMyJournal(
-        pageNumber: nextPage,
-        pageSize: pageSize,
-        fromUtc: fromDate == null
-            ? null
-            : DateTime(fromDate!.year, fromDate!.month, fromDate!.day).toUtc(),
-        toUtc: toDate == null
-            ? null
-            : DateTime(
-                toDate!.year,
-                toDate!.month,
-                toDate!.day,
-                23,
-                59,
-                59,
-                999,
-              ).toUtc(),
-      );
-
-      entries.addAll(response.items);
-
-      pageNumber = response.pageNumber;
-
-      totalPages = response.totalPages;
+      final entry = await repository.getJournalEntry(id);
+      error = null;
+      return entry;
     } catch (exception) {
-      error = exception.toString();
-    }
-
-    isLoadingMore = false;
-    notifyListeners();
-  }
-
-  Future<JournalEntryModel?> getEntry(int id) async {
-    try {
-      return await repository.getJournalEntry(id);
-    } catch (exception) {
-      error = exception.toString();
+      error = AppErrorMessage.from(exception);
       notifyListeners();
       return null;
     }
@@ -122,22 +113,20 @@ class JournalViewModel extends ChangeNotifier {
     required List<String> emotions,
     required String note,
   }) async {
+    if (isSaving) return false;
+
     isSaving = true;
     error = null;
+    fieldErrors = {};
     notifyListeners();
 
     try {
       await repository.createJournalEntry(
         CreateJournalEntryRequest(mood: mood, emotions: emotions, note: note),
       );
-
-      isSaving = false;
-      notifyListeners();
-
       return true;
     } catch (exception) {
       _setError(exception, fallback: 'Zapis dnevnika nije moguće sačuvati.');
-
       return false;
     } finally {
       isSaving = false;
@@ -151,8 +140,11 @@ class JournalViewModel extends ChangeNotifier {
     required List<String> emotions,
     required String note,
   }) async {
+    if (isSaving) return false;
+
     isSaving = true;
     error = null;
+    fieldErrors = {};
     notifyListeners();
 
     try {
@@ -162,14 +154,9 @@ class JournalViewModel extends ChangeNotifier {
         emotions: emotions,
         note: note,
       );
-
-      isSaving = false;
-      notifyListeners();
-
       return true;
     } catch (exception) {
       _setError(exception, fallback: 'Zapis dnevnika nije moguće sačuvati.');
-
       return false;
     } finally {
       isSaving = false;
@@ -179,20 +166,17 @@ class JournalViewModel extends ChangeNotifier {
 
   Future<bool> deleteEntry(int id) async {
     error = null;
+    notifyListeners();
 
     try {
       await repository.deleteJournalEntry(id);
-
       entries.removeWhere((entry) => entry.id == id);
-
-      notifyListeners();
-
       return true;
     } catch (exception) {
-      error = exception.toString();
-      notifyListeners();
-
+      error = AppErrorMessage.from(exception);
       return false;
+    } finally {
+      notifyListeners();
     }
   }
 
@@ -208,8 +192,6 @@ class JournalViewModel extends ChangeNotifier {
     await loadEntries();
   }
 
-  Map<String, List<String>> fieldErrors = {};
-
   String? fieldError(String fieldName) {
     final requested = _normalizeFieldName(fieldName);
 
@@ -223,19 +205,49 @@ class JournalViewModel extends ChangeNotifier {
     return null;
   }
 
+  void clearError() {
+    if (error == null) return;
+    error = null;
+    notifyListeners();
+  }
+
+  void clearLoadMoreError() {
+    if (loadMoreError == null) return;
+    loadMoreError = null;
+    notifyListeners();
+  }
+
+  DateTime? get _fromUtc {
+    final value = fromDate;
+    if (value == null) return null;
+    return DateTime(value.year, value.month, value.day).toUtc();
+  }
+
+  DateTime? get _toUtc {
+    final value = toDate;
+    if (value == null) return null;
+    return DateTime(
+      value.year,
+      value.month,
+      value.day,
+      23,
+      59,
+      59,
+      999,
+    ).toUtc();
+  }
+
   void _setError(Object exception, {required String fallback}) {
     if (exception is AppException) {
       error = exception.message.trim().isEmpty
           ? fallback
           : exception.message.trim();
-
       fieldErrors = Map<String, List<String>>.from(exception.fieldErrors);
-
       return;
     }
 
-    final message = exception.toString().replaceFirst('Exception: ', '').trim();
-
+    fieldErrors = {};
+    final message = AppErrorMessage.from(exception).trim();
     error = message.isEmpty ? fallback : message;
   }
 

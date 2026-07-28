@@ -3,6 +3,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../viewmodels/chat_list_viewmodel.dart';
 
 class ChatListPage extends StatefulWidget {
@@ -20,14 +23,12 @@ class _ChatListPageState extends State<ChatListPage> {
     super.initState();
 
     _viewModel.addListener(_onChanged);
-
     _viewModel.loadConversations();
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onChanged);
-
     _viewModel.dispose();
 
     super.dispose();
@@ -39,8 +40,8 @@ class _ChatListPageState extends State<ChatListPage> {
     }
   }
 
-  Future<void> _refresh() async {
-    await _viewModel.loadConversations();
+  Future<void> _refresh() {
+    return _viewModel.loadConversations();
   }
 
   Future<void> _openConversation(int appointmentId) async {
@@ -58,50 +59,43 @@ class _ChatListPageState extends State<ChatListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Messages')),
+      appBar: AppBar(
+        title: const Text('Messages'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _viewModel.isLoading ? null : _refresh,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: _buildBody(),
     );
   }
 
   Widget _buildBody() {
     if (_viewModel.isLoading && _viewModel.conversations.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading conversations...',
+        skeletonItemCount: 6,
+      );
     }
 
     if (_viewModel.errorMessage != null && _viewModel.conversations.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _viewModel.errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _refresh,
-                child: const Text('Try again'),
-              ),
-            ],
-          ),
-        ),
+      return AppErrorWidget(
+        title: 'Conversations could not be loaded',
+        error: _viewModel.errorMessage,
+        onRetry: _refresh,
       );
     }
 
     if (_viewModel.conversations.isEmpty) {
       return RefreshIndicator(
         onRefresh: _refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 180),
-            Icon(Icons.chat_bubble_outline, size: 64),
-            SizedBox(height: 12),
-            Center(child: Text('You do not have any conversations.')),
-          ],
+        child: const AppEmptyStateWidget(
+          title: 'No conversations',
+          message: 'You do not have any conversations yet.',
+          icon: Icons.chat_bubble_outline,
         ),
       );
     }
@@ -111,11 +105,25 @@ class _ChatListPageState extends State<ChatListPage> {
     return RefreshIndicator(
       onRefresh: _refresh,
       child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(12),
-        itemCount: _viewModel.conversations.length,
+        itemCount:
+            _viewModel.conversations.length +
+            (_viewModel.errorMessage != null ? 1 : 0),
         separatorBuilder: (context, index) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
-          final conversation = _viewModel.conversations[index];
+          if (_viewModel.errorMessage != null && index == 0) {
+            return AppInlineError(
+              title: 'Conversations could not be refreshed',
+              error: _viewModel.errorMessage,
+              onRetry: _refresh,
+            );
+          }
+
+          final conversationIndex =
+              index - (_viewModel.errorMessage != null ? 1 : 0);
+
+          final conversation = _viewModel.conversations[conversationIndex];
 
           return Card(
             child: ListTile(

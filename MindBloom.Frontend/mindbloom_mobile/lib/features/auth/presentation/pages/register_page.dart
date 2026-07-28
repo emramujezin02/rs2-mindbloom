@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_error_widget.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -14,19 +15,21 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final AuthViewModel _viewModel = AppInjection.createAuthViewModel();
 
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  final _firstNameController = TextEditingController();
+  final TextEditingController _firstNameController = TextEditingController();
 
-  final _lastNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
 
-  final _usernameController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
 
-  final _emailController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
 
-  final _passwordController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   DateTime? _dateOfBirth;
+  bool _obscurePassword = true;
+  String? _localError;
 
   @override
   void initState() {
@@ -37,11 +40,14 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onChanged);
+    _viewModel.dispose();
+
     _firstNameController.dispose();
     _lastNameController.dispose();
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+
     super.dispose();
   }
 
@@ -52,6 +58,10 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _pickDate() async {
+    if (_viewModel.isLoading) {
+      return;
+    }
+
     final now = DateTime.now();
 
     final picked = await showDatePicker(
@@ -61,60 +71,71 @@ class _RegisterPageState extends State<RegisterPage> {
       lastDate: now,
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _dateOfBirth = picked;
+        _localError = null;
       });
     }
   }
 
   Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_viewModel.isLoading || !_formKey.currentState!.validate()) {
       return;
     }
 
     if (_dateOfBirth == null) {
       setState(() {
-        _viewModel.errorMessage = 'Date of birth is required.';
+        _localError = 'Date of birth is required.';
       });
       return;
     }
+
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _localError = null;
+    });
+
+    final email = _emailController.text.trim();
 
     final success = await _viewModel.register(
       firstName: _firstNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
       username: _usernameController.text.trim(),
-      email: _emailController.text.trim(),
+      email: email,
       password: _passwordController.text,
       dateOfBirth: _dateOfBirth!,
     );
 
-    if (!mounted) {
+    if (!mounted || !success) {
       return;
     }
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Registration successful. Enter the code sent to your email.',
-          ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Registration successful. Enter the code sent to your email.',
         ),
-      );
+      ),
+    );
 
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRouter.verifyEmail,
-        (route) => false,
-        arguments: _emailController.text.trim(),
-      );
-    }
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      AppRouter.verifyEmail,
+      (route) => false,
+      arguments: email,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final dateText = _dateOfBirth == null
         ? 'Choose date of birth'
-        : '${_dateOfBirth!.day}.${_dateOfBirth!.month}.${_dateOfBirth!.year}.';
+        : '${_dateOfBirth!.day}.'
+              '${_dateOfBirth!.month}.'
+              '${_dateOfBirth!.year}.';
+
+    final error = _localError ?? _viewModel.errorMessage;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Register')),
@@ -133,11 +154,10 @@ class _RegisterPageState extends State<RegisterPage> {
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
-
                   const SizedBox(height: 24),
-
                   TextFormField(
                     controller: _firstNameController,
+                    enabled: !_viewModel.isLoading,
                     decoration: const InputDecoration(
                       labelText: 'First name',
                       border: OutlineInputBorder(),
@@ -150,11 +170,10 @@ class _RegisterPageState extends State<RegisterPage> {
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 14),
-
                   TextFormField(
                     controller: _lastNameController,
+                    enabled: !_viewModel.isLoading,
                     decoration: const InputDecoration(
                       labelText: 'Last name',
                       border: OutlineInputBorder(),
@@ -167,11 +186,10 @@ class _RegisterPageState extends State<RegisterPage> {
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 14),
-
                   TextFormField(
                     controller: _usernameController,
+                    enabled: !_viewModel.isLoading,
                     decoration: const InputDecoration(
                       labelText: 'Username',
                       border: OutlineInputBorder(),
@@ -184,37 +202,51 @@ class _RegisterPageState extends State<RegisterPage> {
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 14),
-
                   TextFormField(
                     controller: _emailController,
+                    enabled: !_viewModel.isLoading,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
                       labelText: 'Email',
                       border: OutlineInputBorder(),
                     ),
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
+                      final email = value?.trim() ?? '';
+
+                      if (email.isEmpty) {
                         return 'Email is required.';
                       }
 
-                      if (!value.contains('@')) {
+                      if (!email.contains('@')) {
                         return 'Enter a valid email address.';
                       }
 
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 14),
-
                   TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    enabled: !_viewModel.isLoading,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
                       labelText: 'Password',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        onPressed: _viewModel.isLoading
+                            ? null
+                            : () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -228,25 +260,21 @@ class _RegisterPageState extends State<RegisterPage> {
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 14),
-
                   OutlinedButton.icon(
-                    onPressed: _pickDate,
+                    onPressed: _viewModel.isLoading ? null : _pickDate,
                     icon: const Icon(Icons.calendar_month),
                     label: Text(dateText),
                   ),
-
-                  const SizedBox(height: 14),
-
-                  if (_viewModel.errorMessage != null)
-                    Text(
-                      _viewModel.errorMessage!,
-                      style: const TextStyle(color: Colors.red),
+                  if (error != null) ...[
+                    const SizedBox(height: 14),
+                    AppInlineError(
+                      title: 'Registration could not be completed',
+                      error: error,
+                      onRetry: _register,
                     ),
-
-                  const SizedBox(height: 14),
-
+                  ],
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _viewModel.isLoading ? null : _register,
                     child: _viewModel.isLoading
@@ -257,15 +285,15 @@ class _RegisterPageState extends State<RegisterPage> {
                           )
                         : const Text('Register'),
                   ),
-
                   const SizedBox(height: 12),
-
                   TextButton(
-                    onPressed: () {
-                      Navigator.of(
-                        context,
-                      ).pushReplacementNamed(AppRouter.login);
-                    },
+                    onPressed: _viewModel.isLoading
+                        ? null
+                        : () {
+                            Navigator.of(
+                              context,
+                            ).pushReplacementNamed(AppRouter.login);
+                          },
                     child: const Text('Already have an account? Login'),
                   ),
                 ],

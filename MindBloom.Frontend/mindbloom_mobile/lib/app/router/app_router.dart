@@ -44,7 +44,6 @@ import '../../features/journal/presentation/pages/add_journal_entry_page.dart';
 import '../../features/journal/data/models/journal_entry_model.dart';
 import '../../features/journal/presentation/pages/edit_journal_entry_page.dart';
 import '../../features/journal/presentation/pages/journal_entry_details_page.dart';
-
 import '../../features/article/presentation/pages/article_details_page.dart';
 import '../../features/article/presentation/pages/article_list_page.dart';
 

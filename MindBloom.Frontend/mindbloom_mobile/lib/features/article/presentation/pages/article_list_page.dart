@@ -5,6 +5,9 @@ import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/widgets/public_footer.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/article_model.dart';
 import '../viewmodels/article_viewmodel.dart';
 
@@ -188,114 +191,91 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   Widget _buildBody() {
-    if (_viewModel.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+    if (_viewModel.isLoading && _viewModel.articles.isEmpty) {
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading articles...',
+        skeletonItemCount: 5,
+      );
     }
 
     if (_viewModel.error != null && _viewModel.articles.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          const SizedBox(height: 120),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                const Icon(Icons.error_outline, size: 52),
-                const SizedBox(height: 12),
-                Text(
-                  _viewModel.error!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  onPressed: _refresh,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Try again'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 120),
-          const PublicFooter(),
-        ],
+      return AppErrorWidget(
+        title: 'Articles could not be loaded',
+        error: _viewModel.error,
+        onRetry: _refresh,
+        footer: const PublicFooter(),
       );
     }
 
     if (_viewModel.articles.isEmpty) {
       return RefreshIndicator(
         onRefresh: _refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 150),
-            Icon(Icons.article_outlined, size: 60),
-            SizedBox(height: 16),
-            Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'No articles were found.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-            SizedBox(height: 150),
-            PublicFooter(),
-          ],
+        child: const AppEmptyStateWidget(
+          title: 'No articles found',
+          message: 'Try changing the search text or selected category.',
+          icon: Icons.article_outlined,
+          footer: PublicFooter(),
         ),
       );
     }
 
-    final hasPaginationItem = _viewModel.hasMorePages;
-
-    final footerIndex =
-        _viewModel.articles.length + (hasPaginationItem ? 1 : 0);
-
     return RefreshIndicator(
       onRefresh: _refresh,
-      child: ListView.builder(
+      child: ListView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.zero,
-        itemCount: footerIndex + 1,
-        itemBuilder: (context, index) {
-          if (index == footerIndex) {
-            return const Padding(
-              padding: EdgeInsets.only(top: 20),
-              child: PublicFooter(),
-            );
-          }
+        children: [
+          if (_viewModel.error != null)
+            AppInlineError(
+              title: 'Articles could not be refreshed',
+              error: _viewModel.error,
+              onRetry: _refresh,
+              margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            ),
+          ..._viewModel.articles.asMap().entries.map((entry) {
+            final index = entry.key;
+            final article = entry.value;
 
-          if (index == _viewModel.articles.length && hasPaginationItem) {
             return Padding(
-              padding: const EdgeInsets.all(20),
-              child: Center(
-                child: _viewModel.isLoadingMore
-                    ? const CircularProgressIndicator()
-                    : ElevatedButton(
-                        onPressed: _viewModel.loadMore,
-                        child: const Text('Load more'),
-                      ),
+              padding: EdgeInsets.only(
+                left: 12,
+                right: 12,
+                top: index == 0 ? 12 : 0,
+              ),
+              child: _ArticleCard(
+                article: article,
+                imageUrl: _buildImageUrl(article.imageUrl),
               ),
             );
-          }
-
-          final article = _viewModel.articles[index];
-
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 12,
-              right: 12,
-              top: index == 0 ? 12 : 0,
+          }),
+          if (_viewModel.isLoadingMore)
+            const AppLoadMoreIndicator(
+              loadingMessage: 'Loading more articles...',
+            )
+          else if (_viewModel.loadMoreError != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: AppLoadMoreError(
+                error: _viewModel.loadMoreError,
+                fallbackMessage: 'More articles could not be loaded.',
+                onRetry: _viewModel.retryLoadMore,
+              ),
+            )
+          else if (_viewModel.hasMorePages)
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: OutlinedButton.icon(
+                onPressed: _viewModel.loadMore,
+                icon: const Icon(Icons.expand_more),
+                label: const Text('Load more'),
+              ),
             ),
-            child: _ArticleCard(
-              article: article,
-              imageUrl: _buildImageUrl(article.imageUrl),
-            ),
-          );
-        },
+          const Padding(
+            padding: EdgeInsets.only(top: 20),
+            child: PublicFooter(),
+          ),
+        ],
       ),
     );
   }

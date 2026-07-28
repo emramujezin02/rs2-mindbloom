@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/widgets/app_loading_widget.dart';
+
 class AvailableSlotsPreview extends StatelessWidget {
   final bool isLoading;
-
   final Map<DateTime, List<DateTime>> groupedSlots;
-
   final ValueChanged<DateTime> onBookSlot;
-
   final VoidCallback onShowAllSlots;
 
   const AvailableSlotsPreview({
@@ -23,8 +22,10 @@ class AvailableSlotsPreview extends StatelessWidget {
     if (isLoading) {
       return const Card(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Center(child: CircularProgressIndicator()),
+          padding: EdgeInsets.all(20),
+          child: AppInlineLoadingIndicator(
+            message: 'Loading available appointments...',
+          ),
         ),
       );
     }
@@ -116,9 +117,7 @@ class AvailableSlotsPreview extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
-
     final today = DateTime(now.year, now.month, now.day);
-
     final normalizedDate = DateTime(date.year, date.month, date.day);
 
     if (normalizedDate == today) {

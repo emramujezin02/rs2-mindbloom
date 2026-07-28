@@ -4,6 +4,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/emotion_analytics_item_model.dart';
 import '../../data/models/mood_trend_point_model.dart';
 import '../../data/models/therapist_mood_trend_model.dart';
@@ -105,12 +108,16 @@ class _TherapistEmotionalAnalyticsPageState
 
   Widget _buildBody() {
     if (viewModel.isLoading && viewModel.analytics == null) {
-      return const _AnalyticsLoadingState();
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading emotional analytics...',
+        skeletonItemCount: 5,
+      );
     }
 
     if (viewModel.errorMessage != null && viewModel.analytics == null) {
-      return _AnalyticsErrorState(
-        message: viewModel.errorMessage!,
+      return AppErrorWidget(
+        title: 'Analytics could not be loaded',
+        error: viewModel.errorMessage,
         onRetry: _refresh,
       );
     }
@@ -118,9 +125,12 @@ class _TherapistEmotionalAnalyticsPageState
     final analytics = viewModel.analytics;
 
     if (analytics == null) {
-      return _AnalyticsErrorState(
-        message: 'Emotional analytics are not available.',
-        onRetry: _refresh,
+      return AppEmptyStateWidget(
+        title: 'Analytics unavailable',
+        message: 'Emotional analytics are not available for this client.',
+        icon: Icons.insights_outlined,
+        actionLabel: 'Refresh',
+        onAction: _refresh,
       );
     }
 
@@ -149,14 +159,23 @@ class _TherapistEmotionalAnalyticsPageState
                 ],
                 if (viewModel.errorMessage != null) ...[
                   const SizedBox(height: 14),
-                  _InlineErrorMessage(
-                    message: viewModel.errorMessage!,
-                    onDismiss: viewModel.clearError,
+                  AppInlineError(
+                    title: 'Analytics could not be refreshed',
+                    error: viewModel.errorMessage,
+                    onRetry: _refresh,
                   ),
                 ],
                 const SizedBox(height: 18),
                 if (!analytics.hasData)
-                  _EmptyAnalyticsState(days: analytics.days)
+                  AppEmptyStateWidget(
+                    title: 'No analytics data',
+                    message:
+                        'The client has not recorded any mood or emotion entries '
+                        'during the last ${analytics.days} days.',
+                    icon: Icons.insights_outlined,
+                    actionLabel: 'Refresh',
+                    onAction: _refresh,
+                  )
                 else ...[
                   _AnalyticsSummarySection(analytics: analytics),
                   const SizedBox(height: 18),
@@ -1208,186 +1227,6 @@ class _AnalyticsPrivacyNotice extends StatelessWidget {
               'included or displayed.',
               style: TextStyle(color: Color(0xFF42634C), height: 1.45),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyAnalyticsState extends StatelessWidget {
-  final int days;
-
-  const _EmptyAnalyticsState({required this.days});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 58),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE5DBEF)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: const BoxDecoration(
-              color: Color(0xFFEDE5FA),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.insights_outlined,
-              size: 42,
-              color: Color(0xFF8063A4),
-            ),
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            'No analytics data',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFF40334D),
-              fontSize: 21,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 9),
-          Text(
-            'The client has not recorded any '
-            'mood or emotion entries during '
-            'the last $days days.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF756D79), height: 1.45),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AnalyticsLoadingState extends StatelessWidget {
-  const _AnalyticsLoadingState();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(24),
-      children: const [
-        SizedBox(height: 220),
-        Center(
-          child: Column(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 17),
-              Text(
-                'Loading emotional analytics...',
-                style: TextStyle(color: Color(0xFF756D79)),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AnalyticsErrorState extends StatelessWidget {
-  final String message;
-  final Future<void> Function() onRetry;
-
-  const _AnalyticsErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(24),
-      children: [
-        const SizedBox(height: 130),
-        Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 520),
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0xFFE5DBEF)),
-            ),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 58,
-                  color: Colors.redAccent,
-                ),
-                const SizedBox(height: 17),
-                const Text(
-                  'Analytics could not be loaded',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF40334D),
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Color(0xFF756D79)),
-                ),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: () {
-                    onRetry();
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Try again'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _InlineErrorMessage extends StatelessWidget {
-  final String message;
-  final VoidCallback onDismiss;
-
-  const _InlineErrorMessage({required this.message, required this.onDismiss});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFEEEE),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFF0CACA)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: Color(0xFFAA3D3D)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(color: Color(0xFF833434)),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Dismiss',
-            onPressed: onDismiss,
-            icon: const Icon(Icons.close, size: 19),
           ),
         ],
       ),

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:mindbloom_mobile/core/validation/app_validators.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/validation/app_validators.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../../appointment/data/models/appointment_model.dart';
 import '../viewmodels/create_review_viewmodel.dart';
 
@@ -18,9 +21,9 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
   final CreateReviewViewModel _viewModel =
       AppInjection.createCreateReviewViewModel();
 
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  final _commentController = TextEditingController();
+  final TextEditingController _commentController = TextEditingController();
 
   int _rating = 5;
 
@@ -29,7 +32,6 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
     super.initState();
 
     _viewModel.addListener(_refresh);
-
     _viewModel.checkEligibility(widget.appointment.id);
   }
 
@@ -48,14 +50,16 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
     }
   }
 
+  Future<void> _checkEligibility() {
+    return _viewModel.checkEligibility(widget.appointment.id);
+  }
+
   Future<void> _submitReview() async {
-    if (_viewModel.isLoading) {
+    if (_viewModel.isLoading || !_formKey.currentState!.validate()) {
       return;
     }
 
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    FocusScope.of(context).unfocus();
 
     final success = await _viewModel.createReview(
       appointmentId: widget.appointment.id,
@@ -67,17 +71,15 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
       _formKey.currentState?.validate();
     }
 
-    if (!mounted) {
+    if (!mounted || !success) {
       return;
     }
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Recenzija je poslana na moderaciju.')),
-      );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Recenzija je poslana na moderaciju.')),
+    );
 
-      Navigator.of(context).pop(true);
-    }
+    Navigator.of(context).pop(true);
   }
 
   @override
@@ -90,39 +92,44 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
 
   Widget _buildBody() {
     if (_viewModel.isCheckingEligibility) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingWidget(message: 'Checking review eligibility...');
     }
 
     if (_viewModel.error != null && _viewModel.eligibility == null) {
-      return _MessageState(
-        icon: Icons.error_outline,
-        message: _viewModel.error!,
-        buttonText: 'Try again',
-        onPressed: () {
-          _viewModel.checkEligibility(widget.appointment.id);
-        },
+      return AppErrorWidget(
+        title: 'Review eligibility could not be checked',
+        error: _viewModel.error,
+        onRetry: _checkEligibility,
       );
     }
 
     final eligibility = _viewModel.eligibility;
 
     if (eligibility == null) {
-      return const _MessageState(
-        icon: Icons.error_outline,
+      return const AppEmptyStateWidget(
+        title: 'Review unavailable',
         message: 'Review eligibility could not be determined.',
+        icon: Icons.rate_review_outlined,
       );
     }
 
     if (!eligibility.canReview) {
-      return _MessageState(
+      return AppEmptyStateWidget(
+        title: 'Review unavailable',
+        message: eligibility.message,
         icon: eligibility.existingReviewId != null
             ? Icons.rate_review_outlined
             : Icons.lock_outline,
-        message: eligibility.message,
-        secondaryMessage: eligibility.moderationStatus == null
+        footer: eligibility.moderationStatus == null
             ? null
-            : 'Moderation status: '
+            : Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Moderation status: '
                   '${eligibility.moderationStatus}',
+                  textAlign: TextAlign.center,
+                ),
+              ),
       );
     }
 
@@ -138,21 +145,14 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 8),
-
             const Text(
-              'Your review will become public only '
-              'after administrator approval.',
+              'Your review will become public only after administrator approval.',
               textAlign: TextAlign.center,
             ),
-
             const SizedBox(height: 24),
-
             const Text('Rating', style: TextStyle(fontWeight: FontWeight.bold)),
-
             const SizedBox(height: 8),
-
             DropdownButtonFormField<int>(
               initialValue: _rating,
               decoration: const InputDecoration(border: OutlineInputBorder()),
@@ -163,22 +163,23 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
                 DropdownMenuItem(value: 4, child: Text('4 - Good')),
                 DropdownMenuItem(value: 5, child: Text('5 - Excellent')),
               ],
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _rating = value;
-                  });
-                }
-              },
+              onChanged: _viewModel.isLoading
+                  ? null
+                  : (value) {
+                      if (value != null) {
+                        setState(() {
+                          _rating = value;
+                        });
+                      }
+                    },
             ),
-
             const SizedBox(height: 16),
-
             TextFormField(
               controller: _commentController,
               minLines: 4,
               maxLines: 7,
               maxLength: 1000,
+              enabled: !_viewModel.isLoading,
               decoration: const InputDecoration(
                 labelText: 'Comment',
                 hintText: 'Describe your experience with the therapist.',
@@ -190,18 +191,15 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
                     AppValidators.reviewComment(value);
               },
             ),
-
             if (_viewModel.error != null) ...[
               const SizedBox(height: 12),
-              Text(
-                _viewModel.error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
+              AppInlineError(
+                title: 'Review could not be submitted',
+                error: _viewModel.error,
+                onRetry: _submitReview,
               ),
             ],
-
             const SizedBox(height: 16),
-
             ElevatedButton.icon(
               onPressed: _viewModel.isLoading ? null : _submitReview,
               icon: _viewModel.isLoading
@@ -215,59 +213,6 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
                 _viewModel.isLoading ? 'Submitting...' : 'Submit review',
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MessageState extends StatelessWidget {
-  final IconData icon;
-  final String message;
-  final String? secondaryMessage;
-  final String? buttonText;
-  final VoidCallback? onPressed;
-
-  const _MessageState({
-    required this.icon,
-    required this.message,
-    this.secondaryMessage,
-    this.buttonText,
-    this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 64),
-
-            const SizedBox(height: 16),
-
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 17),
-            ),
-
-            if (secondaryMessage != null) ...[
-              const SizedBox(height: 10),
-              Text(
-                secondaryMessage!,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-
-            if (buttonText != null && onPressed != null) ...[
-              const SizedBox(height: 20),
-              ElevatedButton(onPressed: onPressed, child: Text(buttonText!)),
-            ],
           ],
         ),
       ),

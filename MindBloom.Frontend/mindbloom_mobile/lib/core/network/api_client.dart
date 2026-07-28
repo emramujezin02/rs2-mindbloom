@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -9,6 +10,8 @@ import '../error/app_exception.dart';
 import '../navigation/app_navigation.dart';
 
 class ApiClient {
+  static const Duration _requestTimeout = Duration(seconds: 30);
+
   final SessionStorageService sessionStorage;
 
   Future<bool>? _refreshInProgress;
@@ -19,10 +22,12 @@ class ApiClient {
     return _executeRequest(
       requiresAuth: requiresAuth,
       request: () async {
-        return http.get(
-          _buildUri(endpoint),
-          headers: await _headers(requiresAuth: requiresAuth),
-        );
+        return http
+            .get(
+              _buildUri(endpoint),
+              headers: await _headers(requiresAuth: requiresAuth),
+            )
+            .timeout(_requestTimeout);
       },
     );
   }
@@ -35,11 +40,13 @@ class ApiClient {
     return _executeRequest(
       requiresAuth: requiresAuth,
       request: () async {
-        return http.post(
-          _buildUri(endpoint),
-          headers: await _headers(requiresAuth: requiresAuth),
-          body: body == null ? null : jsonEncode(body),
-        );
+        return http
+            .post(
+              _buildUri(endpoint),
+              headers: await _headers(requiresAuth: requiresAuth),
+              body: body == null ? null : jsonEncode(body),
+            )
+            .timeout(_requestTimeout);
       },
     );
   }
@@ -52,11 +59,13 @@ class ApiClient {
     return _executeRequest(
       requiresAuth: requiresAuth,
       request: () async {
-        return http.put(
-          _buildUri(endpoint),
-          headers: await _headers(requiresAuth: requiresAuth),
-          body: body == null ? null : jsonEncode(body),
-        );
+        return http
+            .put(
+              _buildUri(endpoint),
+              headers: await _headers(requiresAuth: requiresAuth),
+              body: body == null ? null : jsonEncode(body),
+            )
+            .timeout(_requestTimeout);
       },
     );
   }
@@ -77,9 +86,11 @@ class ApiClient {
           request.body = jsonEncode(body);
         }
 
-        final streamedResponse = await request.send();
+        final streamedResponse = await request.send().timeout(_requestTimeout);
 
-        return http.Response.fromStream(streamedResponse);
+        return http.Response.fromStream(
+          streamedResponse,
+        ).timeout(_requestTimeout);
       },
     );
   }
@@ -105,9 +116,11 @@ class ApiClient {
           await http.MultipartFile.fromPath(fileFieldName, filePath),
         );
 
-        final streamedResponse = await request.send();
+        final streamedResponse = await request.send().timeout(_requestTimeout);
 
-        return http.Response.fromStream(streamedResponse);
+        return http.Response.fromStream(
+          streamedResponse,
+        ).timeout(_requestTimeout);
       },
     );
   }
@@ -116,38 +129,53 @@ class ApiClient {
     required bool requiresAuth,
     required Future<http.Response> Function() request,
   }) async {
-    final response = await request();
+    try {
+      final response = await request();
 
-    if (response.statusCode != 401 || !requiresAuth) {
-      return _handleResponse(response);
+      if (response.statusCode != 401 || !requiresAuth) {
+        return _handleResponse(response);
+      }
+
+      final refreshed = await _refreshAccessToken();
+
+      if (!refreshed) {
+        await _expireSession();
+
+        return _handleResponse(response);
+      }
+
+      final repeatedResponse = await request();
+
+      if (repeatedResponse.statusCode == 401) {
+        await _expireSession();
+      }
+
+      return _handleResponse(repeatedResponse);
+    } on AppException {
+      rethrow;
+    } on TimeoutException {
+      throw const AppException(
+        message:
+            'Zahtjev je trajao predugo. Provjerite internet vezu i pokušajte ponovo.',
+      );
+    } on SocketException {
+      throw const AppException(
+        message:
+            'Nema internet veze. Provjerite mrežnu vezu i pokušajte ponovo.',
+      );
+    } on http.ClientException {
+      throw const AppException(
+        message:
+            'Povezivanje sa serverom nije uspjelo. Provjerite internet vezu i pokušajte ponovo.',
+      );
+    } catch (_) {
+      throw const AppException(
+        message: 'Zahtjev nije moguće izvršiti. Pokušajte ponovo.',
+      );
     }
-
-    final refreshed = await _refreshAccessToken();
-
-    if (!refreshed) {
-      await _expireSession();
-
-      return _handleResponse(response);
-    }
-
-    /*
-     * Originalni zahtjev se ponavlja tačno jednom.
-     * Request callback ponovo kreira headers i čita novi token.
-     */
-    final repeatedResponse = await request();
-
-    if (repeatedResponse.statusCode == 401) {
-      await _expireSession();
-    }
-
-    return _handleResponse(repeatedResponse);
   }
 
   Future<bool> _refreshAccessToken() async {
-    /*
-     * Ako je više API zahtjeva istovremeno dobilo 401,
-     * svi čekaju isti refresh zahtjev.
-     */
     final existingRefresh = _refreshInProgress;
 
     if (existingRefresh != null) {
@@ -173,21 +201,16 @@ class ApiClient {
     }
 
     try {
-      /*
-       * Ovdje namjerno koristimo direktno http.post,
-       * a ne ApiClient.post().
-       *
-       * Time sprječavamo da refresh endpoint
-       * izazove novi refresh i beskonačnu petlju.
-       */
-      final response = await http.post(
-        _buildUri('/Auth/refresh-token'),
-        headers: const {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({'refreshToken': refreshToken.trim()}),
-      );
+      final response = await http
+          .post(
+            _buildUri('/Auth/refresh-token'),
+            headers: const {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({'refreshToken': refreshToken.trim()}),
+          )
+          .timeout(_requestTimeout);
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return false;
@@ -204,7 +227,6 @@ class ApiClient {
       }
 
       final newAccessToken = decoded['token'];
-
       final newRefreshToken = decoded['refreshToken'];
 
       if (newAccessToken is! String || newAccessToken.trim().isEmpty) {
@@ -221,6 +243,10 @@ class ApiClient {
       );
 
       return true;
+    } on TimeoutException {
+      return false;
+    } on SocketException {
+      return false;
     } on FormatException {
       return false;
     } on http.ClientException {
@@ -241,10 +267,7 @@ class ApiClient {
         ? endpoint
         : '/$endpoint';
 
-    return Uri.parse(
-      '${ApiConstants.apiBaseUrl}'
-      '$normalizedEndpoint',
-    );
+    return Uri.parse('${ApiConstants.apiBaseUrl}$normalizedEndpoint');
   }
 
   Future<Map<String, String>> _headers({required bool requiresAuth}) async {
@@ -300,9 +323,7 @@ class ApiClient {
         final fieldErrors = _extractFieldErrors(decoded['errors']);
 
         final directMessage = _readMessage(decoded['message']);
-
         final title = _readMessage(decoded['title']);
-
         final detail = _readMessage(decoded['detail']);
 
         final message =
@@ -339,9 +360,7 @@ class ApiClient {
 
     for (final entry in rawErrors.entries) {
       final fieldName = entry.key.toString();
-
       final value = entry.value;
-
       final messages = <String>[];
 
       if (value is List) {
@@ -382,9 +401,13 @@ class ApiClient {
       401 => 'Sesija je istekla. Prijavite se ponovo.',
       403 => 'Nemate dozvolu za ovu radnju.',
       404 => 'Traženi podatak nije pronađen.',
+      408 => 'Zahtjev je istekao. Pokušajte ponovo.',
       409 => 'Radnja se ne može završiti zbog konflikta podataka.',
       422 => 'Provjerite unesene podatke.',
       429 => 'Previše pokušaja. Pokušajte ponovo kasnije.',
+      502 ||
+      503 ||
+      504 => 'Server trenutno nije dostupan. Pokušajte ponovo kasnije.',
       >= 500 => 'Došlo je do greške na serveru. Pokušajte ponovo.',
       _ => 'Zahtjev nije uspješno izvršen.',
     };
@@ -393,7 +416,6 @@ class ApiClient {
 
 class _ApiErrorData {
   final String message;
-
   final Map<String, List<String>> fieldErrors;
 
   const _ApiErrorData({required this.message, this.fieldErrors = const {}});

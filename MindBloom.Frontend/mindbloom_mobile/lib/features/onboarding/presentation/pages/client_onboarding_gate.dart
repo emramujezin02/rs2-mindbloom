@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../viewmodels/client_onboarding_viewmodel.dart';
 import 'client_onboarding_page.dart';
 
@@ -41,6 +43,10 @@ class _ClientOnboardingGateState extends State<ClientOnboardingGate> {
     }
   }
 
+  Future<void> _reload() {
+    return _viewModel.load();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_completedInCurrentSession) {
@@ -48,26 +54,17 @@ class _ClientOnboardingGateState extends State<ClientOnboardingGate> {
     }
 
     if (_viewModel.isLoading && _viewModel.onboarding == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: AppLoadingWidget(message: 'Loading onboarding information...'),
+      );
     }
 
     if (_viewModel.error != null && _viewModel.onboarding == null) {
       return Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(_viewModel.error!, textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: _viewModel.load,
-                  child: const Text('Try again'),
-                ),
-              ],
-            ),
-          ),
+        body: AppErrorWidget(
+          title: 'Onboarding information could not be loaded',
+          error: _viewModel.error,
+          onRetry: _reload,
         ),
       );
     }

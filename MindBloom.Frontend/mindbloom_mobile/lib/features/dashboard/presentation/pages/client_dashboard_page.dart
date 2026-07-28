@@ -3,6 +3,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../viewmodels/client_dashboard_viewmodel.dart';
 
 class ClientDashboardPage extends StatefulWidget {
@@ -19,6 +22,7 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
   @override
   void initState() {
     super.initState();
+
     _viewModel.addListener(_refresh);
     _viewModel.loadDashboard();
   }
@@ -43,99 +47,115 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('My dashboard')),
-      body: _viewModel.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _viewModel.error != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  _viewModel.error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
-            )
-          : Padding(
-              padding: const EdgeInsets.all(16),
-              child: ListView(
-                children: [
-                  _RecommendationCard(
-                    onTap: () {
-                      Navigator.of(
-                        context,
-                      ).pushNamed(AppRouter.recommendations);
-                    },
-                  ),
-                  _AnalyticsNavigationCard(
-                    onTap: () {
-                      Navigator.of(
-                        context,
-                      ).pushNamed(AppRouter.clientEmotionalAnalytics);
-                    },
-                  ),
-                  _DashboardCard(
-                    icon: Icons.calendar_month,
-                    title: 'Total appointments',
-                    value: _viewModel.dashboard!.totalAppointments.toString(),
-                  ),
-                  _DashboardCard(
-                    icon: Icons.check_circle,
-                    title: 'Completed appointments',
-                    value: _viewModel.dashboard!.completedAppointments
-                        .toString(),
-                  ),
-                  _DashboardCard(
-                    icon: Icons.schedule,
-                    title: 'Pending appointments',
-                    value: _viewModel.dashboard!.pendingAppointments.toString(),
-                  ),
-                  _DashboardCard(
-                    icon: Icons.cancel,
-                    title: 'Cancelled appointments',
-                    value: _viewModel.dashboard!.cancelledAppointments
-                        .toString(),
-                  ),
-                  _DashboardCard(
-                    icon: Icons.psychology,
-                    title: 'Therapists visited',
-                    value: _viewModel.dashboard!.totalTherapistsVisited
-                        .toString(),
-                  ),
-                  _DashboardCard(
-                    icon: Icons.payments,
-                    title: 'Total spent',
-                    value:
-                        '${_viewModel.dashboard!.totalSpent.toStringAsFixed(2)} KM',
-                  ),
-                  _DashboardCard(
-                    icon: Icons.history,
-                    title: 'Last appointment',
-                    value: _viewModel.dashboard!.lastAppointmentDate == null
-                        ? 'No previous appointments'
-                        : formatter.format(
-                            _viewModel.dashboard!.lastAppointmentDate!
-                                .toLocal(),
-                          ),
-                  ),
-                  _DashboardCard(
-                    icon: Icons.event_available,
-                    title: 'Next appointment',
-                    value: _viewModel.dashboard!.nextAppointmentDate == null
-                        ? 'No upcoming appointments'
-                        : formatter.format(
-                            _viewModel.dashboard!.nextAppointmentDate!
-                                .toLocal(),
-                          ),
-                  ),
-                  _PrivateJournalNavigationCard(
-                    onTap: () {
-                      Navigator.of(context).pushNamed(AppRouter.privateJournal);
-                    },
-                  ),
-                ],
-              ),
+      body: _buildBody(formatter),
+    );
+  }
+
+  Widget _buildBody(DateFormat formatter) {
+    final dashboard = _viewModel.dashboard;
+
+    if (_viewModel.isLoading && dashboard == null) {
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading dashboard...',
+        skeletonItemCount: 6,
+      );
+    }
+
+    if (_viewModel.error != null && dashboard == null) {
+      return AppErrorWidget(
+        title: 'Dashboard could not be loaded',
+        error: _viewModel.error,
+        onRetry: _viewModel.refresh,
+      );
+    }
+
+    if (dashboard == null) {
+      return RefreshIndicator(
+        onRefresh: _viewModel.refresh,
+        child: const AppEmptyStateWidget(
+          title: 'Dashboard unavailable',
+          message: 'Dashboard data is currently unavailable.',
+          icon: Icons.dashboard_outlined,
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _viewModel.refresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (_viewModel.error != null)
+            AppInlineError(
+              title: 'Dashboard could not be refreshed',
+              error: _viewModel.error,
+              onRetry: _viewModel.refresh,
+              margin: const EdgeInsets.only(bottom: 12),
             ),
+          _RecommendationCard(
+            onTap: () {
+              Navigator.of(context).pushNamed(AppRouter.recommendations);
+            },
+          ),
+          _PrivateJournalNavigationCard(
+            onTap: () {
+              Navigator.of(context).pushNamed(AppRouter.privateJournal);
+            },
+          ),
+          _AnalyticsNavigationCard(
+            onTap: () {
+              Navigator.of(
+                context,
+              ).pushNamed(AppRouter.clientEmotionalAnalytics);
+            },
+          ),
+          _DashboardCard(
+            icon: Icons.calendar_month,
+            title: 'Total appointments',
+            value: dashboard.totalAppointments.toString(),
+          ),
+          _DashboardCard(
+            icon: Icons.check_circle,
+            title: 'Completed appointments',
+            value: dashboard.completedAppointments.toString(),
+          ),
+          _DashboardCard(
+            icon: Icons.schedule,
+            title: 'Pending appointments',
+            value: dashboard.pendingAppointments.toString(),
+          ),
+          _DashboardCard(
+            icon: Icons.cancel,
+            title: 'Cancelled appointments',
+            value: dashboard.cancelledAppointments.toString(),
+          ),
+          _DashboardCard(
+            icon: Icons.psychology,
+            title: 'Therapists visited',
+            value: dashboard.totalTherapistsVisited.toString(),
+          ),
+          _DashboardCard(
+            icon: Icons.payments,
+            title: 'Total spent',
+            value: '${dashboard.totalSpent.toStringAsFixed(2)} KM',
+          ),
+          _DashboardCard(
+            icon: Icons.history,
+            title: 'Last appointment',
+            value: dashboard.lastAppointmentDate == null
+                ? 'No previous appointments'
+                : formatter.format(dashboard.lastAppointmentDate!.toLocal()),
+          ),
+          _DashboardCard(
+            icon: Icons.event_available,
+            title: 'Next appointment',
+            value: dashboard.nextAppointmentDate == null
+                ? 'No upcoming appointments'
+                : formatter.format(dashboard.nextAppointmentDate!.toLocal()),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../core/validation/app_validators.dart';
+import '../../../../core/widgets/app_error_widget.dart';
 import '../constants/mood_options.dart';
 import '../viewmodels/journal_viewmodel.dart';
 
@@ -56,6 +57,8 @@ class _AddJournalEntryPageState extends State<AddJournalEntryPage> {
       return;
     }
 
+    FocusScope.of(context).unfocus();
+
     final success = await _viewModel.createEntry(
       mood: _mood,
       emotions: _selectedEmotions.toList(),
@@ -66,25 +69,15 @@ class _AddJournalEntryPageState extends State<AddJournalEntryPage> {
       _formKey.currentState?.validate();
     }
 
-    if (!mounted) {
-      return;
-    }
-
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Journal entry saved successfully.')),
-      );
-
-      Navigator.of(context).pop(true);
-
+    if (!mounted || !success) {
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_viewModel.error ?? 'Unable to save journal entry.'),
-      ),
+      const SnackBar(content: Text('Journal entry saved successfully.')),
     );
+
+    Navigator.of(context).pop(true);
   }
 
   @override
@@ -214,10 +207,10 @@ class _AddJournalEntryPageState extends State<AddJournalEntryPage> {
               ),
               if (_viewModel.error != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  _viewModel.error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
+                AppInlineError(
+                  title: 'Journal entry could not be saved',
+                  error: _viewModel.error,
+                  onRetry: _save,
                 ),
               ],
               const SizedBox(height: 24),

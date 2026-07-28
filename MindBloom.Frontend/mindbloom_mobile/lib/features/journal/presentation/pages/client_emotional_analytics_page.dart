@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 import '../../../../app/di/injection.dart';
 import '../../../therapist/data/models/mood_trend_point_model.dart';
 import '../../../therapist/data/models/therapist_mood_trend_model.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../viewmodels/client_emotional_analytics_viewmodel.dart';
 
 class ClientEmotionalAnalyticsPage extends StatefulWidget {
@@ -108,30 +110,17 @@ class _ClientEmotionalAnalyticsPageState
 
   Widget _buildBody() {
     if (_viewModel.isLoading && _viewModel.analytics == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading emotional analytics...',
+        skeletonItemCount: 5,
+      );
     }
 
     if (_viewModel.error != null && _viewModel.analytics == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _viewModel.error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _viewModel.refresh,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
-              ),
-            ],
-          ),
-        ),
+      return AppErrorWidget(
+        title: 'Emotional analytics could not be loaded',
+        error: _viewModel.error,
+        onRetry: _viewModel.refresh,
       );
     }
 
@@ -150,10 +139,12 @@ class _ClientEmotionalAnalyticsPageState
             const LinearProgressIndicator(),
           ],
 
-          if (_viewModel.error != null) ...[
-            const SizedBox(height: 12),
-            Text(_viewModel.error!, style: const TextStyle(color: Colors.red)),
-          ],
+          if (_viewModel.error != null)
+            AppInlineError(
+              title: 'Analytics could not be refreshed',
+              error: _viewModel.error,
+              onRetry: _viewModel.refresh,
+            ),
 
           const SizedBox(height: 16),
 

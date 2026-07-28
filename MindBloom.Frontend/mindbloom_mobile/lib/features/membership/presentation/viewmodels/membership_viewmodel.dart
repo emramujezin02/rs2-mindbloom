@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
 import '../../../../core/error/app_exception.dart';
+import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/membership_model.dart';
 import '../../data/models/membership_plan_model.dart';
 import '../../data/models/membership_receipt_model.dart';
@@ -15,13 +16,12 @@ class MembershipViewModel extends ChangeNotifier {
   MembershipViewModel({required this.repository});
 
   bool isLoading = false;
-
   bool isPurchasing = false;
+  bool isUsingMembership = false;
 
   String? error;
 
   List<MembershipModel> memberships = [];
-
   List<MembershipPlanModel> plans = [];
 
   List<MembershipModel> get activeMemberships {
@@ -37,11 +37,12 @@ class MembershipViewModel extends ChangeNotifier {
   }
 
   List<MembershipModel> get membershipHistory {
+    final activeIds = activeMemberships
+        .map((membership) => membership.id)
+        .toSet();
+
     return memberships
-        .where(
-          (membership) =>
-              !activeMemberships.any((active) => active.id == membership.id),
-        )
+        .where((membership) => !activeIds.contains(membership.id))
         .toList();
   }
 
@@ -51,18 +52,18 @@ class MembershipViewModel extends ChangeNotifier {
     }
 
     isLoading = true;
-
     error = null;
-
     notifyListeners();
 
     try {
-      memberships = await repository.getMyMemberships();
+      final loadedMemberships = await repository.getMyMemberships();
+
+      memberships = loadedMemberships;
+      error = null;
     } catch (exception) {
-      error = _normalizeError(exception);
+      error = AppErrorMessage.from(exception);
     } finally {
       isLoading = false;
-
       notifyListeners();
     }
   }
@@ -73,20 +74,19 @@ class MembershipViewModel extends ChangeNotifier {
     }
 
     isLoading = true;
-
     error = null;
-
     notifyListeners();
 
     try {
-      final result = await repository.getPlansForTherapist(therapistId);
+      final loadedPlans = await repository.getPlansForTherapist(therapistId);
 
-      plans = result.where((plan) => plan.isActive).toList();
+      plans = loadedPlans.where((plan) => plan.isActive).toList();
+
+      error = null;
     } catch (exception) {
-      error = _normalizeError(exception);
+      error = AppErrorMessage.from(exception);
     } finally {
       isLoading = false;
-
       notifyListeners();
     }
   }
@@ -100,9 +100,7 @@ class MembershipViewModel extends ChangeNotifier {
     }
 
     isPurchasing = true;
-
     error = null;
-
     notifyListeners();
 
     try {
@@ -138,23 +136,24 @@ class MembershipViewModel extends ChangeNotifier {
       );
 
       memberships.removeWhere((item) => item.id == membership.id);
-
       memberships.insert(0, membership);
+
+      error = null;
 
       return membership.isPaid && membership.isActive;
     } on StripeException catch (exception) {
-      error =
-          exception.error.localizedMessage ??
-          'Stripe payment was cancelled or could not be completed.';
+      error = exception.error.localizedMessage?.trim();
+
+      if (error == null || error!.isEmpty) {
+        error = 'Stripe payment was cancelled or could not be completed.';
+      }
 
       return false;
     } catch (exception) {
-      error = _normalizeError(exception);
-
+      error = AppErrorMessage.from(exception);
       return false;
     } finally {
       isPurchasing = false;
-
       notifyListeners();
     }
   }
@@ -164,14 +163,12 @@ class MembershipViewModel extends ChangeNotifier {
   }
 
   Future<bool> useMembership({required int appointmentId}) async {
-    if (isLoading) {
+    if (isUsingMembership) {
       return false;
     }
 
-    isLoading = true;
-
+    isUsingMembership = true;
     error = null;
-
     notifyListeners();
 
     try {
@@ -179,23 +176,23 @@ class MembershipViewModel extends ChangeNotifier {
         UseMembershipRequest(appointmentId: appointmentId),
       );
 
+      error = null;
       return true;
     } catch (exception) {
-      error = _normalizeError(exception);
-
+      error = AppErrorMessage.from(exception);
       return false;
     } finally {
-      isLoading = false;
-
+      isUsingMembership = false;
       notifyListeners();
     }
   }
 
-  String _normalizeError(Object exception) {
-    if (exception is AppException) {
-      return exception.message;
+  void clearError() {
+    if (error == null) {
+      return;
     }
 
-    return exception.toString().replaceFirst('Exception: ', '').trim();
+    error = null;
+    notifyListeners();
   }
 }

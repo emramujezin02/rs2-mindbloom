@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../notification/presentation/viewmodels/notification_scope.dart';
+
 import '../../../../app/di/injection.dart';
+import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../notification/presentation/viewmodels/notification_scope.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../viewmodels/auth_viewmodel.dart';
-import '../../../../app/router/app_router.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,13 +17,14 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final AuthViewModel _viewModel = AppInjection.createAuthViewModel();
 
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   final TextEditingController _emailController = TextEditingController();
 
   final TextEditingController _passwordController = TextEditingController();
 
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
   bool _rememberMe = false;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -33,8 +36,11 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
+
     _emailController.dispose();
     _passwordController.dispose();
+
     super.dispose();
   }
 
@@ -45,9 +51,11 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_viewModel.isLoading || !_formKey.currentState!.validate()) {
       return;
     }
+
+    FocusScope.of(context).unfocus();
 
     final email = _emailController.text.trim();
 
@@ -61,6 +69,10 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    /*
+     * Ranija funkcionalnost:
+     * korisnik čiji email nije potvrđen ide na verifikaciju emaila.
+     */
     if (!success && _viewModel.needsEmailVerification) {
       Navigator.of(context).pushNamed(
         AppRouter.verifyEmail,
@@ -74,14 +86,25 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    /*
+     * Ranija funkcionalnost:
+     * korisnik kojem je uključen 2FA prvo mora potvrditi kod.
+     */
     if (_viewModel.requiresTwoFactor) {
       Navigator.of(context).pushNamed(AppRouter.verify2FA, arguments: email);
 
       return;
     }
 
+    /*
+     * Nakon uspješne prijave ponovo se učitava korisnička sesija.
+     */
     final session = SessionScope.of(context);
 
+    /*
+     * Ranija funkcionalnost:
+     * nakon prijave inicijalizuju se i notifikacije.
+     */
     final notifications = NotificationScope.of(context);
 
     await session.initialize();
@@ -96,6 +119,10 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    /*
+     * HomeScreen zatim na osnovu uloge prikazuje odgovarajući shell:
+     * ClientNavigationShell ili TherapistNavigationShell.
+     */
     Navigator.of(
       context,
     ).pushNamedAndRemoveUntil(AppRouter.home, (route) => false);
@@ -120,37 +147,57 @@ class _LoginPageState extends State<LoginPage> {
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                   ),
-
                   const SizedBox(height: 32),
-
                   TextFormField(
                     controller: _emailController,
+                    enabled: !_viewModel.isLoading,
                     keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.email],
                     decoration: const InputDecoration(
                       labelText: 'Email',
+                      prefixIcon: Icon(Icons.email_outlined),
                       border: OutlineInputBorder(),
                     ),
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
+                      final email = value?.trim() ?? '';
+
+                      if (email.isEmpty) {
                         return 'Email is required.';
                       }
 
-                      if (!value.contains('@')) {
+                      if (!email.contains('@')) {
                         return 'Enter a valid email address.';
                       }
 
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 16),
-
                   TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    enabled: !_viewModel.isLoading,
+                    obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.password],
+                    decoration: InputDecoration(
                       labelText: 'Password',
-                      border: OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        onPressed: _viewModel.isLoading
+                            ? null
+                            : () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -159,62 +206,74 @@ class _LoginPageState extends State<LoginPage> {
 
                       return null;
                     },
+                    onFieldSubmitted: (_) {
+                      if (!_viewModel.isLoading) {
+                        _login();
+                      }
+                    },
                   ),
-
                   const SizedBox(height: 12),
-
                   CheckboxListTile(
                     value: _rememberMe,
-                    onChanged: (value) {
-                      setState(() {
-                        _rememberMe = value ?? false;
-                      });
-                    },
+                    onChanged: _viewModel.isLoading
+                        ? null
+                        : (value) {
+                            setState(() {
+                              _rememberMe = value ?? false;
+                            });
+                          },
                     title: const Text('Remember me'),
                     controlAffinity: ListTileControlAffinity.leading,
                     contentPadding: EdgeInsets.zero,
                   ),
-
-                  if (_viewModel.errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        _viewModel.errorMessage!,
-                        style: const TextStyle(color: Colors.red),
+                  if (_viewModel.errorMessage != null) ...[
+                    const SizedBox(height: 4),
+                    AppInlineError(
+                      title: 'Login failed',
+                      error: _viewModel.errorMessage,
+                      onRetry: _login,
+                    ),
+                    const SizedBox(height: 16),
+                  ] else
+                    const SizedBox(height: 4),
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: _viewModel.isLoading ? null : _login,
+                      icon: _viewModel.isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.login),
+                      label: Text(
+                        _viewModel.isLoading ? 'Logging in...' : 'Login',
                       ),
                     ),
-
-                  ElevatedButton(
-                    onPressed: _viewModel.isLoading ? null : _login,
-                    child: _viewModel.isLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Login'),
                   ),
-
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        Navigator.of(
-                          context,
-                        ).pushNamed(AppRouter.forgotPassword);
-                      },
+                      onPressed: _viewModel.isLoading
+                          ? null
+                          : () {
+                              Navigator.of(
+                                context,
+                              ).pushNamed(AppRouter.forgotPassword);
+                            },
                       child: const Text('Forgot password?'),
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
                   TextButton(
-                    onPressed: () {
-                      Navigator.of(
-                        context,
-                      ).pushReplacementNamed(AppRouter.register);
-                    },
+                    onPressed: _viewModel.isLoading
+                        ? null
+                        : () {
+                            Navigator.of(
+                              context,
+                            ).pushReplacementNamed(AppRouter.register);
+                          },
                     child: const Text('Do not have an account? Register'),
                   ),
                 ],

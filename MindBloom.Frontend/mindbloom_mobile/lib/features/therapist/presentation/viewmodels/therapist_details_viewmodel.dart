@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+
+import '../../../../core/widgets/app_error_message.dart';
 import '../../../favorite/data/models/favorite_model.dart';
 import '../../../favorite/data/repositories/favorite_repository.dart';
 import '../../data/models/therapist_details_model.dart';
@@ -6,7 +8,6 @@ import '../../data/repositories/therapist_repository.dart';
 
 class TherapistDetailsViewModel extends ChangeNotifier {
   final TherapistRepository repository;
-
   final FavoriteRepository favoriteRepository;
 
   TherapistDetailsViewModel({
@@ -18,14 +19,19 @@ class TherapistDetailsViewModel extends ChangeNotifier {
   bool isChangingFavorite = false;
 
   String? errorMessage;
+  String? favoriteErrorMessage;
 
   TherapistDetailsModel? therapist;
-
   bool isFavorite = false;
 
   Future<void> loadTherapist(int therapistId) async {
+    if (isLoading) {
+      return;
+    }
+
     isLoading = true;
     errorMessage = null;
+    favoriteErrorMessage = null;
     notifyListeners();
 
     try {
@@ -41,23 +47,28 @@ class TherapistDetailsViewModel extends ChangeNotifier {
       isFavorite = favorites.any(
         (favorite) => favorite.therapistId == therapistId,
       );
-    } catch (error) {
-      errorMessage = error.toString();
-    }
 
-    isLoading = false;
-    notifyListeners();
+      errorMessage = null;
+    } catch (error) {
+      errorMessage = AppErrorMessage.from(
+        error,
+        fallback: 'Podatke o terapeutu nije moguće učitati.',
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<bool> toggleFavorite() async {
     final currentTherapist = therapist;
 
-    if (currentTherapist == null) {
+    if (currentTherapist == null || isChangingFavorite) {
       return false;
     }
 
     isChangingFavorite = true;
-    errorMessage = null;
+    favoriteErrorMessage = null;
     notifyListeners();
 
     try {
@@ -68,17 +79,35 @@ class TherapistDetailsViewModel extends ChangeNotifier {
       }
 
       isFavorite = !isFavorite;
-
-      isChangingFavorite = false;
-      notifyListeners();
-
+      favoriteErrorMessage = null;
       return true;
     } catch (error) {
-      isChangingFavorite = false;
-      errorMessage = error.toString();
-      notifyListeners();
-
+      favoriteErrorMessage = AppErrorMessage.from(
+        error,
+        fallback: 'Omiljeni status nije moguće promijeniti.',
+      );
       return false;
+    } finally {
+      isChangingFavorite = false;
+      notifyListeners();
     }
+  }
+
+  Future<void> refresh() async {
+    final therapistId = therapist?.id;
+    if (therapistId == null) return;
+    await loadTherapist(therapistId);
+  }
+
+  void clearError() {
+    if (errorMessage == null) return;
+    errorMessage = null;
+    notifyListeners();
+  }
+
+  void clearFavoriteError() {
+    if (favoriteErrorMessage == null) return;
+    favoriteErrorMessage = null;
+    notifyListeners();
   }
 }

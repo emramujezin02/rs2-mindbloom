@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/favorite_model.dart';
 import '../viewmodels/favorite_list_viewmodel.dart';
 
@@ -21,13 +24,13 @@ class _MyFavoritesPageState extends State<MyFavoritesPage> {
     super.initState();
 
     _viewModel.addListener(_onViewModelChanged);
-
     _viewModel.loadFavorites();
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
 
     super.dispose();
   }
@@ -38,8 +41,8 @@ class _MyFavoritesPageState extends State<MyFavoritesPage> {
     }
   }
 
-  Future<void> _refresh() async {
-    await _viewModel.loadFavorites();
+  Future<void> _refresh() {
+    return _viewModel.loadFavorites();
   }
 
   Future<void> _removeFavorite(FavoriteModel favorite) async {
@@ -69,7 +72,7 @@ class _MyFavoritesPageState extends State<MyFavoritesPage> {
       },
     );
 
-    if (confirmed != true) {
+    if (confirmed != true || !mounted) {
       return;
     }
 
@@ -89,47 +92,43 @@ class _MyFavoritesPageState extends State<MyFavoritesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My favorites')),
+      appBar: AppBar(
+        title: const Text('My favorites'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _viewModel.isLoading ? null : _refresh,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: _buildBody(),
     );
   }
 
   Widget _buildBody() {
-    if (_viewModel.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+    if (_viewModel.isLoading && _viewModel.favorites.isEmpty) {
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading favorite therapists...',
+        skeletonItemCount: 5,
+      );
     }
 
-    if (_viewModel.errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _viewModel.errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _viewModel.loadFavorites,
-                child: const Text('Try again'),
-              ),
-            ],
-          ),
-        ),
+    if (_viewModel.errorMessage != null && _viewModel.favorites.isEmpty) {
+      return AppErrorWidget(
+        title: 'Favorites could not be loaded',
+        error: _viewModel.errorMessage,
+        onRetry: _refresh,
       );
     }
 
     if (_viewModel.favorites.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'You have not added any favorite therapists yet.',
-            textAlign: TextAlign.center,
-          ),
+      return RefreshIndicator(
+        onRefresh: _refresh,
+        child: const AppEmptyStateWidget(
+          title: 'No favorite therapists',
+          message: 'You have not added any favorite therapists yet.',
+          icon: Icons.favorite_border,
         ),
       );
     }
@@ -137,11 +136,25 @@ class _MyFavoritesPageState extends State<MyFavoritesPage> {
     return RefreshIndicator(
       onRefresh: _refresh,
       child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
-        itemCount: _viewModel.favorites.length,
+        itemCount:
+            _viewModel.favorites.length +
+            (_viewModel.errorMessage != null ? 1 : 0),
         separatorBuilder: (context, index) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final favorite = _viewModel.favorites[index];
+          if (_viewModel.errorMessage != null && index == 0) {
+            return AppInlineError(
+              title: 'Favorites could not be refreshed',
+              error: _viewModel.errorMessage,
+              onRetry: _refresh,
+            );
+          }
+
+          final favoriteIndex =
+              index - (_viewModel.errorMessage != null ? 1 : 0);
+
+          final favorite = _viewModel.favorites[favoriteIndex];
 
           return Card(
             child: ListTile(

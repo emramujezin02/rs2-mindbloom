@@ -6,6 +6,9 @@ import '../../../../core/constants/api_constants.dart';
 import '../../data/models/recommendation_reason_model.dart';
 import '../../data/models/therapist_recommendation_model.dart';
 import '../viewmodels/recommendation_viewmodel.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
 
 class RecommendationPage extends StatefulWidget {
   const RecommendationPage({super.key});
@@ -95,31 +98,20 @@ class _RecommendationPageState extends State<RecommendationPage> {
   }
 
   Widget _buildBody() {
-    if (_viewModel.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+    if (_viewModel.isLoading && _viewModel.recommendations.isEmpty) {
+      return const AppLoadingWidget.skeleton(
+        message: 'Finding the best therapists...',
+        skeletonItemCount: 4,
+      );
     }
 
     if (_viewModel.error != null && _viewModel.recommendations.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 60, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                _viewModel.error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _refresh,
-                child: const Text('Try again'),
-              ),
-            ],
-          ),
+      return RefreshIndicator(
+        onRefresh: _refresh,
+        child: AppErrorWidget(
+          title: 'Recommendations could not be loaded',
+          error: _viewModel.error,
+          onRetry: _refresh,
         ),
       );
     }
@@ -127,14 +119,11 @@ class _RecommendationPageState extends State<RecommendationPage> {
     if (_viewModel.recommendations.isEmpty) {
       return RefreshIndicator(
         onRefresh: _refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 170),
-            Icon(Icons.psychology_outlined, size: 70),
-            SizedBox(height: 16),
-            Center(child: Text('No therapist recommendations were found.')),
-          ],
+        child: const AppEmptyStateWidget(
+          title: 'No recommendations',
+          message:
+              'Complete or update your preferences to receive therapist recommendations.',
+          icon: Icons.psychology_outlined,
         ),
       );
     }
@@ -144,13 +133,23 @@ class _RecommendationPageState extends State<RecommendationPage> {
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(12),
-        itemCount: _viewModel.recommendations.length + 1,
+        itemCount: _viewModel.recommendations.length + 2,
         itemBuilder: (context, index) {
           if (index == 0) {
             return const _RecommendationHeader();
           }
 
-          final recommendation = _viewModel.recommendations[index - 1];
+          if (index == 1 && _viewModel.error != null) {
+            return AppInlineError(
+              title: 'Recommendations could not be refreshed',
+              error: _viewModel.error,
+              onRetry: _refresh,
+              margin: const EdgeInsets.only(bottom: 12),
+            );
+          }
+
+          final recommendation = _viewModel
+              .recommendations[index - (_viewModel.error != null ? 2 : 1)];
 
           return _RecommendationCard(
             recommendation: recommendation,

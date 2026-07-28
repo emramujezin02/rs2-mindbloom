@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_message.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/membership_receipt_model.dart';
 import '../viewmodels/membership_viewmodel.dart';
 
@@ -19,19 +23,26 @@ class _MembershipReceiptPageState extends State<MembershipReceiptPage> {
       AppInjection.createMembershipViewModel();
 
   MembershipReceiptModel? _receipt;
-
   String? _error;
-
-  bool _isLoading = true;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-
     _loadReceipt();
   }
 
+  @override
+  void dispose() {
+    _viewModel.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadReceipt() async {
+    if (_isLoading) {
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -46,6 +57,7 @@ class _MembershipReceiptPageState extends State<MembershipReceiptPage> {
 
       setState(() {
         _receipt = receipt;
+        _error = null;
       });
     } catch (exception) {
       if (!mounted) {
@@ -53,7 +65,7 @@ class _MembershipReceiptPageState extends State<MembershipReceiptPage> {
       }
 
       setState(() {
-        _error = exception.toString();
+        _error = AppErrorMessage.from(exception);
       });
     } finally {
       if (mounted) {
@@ -67,105 +79,113 @@ class _MembershipReceiptPageState extends State<MembershipReceiptPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Membership receipt')),
+      appBar: AppBar(
+        title: const Text('Membership receipt'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _isLoading ? null : _loadReceipt,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: _buildBody(),
     );
   }
 
   Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+    if (_isLoading && _receipt == null) {
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading membership receipt...',
+        skeletonItemCount: 5,
+      );
     }
 
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _loadReceipt,
-                child: const Text('Try again'),
-              ),
-            ],
-          ),
-        ),
+    if (_error != null && _receipt == null) {
+      return AppErrorWidget(
+        title: 'Receipt could not be loaded',
+        error: _error,
+        onRetry: _loadReceipt,
       );
     }
 
     final receipt = _receipt;
 
     if (receipt == null) {
-      return const Center(child: Text('Receipt could not be loaded.'));
+      return const AppEmptyStateWidget(
+        title: 'Receipt unavailable',
+        message: 'The requested membership receipt is not available.',
+        icon: Icons.receipt_long_outlined,
+      );
     }
 
     final dateFormatter = DateFormat('dd.MM.yyyy. HH:mm');
 
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const Icon(Icons.receipt_long, size: 70),
-
-        const SizedBox(height: 16),
-
-        Text(
-          receipt.invoiceNumber,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-
-        const SizedBox(height: 20),
-
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _ReceiptRow(label: 'Client', value: receipt.clientName),
-                const Divider(),
-                _ReceiptRow(label: 'Therapist', value: receipt.therapistName),
-                const Divider(),
-                _ReceiptRow(label: 'Package', value: receipt.planType),
-                const Divider(),
-                _ReceiptRow(
-                  label: 'Sessions',
-                  value: receipt.totalSessions.toString(),
-                ),
-                const Divider(),
-                _ReceiptRow(
-                  label: 'Amount',
-                  value:
-                      '${receipt.amount.toStringAsFixed(2)} '
-                      '${receipt.currency}',
-                ),
-                const Divider(),
-                _ReceiptRow(label: 'Status', value: receipt.paymentStatus),
-                const Divider(),
-                _ReceiptRow(
-                  label: 'Paid at',
-                  value: dateFormatter.format(receipt.paidAtUtc.toLocal()),
-                ),
-                if (receipt.expiresAtUtc != null) ...[
+    return RefreshIndicator(
+      onRefresh: _loadReceipt,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: [
+          if (_error != null)
+            AppInlineError(
+              title: 'Receipt could not be refreshed',
+              error: _error,
+              onRetry: _loadReceipt,
+              margin: const EdgeInsets.only(bottom: 16),
+            ),
+          const Icon(Icons.receipt_long, size: 70),
+          const SizedBox(height: 16),
+          Text(
+            receipt.invoiceNumber,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _ReceiptRow(label: 'Client', value: receipt.clientName),
+                  const Divider(),
+                  _ReceiptRow(label: 'Therapist', value: receipt.therapistName),
+                  const Divider(),
+                  _ReceiptRow(label: 'Package', value: receipt.planType),
                   const Divider(),
                   _ReceiptRow(
-                    label: 'Expires',
-                    value: dateFormatter.format(
-                      receipt.expiresAtUtc!.toLocal(),
-                    ),
+                    label: 'Sessions',
+                    value: receipt.totalSessions.toString(),
                   ),
+                  const Divider(),
+                  _ReceiptRow(
+                    label: 'Amount',
+                    value:
+                        '${receipt.amount.toStringAsFixed(2)} '
+                        '${receipt.currency}',
+                  ),
+                  const Divider(),
+                  _ReceiptRow(label: 'Status', value: receipt.paymentStatus),
+                  const Divider(),
+                  _ReceiptRow(
+                    label: 'Paid at',
+                    value: dateFormatter.format(receipt.paidAtUtc.toLocal()),
+                  ),
+                  if (receipt.expiresAtUtc != null) ...[
+                    const Divider(),
+                    _ReceiptRow(
+                      label: 'Expires',
+                      value: dateFormatter.format(
+                        receipt.expiresAtUtc!.toLocal(),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
