@@ -190,6 +190,13 @@ class _TherapistNavigationShellState extends State<TherapistNavigationShell> {
                         },
                       ),
                       ListTile(
+                        leading: const Icon(Icons.person_outline),
+                        title: const Text('Profil'),
+                        onTap: () {
+                          _openDrawerRoute(AppRouter.profile);
+                        },
+                      ),
+                      ListTile(
                         leading: const Icon(Icons.article_outlined),
                         title: const Text('Članci'),
                         onTap: () {
@@ -224,12 +231,9 @@ class _TherapistNavigationShellState extends State<TherapistNavigationShell> {
             ),
           ),
         ),
-body: SafeArea(
-  child: IndexedStack(
-    index: currentIndex,
-    children: _pages,
-  ),
-),
+        body: SafeArea(
+          child: IndexedStack(index: currentIndex, children: _pages),
+        ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: currentIndex,
           onDestinationSelected: _changeTab,
