@@ -151,19 +151,60 @@ public class TherapistService : ITherapistService
     }
 
     public async Task AddAvailabilityAsync(
-        int therapistId,
-        CreateAvailabilityDto request)
+     int therapistUserId,
+     CreateAvailabilityDto request)
     {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist profile not found.");
+        }
+
+        if (request.StartTime >= request.EndTime)
+        {
+            throw new BadRequestException(
+                "Start time must be earlier than end time.");
+        }
+
+        if (request.StartTime < TimeSpan.Zero ||
+            request.EndTime > TimeSpan.FromDays(1))
+        {
+            throw new BadRequestException(
+                "Working hours are outside the valid daily range.");
+        }
+
+        var overlaps =
+            await _context.TherapistAvailabilities
+                .AnyAsync(x =>
+                    x.TherapistId == therapist.Id &&
+                    !x.IsDeleted &&
+                    x.DayOfWeek == request.DayOfWeek &&
+                    request.StartTime < x.EndTime &&
+                    request.EndTime > x.StartTime);
+
+        if (overlaps)
+        {
+            throw new BusinessException(
+                "Working hours overlap an existing interval.");
+        }
+
         var availability =
             new TherapistAvailability
             {
-                TherapistId = therapistId,
+                TherapistId = therapist.Id,
                 DayOfWeek = request.DayOfWeek,
                 StartTime = request.StartTime,
                 EndTime = request.EndTime
             };
 
-        _context.TherapistAvailabilities.Add(availability);
+        _context.TherapistAvailabilities.Add(
+            availability);
 
         await _context.SaveChangesAsync();
     }
@@ -172,7 +213,9 @@ public class TherapistService : ITherapistService
         GetAvailabilitiesAsync(int therapistId)
     {
         return await _context.TherapistAvailabilities
-            .Where(x => x.TherapistId == therapistId)
+            .Where(x =>
+    x.TherapistId == therapistId &&
+    !x.IsDeleted)
             .Select(x => new AvailabilityResponseDto
             {
                 Id = x.Id,
@@ -1415,38 +1458,66 @@ public class TherapistService : ITherapistService
     }
 
     public async Task AddUnavailableDateAsync(
-    int therapistUserId,
-    CreateUnavailableDateDto request)
+     int therapistUserId,
+     CreateUnavailableDateDto request)
     {
         var therapist =
             await _context.Therapists
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == therapistUserId);
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
 
         if (therapist == null)
         {
             throw new NotFoundException(
-                "Therapist not found.");
+                "Therapist profile not found.");
         }
 
         if (request.StartUtc >= request.EndUtc)
         {
-            throw new Exception(
-                "Invalid date range.");
+            throw new BadRequestException(
+                "The unavailable period must end after it starts.");
+        }
+
+        if (request.StartUtc < DateTime.UtcNow)
+        {
+            throw new BadRequestException(
+                "The unavailable period cannot start in the past.");
+        }
+
+        var reason =
+            request.Reason?.Trim()
+            ?? string.Empty;
+
+        var allowedReasons =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            "Break",
+            "Blocked time",
+            "Annual leave",
+            "Temporarily unavailable"
+            };
+
+        if (!allowedReasons.Contains(reason))
+        {
+            throw new BadRequestException(
+                "Unavailable period type is invalid.");
         }
 
         var hasOverlap =
             await _context
                 .TherapistUnavailableDates
                 .AnyAsync(x =>
-                    x.TherapistId == therapist.Id
-                    && request.StartUtc < x.EndUtc
-                    && request.EndUtc > x.StartUtc);
+                    x.TherapistId == therapist.Id &&
+                    !x.IsDeleted &&
+                    request.StartUtc < x.EndUtc &&
+                    request.EndUtc > x.StartUtc);
 
         if (hasOverlap)
         {
-            throw new Exception(
-                "Unavailable date overlaps with existing one.");
+            throw new BusinessException(
+                "Unavailable period overlaps an existing period.");
         }
 
         var unavailableDate =
@@ -1455,7 +1526,7 @@ public class TherapistService : ITherapistService
                 TherapistId = therapist.Id,
                 StartUtc = request.StartUtc,
                 EndUtc = request.EndUtc,
-                Reason = request.Reason
+                Reason = reason
             };
 
         _context
@@ -1472,8 +1543,9 @@ public class TherapistService : ITherapistService
     {
         return await _context
             .TherapistUnavailableDates
-            .Where(x =>
-                x.TherapistId == therapistId)
+.Where(x =>
+    x.TherapistId == therapistId &&
+    !x.IsDeleted)
             .OrderBy(x => x.StartUtc)
             .Select(x =>
                 new UnavailableDateResponseDto

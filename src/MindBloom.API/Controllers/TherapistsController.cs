@@ -47,14 +47,19 @@ public class TherapistsController : ControllerBase
     }
 
     [Authorize(Roles = "Therapist")]
-    [HttpPost("{therapistId}/availability")]
+    [HttpPost("availability")]
     public async Task<IActionResult> AddAvailability(
-        int therapistId,
         CreateAvailabilityDto request)
     {
-        await _therapistService.AddAvailabilityAsync(
-            therapistId,
-            request);
+        var therapistUserId =
+            int.Parse(
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier)!);
+
+        await _therapistService
+            .AddAvailabilityAsync(
+                therapistUserId,
+                request);
 
         return NoContent();
     }

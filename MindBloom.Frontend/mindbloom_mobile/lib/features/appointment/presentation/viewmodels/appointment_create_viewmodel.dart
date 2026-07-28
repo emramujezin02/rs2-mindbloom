@@ -152,28 +152,63 @@ class AppointmentCreateViewModel extends ChangeNotifier {
 
     final backendDayOfWeek = _toBackendDayOfWeek(normalizedDate.weekday);
 
-    final worksOnDay = availabilities.any(
-      (availability) => availability.dayOfWeek == backendDayOfWeek,
-    );
+    final dailyAvailabilities = availabilities
+        .where((availability) => availability.dayOfWeek == backendDayOfWeek)
+        .toList();
 
-    if (!worksOnDay) {
+    if (dailyAvailabilities.isEmpty) {
       return false;
     }
 
-    final dayStart = normalizedDate;
+    for (final availability in dailyAvailabilities) {
+      final startParts = _parseTime(availability.startTime);
 
-    final dayEnd = normalizedDate.add(const Duration(days: 1));
+      final endParts = _parseTime(availability.endTime);
 
-    final blocked = unavailableDates.any((unavailableDate) {
-      final unavailableStart = unavailableDate.startUtc.toLocal();
+      if (startParts == null || endParts == null) {
+        continue;
+      }
 
-      final unavailableEnd = unavailableDate.endUtc.toLocal();
+      var slotStart = DateTime(
+        normalizedDate.year,
+        normalizedDate.month,
+        normalizedDate.day,
+        startParts.$1,
+        startParts.$2,
+      );
 
-      return unavailableStart.isBefore(dayEnd) &&
-          unavailableEnd.isAfter(dayStart);
-    });
+      final availabilityEnd = DateTime(
+        normalizedDate.year,
+        normalizedDate.month,
+        normalizedDate.day,
+        endParts.$1,
+        endParts.$2,
+      );
 
-    return !blocked;
+      while (slotStart.add(appointmentDuration).compareTo(availabilityEnd) <=
+          0) {
+        final slotEnd = slotStart.add(appointmentDuration);
+
+        final isPast = slotStart.isBefore(DateTime.now());
+
+        final isUnavailable = unavailableDates.any((unavailableDate) {
+          final unavailableStart = unavailableDate.startUtc.toLocal();
+
+          final unavailableEnd = unavailableDate.endUtc.toLocal();
+
+          return slotStart.isBefore(unavailableEnd) &&
+              slotEnd.isAfter(unavailableStart);
+        });
+
+        if (!isPast && !isUnavailable) {
+          return true;
+        }
+
+        slotStart = slotStart.add(appointmentDuration);
+      }
+    }
+
+    return false;
   }
 
   Future<void> loadAvailableSlots({

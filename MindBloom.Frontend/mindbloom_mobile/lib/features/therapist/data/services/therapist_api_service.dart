@@ -1,3 +1,5 @@
+import 'package:mindbloom_mobile/features/therapist/data/models/create_unavailable_date_request.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../models/therapist_details_model.dart';
 import '../models/therapist_filter_request.dart';
@@ -13,6 +15,8 @@ import '../models/update_therapist_profile_request.dart';
 import '../models/therapist_mood_entry_model.dart';
 import '../models/therapist_mood_trend_model.dart';
 import '../models/therapist_search_page_model.dart';
+import '../../../appointment/data/models/unavailable_date_model.dart';
+import '../models/therapist_availability_model.dart';
 
 class TherapistApiService {
   final ApiClient apiClient;
@@ -27,29 +31,27 @@ class TherapistApiService {
         .toList();
   }
 
-Future<TherapistSearchPageModel> searchTherapists(
-  TherapistFilterRequest request,
-) async {
-  final uri = Uri(
-    path: '/Therapists/search',
-    queryParameters: request.toQueryParameters(),
-  );
+  Future<TherapistSearchPageModel> searchTherapists(
+    TherapistFilterRequest request,
+  ) async {
+    final uri = Uri(
+      path: '/Therapists/search',
+      queryParameters: request.toQueryParameters(),
+    );
 
-  final response = await apiClient.get(
-    uri.toString(),
-  );
+    final response = await apiClient.get(uri.toString());
 
-  if (response is! Map) {
-    throw const FormatException(
-      'The server returned an invalid '
-      'therapist search response.',
+    if (response is! Map) {
+      throw const FormatException(
+        'The server returned an invalid '
+        'therapist search response.',
+      );
+    }
+
+    return TherapistSearchPageModel.fromJson(
+      Map<String, dynamic>.from(response),
     );
   }
-
-  return TherapistSearchPageModel.fromJson(
-    Map<String, dynamic>.from(response),
-  );
-}
 
   Future<TherapistDetailsModel> getTherapistById(int therapistId) async {
     final response = await apiClient.get('/Therapists/$therapistId');
@@ -150,16 +152,6 @@ Future<TherapistSearchPageModel> searchTherapists(
     throw const FormatException('The server returned an invalid response.');
   }
 
-  Future<void> addTherapistAvailability({
-    required int therapistId,
-    required CreateTherapistAvailabilityRequest request,
-  }) async {
-    await apiClient.post(
-      '/Therapists/$therapistId/availability',
-      body: request.toJson(),
-    );
-  }
-
   Future<void> deleteTherapistAvailability(int availabilityId) async {
     await apiClient.delete('/Therapists/availability/$availabilityId');
   }
@@ -231,5 +223,63 @@ Future<TherapistSearchPageModel> searchTherapists(
     return TherapistMoodTrendModel.fromJson(
       Map<String, dynamic>.from(response),
     );
+  }
+
+  Future<List<TherapistAvailabilityModel>> getOwnAvailabilities(
+    int therapistId,
+  ) async {
+    final response = await apiClient.get(
+      '/Therapists/$therapistId/availability',
+    );
+
+    if (response is! List) {
+      return [];
+    }
+
+    return response
+        .whereType<Map>()
+        .map(
+          (item) => TherapistAvailabilityModel.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> addTherapistAvailability({
+    required CreateTherapistAvailabilityRequest request,
+  }) async {
+    await apiClient.post('/Therapists/availability', body: request.toJson());
+  }
+
+  Future<List<UnavailableDateModel>> getUnavailableDates(
+    int therapistId,
+  ) async {
+    final response = await apiClient.get(
+      '/Therapists/$therapistId/unavailable-dates',
+    );
+
+    if (response is! List) {
+      return [];
+    }
+
+    return response
+        .whereType<Map>()
+        .map(
+          (item) =>
+              UnavailableDateModel.fromJson(Map<String, dynamic>.from(item)),
+        )
+        .toList();
+  }
+
+  Future<void> addUnavailableDate(CreateUnavailableDateRequest request) async {
+    await apiClient.post(
+      '/Therapists/unavailable-dates',
+      body: request.toJson(),
+    );
+  }
+
+  Future<void> deleteUnavailableDate(int unavailableDateId) async {
+    await apiClient.delete('/Therapists/unavailable-dates/$unavailableDateId');
   }
 }

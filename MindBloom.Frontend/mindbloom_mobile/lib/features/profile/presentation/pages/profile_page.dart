@@ -8,6 +8,8 @@ import '../../../../core/constants/api_constants.dart';
 import '../viewmodels/profile_viewmodel.dart';
 import '../../data/models/profile_model.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
+import 'package:intl/intl.dart';
+import '../../../appointment/data/models/unavailable_date_model.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -193,6 +195,150 @@ class _ProfilePageState extends State<ProfilePage> {
     Navigator.of(
       context,
     ).pushNamedAndRemoveUntil(AppRouter.login, (route) => false);
+  }
+
+  Future<void> _showAddAvailabilityDialog() async {
+    int selectedDay = DateTime.monday;
+
+    TimeOfDay startTime = const TimeOfDay(hour: 9, minute: 0);
+
+    TimeOfDay endTime = const TimeOfDay(hour: 17, minute: 0);
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Add working hours'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<int>(
+                      initialValue: selectedDay,
+                      decoration: const InputDecoration(
+                        labelText: 'Working day',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: DateTime.monday,
+                          child: Text('Monday'),
+                        ),
+                        DropdownMenuItem(
+                          value: DateTime.tuesday,
+                          child: Text('Tuesday'),
+                        ),
+                        DropdownMenuItem(
+                          value: DateTime.wednesday,
+                          child: Text('Wednesday'),
+                        ),
+                        DropdownMenuItem(
+                          value: DateTime.thursday,
+                          child: Text('Thursday'),
+                        ),
+                        DropdownMenuItem(
+                          value: DateTime.friday,
+                          child: Text('Friday'),
+                        ),
+                        DropdownMenuItem(
+                          value: DateTime.saturday,
+                          child: Text('Saturday'),
+                        ),
+                        DropdownMenuItem(
+                          value: DateTime.sunday,
+                          child: Text('Sunday'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            selectedDay = value;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.schedule_outlined),
+                      title: const Text('Start time'),
+                      subtitle: Text(startTime.format(dialogContext)),
+                      onTap: () async {
+                        final picked = await showTimePicker(
+                          context: dialogContext,
+                          initialTime: startTime,
+                        );
+
+                        if (picked != null) {
+                          setDialogState(() {
+                            startTime = picked;
+                          });
+                        }
+                      },
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.schedule_outlined),
+                      title: const Text('End time'),
+                      subtitle: Text(endTime.format(dialogContext)),
+                      onTap: () async {
+                        final picked = await showTimePicker(
+                          context: dialogContext,
+                          initialTime: endTime,
+                        );
+
+                        if (picked != null) {
+                          setDialogState(() {
+                            endTime = picked;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'To create a break, add two separate working intervals '
+                      'for the same day, for example 09:00–12:00 and 13:00–17:00.',
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(false);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(true);
+                  },
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != true || !mounted) {
+      return;
+    }
+
+    final success = await _therapistProfileViewModel.addAvailability(
+      dayOfWeek: selectedDay == DateTime.sunday ? 0 : selectedDay,
+      startTime: _formatApiTime(startTime),
+      endTime: _formatApiTime(endTime),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    _showTherapistResultMessage(success);
   }
 
   @override
@@ -593,6 +739,98 @@ class _ProfilePageState extends State<ProfilePage> {
                   .toList(),
             ),
           ],
+
+          const SizedBox(height: 24),
+
+          const Divider(),
+
+          const SizedBox(height: 18),
+
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Working hours',
+                  style: TextStyle(
+                    color: Color(0xFF40334D),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              FilledButton.icon(
+                onPressed: _therapistProfileViewModel.isManagingAvailability
+                    ? null
+                    : _showAddAvailabilityDialog,
+                icon: const Icon(Icons.add),
+                label: const Text('Add'),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          if (therapistProfile.availabilities.isEmpty)
+            const Text(
+              'No working hours have been added.',
+              style: TextStyle(color: Color(0xFF756D79)),
+            )
+          else
+            ...therapistProfile.availabilities.map(
+              (availability) => Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  leading: const Icon(Icons.schedule_outlined),
+                  title: Text(availability.dayName),
+                  subtitle: Text(availability.formattedTime),
+                  trailing: IconButton(
+                    tooltip: 'Delete working hours',
+                    onPressed: _therapistProfileViewModel.isManagingAvailability
+                        ? null
+                        : () {
+                            _deleteAvailability(availability.id);
+                          },
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                ),
+              ),
+            ),
+
+          const SizedBox(height: 24),
+
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Unavailable periods',
+                  style: TextStyle(
+                    color: Color(0xFF40334D),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              FilledButton.icon(
+                onPressed: _therapistProfileViewModel.isManagingAvailability
+                    ? null
+                    : _showAddUnavailablePeriodDialog,
+                icon: const Icon(Icons.block_outlined),
+                label: const Text('Add'),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          if (_therapistProfileViewModel.unavailableDates.isEmpty)
+            const Text(
+              'No breaks, blocked times or leave periods have been added.',
+              style: TextStyle(color: Color(0xFF756D79)),
+            )
+          else
+            ..._therapistProfileViewModel.unavailableDates.map(
+              _buildUnavailablePeriodCard,
+            ),
         ],
       ),
     );
@@ -636,5 +874,298 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+  }
+
+  String _formatApiTime(TimeOfDay value) {
+    return '${value.hour.toString().padLeft(2, '0')}:'
+        '${value.minute.toString().padLeft(2, '0')}:00';
+  }
+
+  Future<void> _showAddUnavailablePeriodDialog() async {
+    const reasons = [
+      'Break',
+      'Blocked time',
+      'Annual leave',
+      'Temporarily unavailable',
+    ];
+
+    var selectedReason = reasons.first;
+
+    var start = DateTime.now().add(const Duration(hours: 1));
+
+    var end = start.add(const Duration(hours: 1));
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Add unavailable period'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedReason,
+                      decoration: const InputDecoration(
+                        labelText: 'Type',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: reasons
+                          .map(
+                            (reason) => DropdownMenuItem<String>(
+                              value: reason,
+                              child: Text(reason),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            selectedReason = value;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.play_circle_outline),
+                      title: const Text('Starts'),
+                      subtitle: Text(
+                        DateFormat('dd.MM.yyyy. HH:mm').format(start),
+                      ),
+                      onTap: () async {
+                        final selected = await _pickDateTime(
+                          dialogContext,
+                          start,
+                        );
+
+                        if (selected != null) {
+                          setDialogState(() {
+                            start = selected;
+
+                            if (!end.isAfter(start)) {
+                              end = start.add(const Duration(hours: 1));
+                            }
+                          });
+                        }
+                      },
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.stop_circle_outlined),
+                      title: const Text('Ends'),
+                      subtitle: Text(
+                        DateFormat('dd.MM.yyyy. HH:mm').format(end),
+                      ),
+                      onTap: () async {
+                        final selected = await _pickDateTime(
+                          dialogContext,
+                          end,
+                        );
+
+                        if (selected != null) {
+                          setDialogState(() {
+                            end = selected;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(false);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(true);
+                  },
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != true || !mounted) {
+      return;
+    }
+
+    final success = await _therapistProfileViewModel.addUnavailablePeriod(
+      start: start,
+      end: end,
+      reason: selectedReason,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    _showTherapistResultMessage(success);
+  }
+
+  Future<DateTime?> _pickDateTime(
+    BuildContext dialogContext,
+    DateTime initialValue,
+  ) async {
+    final date = await showDatePicker(
+      context: dialogContext,
+      initialDate: initialValue,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 730)),
+    );
+
+    if (date == null || !dialogContext.mounted) {
+      return null;
+    }
+
+    final time = await showTimePicker(
+      context: dialogContext,
+      initialTime: TimeOfDay.fromDateTime(initialValue),
+    );
+
+    if (time == null) {
+      return null;
+    }
+
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
+  Future<void> _deleteAvailability(int availabilityId) async {
+    final confirmed = await _confirmDelete(
+      title: 'Delete working hours?',
+      message:
+          'The selected working interval will no longer be available for booking.',
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final success = await _therapistProfileViewModel.deleteAvailability(
+      availabilityId,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    _showTherapistResultMessage(success);
+  }
+
+  Future<void> _deleteUnavailablePeriod(int unavailableDateId) async {
+    final confirmed = await _confirmDelete(
+      title: 'Delete unavailable period?',
+      message: 'This period will become available for booking again.',
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final success = await _therapistProfileViewModel.deleteUnavailablePeriod(
+      unavailableDateId,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    _showTherapistResultMessage(success);
+  }
+
+  Future<bool?> _confirmDelete({
+    required String title,
+    required String message,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showTherapistResultMessage(bool success) {
+    final message = success
+        ? _therapistProfileViewModel.successMessage ??
+              'Availability updated successfully.'
+        : _therapistProfileViewModel.errorMessage ??
+              'Availability could not be updated.';
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _buildUnavailablePeriodCard(UnavailableDateModel period) {
+    final formatter = DateFormat('dd.MM.yyyy. HH:mm');
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        leading: Icon(_unavailableReasonIcon(period.reason)),
+        title: Text(period.reason.isEmpty ? 'Unavailable' : period.reason),
+        subtitle: Text(
+          '${formatter.format(period.localStart)}\n'
+          '${formatter.format(period.localEnd)}',
+        ),
+        isThreeLine: true,
+        trailing: IconButton(
+          tooltip: 'Delete unavailable period',
+          onPressed: _therapistProfileViewModel.isManagingAvailability
+              ? null
+              : () {
+                  _deleteUnavailablePeriod(period.id);
+                },
+          icon: const Icon(Icons.delete_outline),
+        ),
+      ),
+    );
+  }
+
+  IconData _unavailableReasonIcon(String reason) {
+    switch (reason.trim().toLowerCase()) {
+      case 'break':
+        return Icons.free_breakfast_outlined;
+
+      case 'blocked time':
+        return Icons.event_busy_outlined;
+
+      case 'annual leave':
+        return Icons.beach_access_outlined;
+
+      case 'temporarily unavailable':
+        return Icons.pause_circle_outline;
+
+      default:
+        return Icons.block_outlined;
+    }
   }
 }

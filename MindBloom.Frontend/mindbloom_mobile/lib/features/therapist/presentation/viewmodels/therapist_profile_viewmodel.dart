@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:mindbloom_mobile/features/therapist/data/models/create_unavailable_date_request.dart';
 import '../../data/models/create_therapist_availability_request.dart';
 import '../../data/models/therapist_profile_model.dart';
 import '../../data/models/update_therapist_profile_request.dart';
 import '../../data/repositories/therapist_repository.dart';
+import '../../../appointment/data/models/unavailable_date_model.dart';
 
 class TherapistProfileViewModel extends ChangeNotifier {
   final TherapistRepository repository;
@@ -12,6 +14,7 @@ class TherapistProfileViewModel extends ChangeNotifier {
   TherapistProfileViewModel({required this.repository});
 
   TherapistProfileModel? _profile;
+  List<UnavailableDateModel> _unavailableDates = [];
 
   bool _isLoading = false;
   bool _isSaving = false;
@@ -50,6 +53,14 @@ class TherapistProfileViewModel extends ChangeNotifier {
 
     try {
       _profile = await repository.getTherapistProfile();
+
+      final currentProfile = _profile;
+
+      if (currentProfile != null) {
+        _unavailableDates = await repository.getUnavailableDates(
+          currentProfile.therapistId,
+        );
+      }
     } catch (error) {
       _errorMessage = _resolveErrorMessage(
         error,
@@ -264,10 +275,7 @@ class TherapistProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await repository.addTherapistAvailability(
-        therapistId: currentProfile.therapistId,
-        request: request,
-      );
+      await repository.addTherapistAvailability(request: request);
 
       _profile = await repository.getTherapistProfile();
 
@@ -278,6 +286,132 @@ class TherapistProfileViewModel extends ChangeNotifier {
       _errorMessage = _resolveErrorMessage(
         error,
         fallback: 'Availability could not be added.',
+      );
+
+      return false;
+    } finally {
+      _isManagingAvailability = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> addUnavailablePeriod({
+    required DateTime start,
+    required DateTime end,
+    required String reason,
+  }) async {
+    if (_isManagingAvailability) {
+      return false;
+    }
+
+    _errorMessage = null;
+    _successMessage = null;
+
+    final normalizedReason = reason.trim();
+
+    if (normalizedReason.isEmpty) {
+      _errorMessage = 'Unavailable period type is required.';
+      notifyListeners();
+
+      return false;
+    }
+
+    if (!start.isBefore(end)) {
+      _errorMessage = 'The unavailable period must end after it starts.';
+      notifyListeners();
+
+      return false;
+    }
+
+    if (start.isBefore(DateTime.now())) {
+      _errorMessage = 'The unavailable period cannot start in the past.';
+      notifyListeners();
+
+      return false;
+    }
+
+    final overlaps = _unavailableDates.any((item) {
+      final existingStart = item.startUtc.toLocal();
+      final existingEnd = item.endUtc.toLocal();
+
+      return start.isBefore(existingEnd) && end.isAfter(existingStart);
+    });
+
+    if (overlaps) {
+      _errorMessage = 'This unavailable period overlaps an existing period.';
+      notifyListeners();
+
+      return false;
+    }
+
+    _isManagingAvailability = true;
+    notifyListeners();
+
+    try {
+      await repository.addUnavailableDate(
+        CreateUnavailableDateRequest(
+          startUtc: start.toUtc(),
+          endUtc: end.toUtc(),
+          reason: normalizedReason,
+        ),
+      );
+
+      final currentProfile = _profile;
+
+      if (currentProfile != null) {
+        _unavailableDates = await repository.getUnavailableDates(
+          currentProfile.therapistId,
+        );
+      }
+
+      _successMessage = 'Unavailable period added successfully.';
+
+      return true;
+    } catch (error) {
+      _errorMessage = _resolveErrorMessage(
+        error,
+        fallback: 'Unavailable period could not be added.',
+      );
+
+      return false;
+    } finally {
+      _isManagingAvailability = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> deleteUnavailablePeriod(int unavailableDateId) async {
+    if (_isManagingAvailability) {
+      return false;
+    }
+
+    if (unavailableDateId <= 0) {
+      _errorMessage = 'Invalid unavailable period identifier.';
+      notifyListeners();
+
+      return false;
+    }
+
+    _errorMessage = null;
+    _successMessage = null;
+    _isManagingAvailability = true;
+
+    notifyListeners();
+
+    try {
+      await repository.deleteUnavailableDate(unavailableDateId);
+
+      _unavailableDates = _unavailableDates
+          .where((item) => item.id != unavailableDateId)
+          .toList();
+
+      _successMessage = 'Unavailable period deleted successfully.';
+
+      return true;
+    } catch (error) {
+      _errorMessage = _resolveErrorMessage(
+        error,
+        fallback: 'Unavailable period could not be deleted.',
       );
 
       return false;
@@ -606,5 +740,12 @@ class TherapistProfileViewModel extends ChangeNotifier {
     }
 
     return cleanedMessage.trim();
+  }
+
+  List<UnavailableDateModel> get unavailableDates {
+    final result = [..._unavailableDates]
+      ..sort((first, second) => first.startUtc.compareTo(second.startUtc));
+
+    return result;
   }
 }

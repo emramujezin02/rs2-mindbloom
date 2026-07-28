@@ -4,7 +4,7 @@ class UnavailableDateModel {
   final DateTime endUtc;
   final String reason;
 
-  UnavailableDateModel({
+  const UnavailableDateModel({
     required this.id,
     required this.startUtc,
     required this.endUtc,
@@ -13,10 +13,31 @@ class UnavailableDateModel {
 
   factory UnavailableDateModel.fromJson(Map<String, dynamic> json) {
     return UnavailableDateModel(
-      id: json['id'] ?? 0,
-      startUtc: DateTime.parse(json['startUtc']),
-      endUtc: DateTime.parse(json['endUtc']),
-      reason: json['reason'] ?? '',
+      id: _readInt(json['id']),
+      startUtc: _readDateTime(json['startUtc']),
+      endUtc: _readDateTime(json['endUtc']),
+      reason: json['reason']?.toString().trim() ?? '',
     );
+  }
+
+  DateTime get localStart => startUtc.toLocal();
+
+  DateTime get localEnd => endUtc.toLocal();
+
+  static int _readInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static DateTime _readDateTime(dynamic value) {
+    return DateTime.tryParse(value?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   }
 }
