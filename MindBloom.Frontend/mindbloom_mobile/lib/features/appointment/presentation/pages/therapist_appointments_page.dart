@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mindbloom_mobile/app/di/injection.dart';
-
+import 'package:intl/intl.dart';
 import '../../../../app/router/app_router.dart';
 import '../../data/models/appointment_model.dart';
 import '../../data/models/therapist_appointment_status.dart';
@@ -185,6 +185,28 @@ class _TherapistAppointmentsPageState extends State<TherapistAppointmentsPage> {
     }
   }
 
+  Future<void> _selectDate() async {
+    final now = DateTime.now();
+
+    final initialDate = viewModel.selectedDate ?? now;
+
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(now.year - 2),
+      lastDate: DateTime(now.year + 3),
+      helpText: 'Select appointment date',
+      cancelText: 'Cancel',
+      confirmText: 'Select',
+    );
+
+    if (selectedDate == null || !mounted) {
+      return;
+    }
+
+    viewModel.selectCustomDate(selectedDate);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -263,8 +285,16 @@ class _TherapistAppointmentsPageState extends State<TherapistAppointmentsPage> {
                 ),
                 const SizedBox(height: 25),
                 _FilterSection(
-                  selectedFilter: viewModel.selectedFilter,
-                  onSelected: viewModel.selectFilter,
+                  selectedStatusFilter: viewModel.selectedStatusFilter,
+                  selectedDateFilter: viewModel.selectedDateFilter,
+                  selectedDate: viewModel.selectedDate,
+                  hasActiveFilters: viewModel.hasActiveFilters,
+                  onStatusSelected: viewModel.selectStatusFilter,
+                  onAllDatesSelected: viewModel.selectAllDates,
+                  onTodaySelected: viewModel.selectToday,
+                  onThisWeekSelected: viewModel.selectThisWeek,
+                  onCustomDateSelected: _selectDate,
+                  onClearFilters: viewModel.clearFilters,
                 ),
                 const SizedBox(height: 22),
                 if (viewModel.appointments.isEmpty)
@@ -425,60 +455,184 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _FilterSection extends StatelessWidget {
-  final TherapistAppointmentStatus? selectedFilter;
+  final TherapistAppointmentStatus? selectedStatusFilter;
 
-  final ValueChanged<TherapistAppointmentStatus?> onSelected;
+  final TherapistAppointmentDateFilter selectedDateFilter;
+
+  final DateTime? selectedDate;
+
+  final bool hasActiveFilters;
+
+  final ValueChanged<TherapistAppointmentStatus?> onStatusSelected;
+
+  final VoidCallback onAllDatesSelected;
+  final VoidCallback onTodaySelected;
+  final VoidCallback onThisWeekSelected;
+  final VoidCallback onCustomDateSelected;
+  final VoidCallback onClearFilters;
 
   const _FilterSection({
-    required this.selectedFilter,
-    required this.onSelected,
+    required this.selectedStatusFilter,
+    required this.selectedDateFilter,
+    required this.selectedDate,
+    required this.hasActiveFilters,
+    required this.onStatusSelected,
+    required this.onAllDatesSelected,
+    required this.onTodaySelected,
+    required this.onThisWeekSelected,
+    required this.onCustomDateSelected,
+    required this.onClearFilters,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Filter by status',
-          style: TextStyle(
-            color: Color(0xFF40334D),
-            fontSize: 19,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE5DBEF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: const Text('All'),
-                  selected: selectedFilter == null,
-                  onSelected: (_) {
-                    onSelected(null);
-                  },
+              const Expanded(
+                child: Text(
+                  'Filters',
+                  style: TextStyle(
+                    color: Color(0xFF40334D),
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
-              ...TherapistAppointmentStatus.values.map((status) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(status.label),
-                    selected: selectedFilter == status,
-                    onSelected: (_) {
-                      onSelected(status);
-                    },
-                  ),
-                );
-              }),
+              if (hasActiveFilters)
+                TextButton.icon(
+                  onPressed: onClearFilters,
+                  icon: const Icon(Icons.filter_alt_off_outlined),
+                  label: const Text('Clear'),
+                ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 15),
+          const Text(
+            'Date',
+            style: TextStyle(
+              color: Color(0xFF5D5364),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: const Text('All dates'),
+                    selected:
+                        selectedDateFilter ==
+                        TherapistAppointmentDateFilter.all,
+                    onSelected: (_) {
+                      onAllDatesSelected();
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    avatar: const Icon(Icons.today_outlined, size: 18),
+                    label: const Text('Today'),
+                    selected:
+                        selectedDateFilter ==
+                        TherapistAppointmentDateFilter.today,
+                    onSelected: (_) {
+                      onTodaySelected();
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    avatar: const Icon(Icons.date_range_outlined, size: 18),
+                    label: const Text('This week'),
+                    selected:
+                        selectedDateFilter ==
+                        TherapistAppointmentDateFilter.thisWeek,
+                    onSelected: (_) {
+                      onThisWeekSelected();
+                    },
+                  ),
+                ),
+                FilterChip(
+                  avatar: const Icon(Icons.calendar_month_outlined, size: 18),
+                  label: Text(_customDateLabel()),
+                  selected:
+                      selectedDateFilter ==
+                      TherapistAppointmentDateFilter.custom,
+                  onSelected: (_) {
+                    onCustomDateSelected();
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 19),
+          const Text(
+            'Status',
+            style: TextStyle(
+              color: Color(0xFF5D5364),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: const Text('All statuses'),
+                    selected: selectedStatusFilter == null,
+                    onSelected: (_) {
+                      onStatusSelected(null);
+                    },
+                  ),
+                ),
+                ...TherapistAppointmentStatus.values.map((status) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(status.label),
+                      selected: selectedStatusFilter == status,
+                      onSelected: (_) {
+                        onStatusSelected(status);
+                      },
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
+  }
+
+  String _customDateLabel() {
+    final date = selectedDate;
+
+    if (selectedDateFilter != TherapistAppointmentDateFilter.custom ||
+        date == null) {
+      return 'Choose date';
+    }
+
+    return DateFormat('dd.MM.yyyy.').format(date);
   }
 }
 

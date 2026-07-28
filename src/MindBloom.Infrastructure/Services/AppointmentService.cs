@@ -396,12 +396,15 @@ public class AppointmentService : IAppointmentService
                 EndUtc = x.EndUtc,
 
                 Status = x.Status.ToString(),
-
                 Type = x.Type.ToString(),
+
+                Price = x.Price,
 
                 MeetingLink = x.MeetingLink,
 
                 Location = x.Location,
+
+                Notes = x.Notes,
 
                 PaymentId =
     x.Payment != null

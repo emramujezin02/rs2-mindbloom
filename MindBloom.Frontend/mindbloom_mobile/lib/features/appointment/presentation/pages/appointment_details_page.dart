@@ -650,6 +650,33 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                   ),
                 ),
               ),
+
+              if (appointment.notes != null &&
+                  appointment.notes!.trim().isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.notes_outlined),
+                            SizedBox(width: 8),
+                            Text(
+                              'Client note',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(appointment.notes!),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
 
             const SizedBox(height: 20),
