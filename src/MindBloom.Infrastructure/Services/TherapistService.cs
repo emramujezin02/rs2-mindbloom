@@ -1475,7 +1475,7 @@ public class TherapistService : ITherapistService
     }
 
     public async Task<TherapistDashboardDto>
-      GetDashboardAsync(int therapistUserId)
+    GetDashboardAsync(int therapistUserId)
     {
         var therapist =
             await _context.Therapists
@@ -1490,11 +1490,35 @@ public class TherapistService : ITherapistService
                 "Therapist not found.");
         }
 
+        var nowUtc = DateTime.UtcNow;
+
         var todayStartUtc =
-            DateTime.UtcNow.Date;
+            nowUtc.Date;
 
         var tomorrowStartUtc =
             todayStartUtc.AddDays(1);
+
+        var currentMonthStartUtc =
+            new DateTime(
+                nowUtc.Year,
+                nowUtc.Month,
+                1,
+                0,
+                0,
+                0,
+                DateTimeKind.Utc);
+
+        var nextMonthStartUtc =
+            currentMonthStartUtc.AddMonths(1);
+
+        var activeClientPeriodStartUtc =
+            nowUtc.AddDays(-30);
+
+        var trendStartUtc =
+            currentMonthStartUtc.AddMonths(-5);
+
+        var trendEndUtc =
+            nextMonthStartUtc;
 
         var todayAppointments =
             await _context.Appointments
@@ -1607,6 +1631,132 @@ public class TherapistService : ITherapistService
                     (decimal?)payment.Amount)
             ?? 0;
 
+        /*
+         * Novi klijenti:
+         * klijenti čiji je prvi prihvaćeni ili završeni
+         * termin kod ovog terapeuta bio u tekućem mjesecu.
+         */
+        var firstClientAppointments =
+            await _context.Appointments
+                .AsNoTracking()
+                .Where(appointment =>
+                    !appointment.IsDeleted &&
+                    appointment.TherapistId ==
+                        therapist.Id &&
+                    (
+                        appointment.Status ==
+                            AppointmentStatus.Accepted ||
+                        appointment.Status ==
+                            AppointmentStatus.Completed
+                    ))
+                .GroupBy(appointment =>
+                    appointment.ClientId)
+                .Select(group =>
+                    new
+                    {
+                        ClientId = group.Key,
+                        FirstAppointmentUtc =
+                            group.Min(appointment =>
+                                appointment.StartUtc)
+                    })
+                .ToListAsync();
+
+        var newClients =
+            firstClientAppointments.Count(client =>
+                client.FirstAppointmentUtc >=
+                    currentMonthStartUtc &&
+                client.FirstAppointmentUtc <
+                    nextMonthStartUtc);
+
+        /*
+         * Aktivni klijenti:
+         * imaju budući prihvaćeni termin ili su završili
+         * najmanje jedan termin u posljednjih 30 dana.
+         */
+        var activeClients =
+            await _context.Appointments
+                .AsNoTracking()
+                .Where(appointment =>
+                    !appointment.IsDeleted &&
+                    appointment.TherapistId ==
+                        therapist.Id &&
+                    (
+                        (
+                            appointment.Status ==
+                                AppointmentStatus.Accepted &&
+                            appointment.StartUtc >= nowUtc
+                        )
+                        ||
+                        (
+                            appointment.Status ==
+                                AppointmentStatus.Completed &&
+                            appointment.StartUtc >=
+                                activeClientPeriodStartUtc &&
+                            appointment.StartUtc <= nowUtc
+                        )
+                    ))
+                .Select(appointment =>
+                    appointment.ClientId)
+                .Distinct()
+                .CountAsync();
+
+        /*
+         * Završeni termini tokom posljednjih šest mjeseci,
+         * uključujući trenutni mjesec.
+         */
+        var completedAppointmentDates =
+            await _context.Appointments
+                .AsNoTracking()
+                .Where(appointment =>
+                    !appointment.IsDeleted &&
+                    appointment.TherapistId ==
+                        therapist.Id &&
+                    appointment.Status ==
+                        AppointmentStatus.Completed &&
+                    appointment.StartUtc >= trendStartUtc &&
+                    appointment.StartUtc < trendEndUtc)
+                .Select(appointment =>
+                    appointment.StartUtc)
+                .ToListAsync();
+
+        var workTrend =
+            new List<TherapistWorkTrendDto>();
+
+        for (var monthOffset = 0;
+             monthOffset < 6;
+             monthOffset++)
+        {
+            var monthStart =
+                trendStartUtc.AddMonths(monthOffset);
+
+            var monthEnd =
+                monthStart.AddMonths(1);
+
+            var completedAppointments =
+                completedAppointmentDates.Count(date =>
+                    date >= monthStart &&
+                    date < monthEnd);
+
+            workTrend.Add(
+                new TherapistWorkTrendDto
+                {
+                    Year = monthStart.Year,
+
+                    Month = monthStart.Month,
+
+                    Label =
+                        monthStart.ToString("MMM yyyy"),
+
+                    CompletedAppointments =
+                        completedAppointments
+                });
+        }
+
+        var averageAppointmentsPerMonth =
+            Math.Round(
+                completedAppointmentDates.Count / 6.0,
+                1);
+
         return new TherapistDashboardDto
         {
             TodayAppointments =
@@ -1630,7 +1780,19 @@ public class TherapistService : ITherapistService
                     1),
 
             TotalEarnings =
-                totalEarnings
+                totalEarnings,
+
+            NewClients =
+                newClients,
+
+            ActiveClients =
+                activeClients,
+
+            AverageAppointmentsPerMonth =
+                averageAppointmentsPerMonth,
+
+            WorkTrend =
+                workTrend
         };
     }
 

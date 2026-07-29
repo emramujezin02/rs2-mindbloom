@@ -119,6 +119,8 @@ class _TherapistDashboardPageState extends State<TherapistDashboardPage> {
         const SizedBox(height: 24),
         _DashboardStatistics(dashboard: dashboard),
         const SizedBox(height: 28),
+        _WorkTrendSection(workTrend: dashboard.workTrend),
+        const SizedBox(height: 28),
         _QuickActions(
           onAppointments: _openAppointments,
           onClients: _openClients,
@@ -199,6 +201,21 @@ class _DashboardStatistics extends StatelessWidget {
         icon: Icons.people_outline,
       ),
       _DashboardCardData(
+        title: 'Novi klijenti ovog mjeseca',
+        value: dashboard.newClients.toString(),
+        icon: Icons.person_add_alt_1_outlined,
+      ),
+      _DashboardCardData(
+        title: 'Aktivni klijenti',
+        value: dashboard.activeClients.toString(),
+        icon: Icons.groups_2_outlined,
+      ),
+      _DashboardCardData(
+        title: 'Prosjek termina mjesečno',
+        value: dashboard.averageAppointmentsPerMonth.toStringAsFixed(1),
+        icon: Icons.analytics_outlined,
+      ),
+      _DashboardCardData(
         title: 'Novi zahtjevi',
         value: dashboard.newRequests.toString(),
         icon: Icons.pending_actions_outlined,
@@ -260,6 +277,136 @@ class _DashboardStatistics extends StatelessWidget {
               }).toList(),
             );
           },
+        ),
+      ],
+    );
+  }
+}
+
+class _WorkTrendSection extends StatelessWidget {
+  final List<TherapistWorkTrendModel> workTrend;
+
+  const _WorkTrendSection({required this.workTrend});
+
+  @override
+  Widget build(BuildContext context) {
+    final maximumAppointments = workTrend.isEmpty
+        ? 0
+        : workTrend
+              .map((item) => item.completedAppointments)
+              .reduce((current, next) => current > next ? current : next);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Trend rada',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Broj završenih termina tokom posljednjih šest mjeseci.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE7DDF0)),
+          ),
+          child: workTrend.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.bar_chart_outlined,
+                        size: 42,
+                        color: Color(0xFF9175B2),
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        'Podaci o trendu rada nisu dostupni.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Color(0xFF756D79)),
+                      ),
+                    ],
+                  ),
+                )
+              : Column(
+                  children: workTrend.map((item) {
+                    final progress = maximumAppointments == 0
+                        ? 0.0
+                        : item.completedAppointments / maximumAppointments;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _WorkTrendRow(item: item, progress: progress),
+                    );
+                  }).toList(),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WorkTrendRow extends StatelessWidget {
+  final TherapistWorkTrendModel item;
+  final double progress;
+
+  const _WorkTrendRow({required this.item, required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 82,
+          child: Text(
+            item.label,
+            style: const TextStyle(
+              color: Color(0xFF5D5264),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              height: 12,
+              color: const Color(0xFFEDE5FA),
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: progress,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF72559A),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 30,
+          child: Text(
+            item.completedAppointments.toString(),
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+              color: Color(0xFF40334D),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ),
       ],
     );
