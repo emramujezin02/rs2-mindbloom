@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:image_cropper/image_cropper.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../data/models/therapist_profile_availability_model.dart';
@@ -23,6 +24,7 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
       AppInjection.createTherapistProfileViewModel();
 
   final ImagePicker _imagePicker = ImagePicker();
+  final ImageCropper _imageCropper = ImageCropper();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   int _selectedDayOfWeek = 1;
@@ -58,6 +60,7 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
   bool _offersInPerson = false;
 
   File? _selectedImage;
+  bool _profileImageDeleted = false;
 
   @override
   void initState() {
@@ -140,37 +143,147 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
   }
 
   Future<void> _selectProfileImage() async {
+    if (_viewModel.isManagingProfileImage) {
+      return;
+    }
+
     final image = await _imagePicker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 85,
-      maxWidth: 1600,
-      maxHeight: 1600,
+      imageQuality: 95,
+      maxWidth: 2400,
+      maxHeight: 2400,
     );
 
     if (image == null || !mounted) {
       return;
     }
 
-    final selectedFile = File(image.path);
+    final croppedImage = await _imageCropper.cropImage(
+      sourcePath: image.path,
+      compressFormat: ImageCompressFormat.jpg,
+      compressQuality: 90,
+      maxWidth: 1200,
+      maxHeight: 1200,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop profile picture',
+          toolbarColor: const Color(0xFF72559A),
+          toolbarWidgetColor: Colors.white,
+          activeControlsWidgetColor: const Color(0xFF72559A),
+          cropStyle: CropStyle.circle,
+          lockAspectRatio: true,
+          hideBottomControls: false,
+          initAspectRatio: CropAspectRatioPreset.square,
+          aspectRatioPresets: const [CropAspectRatioPreset.square],
+        ),
+        IOSUiSettings(
+          title: 'Crop profile picture',
+          cropStyle: CropStyle.circle,
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+          aspectRatioPickerButtonHidden: true,
+          aspectRatioPresets: const [CropAspectRatioPreset.square],
+        ),
+      ],
+    );
+
+    if (croppedImage == null || !mounted) {
+      return;
+    }
 
     setState(() {
-      _selectedImage = selectedFile;
-    });
+      _selectedImage = File(croppedImage.path);
 
-    final success = await _viewModel.uploadProfileImage(selectedFile);
+      _profileImageDeleted = false;
+    });
+  }
+
+  Future<void> _uploadSelectedProfileImage() async {
+    final selectedImage = _selectedImage;
+
+    if (selectedImage == null || _viewModel.isManagingProfileImage) {
+      return;
+    }
+
+    final success = await _viewModel.uploadProfileImage(selectedImage);
 
     if (!mounted) {
       return;
     }
 
     if (success) {
+      setState(() {
+        _selectedImage = null;
+        _profileImageDeleted = false;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile picture updated successfully.')),
       );
-    } else {
+    }
+  }
+
+  void _discardSelectedProfileImage() {
+    if (_viewModel.isManagingProfileImage) {
+      return;
+    }
+
+    setState(() {
+      _selectedImage = null;
+    });
+  }
+
+  Future<void> _deleteProfileImage() async {
+    if (_viewModel.isManagingProfileImage) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete profile picture'),
+          content: const Text(
+            'Are you sure you want to delete your profile picture?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final success = await _viewModel.deleteProfileImage();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (success) {
       setState(() {
         _selectedImage = null;
+        _profileImageDeleted = true;
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile picture deleted successfully.')),
+      );
     }
   }
 
@@ -398,6 +511,10 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
       return FileImage(_selectedImage!);
     }
 
+    if (_profileImageDeleted) {
+      return null;
+    }
+
     final uploadedImageUrl = _buildImageUrl(
       _viewModel.profile?.profileImageUrl,
     );
@@ -413,6 +530,23 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
     }
 
     return null;
+  }
+
+  String _buildProfileInitials() {
+    final parts = [
+      widget.profile.firstName.trim(),
+      widget.profile.lastName.trim(),
+    ].where((value) => value.isNotEmpty).toList();
+
+    if (parts.isEmpty) {
+      return '?';
+    }
+
+    if (parts.length == 1) {
+      return parts.first[0].toUpperCase();
+    }
+
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 
   @override
@@ -460,10 +594,13 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
                                 backgroundColor: const Color(0xFFEDE5FA),
                                 backgroundImage: profileImage,
                                 child: profileImage == null
-                                    ? const Icon(
-                                        Icons.person_outline,
-                                        size: 58,
-                                        color: Color(0xFF72559A),
+                                    ? Text(
+                                        _buildProfileInitials(),
+                                        style: const TextStyle(
+                                          color: Color(0xFF72559A),
+                                          fontSize: 34,
+                                          fontWeight: FontWeight.w800,
+                                        ),
                                       )
                                     : null,
                               ),
@@ -476,10 +613,10 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
                                   shape: const CircleBorder(),
                                   child: IconButton(
                                     tooltip: 'Change profile picture',
-                                    onPressed: _viewModel.isUploadingImage
+                                    onPressed: _viewModel.isManagingProfileImage
                                         ? null
                                         : _selectProfileImage,
-                                    icon: _viewModel.isUploadingImage
+                                    icon: _viewModel.isManagingProfileImage
                                         ? const SizedBox(
                                             width: 21,
                                             height: 21,
@@ -496,6 +633,73 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
                               ),
                             ],
                           ),
+
+                          const SizedBox(height: 18),
+
+                          if (_selectedImage != null)
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                FilledButton.icon(
+                                  onPressed: _viewModel.isManagingProfileImage
+                                      ? null
+                                      : _uploadSelectedProfileImage,
+                                  icon: _viewModel.isUploadingImage
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Icon(Icons.cloud_upload_outlined),
+                                  label: Text(
+                                    _viewModel.isUploadingImage
+                                        ? 'Uploading...'
+                                        : 'Upload picture',
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: _viewModel.isManagingProfileImage
+                                      ? null
+                                      : _discardSelectedProfileImage,
+                                  icon: const Icon(Icons.close),
+                                  label: const Text('Cancel preview'),
+                                ),
+                              ],
+                            )
+                          else if (!_profileImageDeleted &&
+                              (_viewModel.profile?.profileImageUrl
+                                          ?.trim()
+                                          .isNotEmpty ==
+                                      true ||
+                                  widget.profile.profileImageUrl
+                                          ?.trim()
+                                          .isNotEmpty ==
+                                      true))
+                            TextButton.icon(
+                              onPressed: _viewModel.isManagingProfileImage
+                                  ? null
+                                  : _deleteProfileImage,
+                              icon: _viewModel.isDeletingImage
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.delete_outline),
+                              label: Text(
+                                _viewModel.isDeletingImage
+                                    ? 'Deleting...'
+                                    : 'Delete profile picture',
+                              ),
+                            ),
+
                           const SizedBox(height: 18),
                           Text(
                             '${widget.profile.firstName} '

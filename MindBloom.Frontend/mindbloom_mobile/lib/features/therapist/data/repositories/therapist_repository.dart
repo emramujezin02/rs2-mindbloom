@@ -62,6 +62,10 @@ class TherapistRepository {
     return therapistApiService.uploadTherapistProfileImage(file);
   }
 
+  Future<void> deleteTherapistProfileImage() {
+    return therapistApiService.deleteTherapistProfileImage();
+  }
+
   Future<void> addTherapistAvailability({
     required CreateTherapistAvailabilityRequest request,
   }) {

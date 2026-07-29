@@ -26,6 +26,7 @@ class TherapistProfileViewModel extends ChangeNotifier {
   bool _isLoading = false;
   bool _isSaving = false;
   bool _isUploadingImage = false;
+  bool _isDeletingImage = false;
   bool _isManagingAvailability = false;
   bool _isLoadingTherapyApproaches = false;
   String? _errorMessage;
@@ -42,6 +43,10 @@ class TherapistProfileViewModel extends ChangeNotifier {
   bool get isSaving => _isSaving;
 
   bool get isUploadingImage => _isUploadingImage;
+  bool get isDeletingImage => _isDeletingImage;
+
+  bool get isManagingProfileImage => _isUploadingImage || _isDeletingImage;
+
   bool get isManagingAvailability => _isManagingAvailability;
   String? get errorMessage => _errorMessage;
 
@@ -50,7 +55,11 @@ class TherapistProfileViewModel extends ChangeNotifier {
   bool get hasProfile => _profile != null;
 
   bool get isBusy =>
-      _isLoading || _isSaving || _isUploadingImage || _isManagingAvailability;
+      _isLoading ||
+      _isSaving ||
+      _isUploadingImage ||
+      _isDeletingImage ||
+      _isManagingAvailability;
 
   Future<void> loadProfile() async {
     if (_isLoading) {
@@ -295,6 +304,43 @@ class TherapistProfileViewModel extends ChangeNotifier {
       return false;
     } finally {
       _isUploadingImage = false;
+
+      notifyListeners();
+    }
+  }
+
+  Future<bool> deleteProfileImage() async {
+    if (_isUploadingImage || _isDeletingImage) {
+      return false;
+    }
+
+    _errorMessage = null;
+    _successMessage = null;
+    _isDeletingImage = true;
+
+    notifyListeners();
+
+    try {
+      await repository.deleteTherapistProfileImage();
+
+      /*
+     * Profil se ponovo učitava jer obični copyWith
+     * trenutno ne može postaviti nullable URL na null.
+     */
+      _profile = await repository.getTherapistProfile();
+
+      _successMessage = 'Profile image deleted successfully.';
+
+      return true;
+    } catch (error) {
+      _errorMessage = _resolveErrorMessage(
+        error,
+        fallback: 'Profile image could not be deleted.',
+      );
+
+      return false;
+    } finally {
+      _isDeletingImage = false;
 
       notifyListeners();
     }

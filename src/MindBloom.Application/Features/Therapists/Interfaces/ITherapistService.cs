@@ -58,4 +58,7 @@ public interface ITherapistService
     Task<TherapistProfileImageDto> UploadProfileImageAsync(
         int therapistUserId,
         IFormFile file);
+
+    Task DeleteProfileImageAsync(
+        int therapistUserId);
 }

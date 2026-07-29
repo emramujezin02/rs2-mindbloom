@@ -368,6 +368,21 @@ UploadProfileImage(
         return Ok(result);
     }
 
+    [Authorize(Roles = "Therapist")]
+    [HttpDelete("profile/image")]
+    public async Task<IActionResult>
+DeleteProfileImage()
+    {
+        var userId =
+            GetCurrentUserId();
+
+        await _therapistService
+            .DeleteProfileImageAsync(
+                userId);
+
+        return NoContent();
+    }
+
     private int GetCurrentUserId()
     {
         var userIdValue =

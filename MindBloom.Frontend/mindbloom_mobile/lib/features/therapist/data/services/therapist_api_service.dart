@@ -140,6 +140,10 @@ class TherapistApiService {
     return TherapistProfileImageModel.fromJson(_asJsonMap(response));
   }
 
+  Future<void> deleteTherapistProfileImage() async {
+    await apiClient.delete('/Therapists/profile/image');
+  }
+
   Map<String, dynamic> _asJsonMap(dynamic response) {
     if (response is Map<String, dynamic>) {
       return response;

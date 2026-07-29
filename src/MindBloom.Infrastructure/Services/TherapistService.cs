@@ -1192,6 +1192,51 @@ public class TherapistService : ITherapistService
         };
     }
 
+    public async Task DeleteProfileImageAsync(
+    int therapistUserId)
+    {
+        var therapist =
+            await _context.Therapists
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist profile not found.");
+        }
+
+        var oldImageUrl =
+            therapist.User.ProfileImageUrl
+            ?? therapist.ProfileImagePath;
+
+        if (string.IsNullOrWhiteSpace(
+                oldImageUrl))
+        {
+            return;
+        }
+
+        therapist.User.ProfileImageUrl =
+            null;
+
+        therapist.ProfileImagePath =
+            null;
+
+        await _context.SaveChangesAsync();
+
+        var webRootPath =
+            _environment.WebRootPath
+            ?? Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot");
+
+        DeleteManagedProfileImage(
+            oldImageUrl,
+            webRootPath);
+    }
+
     public async Task<TherapistDetailsDto>
  GetByIdAsync(
      int therapistId,
@@ -2348,32 +2393,9 @@ public class TherapistService : ITherapistService
             return;
         }
 
-        const string managedFolder =
-            "/uploads/profiles/therapists/";
-
-        if (!oldImageUrl.StartsWith(
-                managedFolder,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        var relativePath =
-            oldImageUrl
-                .TrimStart('/')
-                .Replace(
-                    '/',
-                    Path.DirectorySeparatorChar);
-
-        var physicalPath =
-            Path.Combine(
-                webRootPath,
-                relativePath);
-
-        if (File.Exists(physicalPath))
-        {
-            File.Delete(physicalPath);
-        }
+        DeleteManagedProfileImage(
+            oldImageUrl,
+            webRootPath);
     }
 
     private static async Task ValidateDocumentAsync(
@@ -2484,5 +2506,43 @@ public class TherapistService : ITherapistService
 
         therapist.Latitude = result.Latitude;
         therapist.Longitude = result.Longitude;
+    }
+
+    private static void DeleteManagedProfileImage(
+    string? imageUrl,
+    string webRootPath)
+    {
+        if (string.IsNullOrWhiteSpace(
+                imageUrl))
+        {
+            return;
+        }
+
+        const string managedFolder =
+            "/uploads/profiles/therapists/";
+
+        if (!imageUrl.StartsWith(
+                managedFolder,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var relativePath =
+            imageUrl
+                .TrimStart('/')
+                .Replace(
+                    '/',
+                    Path.DirectorySeparatorChar);
+
+        var physicalPath =
+            Path.Combine(
+                webRootPath,
+                relativePath);
+
+        if (File.Exists(physicalPath))
+        {
+            File.Delete(physicalPath);
+        }
     }
 }
