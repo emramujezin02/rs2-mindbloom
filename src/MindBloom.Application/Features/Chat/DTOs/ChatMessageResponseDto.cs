@@ -21,4 +21,8 @@ public class ChatMessageResponseDto
     public bool IsEdited { get; set; }
 
     public string? ClientMessageId { get; set; }
+
+    public bool IsRead { get; set; }
+
+    public DateTime? ReadAtUtc { get; set; }
 }

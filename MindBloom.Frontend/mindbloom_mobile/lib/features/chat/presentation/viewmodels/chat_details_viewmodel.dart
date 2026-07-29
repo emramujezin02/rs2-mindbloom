@@ -23,6 +23,9 @@ class ChatDetailsViewModel extends ChangeNotifier {
       required void Function(ChatMessageModel message) onMessageReceived,
       required void Function(ChatConnectionStatus status) onStatusChanged,
       required Future<void> Function() onReconnected,
+      required void Function(int conversationId, bool isTyping) onTypingChanged,
+      required void Function(int conversationId, DateTime readAtUtc)
+      onConversationRead,
     })
     realtimeServiceFactory,
   }) {
@@ -30,6 +33,8 @@ class ChatDetailsViewModel extends ChangeNotifier {
       onMessageReceived: _addRealtimeMessage,
       onStatusChanged: _setConnectionStatus,
       onReconnected: _refreshAfterReconnect,
+      onTypingChanged: _handleTypingChanged,
+      onConversationRead: _handleConversationRead,
     );
   }
 
@@ -47,6 +52,11 @@ class ChatDetailsViewModel extends ChangeNotifier {
   int _totalPages = 0;
 
   ChatConnectionStatus connectionStatus = ChatConnectionStatus.disconnected;
+  Timer? _typingStopTimer;
+
+  bool isOtherParticipantTyping = false;
+
+  bool _typingSent = false;
 
   bool get hasMoreMessages {
     return _currentPage < _totalPages;
@@ -203,6 +213,100 @@ class ChatDetailsViewModel extends ChangeNotifier {
     }
   }
 
+  void onComposerChanged(String value) {
+    final conversationId = conversation?.id;
+
+    if (conversationId == null || conversation?.isClosed == true) {
+      return;
+    }
+
+    final hasText = value.trim().isNotEmpty;
+
+    _typingStopTimer?.cancel();
+
+    if (!hasText) {
+      unawaited(_sendTypingState(false));
+
+      return;
+    }
+
+    if (!_typingSent) {
+      unawaited(_sendTypingState(true));
+    }
+
+    _typingStopTimer = Timer(const Duration(milliseconds: 1400), () {
+      unawaited(_sendTypingState(false));
+    });
+  }
+
+  Future<void> _sendTypingState(bool isTyping) async {
+    final conversationId = conversation?.id;
+
+    if (conversationId == null) {
+      return;
+    }
+
+    if (_typingSent == isTyping) {
+      return;
+    }
+
+    _typingSent = isTyping;
+
+    try {
+      await realtimeService.setTyping(
+        conversationId: conversationId,
+        isTyping: isTyping,
+      );
+    } catch (_) {
+      if (isTyping) {
+        _typingSent = false;
+      }
+    }
+  }
+
+  void _handleTypingChanged(int conversationId, bool isTyping) {
+    if (conversation?.id != conversationId) {
+      return;
+    }
+
+    if (isOtherParticipantTyping == isTyping) {
+      return;
+    }
+
+    isOtherParticipantTyping = isTyping;
+
+    notifyListeners();
+  }
+
+  void _handleConversationRead(int conversationId, DateTime readAtUtc) {
+    if (conversation?.id != conversationId) {
+      return;
+    }
+
+    var changed = false;
+
+    messages = messages.map((message) {
+      if (!message.isMine ||
+          message.isSending ||
+          message.hasFailed ||
+          message.sentAtUtc.isAfter(readAtUtc)) {
+        return message;
+      }
+
+      if (message.isRead && message.readAtUtc == readAtUtc) {
+        return message;
+      }
+
+      changed = true;
+
+      return message.copyWith(isRead: true, readAtUtc: readAtUtc);
+    }).toList();
+
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
   Future<bool> sendMessage(String content) async {
     final conversationId = conversation?.id;
 
@@ -231,6 +335,10 @@ class ChatDetailsViewModel extends ChangeNotifier {
     }
 
     errorMessage = null;
+
+    _typingStopTimer?.cancel();
+
+    unawaited(_sendTypingState(false));
 
     final clientMessageId = _createClientMessageId();
 
@@ -325,6 +433,8 @@ class ChatDetailsViewModel extends ChangeNotifier {
 
       if (conversationId != null) {
         await repository.markAsRead(conversationId);
+
+        await realtimeService.markAsRead(conversationId);
       }
 
       notifyListeners();
@@ -342,7 +452,13 @@ class ChatDetailsViewModel extends ChangeNotifier {
 
     _reconcileMessage(message);
 
-    unawaited(repository.markAsRead(conversationId));
+    if (!message.isMine) {
+      isOtherParticipantTyping = false;
+
+      unawaited(realtimeService.markAsRead(conversationId));
+
+      notifyListeners();
+    }
   }
 
   void _reconcileMessage(ChatMessageModel serverMessage) {
@@ -472,6 +588,10 @@ class ChatDetailsViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _typingStopTimer?.cancel();
+
+    _typingStopTimer = null;
+
     unawaited(realtimeService.stop());
 
     super.dispose();

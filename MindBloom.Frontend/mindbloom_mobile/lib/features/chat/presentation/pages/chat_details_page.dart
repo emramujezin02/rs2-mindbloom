@@ -119,6 +119,8 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
     if (success) {
       _messageController.clear();
 
+      _viewModel.onComposerChanged('');
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom();
       });
@@ -268,6 +270,31 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
                 ),
         ),
 
+        if (_viewModel.isOtherParticipantTyping)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 1.5),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${conversation.otherParticipantName} is typing...',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
         if (_viewModel.errorMessage != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
@@ -303,6 +330,7 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
                       minLines: 1,
                       maxLines: 5,
                       maxLength: 2000,
+                      onChanged: _viewModel.onComposerChanged,
                       decoration: const InputDecoration(
                         hintText: 'Write a message...',
                         border: OutlineInputBorder(),
@@ -393,9 +421,20 @@ class _MessageBubble extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 1.5),
                     )
                   else if (message.hasFailed)
-                    const Icon(Icons.error_outline, size: 16)
+                    const Tooltip(
+                      message: 'Message could not be sent',
+                      child: Icon(Icons.error_outline, size: 16),
+                    )
+                  else if (message.isRead)
+                    const Tooltip(
+                      message: 'Read',
+                      child: Icon(Icons.done_all, size: 17),
+                    )
                   else
-                    const Icon(Icons.done, size: 16),
+                    const Tooltip(
+                      message: 'Sent',
+                      child: Icon(Icons.done, size: 16),
+                    ),
                 ],
               ],
             ),

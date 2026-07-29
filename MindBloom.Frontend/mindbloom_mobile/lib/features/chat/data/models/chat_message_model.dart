@@ -13,6 +13,9 @@ class ChatMessageModel {
   final ChatMessageDeliveryStatus deliveryStatus;
   final String? sendingError;
 
+  final bool isRead;
+  final DateTime? readAtUtc;
+
   const ChatMessageModel({
     required this.id,
     required this.conversationId,
@@ -25,6 +28,8 @@ class ChatMessageModel {
     required this.clientMessageId,
     required this.deliveryStatus,
     required this.sendingError,
+    required this.isRead,
+    required this.readAtUtc,
   });
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
@@ -42,6 +47,8 @@ class ChatMessageModel {
       clientMessageId: _nullableString(json['clientMessageId']),
       deliveryStatus: ChatMessageDeliveryStatus.sent,
       sendingError: null,
+      isRead: json['isRead'] == true,
+      readAtUtc: _toNullableDateTime(json['readAtUtc']),
     );
   }
 
@@ -64,6 +71,8 @@ class ChatMessageModel {
       clientMessageId: clientMessageId,
       deliveryStatus: ChatMessageDeliveryStatus.sending,
       sendingError: null,
+      isRead: false,
+      readAtUtc: null,
     );
   }
 
@@ -88,6 +97,9 @@ class ChatMessageModel {
     ChatMessageDeliveryStatus? deliveryStatus,
     String? sendingError,
     bool clearSendingError = false,
+    bool? isRead,
+    DateTime? readAtUtc,
+    bool clearReadAtUtc = false,
   }) {
     return ChatMessageModel(
       id: id ?? this.id,
@@ -103,6 +115,8 @@ class ChatMessageModel {
       sendingError: clearSendingError
           ? null
           : sendingError ?? this.sendingError,
+      isRead: isRead ?? this.isRead,
+      readAtUtc: clearReadAtUtc ? null : readAtUtc ?? this.readAtUtc,
     );
   }
 
@@ -122,5 +136,19 @@ class ChatMessageModel {
     final text = value?.toString().trim() ?? '';
 
     return text.isEmpty ? null : text;
+  }
+
+  static DateTime? _toNullableDateTime(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    final text = value.toString().trim();
+
+    if (text.isEmpty) {
+      return null;
+    }
+
+    return DateTime.tryParse(text);
   }
 }

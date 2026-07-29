@@ -328,12 +328,16 @@ class AppInjection {
             required onMessageReceived,
             required onStatusChanged,
             required onReconnected,
+            required onTypingChanged,
+            required onConversationRead,
           }) {
             return ChatRealtimeService(
               sessionStorage: sessionStorage,
               onMessageReceived: onMessageReceived,
               onStatusChanged: onStatusChanged,
               onReconnected: onReconnected,
+              onTypingChanged: onTypingChanged,
+              onConversationRead: onConversationRead,
             );
           },
     );

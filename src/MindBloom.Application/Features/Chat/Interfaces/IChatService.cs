@@ -22,7 +22,7 @@ public interface IChatService
             int currentUserId,
             SendChatMessageDto request);
 
-    Task MarkConversationAsReadAsync(
+    Task<DateTime> MarkConversationAsReadAsync(
         int currentUserId,
         int conversationId);
 
@@ -31,6 +31,6 @@ public interface IChatService
         int conversationId);
 
     Task<List<ConversationListItemDto>>
-    GetMyConversationsAsync(
-        int currentUserId);
+        GetMyConversationsAsync(
+            int currentUserId);
 }

@@ -17,6 +17,11 @@ class ChatRealtimeService {
 
   final Future<void> Function() onReconnected;
 
+  final void Function(int conversationId, bool isTyping) onTypingChanged;
+
+  final void Function(int conversationId, DateTime readAtUtc)
+  onConversationRead;
+
   HubConnection? _connection;
 
   Timer? _manualReconnectTimer;
@@ -32,6 +37,8 @@ class ChatRealtimeService {
     required this.onMessageReceived,
     required this.onStatusChanged,
     required this.onReconnected,
+    required this.onTypingChanged,
+    required this.onConversationRead,
   });
 
   bool get isConnected {
@@ -101,6 +108,10 @@ class ChatRealtimeService {
 
     connection.on('ReceiveMessage', _handleMessage);
 
+    connection.on('TypingChanged', _handleTypingChanged);
+
+    connection.on('ConversationRead', _handleConversationRead);
+
     connection.onreconnecting(({Exception? error}) {
       onStatusChanged(ChatConnectionStatus.reconnecting);
     });
@@ -141,19 +152,63 @@ class ChatRealtimeService {
   }
 
   void _handleMessage(List<Object?>? arguments) {
-    if (arguments == null || arguments.isEmpty) {
+    final json = _firstJsonArgument(arguments);
+
+    if (json == null) {
       return;
+    }
+
+    onMessageReceived(ChatMessageModel.fromJson(json));
+  }
+
+  void _handleTypingChanged(List<Object?>? arguments) {
+    final json = _firstJsonArgument(arguments);
+
+    if (json == null) {
+      return;
+    }
+
+    final conversationId = _toInt(json['conversationId']);
+
+    final isTyping = json['isTyping'] == true;
+
+    if (conversationId <= 0) {
+      return;
+    }
+
+    onTypingChanged(conversationId, isTyping);
+  }
+
+  void _handleConversationRead(List<Object?>? arguments) {
+    final json = _firstJsonArgument(arguments);
+
+    if (json == null) {
+      return;
+    }
+
+    final conversationId = _toInt(json['conversationId']);
+
+    final readAtUtc = DateTime.tryParse(json['readAtUtc']?.toString() ?? '');
+
+    if (conversationId <= 0 || readAtUtc == null) {
+      return;
+    }
+
+    onConversationRead(conversationId, readAtUtc);
+  }
+
+  Map<String, dynamic>? _firstJsonArgument(List<Object?>? arguments) {
+    if (arguments == null || arguments.isEmpty) {
+      return null;
     }
 
     final firstArgument = arguments.first;
 
     if (firstArgument is! Map) {
-      return;
+      return null;
     }
 
-    final json = Map<String, dynamic>.from(firstArgument);
-
-    onMessageReceived(ChatMessageModel.fromJson(json));
+    return Map<String, dynamic>.from(firstArgument);
   }
 
   Future<void> joinConversation(int conversationId) async {
@@ -179,14 +234,35 @@ class ChatRealtimeService {
     );
   }
 
+  Future<void> setTyping({
+    required int conversationId,
+    required bool isTyping,
+  }) async {
+    if (!isConnected) {
+      return;
+    }
+
+    await _connection!.invoke('SetTyping', args: [conversationId, isTyping]);
+  }
+
+  Future<void> markAsRead(int conversationId) async {
+    if (!isConnected) {
+      return;
+    }
+
+    await _connection!.invoke('MarkAsRead', args: [conversationId]);
+  }
+
   Future<void> leaveConversation() async {
     final conversationId = _conversationId;
 
     if (conversationId != null && isConnected) {
       try {
+        await setTyping(conversationId: conversationId, isTyping: false);
+
         await _connection!.invoke('LeaveConversation', args: [conversationId]);
       } catch (_) {
-        // Konekcija se svakako zatvara.
+        // Connection is being closed.
       }
     }
 
@@ -213,7 +289,6 @@ class ChatRealtimeService {
     _manuallyStopped = true;
 
     _manualReconnectTimer?.cancel();
-
     _manualReconnectTimer = null;
 
     await leaveConversation();
@@ -225,10 +300,22 @@ class ChatRealtimeService {
       try {
         await connection.stop();
       } catch (_) {
-        // Nema dodatne akcije.
+        // No additional action is needed.
       }
     }
 
     onStatusChanged(ChatConnectionStatus.disconnected);
+  }
+
+  int _toInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }

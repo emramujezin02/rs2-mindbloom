@@ -35,27 +35,25 @@ public sealed class ChatHub : Hub
         var userId =
             GetCurrentUserId();
 
-        var isParticipant =
-            await _chatService
-                .IsParticipantAsync(
-                    userId,
-                    conversationId);
-
-        if (!isParticipant)
-        {
-            throw new ForbiddenException(
-                "You are not allowed to join this conversation.");
-        }
+        await EnsureParticipantAsync(
+            userId,
+            conversationId);
 
         await Groups.AddToGroupAsync(
             Context.ConnectionId,
             GetConversationGroupName(
                 conversationId));
 
-        await _chatService
-            .MarkConversationAsReadAsync(
-                userId,
-                conversationId);
+        var readAtUtc =
+            await _chatService
+                .MarkConversationAsReadAsync(
+                    userId,
+                    conversationId);
+
+        await NotifyConversationReadAsync(
+            conversationId,
+            userId,
+            readAtUtc);
     }
 
     public async Task LeaveConversation(
@@ -64,17 +62,22 @@ public sealed class ChatHub : Hub
         var userId =
             GetCurrentUserId();
 
-        var isParticipant =
-            await _chatService
-                .IsParticipantAsync(
-                    userId,
-                    conversationId);
+        await EnsureParticipantAsync(
+            userId,
+            conversationId);
 
-        if (!isParticipant)
-        {
-            throw new HubException(
-                "You are not a participant in this conversation.");
-        }
+        await Clients
+            .OthersInGroup(
+                GetConversationGroupName(
+                    conversationId))
+            .SendAsync(
+                "TypingChanged",
+                new
+                {
+                    conversationId,
+                    userId,
+                    isTyping = false
+                });
 
         await Groups.RemoveFromGroupAsync(
             Context.ConnectionId,
@@ -159,7 +162,13 @@ public sealed class ChatHub : Hub
                     result.IsEdited,
 
                 ClientMessageId =
-                    result.ClientMessageId
+                    result.ClientMessageId,
+
+                IsRead =
+                    false,
+
+                ReadAtUtc =
+                    null
             };
 
         await Clients
@@ -169,6 +178,103 @@ public sealed class ChatHub : Hub
             .SendAsync(
                 "ReceiveMessage",
                 recipientResult);
+
+        await Clients
+            .OthersInGroup(
+                GetConversationGroupName(
+                    conversationId))
+            .SendAsync(
+                "TypingChanged",
+                new
+                {
+                    conversationId,
+                    userId,
+                    isTyping = false
+                });
+    }
+
+    public async Task SetTyping(
+        int conversationId,
+        bool isTyping)
+    {
+        var userId =
+            GetCurrentUserId();
+
+        await EnsureParticipantAsync(
+            userId,
+            conversationId);
+
+        await Clients
+            .OthersInGroup(
+                GetConversationGroupName(
+                    conversationId))
+            .SendAsync(
+                "TypingChanged",
+                new
+                {
+                    conversationId,
+                    userId,
+                    isTyping
+                });
+    }
+
+    public async Task MarkAsRead(
+        int conversationId)
+    {
+        var userId =
+            GetCurrentUserId();
+
+        await EnsureParticipantAsync(
+            userId,
+            conversationId);
+
+        var readAtUtc =
+            await _chatService
+                .MarkConversationAsReadAsync(
+                    userId,
+                    conversationId);
+
+        await NotifyConversationReadAsync(
+            conversationId,
+            userId,
+            readAtUtc);
+    }
+
+    private async Task
+        NotifyConversationReadAsync(
+            int conversationId,
+            int readerUserId,
+            DateTime readAtUtc)
+    {
+        await Clients
+            .OthersInGroup(
+                GetConversationGroupName(
+                    conversationId))
+            .SendAsync(
+                "ConversationRead",
+                new
+                {
+                    conversationId,
+                    readerUserId,
+                    readAtUtc
+                });
+    }
+
+    private async Task EnsureParticipantAsync(
+        int userId,
+        int conversationId)
+    {
+        var isParticipant =
+            await _chatService
+                .IsParticipantAsync(
+                    userId,
+                    conversationId);
+
+        if (!isParticipant)
+        {
+            throw new ForbiddenException(
+                "You are not allowed to access this conversation.");
+        }
     }
 
     private int GetCurrentUserId()

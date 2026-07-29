@@ -311,6 +311,21 @@ public sealed class ChatService : IChatService
             currentUserId,
             conversationId);
 
+        var otherParticipantLastReadAtUtc =
+    await _context
+        .ConversationParticipants
+        .AsNoTracking()
+        .Where(x =>
+            x.ConversationId ==
+                conversationId &&
+            x.UserId !=
+                currentUserId &&
+            x.IsActive &&
+            !x.IsDeleted)
+        .Select(x =>
+            x.LastReadAtUtc)
+        .FirstOrDefaultAsync();
+
         var query =
             _context.ChatMessages
                 .AsNoTracking()
@@ -363,8 +378,27 @@ public sealed class ChatService : IChatService
                         IsEdited =
                             x.IsEdited,
 
-                        ClientMessageId =
-    x.ClientMessageId,
+                        ClientMessageId = x.ClientMessageId,
+
+                        IsRead =
+    x.SenderUserId ==
+        currentUserId &&
+    otherParticipantLastReadAtUtc
+        .HasValue &&
+    x.SentAtUtc <=
+        otherParticipantLastReadAtUtc
+            .Value,
+
+                        ReadAtUtc =
+    x.SenderUserId ==
+        currentUserId &&
+    otherParticipantLastReadAtUtc
+        .HasValue &&
+    x.SentAtUtc <=
+        otherParticipantLastReadAtUtc
+            .Value
+        ? otherParticipantLastReadAtUtc
+        : null
                     })
                 .ToListAsync();
 
@@ -550,7 +584,8 @@ public sealed class ChatService : IChatService
             currentUserId);
     }
 
-    public async Task MarkConversationAsReadAsync(
+    public async Task<DateTime>
+    MarkConversationAsReadAsync(
         int currentUserId,
         int conversationId)
     {
@@ -571,10 +606,15 @@ public sealed class ChatService : IChatService
                 "You are not a participant in this conversation.");
         }
 
-        participant.LastReadAtUtc =
+        var readAtUtc =
             DateTime.UtcNow;
 
+        participant.LastReadAtUtc =
+            readAtUtc;
+
         await _context.SaveChangesAsync();
+
+        return readAtUtc;
     }
 
     public async Task<bool> IsParticipantAsync(
@@ -678,7 +718,11 @@ public sealed class ChatService : IChatService
                 message.IsEdited,
 
             ClientMessageId =
-                message.ClientMessageId
+    message.ClientMessageId,
+
+            IsRead = false,
+
+            ReadAtUtc = null
         };
     }
 
