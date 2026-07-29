@@ -7,23 +7,35 @@ import '../../data/models/therapist_profile_model.dart';
 import '../../data/models/update_therapist_profile_request.dart';
 import '../../data/repositories/therapist_repository.dart';
 import '../../../appointment/data/models/unavailable_date_model.dart';
+import '../../../therapy_approach/data/models/therapy_approach_model.dart';
+import '../../../therapy_approach/data/repositories/therapy_approach_repository.dart';
 
 class TherapistProfileViewModel extends ChangeNotifier {
   final TherapistRepository repository;
+  final TherapyApproachRepository therapyApproachRepository;
 
-  TherapistProfileViewModel({required this.repository});
+  TherapistProfileViewModel({
+    required this.repository,
+    required this.therapyApproachRepository,
+  });
 
   TherapistProfileModel? _profile;
+  List<TherapyApproachModel> _availableTherapyApproaches = [];
   List<UnavailableDateModel> _unavailableDates = [];
 
   bool _isLoading = false;
   bool _isSaving = false;
   bool _isUploadingImage = false;
   bool _isManagingAvailability = false;
+  bool _isLoadingTherapyApproaches = false;
   String? _errorMessage;
   String? _successMessage;
 
   TherapistProfileModel? get profile => _profile;
+  List<TherapyApproachModel> get availableTherapyApproaches =>
+      List.unmodifiable(_availableTherapyApproaches);
+
+  bool get isLoadingTherapyApproaches => _isLoadingTherapyApproaches;
 
   bool get isLoading => _isLoading;
 
@@ -91,13 +103,58 @@ class TherapistProfileViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> loadTherapyApproaches() async {
+    if (_isLoadingTherapyApproaches) {
+      return;
+    }
+
+    _isLoadingTherapyApproaches = true;
+    _errorMessage = null;
+
+    notifyListeners();
+
+    try {
+      final approaches = await therapyApproachRepository
+          .getPublicTherapyApproaches();
+
+      _availableTherapyApproaches =
+          approaches
+              .where(
+                (approach) =>
+                    approach.id > 0 &&
+                    approach.name.trim().isNotEmpty &&
+                    approach.isActive,
+              )
+              .toList()
+            ..sort(
+              (first, second) =>
+                  first.name.toLowerCase().compareTo(second.name.toLowerCase()),
+            );
+    } catch (error) {
+      _errorMessage = _resolveErrorMessage(
+        error,
+        fallback: 'Therapy approaches could not be loaded.',
+      );
+    } finally {
+      _isLoadingTherapyApproaches = false;
+
+      notifyListeners();
+    }
+  }
+
   Future<bool> saveProfile({
     required String biography,
     required String specialization,
     required String experienceYears,
     required String hourlyRate,
     required String location,
+    required String country,
+    required String city,
+    required String address,
+    required bool offersOnline,
+    required bool offersInPerson,
     required List<String> languages,
+    required List<int> therapyApproachIds,
   }) async {
     if (_isSaving) {
       return false;
@@ -112,7 +169,13 @@ class TherapistProfileViewModel extends ChangeNotifier {
       experienceYears: experienceYears,
       hourlyRate: hourlyRate,
       location: location,
+      country: country,
+      city: city,
+      address: address,
+      offersOnline: offersOnline,
+      offersInPerson: offersInPerson,
       languages: languages,
+      therapyApproachIds: therapyApproachIds,
     );
 
     if (validationMessage != null) {
@@ -131,13 +194,24 @@ class TherapistProfileViewModel extends ChangeNotifier {
 
     final normalizedLanguages = _normalizeLanguages(languages);
 
+    final normalizedTherapyApproachIds = therapyApproachIds
+        .where((id) => id > 0)
+        .toSet()
+        .toList();
+
     final request = UpdateTherapistProfileRequest(
       biography: biography.trim(),
       specialization: specialization.trim(),
       experienceYears: parsedExperienceYears,
       hourlyRate: parsedHourlyRate,
       location: location.trim(),
+      country: country.trim(),
+      city: city.trim(),
+      address: address.trim(),
+      offersOnline: offersOnline,
+      offersInPerson: offersInPerson,
       languages: normalizedLanguages,
+      therapyApproachIds: normalizedTherapyApproachIds,
     );
 
     _isSaving = true;
@@ -147,18 +221,13 @@ class TherapistProfileViewModel extends ChangeNotifier {
     try {
       await repository.updateTherapistProfile(request);
 
-      if (_profile != null) {
-        _profile = _profile!.copyWith(
-          biography: request.biography,
-          specialization: request.specialization,
-          experienceYears: request.experienceYears,
-          hourlyRate: request.hourlyRate,
-          location: request.location,
-          languages: request.languages,
-        );
-      } else {
-        _profile = await repository.getTherapistProfile();
-      }
+      /*
+     * Ponovo učitavamo profil jer backend:
+     * - ažurira koordinate
+     * - vraća terapijske pravce sa nazivima
+     * - normalizuje podatke
+     */
+      _profile = await repository.getTherapistProfile();
 
       _successMessage = 'Profile updated successfully.';
 
@@ -503,13 +572,25 @@ class TherapistProfileViewModel extends ChangeNotifier {
     required String experienceYears,
     required String hourlyRate,
     required String location,
+    required String country,
+    required String city,
+    required String address,
+    required bool offersOnline,
+    required bool offersInPerson,
     required List<String> languages,
+    required List<int> therapyApproachIds,
   }) {
     final normalizedBiography = biography.trim();
 
     final normalizedSpecialization = specialization.trim();
 
     final normalizedLocation = location.trim();
+
+    final normalizedCountry = country.trim();
+
+    final normalizedCity = city.trim();
+
+    final normalizedAddress = address.trim();
 
     if (normalizedBiography.isEmpty) {
       return 'Biography is required.';
@@ -523,8 +604,8 @@ class TherapistProfileViewModel extends ChangeNotifier {
       return 'Specialization is required.';
     }
 
-    if (normalizedSpecialization.length > 150) {
-      return 'Specialization cannot contain more than 150 characters.';
+    if (normalizedSpecialization.length > 200) {
+      return 'Specialization cannot contain more than 200 characters.';
     }
 
     final parsedExperienceYears = int.tryParse(experienceYears.trim());
@@ -557,20 +638,59 @@ class TherapistProfileViewModel extends ChangeNotifier {
       return 'Location cannot contain more than 200 characters.';
     }
 
+    if (normalizedCountry.isEmpty) {
+      return 'Country is required.';
+    }
+
+    if (normalizedCountry.length > 100) {
+      return 'Country cannot contain more than 100 characters.';
+    }
+
+    if (normalizedCity.isEmpty) {
+      return 'City is required.';
+    }
+
+    if (normalizedCity.length > 100) {
+      return 'City cannot contain more than 100 characters.';
+    }
+
+    if (normalizedAddress.length > 250) {
+      return 'Address cannot contain more than 250 characters.';
+    }
+
+    if (offersInPerson && normalizedAddress.isEmpty) {
+      return 'Address is required for in-person appointments.';
+    }
+
+    if (!offersOnline && !offersInPerson) {
+      return 'Select at least one session mode.';
+    }
+
     final normalizedLanguages = _normalizeLanguages(languages);
 
     if (normalizedLanguages.isEmpty) {
       return 'Add at least one language.';
     }
 
+    if (normalizedLanguages.length > 20) {
+      return 'You may add at most 20 languages.';
+    }
+
     if (normalizedLanguages.any((language) => language.length > 100)) {
       return 'A language cannot contain more than 100 characters.';
     }
 
-    final serializedLanguages = normalizedLanguages.join(',');
+    final normalizedApproachIds = therapyApproachIds
+        .where((id) => id > 0)
+        .toSet()
+        .toList();
 
-    if (serializedLanguages.length > 1000) {
-      return 'The complete language list is too long.';
+    if (normalizedApproachIds.isEmpty) {
+      return 'Select at least one therapy approach.';
+    }
+
+    if (normalizedApproachIds.length > 20) {
+      return 'You may select at most 20 therapy approaches.';
     }
 
     return null;

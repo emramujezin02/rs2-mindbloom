@@ -19,7 +19,9 @@ class TherapyApproachModel {
       name: (json['name'] ?? '').toString().trim(),
       description: (json['description'] ?? '').toString().trim(),
       iconUrl: _parseNullableString(json['iconUrl']),
-      isActive: _parseBool(json['isActive']),
+      isActive: json.containsKey('isActive')
+          ? _parseBool(json['isActive'])
+          : true,
     );
   }
 

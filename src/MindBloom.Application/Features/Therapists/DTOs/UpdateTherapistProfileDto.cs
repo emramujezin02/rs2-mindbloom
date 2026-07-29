@@ -23,4 +23,6 @@ public class UpdateTherapistProfileDto
     public bool OffersInPerson { get; set; }
 
     public List<string> Languages { get; set; } = [];
+
+    public List<int> TherapyApproachIds { get; set; } = [];
 }

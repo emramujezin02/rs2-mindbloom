@@ -736,13 +736,15 @@ public class TherapistService : ITherapistService
     }
 
     public async Task<TherapistProfileDto> GetProfileAsync(
-    int therapistUserId)
+     int therapistUserId)
     {
         var therapist =
             await _context.Therapists
                 .AsNoTracking()
                 .Include(x => x.User)
                 .Include(x => x.Availabilities)
+                .Include(x => x.TherapyApproaches)
+                    .ThenInclude(x => x.TherapyApproach)
                 .FirstOrDefaultAsync(x =>
                     x.UserId == therapistUserId &&
                     !x.IsDeleted);
@@ -765,15 +767,14 @@ public class TherapistService : ITherapistService
                         !string.IsNullOrWhiteSpace(x))
                     .Distinct(
                         StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(x => x)
                     .ToList();
 
         return new TherapistProfileDto
         {
-            TherapistId =
-                therapist.Id,
+            TherapistId = therapist.Id,
 
-            UserId =
-                therapist.UserId,
+            UserId = therapist.UserId,
 
             FirstName =
                 therapist.User.FirstName
@@ -817,6 +818,27 @@ public class TherapistService : ITherapistService
                 therapist.Location
                 ?? string.Empty,
 
+            Country =
+                therapist.Country,
+
+            City =
+                therapist.City,
+
+            Address =
+                therapist.Address,
+
+            Latitude =
+                therapist.Latitude,
+
+            Longitude =
+                therapist.Longitude,
+
+            OffersOnline =
+                therapist.OffersOnline,
+
+            OffersInPerson =
+                therapist.OffersInPerson,
+
             Languages =
                 languages,
 
@@ -830,34 +852,37 @@ public class TherapistService : ITherapistService
 
             Availabilities =
                 therapist.Availabilities
-                    .OrderBy(x =>
-                        x.DayOfWeek)
-                    .ThenBy(x =>
-                        x.StartTime)
+                    .Where(x => !x.IsDeleted)
+                    .OrderBy(x => x.DayOfWeek)
+                    .ThenBy(x => x.StartTime)
                     .Select(x =>
                         new AvailabilityResponseDto
                         {
-                            Id =
-                                x.Id,
-
-                            DayOfWeek =
-                                x.DayOfWeek,
-
-                            StartTime =
-                                x.StartTime,
-
-                            EndTime =
-                                x.EndTime
+                            Id = x.Id,
+                            DayOfWeek = x.DayOfWeek,
+                            StartTime = x.StartTime,
+                            EndTime = x.EndTime
                         })
                     .ToList(),
 
-            Country = therapist.Country,
-            City = therapist.City,
-            Address = therapist.Address,
-            OffersOnline = therapist.OffersOnline,
-            OffersInPerson = therapist.OffersInPerson,
-            Latitude = therapist.Latitude,
-            Longitude = therapist.Longitude,
+            TherapyApproaches =
+                therapist.TherapyApproaches
+                    .Where(x =>
+                        !x.IsDeleted &&
+                        !x.TherapyApproach.IsDeleted &&
+                        x.TherapyApproach.IsActive)
+                    .OrderBy(x =>
+                        x.TherapyApproach.Name)
+                    .Select(x =>
+                        new TherapistProfileTherapyApproachDto
+                        {
+                            Id =
+                                x.TherapyApproachId,
+
+                            Name =
+                                x.TherapyApproach.Name
+                        })
+                    .ToList()
         };
     }
 
@@ -867,6 +892,7 @@ public class TherapistService : ITherapistService
     {
         var therapist =
             await _context.Therapists
+                .Include(x => x.TherapyApproaches)
                 .FirstOrDefaultAsync(x =>
                     x.UserId == therapistUserId &&
                     !x.IsDeleted);
@@ -875,6 +901,35 @@ public class TherapistService : ITherapistService
         {
             throw new NotFoundException(
                 "Therapist profile not found.");
+        }
+
+        var therapyApproachIds =
+            request.TherapyApproachIds
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+        if (therapyApproachIds.Count == 0)
+        {
+            throw new BadRequestException(
+                "At least one therapy approach must be selected.");
+        }
+
+        var validTherapyApproachIds =
+            await _context.TherapyApproaches
+                .AsNoTracking()
+                .Where(x =>
+                    therapyApproachIds.Contains(x.Id) &&
+                    !x.IsDeleted &&
+                    x.IsActive)
+                .Select(x => x.Id)
+                .ToListAsync();
+
+        if (validTherapyApproachIds.Count !=
+            therapyApproachIds.Count)
+        {
+            throw new BadRequestException(
+                "One or more selected therapy approaches are invalid or inactive.");
         }
 
         var biography =
@@ -886,6 +941,15 @@ public class TherapistService : ITherapistService
         var location =
             request.Location.Trim();
 
+        var country =
+            request.Country.Trim();
+
+        var city =
+            request.City.Trim();
+
+        var address =
+            request.Address.Trim();
+
         var languages =
             request.Languages
                 .Where(x =>
@@ -895,8 +959,6 @@ public class TherapistService : ITherapistService
                 .Distinct(
                     StringComparer.OrdinalIgnoreCase)
                 .ToList();
-
-       
 
         var serializedLanguages =
             string.Join(",", languages);
@@ -916,14 +978,84 @@ public class TherapistService : ITherapistService
         therapist.Location =
             location;
 
+        therapist.Country =
+            country;
+
+        therapist.City =
+            city;
+
+        therapist.Address =
+            address;
+
+        therapist.OffersOnline =
+            request.OffersOnline;
+
+        therapist.OffersInPerson =
+            request.OffersInPerson;
+
         therapist.Languages =
             serializedLanguages;
 
-        therapist.Country = request.Country.Trim();
-        therapist.City = request.City.Trim();
-        therapist.Address = request.Address.Trim();
-        therapist.OffersOnline = request.OffersOnline;
-        therapist.OffersInPerson = request.OffersInPerson;
+        var currentActiveConnections =
+            therapist.TherapyApproaches
+                .Where(x => !x.IsDeleted)
+                .ToList();
+
+        var connectionsToRemove =
+            currentActiveConnections
+                .Where(x =>
+                    !therapyApproachIds.Contains(
+                        x.TherapyApproachId))
+                .ToList();
+
+        foreach (var connection in connectionsToRemove)
+        {
+            connection.IsDeleted = true;
+        }
+
+        var currentApproachIds =
+            currentActiveConnections
+                .Where(x => !x.IsDeleted)
+                .Select(x => x.TherapyApproachId)
+                .ToHashSet();
+
+        var existingDeletedConnections =
+            therapist.TherapyApproaches
+                .Where(x => x.IsDeleted)
+                .ToList();
+
+        foreach (var therapyApproachId in
+                 therapyApproachIds)
+        {
+            if (currentApproachIds.Contains(
+                    therapyApproachId))
+            {
+                continue;
+            }
+
+            var deletedConnection =
+                existingDeletedConnections
+                    .FirstOrDefault(x =>
+                        x.TherapyApproachId ==
+                        therapyApproachId);
+
+            if (deletedConnection != null)
+            {
+                deletedConnection.IsDeleted = false;
+
+                continue;
+            }
+
+            therapist.TherapyApproaches.Add(
+                new TherapistTherapyApproach
+                {
+                    TherapistId =
+                        therapist.Id,
+
+                    TherapyApproachId =
+                        therapyApproachId
+                });
+        }
 
         await UpdateCoordinatesAsync(
             therapist,

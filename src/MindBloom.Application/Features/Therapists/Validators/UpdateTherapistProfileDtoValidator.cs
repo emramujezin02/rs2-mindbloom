@@ -74,6 +74,18 @@ public sealed class UpdateTherapistProfileDtoValidator
         RuleFor(x => x)
             .Must(x => x.OffersOnline || x.OffersInPerson)
             .WithMessage("The therapist must offer online or in-person appointments.");
+        RuleFor(x => x.TherapyApproachIds)
+         .NotNull()
+         .WithMessage("Therapy approaches are required.")
+         .Must(ids => ids.Count > 0)
+         .WithMessage("At least one therapy approach must be selected.")
+         .Must(ids => ids.Count <= 20)
+         .WithMessage("A maximum of 20 therapy approaches may be selected.")
+         .Must(ids => ids.All(id => id > 0))
+         .WithMessage("Therapy approach identifiers must be valid.")
+         .Must(ids => ids.Distinct().Count() == ids.Count)
+         .WithMessage("Duplicate therapy approaches are not allowed.");
+
     }
 }
 

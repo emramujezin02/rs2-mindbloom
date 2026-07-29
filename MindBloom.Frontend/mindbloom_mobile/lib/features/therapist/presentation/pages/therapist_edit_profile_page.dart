@@ -47,8 +47,15 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
   late final TextEditingController _hourlyRateController;
   late final TextEditingController _locationController;
   late final TextEditingController _languageController;
+  late final TextEditingController _countryController;
+  late final TextEditingController _cityController;
+  late final TextEditingController _addressController;
 
   final List<String> _languages = [];
+  final Set<int> _selectedTherapyApproachIds = {};
+
+  bool _offersOnline = false;
+  bool _offersInPerson = false;
 
   File? _selectedImage;
 
@@ -76,9 +83,26 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
 
     _locationController = TextEditingController(text: widget.profile.location);
 
+    _countryController = TextEditingController(text: widget.profile.country);
+
+    _cityController = TextEditingController(text: widget.profile.city);
+
+    _addressController = TextEditingController(text: widget.profile.address);
+
+    _offersOnline = widget.profile.offersOnline;
+    _offersInPerson = widget.profile.offersInPerson;
+
+    _selectedTherapyApproachIds.addAll(
+      widget.profile.therapyApproaches
+          .where((approach) => approach.id > 0)
+          .map((approach) => approach.id),
+    );
+
     _languageController = TextEditingController();
 
     _loadLanguages();
+
+    _viewModel.loadTherapyApproaches();
   }
 
   void _loadLanguages() {
@@ -102,6 +126,9 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
     _hourlyRateController.dispose();
     _locationController.dispose();
     _languageController.dispose();
+    _countryController.dispose();
+    _cityController.dispose();
+    _addressController.dispose();
 
     super.dispose();
   }
@@ -194,13 +221,35 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
       return;
     }
 
+    if (!_offersOnline && !_offersInPerson) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select at least one session mode.')),
+      );
+
+      return;
+    }
+
+    if (_selectedTherapyApproachIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select at least one therapy approach.')),
+      );
+
+      return;
+    }
+
     final success = await _viewModel.saveProfile(
       biography: _biographyController.text.trim(),
       specialization: _specializationController.text.trim(),
       experienceYears: _experienceYearsController.text.trim(),
       hourlyRate: _hourlyRateController.text.trim(),
       location: _locationController.text.trim(),
+      country: _countryController.text.trim(),
+      city: _cityController.text.trim(),
+      address: _addressController.text.trim(),
+      offersOnline: _offersOnline,
+      offersInPerson: _offersInPerson,
       languages: List<String>.from(_languages),
+      therapyApproachIds: _selectedTherapyApproachIds.toList(),
     );
 
     if (!mounted) {
@@ -692,6 +741,198 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
 
                           const SizedBox(height: 24),
 
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final countryField = TextFormField(
+                                controller: _countryController,
+                                textInputAction: TextInputAction.next,
+                                decoration: const InputDecoration(
+                                  labelText: 'Country',
+                                  hintText: 'Example: Bosnia and Herzegovina',
+                                  prefixIcon: Icon(Icons.public_outlined),
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (value) {
+                                  final country = value?.trim() ?? '';
+
+                                  if (country.isEmpty) {
+                                    return 'Country is required.';
+                                  }
+
+                                  if (country.length > 100) {
+                                    return 'Country may contain at most 100 characters.';
+                                  }
+
+                                  return null;
+                                },
+                              );
+
+                              final cityField = TextFormField(
+                                controller: _cityController,
+                                textInputAction: TextInputAction.next,
+                                decoration: const InputDecoration(
+                                  labelText: 'City',
+                                  hintText: 'Example: Sarajevo',
+                                  prefixIcon: Icon(
+                                    Icons.location_city_outlined,
+                                  ),
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (value) {
+                                  final city = value?.trim() ?? '';
+
+                                  if (city.isEmpty) {
+                                    return 'City is required.';
+                                  }
+
+                                  if (city.length > 100) {
+                                    return 'City may contain at most 100 characters.';
+                                  }
+
+                                  return null;
+                                },
+                              );
+
+                              if (constraints.maxWidth >= 600) {
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: countryField),
+                                    const SizedBox(width: 16),
+                                    Expanded(child: cityField),
+                                  ],
+                                );
+                              }
+
+                              return Column(
+                                children: [
+                                  countryField,
+                                  const SizedBox(height: 16),
+                                  cityField,
+                                ],
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          TextFormField(
+                            controller: _addressController,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Office address',
+                              hintText: 'Street and number',
+                              prefixIcon: Icon(Icons.home_work_outlined),
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              final address = value?.trim() ?? '';
+
+                              if (_offersInPerson && address.isEmpty) {
+                                return 'Address is required for in-person sessions.';
+                              }
+
+                              if (address.length > 250) {
+                                return 'Address may contain at most 250 characters.';
+                              }
+
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          const Text(
+                            'Session modes',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF40334D),
+                            ),
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          const Text(
+                            'Select how clients can attend sessions.',
+                            style: TextStyle(color: Color(0xFF756D79)),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF7F3FB),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: const Color(0xFFE7DDF0),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                SwitchListTile(
+                                  value: _offersOnline,
+                                  title: const Text(
+                                    'Online sessions',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  subtitle: const Text(
+                                    'Clients can attend through an online meeting.',
+                                  ),
+                                  secondary: const Icon(
+                                    Icons.videocam_outlined,
+                                  ),
+                                  onChanged: _viewModel.isSaving
+                                      ? null
+                                      : (value) {
+                                          setState(() {
+                                            _offersOnline = value;
+                                          });
+                                        },
+                                ),
+                                const Divider(height: 1),
+                                SwitchListTile(
+                                  value: _offersInPerson,
+                                  title: const Text(
+                                    'In-person sessions',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  subtitle: const Text(
+                                    'Clients can attend at the office address.',
+                                  ),
+                                  secondary: const Icon(Icons.people_outline),
+                                  onChanged: _viewModel.isSaving
+                                      ? null
+                                      : (value) {
+                                          setState(() {
+                                            _offersInPerson = value;
+                                          });
+
+                                          _formKey.currentState?.validate();
+                                        },
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          if (!_offersOnline && !_offersInPerson) ...[
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Select at least one session mode.',
+                              style: TextStyle(color: Colors.red, fontSize: 12),
+                            ),
+                          ],
+
+                          const SizedBox(height: 28),
+
+                          _buildTherapyApproachesSection(),
+
+                          const SizedBox(height: 28),
+
                           const Text(
                             'Languages',
                             style: TextStyle(
@@ -818,6 +1059,90 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTherapyApproachesSection() {
+    final approaches = _viewModel.availableTherapyApproaches;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Therapy approaches',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF40334D),
+          ),
+        ),
+
+        const SizedBox(height: 6),
+
+        const Text(
+          'Select the approaches you use in your therapeutic work.',
+          style: TextStyle(color: Color(0xFF756D79), height: 1.4),
+        ),
+
+        const SizedBox(height: 14),
+
+        if (_viewModel.isLoadingTherapyApproaches)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (approaches.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7F3FB),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'Therapy approaches could not be loaded.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF756D79)),
+            ),
+          )
+        else
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: approaches.map((approach) {
+              final isSelected = _selectedTherapyApproachIds.contains(
+                approach.id,
+              );
+
+              return FilterChip(
+                label: Text(approach.name),
+                selected: isSelected,
+                onSelected: _viewModel.isSaving
+                    ? null
+                    : (selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedTherapyApproachIds.add(approach.id);
+                          } else {
+                            _selectedTherapyApproachIds.remove(approach.id);
+                          }
+                        });
+                      },
+              );
+            }).toList(),
+          ),
+
+        if (_selectedTherapyApproachIds.isEmpty &&
+            !_viewModel.isLoadingTherapyApproaches) ...[
+          const SizedBox(height: 8),
+          const Text(
+            'Select at least one therapy approach.',
+            style: TextStyle(color: Colors.red, fontSize: 12),
+          ),
+        ],
+      ],
     );
   }
 

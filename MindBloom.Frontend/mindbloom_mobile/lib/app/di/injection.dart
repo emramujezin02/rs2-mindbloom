@@ -7,6 +7,9 @@ import '../../core/network/api_client.dart';
 import '../../features/session/presentation/viewmodels/session_viewmodel.dart';
 import '../../services/session_storage_service.dart';
 
+import '../../features/therapy_approach/data/repositories/therapy_approach_repository.dart';
+import '../../features/therapy_approach/data/services/therapy_approach_api_service.dart';
+
 import '../../features/private_journal/data/repositories/private_journal_repository.dart';
 import '../../features/private_journal/data/services/private_journal_api_service.dart';
 import '../../features/private_journal/presentation/viewmodels/private_journal_viewmodel.dart';
@@ -85,8 +88,6 @@ import '../../features/therapist/presentation/viewmodels/therapist_clients_viewm
 import '../../features/therapist/presentation/viewmodels/therapist_client_details_viewmodel.dart';
 
 import '../../features/therapist/presentation/viewmodels/therapist_emotional_analytics_viewmodel.dart';
-import '../../features/therapy_approach/data/repositories/therapy_approach_repository.dart';
-import '../../features/therapy_approach/data/services/therapy_approach_api_service.dart';
 
 import '../../features/journal/presentation/viewmodels/client_emotional_analytics_viewmodel.dart';
 
@@ -424,11 +425,24 @@ class AppInjection {
   }
 
   static TherapistProfileViewModel createTherapistProfileViewModel() {
-    final apiService = TherapistApiService(apiClient: apiClient);
+    final therapistApiService = TherapistApiService(apiClient: apiClient);
 
-    final repository = TherapistRepository(therapistApiService: apiService);
+    final therapistRepository = TherapistRepository(
+      therapistApiService: therapistApiService,
+    );
 
-    return TherapistProfileViewModel(repository: repository);
+    final therapyApproachApiService = TherapyApproachApiService(
+      apiClient: apiClient,
+    );
+
+    final therapyApproachRepository = TherapyApproachRepository(
+      apiService: therapyApproachApiService,
+    );
+
+    return TherapistProfileViewModel(
+      repository: therapistRepository,
+      therapyApproachRepository: therapyApproachRepository,
+    );
   }
 
   static TherapistEmotionalAnalyticsViewModel
