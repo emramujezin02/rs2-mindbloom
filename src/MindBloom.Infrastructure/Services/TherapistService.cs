@@ -1990,6 +1990,120 @@ public class TherapistService : ITherapistService
                     (DateTime?)x.StartUtc)
                 .FirstOrDefault();
 
+        var nowUtc =
+    DateTime.UtcNow;
+
+        var memberships =
+            await _context.ClientMemberships
+                .AsNoTracking()
+                .Include(x => x.Payment)
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.ClientId == clientId &&
+                    x.TherapistId == therapist.Id)
+                .OrderByDescending(x =>
+                    x.PurchasedAtUtc ??
+                    x.CreatedAtUtc)
+                .Select(x =>
+                    new TherapistClientMembershipDto
+                    {
+                        Id =
+                            x.Id,
+
+                        PlanType =
+                            x.PlanType.ToString(),
+
+                        TotalSessions =
+                            x.TotalSessions,
+
+                        RemainingSessions =
+                            x.RemainingSessions,
+
+                        UsedSessions =
+                            Math.Max(
+                                0,
+                                x.TotalSessions -
+                                x.RemainingSessions),
+
+                        Price =
+                            x.Price,
+
+                        IsActive =
+                            x.IsActive &&
+                            x.RemainingSessions > 0 &&
+                            (
+                                x.ExpiresAtUtc == null ||
+                                x.ExpiresAtUtc > nowUtc
+                            ),
+
+                        IsPaid =
+                            x.Payment != null &&
+                            x.Payment.Status ==
+                                PaymentStatus.Paid,
+
+                        IsExpired =
+                            x.ExpiresAtUtc != null &&
+                            x.ExpiresAtUtc <= nowUtc,
+
+                        PaymentStatus =
+                            x.Payment == null
+                                ? "NotCreated"
+                                : x.Payment.Status
+                                    .ToString(),
+
+                        PurchasedAtUtc =
+                            x.PurchasedAtUtc,
+
+                        ExpiresAtUtc =
+                            x.ExpiresAtUtc
+                    })
+                .ToListAsync();
+
+        var reviews =
+            await _context.Reviews
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.ClientId == clientId &&
+                    x.TherapistId == therapist.Id)
+                .OrderByDescending(x =>
+                    x.CreatedAtUtc)
+                .ThenByDescending(x =>
+                    x.Id)
+                .Select(x =>
+                    new TherapistClientReviewDto
+                    {
+                        Id =
+                            x.Id,
+
+                        AppointmentId =
+                            x.AppointmentId,
+
+                        Rating =
+                            x.Rating,
+
+                        Comment =
+                            x.Comment,
+
+                        IsApproved =
+                            x.IsApproved,
+
+                        ModerationStatus =
+                            x.IsApproved
+                                ? "Approved"
+                                : "Pending moderation",
+
+                        CreatedAtUtc =
+                            x.CreatedAtUtc,
+
+                        TherapistReply =
+                            x.TherapistReply,
+
+                        TherapistReplyCreatedAtUtc =
+                            x.TherapistReplyCreatedAtUtc
+                    })
+                .ToListAsync();
+
         return new TherapistClientDetailsDto
         {
             ClientId =
@@ -2046,36 +2160,44 @@ public class TherapistService : ITherapistService
                 nextAppointmentDate,
 
             AppointmentHistory =
-                appointments
-                    .Select(x =>
-                        new TherapistClientAppointmentDto
-                        {
-                            AppointmentId =
-                                x.Id,
+    appointments
+        .Select(x =>
+            new TherapistClientAppointmentDto
+            {
+                AppointmentId =
+                    x.Id,
 
-                            StartUtc =
-                                x.StartUtc,
+                StartUtc =
+                    x.StartUtc,
 
-                            EndUtc =
-                                x.EndUtc,
+                EndUtc =
+                    x.EndUtc,
 
-                            Status =
-                                x.Status.ToString(),
+                Status =
+                    x.Status.ToString(),
 
-                            Type =
-                                x.Type.ToString(),
+                Type =
+                    x.Type.ToString(),
 
-                            MeetingLink =
-                                x.MeetingLink,
+                MeetingLink =
+                    x.MeetingLink,
 
-                            Location =
-                                x.Location,
+                Location =
+                    x.Location,
 
-                            HasNote =
-                                appointmentIdsWithNotes
-                                    .Contains(x.Id)
-                        })
-                    .ToList()
+                HasNote =
+                    appointmentIdsWithNotes
+                        .Contains(x.Id)
+            })
+        .ToList(),
+
+            Memberships =
+    memberships,
+
+            Reviews =
+    reviews
+
+
         };
     }
 

@@ -33,4 +33,12 @@ public class TherapistClientDetailsDto
     public List<TherapistClientAppointmentDto>
         AppointmentHistory
     { get; set; } = [];
+
+    public List<TherapistClientMembershipDto>
+    Memberships
+    { get; set; } = [];
+
+    public List<TherapistClientReviewDto>
+        Reviews
+    { get; set; } = [];
 }

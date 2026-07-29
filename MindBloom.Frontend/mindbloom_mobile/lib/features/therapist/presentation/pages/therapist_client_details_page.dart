@@ -11,6 +11,8 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/widgets/app_empty_state_widget.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../../../../core/widgets/app_loading_widget.dart';
+import '../../data/models/therapist_client_membership_model.dart';
+import '../../data/models/therapist_client_review_model.dart';
 
 class TherapistClientDetailsPage extends StatefulWidget {
   final int clientId;
@@ -132,7 +134,12 @@ class _TherapistClientDetailsPageState
                 _ClientProfileCard(client: client),
                 const SizedBox(height: 18),
                 _StatisticsSection(client: client),
-                const SizedBox(height: 18),
+                const SizedBox(height: 26),
+                _MembershipSection(memberships: client.memberships),
+                const SizedBox(height: 26),
+                _ReviewsSection(reviews: client.reviews),
+                const SizedBox(height: 26),
+
                 _EmotionalAnalyticsNavigationCard(
                   onPressed: () {
                     Navigator.of(context).pushNamed(
@@ -666,6 +673,528 @@ class _StatisticData {
     required this.value,
     required this.icon,
   });
+}
+
+class _MembershipSection extends StatelessWidget {
+  final List<TherapistClientMembershipModel> memberships;
+
+  const _MembershipSection({required this.memberships});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Memberships',
+                style: TextStyle(
+                  color: Color(0xFF40334D),
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            _SectionCountBadge(
+              value: memberships.length,
+              singular: 'membership',
+              plural: 'memberships',
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (memberships.isEmpty)
+          const _EmptyDetailsSection(
+            icon: Icons.card_membership_outlined,
+            title: 'No memberships',
+            message: 'This client has not purchased a membership with you.',
+          )
+        else
+          ...memberships.map(
+            (membership) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _MembershipCard(membership: membership),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _MembershipCard extends StatelessWidget {
+  final TherapistClientMembershipModel membership;
+
+  const _MembershipCard({required this.membership});
+
+  @override
+  Widget build(BuildContext context) {
+    final statusText = membership.isActive
+        ? 'Active'
+        : membership.isExpired
+        ? 'Expired'
+        : 'Inactive';
+
+    final statusBackground = membership.isActive
+        ? const Color(0xFFE4F5E9)
+        : membership.isExpired
+        ? const Color(0xFFFCE8E8)
+        : const Color(0xFFF0ECEC);
+
+    final statusForeground = membership.isActive
+        ? const Color(0xFF287A42)
+        : membership.isExpired
+        ? const Color(0xFFB13B3B)
+        : const Color(0xFF696161);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(color: const Color(0xFFE5DBEF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE5FA),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: const Icon(
+                  Icons.card_membership_outlined,
+                  color: Color(0xFF72559A),
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _formatPlanType(membership.planType),
+                      style: const TextStyle(
+                        color: Color(0xFF40334D),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${membership.remainingSessions} of '
+                      '${membership.totalSessions} sessions remaining',
+                      style: const TextStyle(color: Color(0xFF756D79)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: statusBackground,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    color: statusForeground,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: membership.totalSessions <= 0
+                  ? 0
+                  : (membership.remainingSessions / membership.totalSessions)
+                        .clamp(0.0, 1.0),
+              backgroundColor: const Color(0xFFEDE5FA),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFF72559A),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              _MembershipDetailChip(
+                icon: Icons.task_alt_outlined,
+                label: '${membership.usedSessions} used',
+              ),
+              _MembershipDetailChip(
+                icon: Icons.payments_outlined,
+                label: membership.isPaid
+                    ? 'Paid'
+                    : membership.paymentStatus.isEmpty
+                    ? 'Not paid'
+                    : membership.paymentStatus,
+              ),
+              _MembershipDetailChip(
+                icon: Icons.attach_money,
+                label: membership.price.toStringAsFixed(2),
+              ),
+            ],
+          ),
+          if (membership.purchasedAtUtc != null) ...[
+            const SizedBox(height: 14),
+            _InformationRow(
+              icon: Icons.shopping_bag_outlined,
+              value:
+                  'Purchased: ${_formatDetailsDate(membership.purchasedAtUtc!)}',
+            ),
+          ],
+          if (membership.expiresAtUtc != null) ...[
+            const SizedBox(height: 10),
+            _InformationRow(
+              icon: Icons.event_outlined,
+              value: 'Expires: ${_formatDetailsDate(membership.expiresAtUtc!)}',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static String _formatPlanType(String value) {
+    final normalized = value.trim();
+
+    if (normalized.isEmpty) {
+      return 'Membership';
+    }
+
+    return normalized
+        .replaceAllMapped(
+          RegExp(r'([a-z])([A-Z])'),
+          (match) => '${match.group(1)} ${match.group(2)}',
+        )
+        .replaceAll('_', ' ');
+  }
+}
+
+class _MembershipDetailChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MembershipDetailChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4EEFA),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFF72559A)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF625B68),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReviewsSection extends StatelessWidget {
+  final List<TherapistClientReviewModel> reviews;
+
+  const _ReviewsSection({required this.reviews});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Reviews',
+                style: TextStyle(
+                  color: Color(0xFF40334D),
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            _SectionCountBadge(
+              value: reviews.length,
+              singular: 'review',
+              plural: 'reviews',
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (reviews.isEmpty)
+          const _EmptyDetailsSection(
+            icon: Icons.rate_review_outlined,
+            title: 'No reviews',
+            message: 'This client has not submitted a review for you.',
+          )
+        else
+          ...reviews.map(
+            (review) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _ClientReviewCard(review: review),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ClientReviewCard extends StatelessWidget {
+  final TherapistClientReviewModel review;
+
+  const _ClientReviewCard({required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    final date = review.createdAtUtc.toLocal();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(color: const Color(0xFFE5DBEF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 3,
+                  children: List.generate(5, (index) {
+                    return Icon(
+                      index < review.rating
+                          ? Icons.star_rounded
+                          : Icons.star_border_rounded,
+                      color: const Color(0xFFE0A83B),
+                      size: 22,
+                    );
+                  }),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: review.isApproved
+                      ? const Color(0xFFE4F5E9)
+                      : const Color(0xFFFFF3D9),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Text(
+                  review.moderationStatus.trim().isEmpty
+                      ? review.isApproved
+                            ? 'Approved'
+                            : 'Pending moderation'
+                      : review.moderationStatus,
+                  style: TextStyle(
+                    color: review.isApproved
+                        ? const Color(0xFF287A42)
+                        : const Color(0xFF9A6A00),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            review.comment.trim().isEmpty
+                ? 'No review comment provided.'
+                : review.comment,
+            style: const TextStyle(
+              color: Color(0xFF625B68),
+              fontSize: 15,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 13),
+          Text(
+            _formatDetailsDate(date),
+            style: const TextStyle(color: Color(0xFF756D79), fontSize: 12),
+          ),
+          if (review.therapistReply != null &&
+              review.therapistReply!.trim().isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4EEFA),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.reply_outlined,
+                        size: 19,
+                        color: Color(0xFF72559A),
+                      ),
+                      SizedBox(width: 7),
+                      Text(
+                        'Your reply',
+                        style: TextStyle(
+                          color: Color(0xFF40334D),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 9),
+                  Text(
+                    review.therapistReply!,
+                    style: const TextStyle(
+                      color: Color(0xFF625B68),
+                      height: 1.45,
+                    ),
+                  ),
+                  if (review.therapistReplyCreatedAtUtc != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _formatDetailsDate(review.therapistReplyCreatedAtUtc!),
+                      style: const TextStyle(
+                        color: Color(0xFF756D79),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionCountBadge extends StatelessWidget {
+  final int value;
+  final String singular;
+  final String plural;
+
+  const _SectionCountBadge({
+    required this.value,
+    required this.singular,
+    required this.plural,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final label = value == 1 ? singular : plural;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDE5FA),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Text(
+        '$value $label',
+        style: const TextStyle(
+          color: Color(0xFF72559A),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyDetailsSection extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+
+  const _EmptyDetailsSection({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 40),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE5DBEF)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 58, color: const Color(0xFF8063A4)),
+          const SizedBox(height: 15),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF40334D),
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFF756D79), height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatDetailsDate(DateTime value) {
+  final date = value.toLocal();
+
+  return '${date.day.toString().padLeft(2, '0')}.'
+      '${date.month.toString().padLeft(2, '0')}.'
+      '${date.year}.';
 }
 
 class _EmotionalAnalyticsNavigationCard extends StatelessWidget {
