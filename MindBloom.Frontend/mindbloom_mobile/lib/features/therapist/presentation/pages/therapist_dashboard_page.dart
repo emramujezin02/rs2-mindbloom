@@ -235,6 +235,27 @@ class _DashboardStatistics extends StatelessWidget {
         value: '${dashboard.totalEarnings.toStringAsFixed(2)} KM',
         icon: Icons.payments_outlined,
       ),
+
+      _DashboardCardData(
+        title: 'Monthly earnings',
+        value: '${dashboard.monthlyEarnings.toStringAsFixed(2)} KM',
+        icon: Icons.calendar_month_outlined,
+      ),
+      _DashboardCardData(
+        title: 'Weekly earnings',
+        value: '${dashboard.weeklyEarnings.toStringAsFixed(2)} KM',
+        icon: Icons.date_range_outlined,
+      ),
+      _DashboardCardData(
+        title: 'Completed appointments',
+        value: dashboard.completedAppointments.toString(),
+        icon: Icons.task_alt_outlined,
+      ),
+      _DashboardCardData(
+        title: 'Cancelled appointments',
+        value: dashboard.cancelledAppointments.toString(),
+        icon: Icons.event_busy_outlined,
+      ),
     ];
 
     return Column(

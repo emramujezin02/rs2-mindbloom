@@ -1508,6 +1508,12 @@ public class TherapistService : ITherapistService
                 0,
                 DateTimeKind.Utc);
 
+        var daysSinceMonday =
+    ((int)nowUtc.DayOfWeek + 6) % 7;
+
+        var currentWeekStartUtc =
+            nowUtc.Date.AddDays(-daysSinceMonday);
+
         var nextMonthStartUtc =
             currentMonthStartUtc.AddMonths(1);
 
@@ -1631,11 +1637,53 @@ public class TherapistService : ITherapistService
                     (decimal?)payment.Amount)
             ?? 0;
 
-        /*
-         * Novi klijenti:
-         * klijenti čiji je prvi prihvaćeni ili završeni
-         * termin kod ovog terapeuta bio u tekućem mjesecu.
-         */
+        var monthlyEarnings =
+    await _context.Payments
+        .AsNoTracking()
+        .Where(payment =>
+            !payment.IsDeleted &&
+            payment.Status == PaymentStatus.Paid &&
+            payment.PaidAtUtc.HasValue &&
+            payment.PaidAtUtc.Value >= currentMonthStartUtc &&
+            payment.PaidAtUtc.Value < nextMonthStartUtc &&
+            !payment.Appointment.IsDeleted &&
+            payment.Appointment.TherapistId == therapist.Id)
+        .SumAsync(payment =>
+            (decimal?)payment.Amount)
+    ?? 0;
+
+        var weeklyEarnings =
+            await _context.Payments
+                .AsNoTracking()
+                .Where(payment =>
+                    !payment.IsDeleted &&
+                    payment.Status == PaymentStatus.Paid &&
+                    payment.PaidAtUtc.HasValue &&
+                    payment.PaidAtUtc.Value >= currentWeekStartUtc &&
+                    payment.PaidAtUtc.Value <= nowUtc &&
+                    !payment.Appointment.IsDeleted &&
+                    payment.Appointment.TherapistId == therapist.Id)
+                .SumAsync(payment =>
+                    (decimal?)payment.Amount)
+            ?? 0;
+
+        var completedAppointments =
+    await _context.Appointments
+        .AsNoTracking()
+        .CountAsync(appointment =>
+            !appointment.IsDeleted &&
+            appointment.TherapistId == therapist.Id &&
+            appointment.Status == AppointmentStatus.Completed);
+
+        var cancelledAppointments =
+            await _context.Appointments
+                .AsNoTracking()
+                .CountAsync(appointment =>
+                    !appointment.IsDeleted &&
+                    appointment.TherapistId == therapist.Id &&
+                    appointment.Status == AppointmentStatus.Cancelled);
+
+
         var firstClientAppointments =
             await _context.Appointments
                 .AsNoTracking()
@@ -1668,11 +1716,6 @@ public class TherapistService : ITherapistService
                 client.FirstAppointmentUtc <
                     nextMonthStartUtc);
 
-        /*
-         * Aktivni klijenti:
-         * imaju budući prihvaćeni termin ili su završili
-         * najmanje jedan termin u posljednjih 30 dana.
-         */
         var activeClients =
             await _context.Appointments
                 .AsNoTracking()
@@ -1700,10 +1743,6 @@ public class TherapistService : ITherapistService
                 .Distinct()
                 .CountAsync();
 
-        /*
-         * Završeni termini tokom posljednjih šest mjeseci,
-         * uključujući trenutni mjesec.
-         */
         var completedAppointmentDates =
             await _context.Appointments
                 .AsNoTracking()
@@ -1732,7 +1771,7 @@ public class TherapistService : ITherapistService
             var monthEnd =
                 monthStart.AddMonths(1);
 
-            var completedAppointments =
+            var monthlyCompletedAppointments =
                 completedAppointmentDates.Count(date =>
                     date >= monthStart &&
                     date < monthEnd);
@@ -1747,8 +1786,7 @@ public class TherapistService : ITherapistService
                     Label =
                         monthStart.ToString("MMM yyyy"),
 
-                    CompletedAppointments =
-                        completedAppointments
+                    CompletedAppointments = monthlyCompletedAppointments
                 });
         }
 
@@ -1792,7 +1830,15 @@ public class TherapistService : ITherapistService
                 averageAppointmentsPerMonth,
 
             WorkTrend =
-                workTrend
+                workTrend,
+
+            MonthlyEarnings = monthlyEarnings,
+
+            WeeklyEarnings = weeklyEarnings,
+
+            CompletedAppointments = completedAppointments,
+
+            CancelledAppointments = cancelledAppointments,
         };
     }
 

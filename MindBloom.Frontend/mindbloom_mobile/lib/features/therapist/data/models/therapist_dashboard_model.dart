@@ -10,6 +10,10 @@ class TherapistDashboardModel {
   final int activeClients;
   final double averageAppointmentsPerMonth;
   final List<TherapistWorkTrendModel> workTrend;
+  final double monthlyEarnings;
+  final double weeklyEarnings;
+  final int completedAppointments;
+  final int cancelledAppointments;
 
   const TherapistDashboardModel({
     required this.todayAppointments,
@@ -23,6 +27,10 @@ class TherapistDashboardModel {
     required this.activeClients,
     required this.averageAppointmentsPerMonth,
     required this.workTrend,
+    required this.monthlyEarnings,
+    required this.weeklyEarnings,
+    required this.completedAppointments,
+    required this.cancelledAppointments,
   });
 
   factory TherapistDashboardModel.fromJson(Map<String, dynamic> json) {
@@ -51,6 +59,10 @@ class TherapistDashboardModel {
                 )
                 .toList()
           : const [],
+      monthlyEarnings: _toDouble(json['monthlyEarnings']),
+      weeklyEarnings: _toDouble(json['weeklyEarnings']),
+      completedAppointments: _toInt(json['completedAppointments']),
+      cancelledAppointments: _toInt(json['cancelledAppointments']),
     );
   }
 

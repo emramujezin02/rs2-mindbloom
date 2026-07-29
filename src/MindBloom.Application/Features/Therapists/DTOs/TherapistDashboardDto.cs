@@ -23,6 +23,14 @@ public class TherapistDashboardDto
     public double AverageAppointmentsPerMonth { get; set; }
 
     public List<TherapistWorkTrendDto> WorkTrend { get; set; } = [];
+
+    public decimal MonthlyEarnings { get; set; }
+
+    public decimal WeeklyEarnings { get; set; }
+
+    public int CompletedAppointments { get; set; }
+
+    public int CancelledAppointments { get; set; }
 }
 
 public class TherapistWorkTrendDto
