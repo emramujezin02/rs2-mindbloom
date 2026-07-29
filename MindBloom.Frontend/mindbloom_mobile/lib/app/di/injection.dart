@@ -95,6 +95,10 @@ import '../../features/onboarding/data/repositories/client_onboarding_repository
 import '../../features/onboarding/data/services/client_onboarding_api_service.dart';
 import '../../features/onboarding/presentation/viewmodels/client_onboarding_viewmodel.dart';
 
+import '../../features/settings/data/repositories/user_settings_repository.dart';
+import '../../features/settings/data/services/user_settings_api_service.dart';
+import '../../features/settings/presentation/viewmodels/therapist_settings_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
   static final ApiClient apiClient = ApiClient(sessionStorage: sessionStorage);
@@ -490,5 +494,21 @@ class AppInjection {
         apiService: TherapyApproachApiService(apiClient: apiClient),
       ),
     );
+  }
+
+  static UserSettingsRepository _createUserSettingsRepository() {
+    return UserSettingsRepository(
+      apiService: UserSettingsApiService(apiClient: apiClient),
+    );
+  }
+
+  static TherapistSettingsViewModel createTherapistSettingsViewModel() {
+    return TherapistSettingsViewModel(
+      repository: _createUserSettingsRepository(),
+    );
+  }
+
+  static UserSettingsRepository createUserSettingsRepository() {
+    return _createUserSettingsRepository();
   }
 }

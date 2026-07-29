@@ -17,6 +17,8 @@ public class ApplicationUser : IdentityUser<int>
     public bool IsBlocked { get; set; }
     public DateTime? TwoFactorCodeExpiresAtUtc { get; set; }
 
+    public UserSettings? Settings { get; set; }
+
     public ICollection<Appointment> ClientAppointments { get; set; } = new List<Appointment>();
     public ICollection<Appointment> TherapistAppointments { get; set; } = new List<Appointment>();
     public ICollection<Review> Reviews { get; set; } = new List<Review>();

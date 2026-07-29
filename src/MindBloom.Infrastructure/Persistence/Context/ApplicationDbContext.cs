@@ -44,6 +44,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ReviewModerationAudit> ReviewModerationAudits => Set<ReviewModerationAudit>();
     public DbSet<ArticleCategory> ArticleCategories => Set<ArticleCategory>();
 
+    public DbSet<UserSettings> UserSettings =>
+    Set<UserSettings>();
+
     public DbSet<TherapistTherapyApproach>
     TherapistTherapyApproaches =>
         Set<TherapistTherapyApproach>();
@@ -216,6 +219,28 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 x.IsDeleted
             });
         });
+
+        builder.Entity<UserSettings>(
+    entity =>
+    {
+        entity.HasOne(x => x.User)
+            .WithOne(x => x.Settings)
+            .HasForeignKey<UserSettings>(
+                x => x.UserId)
+            .OnDelete(
+                DeleteBehavior.Cascade);
+
+        entity.Property(x =>
+                x.NotificationsEnabled)
+            .HasDefaultValue(true);
+
+        entity.Property(x =>
+                x.ShowProfilePublicly)
+            .HasDefaultValue(true);
+
+        entity.HasIndex(x => x.UserId)
+            .IsUnique();
+    });
 
         builder.Entity<TherapistTherapyApproach>(entity =>
         {

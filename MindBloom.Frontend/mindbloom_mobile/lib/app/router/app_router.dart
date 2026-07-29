@@ -79,6 +79,8 @@ import '../../features/private_journal/presentation/pages/edit_private_journal_e
 import '../../features/private_journal/presentation/pages/private_journal_entry_details_page.dart';
 import '../../features/onboarding/presentation/pages/client_onboarding_page.dart';
 
+import '../../features/settings/presentation/pages/therapist_settings_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String login = '/login';
@@ -132,7 +134,7 @@ class AppRouter {
   static const String privateJournal = '/private-journal';
   static const String onboarding = '/client-onboarding';
   static const String addPrivateJournalEntry = '/private-journal/add';
-
+  static const String therapistSettings = '/therapist/settings';
   static const String privateJournalEntryDetails = '/private-journal/details';
 
   static const String editPrivateJournalEntry = '/private-journal/edit';
@@ -426,6 +428,12 @@ class AppRouter {
       case onboarding:
         return MaterialPageRoute(
           builder: (_) => const ClientOnboardingPage(),
+          settings: settings,
+        );
+
+      case therapistSettings:
+        return MaterialPageRoute(
+          builder: (_) => const TherapistSettingsPage(),
           settings: settings,
         );
 

@@ -115,7 +115,8 @@ public class TherapistService : ITherapistService
                     .Where(x =>
     !x.IsDeleted &&
     x.VerificationStatus ==
-        TherapistVerificationStatus.Approved)
+        TherapistVerificationStatus.Approved &&
+        (x.User.Settings ==null || x.User.Settings.ShowProfilePublicly))
             .Select(x => new TherapistResponseDto
             {
                 Id = x.Id,
@@ -275,7 +276,11 @@ public class TherapistService : ITherapistService
                     x.User.IsActive &&
                     !x.User.IsBlocked &&
                     x.VerificationStatus ==
-                        TherapistVerificationStatus.Approved)
+                        TherapistVerificationStatus.Approved &&
+                    (
+                        x.User.Settings == null ||
+                        x.User.Settings.ShowProfilePublicly
+                    ))
                 .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(
@@ -641,7 +646,11 @@ public class TherapistService : ITherapistService
 .Where(x =>
     !x.IsDeleted &&
     x.VerificationStatus ==
-        TherapistVerificationStatus.Approved)
+        TherapistVerificationStatus.Approved &&
+    (
+        x.User.Settings == null ||
+        x.User.Settings.ShowProfilePublicly
+    ))
                 .AsQueryable();
 
 
@@ -1251,12 +1260,15 @@ public class TherapistService : ITherapistService
                 .Include(x => x.TherapyApproaches)
                     .ThenInclude(x =>
                         x.TherapyApproach)
-                .FirstOrDefaultAsync(x =>
-                    x.Id == therapistId &&
-                    !x.IsDeleted &&
-                    x.VerificationStatus ==
-                        TherapistVerificationStatus
-                            .Approved);
+.FirstOrDefaultAsync(x =>
+    x.Id == therapistId &&
+    !x.IsDeleted &&
+    x.VerificationStatus ==
+        TherapistVerificationStatus.Approved &&
+    (
+        x.User.Settings == null ||
+        x.User.Settings.ShowProfilePublicly
+    ));
 
         if (therapist == null)
         {

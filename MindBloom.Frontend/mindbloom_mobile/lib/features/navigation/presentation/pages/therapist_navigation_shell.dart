@@ -8,6 +8,7 @@ import '../../../notification/presentation/viewmodels/notification_scope.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../../../therapist/presentation/pages/therapist_clients_page.dart';
 import '../../../therapist/presentation/pages/therapist_dashboard_page.dart';
+import '../../../../app/di/injection.dart';
 
 class TherapistNavigationShell extends StatefulWidget {
   const TherapistNavigationShell({super.key});
@@ -35,7 +36,35 @@ class _TherapistNavigationShellState extends State<TherapistNavigationShell> {
   @override
   void initState() {
     super.initState();
+
     _loadActiveTab();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyNotificationSettings();
+    });
+  }
+
+  Future<void> _applyNotificationSettings() async {
+    try {
+      final repository = AppInjection.createUserSettingsRepository();
+
+      final settings = await repository.getSettings();
+
+      if (!mounted) {
+        return;
+      }
+
+      final notifications = NotificationScope.of(context);
+
+      if (settings.notificationsEnabled) {
+        await notifications.initialize();
+      } else {
+        await notifications.stop();
+      }
+    } catch (_) {
+      // Notifications keep their current behavior
+      // if settings cannot be loaded.
+    }
   }
 
   Future<void> _loadActiveTab() async {
@@ -194,6 +223,13 @@ class _TherapistNavigationShellState extends State<TherapistNavigationShell> {
                         title: const Text('Profil'),
                         onTap: () {
                           _openDrawerRoute(AppRouter.profile);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.settings_outlined),
+                        title: const Text('Postavke'),
+                        onTap: () {
+                          _openDrawerRoute(AppRouter.therapistSettings);
                         },
                       ),
                       ListTile(
