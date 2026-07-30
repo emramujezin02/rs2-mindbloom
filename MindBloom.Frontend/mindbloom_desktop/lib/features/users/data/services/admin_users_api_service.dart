@@ -1,5 +1,8 @@
+import 'package:mindbloom_desktop/features/users/data/models/update_admin_user_request.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../models/admin_users_paged_response.dart';
+import '../models/admin_user_details_model.dart';
 
 class AdminUsersApiService {
   final ApiClient apiClient;
@@ -12,6 +15,8 @@ class AdminUsersApiService {
     String? search,
     String? role,
     bool? isBlocked,
+    DateTime? registeredFrom,
+    DateTime? registeredTo,
   }) async {
     final queryParameters = <String, String>{
       'pageNumber': pageNumber.toString(),
@@ -28,6 +33,16 @@ class AdminUsersApiService {
 
     if (normalizedRole.isNotEmpty) {
       queryParameters['role'] = normalizedRole;
+    }
+
+    if (registeredFrom != null) {
+      queryParameters['registeredFrom'] = registeredFrom
+          .toUtc()
+          .toIso8601String();
+    }
+
+    if (registeredTo != null) {
+      queryParameters['registeredTo'] = registeredTo.toUtc().toIso8601String();
     }
 
     if (isBlocked != null) {
@@ -53,5 +68,23 @@ class AdminUsersApiService {
       '/Admin/users/$userId/status',
       body: {'isBlocked': isBlocked},
     );
+  }
+
+  Future<AdminUserDetailsModel> getUserDetails(int userId) async {
+    final response = await apiClient.get('/Admin/users/$userId');
+
+    if (response is! Map<String, dynamic>) {
+      throw Exception('Invalid user details response.');
+    }
+
+    return AdminUserDetailsModel.fromJson(response);
+  }
+
+  Future<void> sendPasswordReset(int userId) async {
+    await apiClient.post('/Admin/users/$userId/send-password-reset');
+  }
+
+  Future<void> updateUser(int userId, UpdateAdminUserRequest request) async {
+    await apiClient.put('/Admin/users/$userId', body: request.toJson());
   }
 }

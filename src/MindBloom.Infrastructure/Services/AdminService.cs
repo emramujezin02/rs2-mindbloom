@@ -12,30 +12,30 @@ using MindBloom.Application.Features.Memberships.Interfaces;
 using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.Pagination;
+using MindBloom.Application.Features.Auth.Interfaces;
+using MindBloom.Application.Features.Auth.DTOs;
+using System.Text.Json;
 
 namespace MindBloom.Infrastructure.Services;
 
 public class AdminService : IAdminService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-
     private readonly ApplicationDbContext _context;
-
     private readonly INotificationSender _notificationSender;
-
     private readonly IPaymentService _paymentService;
-
     private readonly IMembershipService _membershipService;
-    private readonly IBusinessNotificationService
-    _businessNotificationService;
+    private readonly IAuthService _authService;
+    private readonly IBusinessNotificationService _businessNotificationService;
+    
     public AdminService(
         UserManager<ApplicationUser> userManager,
         ApplicationDbContext context,
         INotificationSender notificationSender,
-        IBusinessNotificationService
-            businessNotificationService,
+        IBusinessNotificationService businessNotificationService,
         IPaymentService paymentService,
-        IMembershipService membershipService)
+        IMembershipService membershipService,
+        IAuthService authService)
     {
         _userManager =
             userManager;
@@ -54,6 +54,8 @@ public class AdminService : IAdminService
 
         _businessNotificationService =
     businessNotificationService;
+
+        _authService = authService;
     }
 
     public async Task<PagedResponse<UserListDto>>
@@ -109,6 +111,22 @@ public class AdminService : IAdminService
             query = query.Where(user =>
                 user.IsBlocked ==
                 request.IsBlocked.Value);
+        }
+
+        if (request.RegisteredFrom.HasValue)
+        {
+            query = query.Where(user =>
+                user.CreatedAtUtc >=
+                request.RegisteredFrom.Value.Date);
+        }
+
+        if (request.RegisteredTo.HasValue)
+        {
+            var exclusiveEndDate =
+                request.RegisteredTo.Value.Date.AddDays(1);
+
+            query = query.Where(user =>
+                user.CreatedAtUtc < exclusiveEndDate);
         }
 
         if (!string.IsNullOrWhiteSpace(
@@ -214,6 +232,127 @@ public class AdminService : IAdminService
 
     }
 
+    public async Task<AdminUserDetailsDto>
+    GetUserDetailsAsync(
+        int userId)
+    {
+        var user =
+            await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.Id == userId);
+
+        if (user == null)
+        {
+            throw new NotFoundException(
+                "User not found.");
+        }
+
+        var role =
+            await (
+                from userRole in _context.UserRoles
+
+                join identityRole in _context.Roles
+                    on userRole.RoleId
+                    equals identityRole.Id
+
+                where userRole.UserId == user.Id
+
+                select identityRole.Name
+            )
+            .FirstOrDefaultAsync();
+
+        var auditHistory =
+    await _context.UserAudits
+        .AsNoTracking()
+        .Include(x =>
+            x.ChangedByUser)
+        .Where(x =>
+            x.TargetUserId == userId)
+        .OrderByDescending(x =>
+            x.ChangedAtUtc)
+        .Take(50)
+        .Select(x =>
+            new AdminUserAuditDto
+            {
+                Id = x.Id,
+                Action = x.Action,
+                ChangedByName =
+                    x.ChangedByUser.FirstName
+                    + " "
+                    + x.ChangedByUser.LastName,
+                ChangedByEmail =
+                    x.ChangedByUser.Email
+                    ?? string.Empty,
+                PreviousValues =
+                    x.PreviousValues,
+                NewValues =
+                    x.NewValues,
+                Reason = x.Reason,
+                ChangedAtUtc =
+                    x.ChangedAtUtc
+            })
+        .ToListAsync();
+
+        return new AdminUserDetailsDto
+        {
+            Id =
+                user.Id,
+
+            FirstName =
+                user.FirstName,
+
+            LastName =
+                user.LastName,
+
+            FullName =
+                (
+                    user.FirstName
+                    + " "
+                    + user.LastName
+                )
+                .Trim(),
+
+            Email =
+                user.Email
+                ?? string.Empty,
+
+            PhoneNumber =
+                user.PhoneNumber,
+
+            DateOfBirth =
+                user.DateOfBirth,
+
+            Gender =
+                user.Gender.ToString(),
+
+            Role =
+                role
+                ?? "No Role",
+
+            ProfileImageUrl =
+                user.ProfileImageUrl,
+
+            IsActive =
+                user.IsActive,
+
+            IsBlocked =
+                user.IsBlocked,
+
+            IsEmailVerified =
+                user.IsEmailVerified
+                || user.EmailConfirmed,
+
+            IsTwoFactorEnabled =
+                user.TwoFactorEnabledCustom
+                || user.TwoFactorEnabled,
+
+            CreatedAtUtc =user.CreatedAtUtc,
+            LastLoginAtUtc = user.LastLoginAtUtc,
+            AuditHistory = auditHistory
+        };
+    }
+
     public async Task UpdateUserStatusAsync(
         int authenticatedAdminUserId,
         int userId,
@@ -290,6 +429,9 @@ public class AdminService : IAdminService
             return;
         }
 
+        var previousIsBlocked = user.IsBlocked;
+        var previousIsActive = user.IsActive;
+
         user.IsBlocked =
             request.IsBlocked;
 
@@ -312,6 +454,32 @@ public class AdminService : IAdminService
             throw new Exception(
                 $"User status could not be updated: {errorMessage}");
         }
+
+        var action =
+    request.IsBlocked
+        ? "AccountBlocked"
+        : "AccountUnblocked";
+
+        AddUserAudit(
+            targetUserId: user.Id,
+            changedByUserId:
+                authenticatedAdminUserId,
+            action: action,
+            previousValues: new
+            {
+                IsBlocked = previousIsBlocked,
+                IsActive = previousIsActive
+            },
+            newValues: new
+            {
+                user.IsBlocked,
+                user.IsActive
+            },
+            reason: request.IsBlocked
+                ? "User account blocked by administrator."
+                : "User account unblocked by administrator.");
+
+        await _context.SaveChangesAsync();
     }
 
     public async Task
@@ -3262,5 +3430,224 @@ new Notification
         }
 
         return "Inactive";
+    }
+
+    public async Task SendPasswordResetAsync(
+        int authenticatedAdminUserId,
+        int userId)
+    {
+        var user =
+            await _userManager.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Id == userId);
+
+        if (user == null)
+        {
+            throw new NotFoundException(
+                "User not found.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                user.Email))
+        {
+            throw new BusinessException(
+                "User does not have a valid email address.");
+        }
+
+        await _authService.ForgotPasswordAsync(
+            new ForgotPasswordDto
+            {
+                Email = user.Email
+            });
+
+        AddUserAudit(
+            targetUserId: user.Id,
+            changedByUserId:
+                authenticatedAdminUserId,
+            action: "PasswordResetRequested",
+            newValues: new
+            {
+                ResetEmailSent = true
+            },
+            reason:
+                "Password reset email requested by administrator.");
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task UpdateUserAsync(
+     int authenticatedAdminUserId,
+     int userId,
+     UpdateAdminUserDto request)
+    {
+        var authenticatedAdminExists =
+            await _userManager.Users
+                .AnyAsync(x =>
+                    x.Id == authenticatedAdminUserId);
+
+        if (!authenticatedAdminExists)
+        {
+            throw new NotFoundException(
+                "Authenticated administrator was not found.");
+        }
+
+        var user =
+            await _userManager.FindByIdAsync(
+                userId.ToString());
+
+        if (user == null)
+        {
+            throw new NotFoundException(
+                "User not found.");
+        }
+
+        var firstName =
+            request.FirstName?.Trim()
+            ?? string.Empty;
+
+        var lastName =
+            request.LastName?.Trim()
+            ?? string.Empty;
+
+        var phoneNumber =
+            string.IsNullOrWhiteSpace(
+                request.PhoneNumber)
+                ? null
+                : request.PhoneNumber.Trim();
+
+        var gender =
+            string.IsNullOrWhiteSpace(
+                request.Gender)
+                ? null
+                : request.Gender.Trim();
+
+        if (string.IsNullOrWhiteSpace(firstName))
+        {
+            throw new BusinessException(
+                "First name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(lastName))
+        {
+            throw new BusinessException(
+                "Last name is required.");
+        }
+
+        if (firstName.Length > 100)
+        {
+            throw new BusinessException(
+                "First name may contain at most 100 characters.");
+        }
+
+        if (lastName.Length > 100)
+        {
+            throw new BusinessException(
+                "Last name may contain at most 100 characters.");
+        }
+
+        if (phoneNumber != null &&
+            phoneNumber.Length > 30)
+        {
+            throw new BusinessException(
+                "Phone number may contain at most 30 characters.");
+        }
+
+        if (request.DateOfBirth.Date >=
+            DateTime.UtcNow.Date)
+        {
+            throw new BusinessException(
+                "Date of birth must be in the past.");
+        }
+
+        var allowedGenders =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            "Male",
+            "Female",
+            "Other"
+            };
+
+        if (gender != null &&
+            !allowedGenders.Contains(gender))
+        {
+            throw new BusinessException(
+                "Gender must be Male, Female or Other.");
+        }
+
+        var previousValues = new
+        {
+            user.FirstName,
+            user.LastName,
+            user.PhoneNumber,
+            user.DateOfBirth,
+            user.Gender
+        };
+
+        user.FirstName = firstName;
+        user.LastName = lastName;
+        user.PhoneNumber = phoneNumber;
+        user.DateOfBirth = request.DateOfBirth.Date;
+        user.Gender = gender;
+
+        var updateResult =
+            await _userManager.UpdateAsync(user);
+
+        if (!updateResult.Succeeded)
+        {
+            throw new BusinessException(
+                string.Join(
+                    ", ",
+                    updateResult.Errors.Select(
+                        x => x.Description)));
+        }
+
+        AddUserAudit(
+            targetUserId: user.Id,
+            changedByUserId:
+                authenticatedAdminUserId,
+            action: "BasicDataUpdated",
+            previousValues: previousValues,
+            newValues: new
+            {
+                user.FirstName,
+                user.LastName,
+                user.PhoneNumber,
+                user.DateOfBirth,
+                user.Gender
+            },
+            reason:
+                "Basic user information updated by administrator.");
+
+        await _context.SaveChangesAsync();
+    }
+
+    private void AddUserAudit(
+    int targetUserId,
+    int changedByUserId,
+    string action,
+    object? previousValues = null,
+    object? newValues = null,
+    string? reason = null)
+    {
+        _context.UserAudits.Add(
+            new UserAudit
+            {
+                TargetUserId = targetUserId,
+                ChangedByUserId = changedByUserId,
+                Action = action,
+                PreviousValues = previousValues == null
+                    ? null
+                    : JsonSerializer.Serialize(
+                        previousValues),
+                NewValues = newValues == null
+                    ? null
+                    : JsonSerializer.Serialize(
+                        newValues),
+                Reason = string.IsNullOrWhiteSpace(reason)
+                    ? null
+                    : reason.Trim(),
+                ChangedAtUtc = DateTime.UtcNow
+            });
     }
 }

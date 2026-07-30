@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../../../../app/di/injection.dart';
 import '../../data/models/admin_user_model.dart';
 import '../viewmodels/admin_users_viewmodel.dart';
+import '../widgets/user_details_dialog.dart';
+import '../widgets/edit_user_dialog.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({super.key});
@@ -21,6 +23,10 @@ class _UsersPageState extends State<UsersPage> {
   String? _selectedRole;
 
   String _selectedStatus = 'all';
+
+  DateTime? _registeredFrom;
+
+  DateTime? _registeredTo;
 
   @override
   void initState() {
@@ -61,11 +67,13 @@ class _UsersPageState extends State<UsersPage> {
     }
   }
 
-  Future<void> _applyFilters() {
-    return _viewModel.applyFilters(
+  Future<void> _applyFilters() async {
+    await _viewModel.applyFilters(
       search: _searchController.text,
       role: _selectedRole,
       isBlocked: _getBlockedFilter(),
+      registeredFrom: _registeredFrom,
+      registeredTo: _registeredTo,
     );
   }
 
@@ -75,9 +83,97 @@ class _UsersPageState extends State<UsersPage> {
     setState(() {
       _selectedRole = null;
       _selectedStatus = 'all';
+      _registeredFrom = null;
+      _registeredTo = null;
     });
 
     await _viewModel.clearFilters();
+  }
+
+  Future<void> _selectRegisteredFrom() async {
+    final initialDate = _registeredFrom ?? _registeredTo ?? DateTime.now();
+
+    final lastDate = _registeredTo ?? DateTime.now();
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate.isAfter(lastDate) ? lastDate : initialDate,
+      firstDate: DateTime(2020),
+      lastDate: lastDate,
+    );
+
+    if (picked == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _registeredFrom = picked;
+    });
+  }
+
+  Future<void> _selectRegisteredTo() async {
+    final now = DateTime.now();
+
+    final firstDate = _registeredFrom ?? DateTime(2020);
+
+    final initialDate = _registeredTo ?? _registeredFrom ?? now;
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate.isAfter(now) ? now : initialDate,
+      firstDate: firstDate,
+      lastDate: now,
+    );
+
+    if (picked == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _registeredTo = picked;
+    });
+  }
+
+  String _formatFilterDate(DateTime? date) {
+    if (date == null) {
+      return '';
+    }
+
+    return DateFormat('dd.MM.yyyy.').format(date);
+  }
+
+  Widget _buildDateField({
+    required String label,
+    required DateTime? value,
+    required VoidCallback onTap,
+    required VoidCallback onClear,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          prefixIcon: const Icon(Icons.calendar_today_outlined),
+          suffixIcon: value == null
+              ? const Icon(Icons.arrow_drop_down)
+              : IconButton(
+                  tooltip: 'Clear date',
+                  onPressed: onClear,
+                  icon: const Icon(Icons.clear),
+                ),
+        ),
+        child: Text(
+          value == null ? 'Select date' : _formatFilterDate(value),
+          style: TextStyle(
+            color: value == null
+                ? Theme.of(context).colorScheme.onSurfaceVariant
+                : null,
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _confirmStatusChange(AdminUserModel user) async {
@@ -91,9 +187,11 @@ class _UsersPageState extends State<UsersPage> {
           content: Text(
             shouldBlock
                 ? 'Are you sure you want to deactivate '
-                      '${user.fullName}? The user will no longer be able to access the application.'
+                      '${user.fullName}? The user will no longer '
+                      'be able to access the application.'
                 : 'Are you sure you want to activate '
-                      '${user.fullName}? The user will regain access to the application.',
+                      '${user.fullName}? The user will regain '
+                      'access to the application.',
           ),
           actions: [
             TextButton(
@@ -168,14 +266,102 @@ class _UsersPageState extends State<UsersPage> {
     );
   }
 
+  Future<void> _sendPasswordReset(AdminUserModel user) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Send password reset'),
+          content: Text('Send a password reset email to ${user.fullName}?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Send'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final success = await _viewModel.sendPasswordReset(user.id);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password reset email sent successfully.'),
+        ),
+      );
+    } else if (_viewModel.errorMessage != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_viewModel.errorMessage!)));
+    }
+  }
+
+  Future<void> _editUser(AdminUserModel user) async {
+    final detailsLoaded = await _viewModel.loadUserDetails(user.id);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (!detailsLoaded || _viewModel.selectedUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _viewModel.errorMessage ?? 'Unable to load user details.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    final updated = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return EditUserDialog(
+          user: _viewModel.selectedUser!,
+          isSaving: _viewModel.isUpdatingUser,
+          onSave: (request) {
+            return _viewModel.updateUser(user.id, request);
+          },
+        );
+      },
+    );
+
+    if (!mounted || updated != true) {
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('User updated successfully.')));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         _buildFilters(),
-
         if (_viewModel.errorMessage != null) _buildInlineError(),
-
         Expanded(child: _buildContent()),
       ],
     );
@@ -188,7 +374,7 @@ class _UsersPageState extends State<UsersPage> {
         padding: const EdgeInsets.all(18),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final compact = constraints.maxWidth < 900;
+            final compact = constraints.maxWidth < 1000;
 
             final searchField = TextField(
               controller: _searchController,
@@ -204,12 +390,14 @@ class _UsersPageState extends State<UsersPage> {
             );
 
             final roleFilter = DropdownButtonFormField<String>(
+              key: ValueKey(_selectedRole),
               initialValue: _selectedRole,
               decoration: const InputDecoration(
                 labelText: 'Role',
                 border: OutlineInputBorder(),
               ),
               items: const [
+                DropdownMenuItem<String>(value: null, child: Text('All roles')),
                 DropdownMenuItem(value: 'Admin', child: Text('Admin')),
                 DropdownMenuItem(value: 'Therapist', child: Text('Therapist')),
                 DropdownMenuItem(value: 'Client', child: Text('Client')),
@@ -222,6 +410,7 @@ class _UsersPageState extends State<UsersPage> {
             );
 
             final statusFilter = DropdownButtonFormField<String>(
+              key: ValueKey(_selectedStatus),
               initialValue: _selectedStatus,
               decoration: const InputDecoration(
                 labelText: 'Status',
@@ -235,6 +424,28 @@ class _UsersPageState extends State<UsersPage> {
               onChanged: (value) {
                 setState(() {
                   _selectedStatus = value ?? 'all';
+                });
+              },
+            );
+
+            final registeredFromField = _buildDateField(
+              label: 'Registered from',
+              value: _registeredFrom,
+              onTap: _selectRegisteredFrom,
+              onClear: () {
+                setState(() {
+                  _registeredFrom = null;
+                });
+              },
+            );
+
+            final registeredToField = _buildDateField(
+              label: 'Registered to',
+              value: _registeredTo,
+              onTap: _selectRegisteredTo,
+              onClear: () {
+                setState(() {
+                  _registeredTo = null;
                 });
               },
             );
@@ -268,20 +479,36 @@ class _UsersPageState extends State<UsersPage> {
                   const SizedBox(height: 12),
                   statusFilter,
                   const SizedBox(height: 12),
+                  registeredFromField,
+                  const SizedBox(height: 12),
+                  registeredToField,
+                  const SizedBox(height: 12),
                   buttons,
                 ],
               );
             }
 
-            return Row(
+            return Column(
               children: [
-                Expanded(flex: 3, child: searchField),
-                const SizedBox(width: 12),
-                Expanded(flex: 2, child: roleFilter),
-                const SizedBox(width: 12),
-                Expanded(flex: 2, child: statusFilter),
-                const SizedBox(width: 12),
-                SizedBox(width: 260, child: buttons),
+                Row(
+                  children: [
+                    Expanded(flex: 3, child: searchField),
+                    const SizedBox(width: 12),
+                    Expanded(flex: 2, child: roleFilter),
+                    const SizedBox(width: 12),
+                    Expanded(flex: 2, child: statusFilter),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: registeredFromField),
+                    const SizedBox(width: 12),
+                    Expanded(child: registeredToField),
+                    const SizedBox(width: 12),
+                    SizedBox(width: 260, child: buttons),
+                  ],
+                ),
               ],
             );
           },
@@ -418,6 +645,72 @@ class _UsersPageState extends State<UsersPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Tooltip(
+                    message: 'View details',
+                    child: IconButton(
+                      onPressed: () async {
+                        final success = await _viewModel.loadUserDetails(
+                          user.id,
+                        );
+
+                        if (!mounted) {
+                          return;
+                        }
+
+                        if (!success || _viewModel.selectedUser == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                _viewModel.errorMessage ??
+                                    'Unable to load user details.',
+                              ),
+                            ),
+                          );
+
+                          return;
+                        }
+
+                        await showDialog(
+                          context: context,
+                          builder: (_) =>
+                              UserDetailsDialog(user: _viewModel.selectedUser!),
+                        );
+                      },
+                      icon: const Icon(Icons.visibility_outlined),
+                    ),
+                  ),
+                  Tooltip(
+                    message: 'Edit user',
+                    child: IconButton(
+                      onPressed: _viewModel.isUpdatingUser
+                          ? null
+                          : () {
+                              _editUser(user);
+                            },
+                      icon: const Icon(Icons.edit_outlined),
+                    ),
+                  ),
+                  Tooltip(
+                    message: 'Send password reset',
+                    child: IconButton(
+                      onPressed:
+                          _viewModel.isSendingPasswordReset &&
+                              _viewModel.passwordResetUserId == user.id
+                          ? null
+                          : () {
+                              _sendPasswordReset(user);
+                            },
+                      icon:
+                          _viewModel.isSendingPasswordReset &&
+                              _viewModel.passwordResetUserId == user.id
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.lock_reset),
+                    ),
+                  ),
+                  Tooltip(
                     message: user.isActive
                         ? 'Deactivate user'
                         : 'Activate user',
@@ -502,8 +795,10 @@ class _UsersPageState extends State<UsersPage> {
               Text(
                 _viewModel.totalPages == 0
                     ? 'Page 0 of 0'
-                    : 'Page ${_viewModel.pageNumber} '
-                          'of ${_viewModel.totalPages}',
+                    : 'Page '
+                          '${_viewModel.pageNumber} '
+                          'of '
+                          '${_viewModel.totalPages}',
               ),
               const SizedBox(width: 12),
               IconButton(

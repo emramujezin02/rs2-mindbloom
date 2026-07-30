@@ -263,6 +263,8 @@ public class AuthService : IAuthService
         _context.RefreshTokens.Add(
             refreshTokenEntity);
 
+        user.LastLoginAtUtc = DateTime.UtcNow;
+
         await _context.SaveChangesAsync();
 
         return new AuthResponseDto
@@ -765,6 +767,8 @@ public class AuthService : IAuthService
                     DateTime.UtcNow.AddDays(7),
                 IsRevoked = false
             });
+
+        user.LastLoginAtUtc = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
 

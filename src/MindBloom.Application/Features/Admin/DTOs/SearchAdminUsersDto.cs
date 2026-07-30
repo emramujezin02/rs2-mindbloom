@@ -39,4 +39,8 @@ public class SearchAdminUsersDto
     public string? Role { get; set; }
 
     public bool? IsBlocked { get; set; }
+
+    public DateTime? RegisteredFrom { get; set; }
+
+    public DateTime? RegisteredTo { get; set; }
 }

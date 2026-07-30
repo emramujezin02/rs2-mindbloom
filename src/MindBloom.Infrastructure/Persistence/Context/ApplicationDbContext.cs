@@ -43,7 +43,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<AppointmentStatusAudit> AppointmentStatusAudits => Set<AppointmentStatusAudit>();
     public DbSet<ReviewModerationAudit> ReviewModerationAudits => Set<ReviewModerationAudit>();
     public DbSet<ArticleCategory> ArticleCategories => Set<ArticleCategory>();
-
+    public DbSet<UserAudit> UserAudits => Set<UserAudit>();
     public DbSet<UserSettings> UserSettings =>
     Set<UserSettings>();
 
@@ -99,6 +99,38 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany(x => x.Availabilities)
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<UserAudit>(entity =>
+        {
+            entity.Property(x => x.Action)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(x => x.PreviousValues)
+                .HasMaxLength(4000);
+
+            entity.Property(x => x.NewValues)
+                .HasMaxLength(4000);
+
+            entity.Property(x => x.Reason)
+                .HasMaxLength(500);
+
+            entity.HasOne(x => x.TargetUser)
+                .WithMany(x => x.ReceivedUserAudits)
+                .HasForeignKey(x => x.TargetUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.ChangedByUser)
+                .WithMany(x => x.PerformedUserAudits)
+                .HasForeignKey(x => x.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => x.TargetUserId);
+
+            entity.HasIndex(x => x.ChangedByUserId);
+
+            entity.HasIndex(x => x.ChangedAtUtc);
+        });
 
         builder.Entity<Notification>(
             entity =>

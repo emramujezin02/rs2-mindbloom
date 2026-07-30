@@ -356,8 +356,7 @@ public class AdminController : ControllerBase
         return Ok(result);
     }
 
-    private int
-       GetAuthenticatedUserId()
+    private int GetAuthenticatedUserId()
     {
         var userIdValue =
             User.FindFirstValue(
@@ -367,10 +366,60 @@ public class AdminController : ControllerBase
                 userIdValue,
                 out var userId))
         {
-            throw new UnauthorizedException(
-                "Authenticated user identifier is invalid.");
+            throw new UnauthorizedAccessException(
+                "Invalid authenticated administrator.");
         }
 
         return userId;
+    }
+
+    [HttpGet("users/{userId}")]
+    public async Task<IActionResult>
+    GetUserDetails(
+        int userId)
+    {
+        var result =
+            await _adminService
+                .GetUserDetailsAsync(
+                    userId);
+
+        return Ok(result);
+    }
+
+    [HttpPost("users/{userId:int}/send-password-reset")]
+    public async Task<IActionResult> SendPasswordReset(
+        int userId)
+    {
+        var authenticatedAdminUserId =
+            GetAuthenticatedUserId();
+
+        await _adminService.SendPasswordResetAsync(
+            authenticatedAdminUserId,
+            userId);
+
+        return Ok(new
+        {
+            message =
+                "Password reset email sent successfully."
+        });
+    }
+
+    [HttpPut("users/{userId:int}")]
+    public async Task<IActionResult> UpdateUser(
+        int userId,
+        UpdateAdminUserDto request)
+    {
+        var authenticatedAdminUserId =
+            GetAuthenticatedUserId();
+
+        await _adminService.UpdateUserAsync(
+            authenticatedAdminUserId,
+            userId,
+            request);
+
+        return Ok(new
+        {
+            message = "User updated successfully."
+        });
     }
 }

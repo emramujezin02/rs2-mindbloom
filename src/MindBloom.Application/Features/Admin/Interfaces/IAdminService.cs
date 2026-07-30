@@ -79,4 +79,17 @@ public interface IAdminService
 
     Task<AdminDashboardDto>
         GetDashboardAsync();
+
+    Task<AdminUserDetailsDto>
+    GetUserDetailsAsync(
+        int userId);
+
+    Task SendPasswordResetAsync(
+        int authenticatedAdminUserId,
+        int userId);
+
+    Task UpdateUserAsync(
+        int authenticatedAdminUserId,
+        int userId,
+        UpdateAdminUserDto request);
 }
