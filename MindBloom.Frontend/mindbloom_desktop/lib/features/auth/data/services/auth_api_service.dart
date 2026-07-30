@@ -35,4 +35,14 @@ class AuthApiService {
   Future<void> logout() async {
     await apiClient.post('/Auth/logout');
   }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await apiClient.post(
+      '/Auth/change-password',
+      body: {'currentPassword': currentPassword, 'newPassword': newPassword},
+    );
+  }
 }

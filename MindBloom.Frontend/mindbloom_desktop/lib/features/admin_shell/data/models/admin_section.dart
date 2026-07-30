@@ -7,12 +7,13 @@ enum AdminSection {
   appointments,
   payments,
   memberships,
-  workshops,
-  articles,
   reviews,
+  articles,
+  workshops,
   referenceData,
   appointmentRevenueReport,
   therapistPerformanceReport,
+  settings,
 }
 
 extension AdminSectionExtension on AdminSection {
@@ -25,7 +26,7 @@ extension AdminSectionExtension on AdminSection {
         return 'Users';
 
       case AdminSection.therapists:
-        return 'Therapists';
+        return 'Therapist Verification';
 
       case AdminSection.appointments:
         return 'Appointments';
@@ -36,23 +37,26 @@ extension AdminSectionExtension on AdminSection {
       case AdminSection.memberships:
         return 'Memberships';
 
-      case AdminSection.workshops:
-        return 'Workshops';
+      case AdminSection.reviews:
+        return 'Reviews';
 
       case AdminSection.articles:
         return 'Articles';
 
-      case AdminSection.reviews:
-        return 'Reviews';
+      case AdminSection.workshops:
+        return 'Workshops';
 
       case AdminSection.referenceData:
         return 'Reference Data';
 
       case AdminSection.appointmentRevenueReport:
-        return 'Revenue Report';
+        return 'Appointment Revenue Report';
 
       case AdminSection.therapistPerformanceReport:
-        return 'Therapist Report';
+        return 'Therapist Performance Report';
+
+      case AdminSection.settings:
+        return 'Settings';
     }
   }
 
@@ -65,7 +69,7 @@ extension AdminSectionExtension on AdminSection {
         return Icons.people_outline;
 
       case AdminSection.therapists:
-        return Icons.psychology_outlined;
+        return Icons.verified_user_outlined;
 
       case AdminSection.appointments:
         return Icons.calendar_month_outlined;
@@ -76,14 +80,14 @@ extension AdminSectionExtension on AdminSection {
       case AdminSection.memberships:
         return Icons.card_membership_outlined;
 
-      case AdminSection.workshops:
-        return Icons.groups_outlined;
+      case AdminSection.reviews:
+        return Icons.reviews_outlined;
 
       case AdminSection.articles:
         return Icons.article_outlined;
 
-      case AdminSection.reviews:
-        return Icons.reviews_outlined;
+      case AdminSection.workshops:
+        return Icons.groups_outlined;
 
       case AdminSection.referenceData:
         return Icons.list_alt_outlined;
@@ -93,6 +97,9 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.therapistPerformanceReport:
         return Icons.assessment_outlined;
+
+      case AdminSection.settings:
+        return Icons.settings_outlined;
     }
   }
 
@@ -105,7 +112,7 @@ extension AdminSectionExtension on AdminSection {
         return Icons.people;
 
       case AdminSection.therapists:
-        return Icons.psychology;
+        return Icons.verified_user;
 
       case AdminSection.appointments:
         return Icons.calendar_month;
@@ -116,14 +123,14 @@ extension AdminSectionExtension on AdminSection {
       case AdminSection.memberships:
         return Icons.card_membership;
 
-      case AdminSection.workshops:
-        return Icons.groups;
+      case AdminSection.reviews:
+        return Icons.reviews;
 
       case AdminSection.articles:
         return Icons.article;
 
-      case AdminSection.reviews:
-        return Icons.reviews;
+      case AdminSection.workshops:
+        return Icons.groups;
 
       case AdminSection.referenceData:
         return Icons.list_alt;
@@ -133,6 +140,14 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.therapistPerformanceReport:
         return Icons.assessment;
+
+      case AdminSection.settings:
+        return Icons.settings;
     }
+  }
+
+  bool get isReport {
+    return this == AdminSection.appointmentRevenueReport ||
+        this == AdminSection.therapistPerformanceReport;
   }
 }
