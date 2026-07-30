@@ -4,6 +4,11 @@ namespace MindBloom.Application.Features.AdminReports.Interfaces;
 
 public interface IAdminReportService
 {
+    Task<AdminDashboardReportDto>
+        GetDashboardReportAsync(
+            AdminDashboardReportQueryDto query,
+            CancellationToken cancellationToken = default);
+
     Task<AppointmentRevenueReportDto>
         GetAppointmentRevenueReportAsync(
             AdminReportPeriodQueryDto query,

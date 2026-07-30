@@ -21,6 +21,25 @@ public class AdminReportsController : ControllerBase
             adminReportService;
     }
 
+    [HttpGet("dashboard")]
+    [ProducesResponseType(
+    typeof(AdminDashboardReportDto),
+    StatusCodes.Status200OK)]
+    public async Task<ActionResult<AdminDashboardReportDto>>
+    GetDashboardReport(
+        [FromQuery]
+        AdminDashboardReportQueryDto query,
+        CancellationToken cancellationToken)
+    {
+        var result =
+            await _adminReportService
+                .GetDashboardReportAsync(
+                    query,
+                    cancellationToken);
+
+        return Ok(result);
+    }
+
     [HttpGet("appointments-revenue")]
     [ProducesResponseType(
         typeof(AppointmentRevenueReportDto),

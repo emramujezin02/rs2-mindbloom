@@ -16,6 +16,532 @@ public class AdminReportService : IAdminReportService
         _context = context;
     }
 
+    public async Task<AdminDashboardReportDto>
+    GetDashboardReportAsync(
+        AdminDashboardReportQueryDto query,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateDashboardPeriod(query);
+
+        var nowUtc =
+            DateTime.UtcNow;
+
+        var todayStartUtc =
+            nowUtc.Date;
+
+        var tomorrowStartUtc =
+            todayStartUtc.AddDays(1);
+
+        var currentMonthStartUtc =
+            new DateTime(
+                nowUtc.Year,
+                nowUtc.Month,
+                1,
+                0,
+                0,
+                0,
+                DateTimeKind.Utc);
+
+        var nextMonthStartUtc =
+            currentMonthStartUtc.AddMonths(1);
+
+        var periodEndExclusive =
+            query.ToUtc == DateTime.MaxValue
+                ? query.ToUtc
+                : query.ToUtc.AddTicks(1);
+
+        var totalUsers =
+            await _context.Users
+                .AsNoTracking()
+                .CountAsync(
+                    cancellationToken);
+
+        var activeClients =
+            await _context.Clients
+                .AsNoTracking()
+                .CountAsync(
+                    client =>
+                        !client.IsDeleted &&
+                        client.User.IsActive &&
+                        !client.User.IsBlocked,
+                    cancellationToken);
+
+        var totalTherapists =
+            await _context.Therapists
+                .AsNoTracking()
+                .CountAsync(
+                    therapist =>
+                        !therapist.IsDeleted,
+                    cancellationToken);
+
+        var verifiedTherapists =
+            await _context.Therapists
+                .AsNoTracking()
+                .CountAsync(
+                    therapist =>
+                        !therapist.IsDeleted &&
+                        therapist.VerificationStatus ==
+                            TherapistVerificationStatus.Approved,
+                    cancellationToken);
+
+        var pendingTherapists =
+            await _context.Therapists
+                .AsNoTracking()
+                .CountAsync(
+                    therapist =>
+                        !therapist.IsDeleted &&
+                        therapist.VerificationStatus ==
+                            TherapistVerificationStatus.Pending,
+                    cancellationToken);
+
+        var appointmentsForPeriod =
+            await _context.Appointments
+                .AsNoTracking()
+                .Where(appointment =>
+                    !appointment.IsDeleted &&
+                    appointment.StartUtc >=
+                        query.FromUtc &&
+                    appointment.StartUtc <
+                        periodEndExclusive)
+                .Select(appointment => new
+                {
+                    appointment.Status
+                })
+                .ToListAsync(
+                    cancellationToken);
+
+        var appointmentsByStatus =
+            appointmentsForPeriod
+                .GroupBy(appointment =>
+                    appointment.Status)
+                .OrderBy(group =>
+                    group.Key)
+                .Select(group =>
+                    new AdminDashboardCountItemDto
+                    {
+                        Label =
+                            group.Key.ToString(),
+
+                        Count =
+                            group.Count()
+                    })
+                .ToList();
+
+        var appointmentTherapyApproachRecords =
+    await _context.Appointments
+        .AsNoTracking()
+        .Where(appointment =>
+            !appointment.IsDeleted &&
+            !appointment.Therapist.IsDeleted &&
+            appointment.StartUtc >=
+                query.FromUtc &&
+            appointment.StartUtc <
+                periodEndExclusive)
+        .SelectMany(appointment =>
+            appointment.Therapist
+                .TherapyApproaches
+                .Where(therapistApproach =>
+                    !therapistApproach.IsDeleted &&
+                    !therapistApproach
+                        .TherapyApproach
+                        .IsDeleted &&
+                    therapistApproach
+                        .TherapyApproach
+                        .IsActive)
+                .Select(therapistApproach =>
+                    new
+                    {
+                        AppointmentId =
+                            appointment.Id,
+
+                        TherapyApproachName =
+                            therapistApproach
+                                .TherapyApproach
+                                .Name
+                    }))
+        .ToListAsync(
+            cancellationToken);
+
+        var appointmentsByTherapyApproach =
+            appointmentTherapyApproachRecords
+                .Where(record =>
+                    !string.IsNullOrWhiteSpace(
+                        record.TherapyApproachName))
+                .GroupBy(
+                    record =>
+                        record.TherapyApproachName.Trim(),
+                    StringComparer.OrdinalIgnoreCase)
+                .Select(group =>
+                    new AdminDashboardCountItemDto
+                    {
+                        Label =
+                            group.Key,
+
+                        Count =
+                            group
+                                .Select(record =>
+                                    record.AppointmentId)
+                                .Distinct()
+                                .Count()
+                    })
+                .OrderByDescending(item =>
+                    item.Count)
+                .ThenBy(item =>
+                    item.Label)
+                .ToList();
+
+        var todayAppointments =
+            await _context.Appointments
+                .AsNoTracking()
+                .CountAsync(
+                    appointment =>
+                        !appointment.IsDeleted &&
+                        appointment.StartUtc >=
+                            todayStartUtc &&
+                        appointment.StartUtc <
+                            tomorrowStartUtc,
+                    cancellationToken);
+
+        var appointmentPayments =
+            await _context.Payments
+                .AsNoTracking()
+                .Where(payment =>
+                    !payment.IsDeleted &&
+                    payment.Status ==
+                        PaymentStatus.Paid &&
+                    payment.PaidAtUtc.HasValue)
+                .Select(payment => new
+                {
+                    Amount =
+                        payment.Amount,
+
+                    PaidAtUtc =
+                        payment.PaidAtUtc!.Value
+                })
+                .ToListAsync(
+                    cancellationToken);
+
+        var membershipPayments =
+            await _context.MembershipPayments
+                .AsNoTracking()
+                .Where(payment =>
+                    !payment.IsDeleted &&
+                    payment.Status ==
+                        PaymentStatus.Paid &&
+                    payment.PaidAtUtc.HasValue)
+                .Select(payment => new
+                {
+                    Amount =
+                        payment.Amount,
+
+                    PaidAtUtc =
+                        payment.PaidAtUtc!.Value
+                })
+                .ToListAsync(
+                    cancellationToken);
+
+        var allPaidTransactions =
+            appointmentPayments
+                .Select(payment =>
+                    new DashboardPaymentRecord
+                    {
+                        Amount =
+                            payment.Amount,
+
+                        PaidAtUtc =
+                            payment.PaidAtUtc
+                    })
+                .Concat(
+                    membershipPayments.Select(payment =>
+                        new DashboardPaymentRecord
+                        {
+                            Amount =
+                                payment.Amount,
+
+                            PaidAtUtc =
+                                payment.PaidAtUtc
+                        }))
+                .ToList();
+
+        var totalRevenue =
+            allPaidTransactions.Sum(
+                payment =>
+                    payment.Amount);
+
+        var currentMonthRevenue =
+            allPaidTransactions
+                .Where(payment =>
+                    payment.PaidAtUtc >=
+                        currentMonthStartUtc &&
+                    payment.PaidAtUtc <
+                        nextMonthStartUtc)
+                .Sum(payment =>
+                    payment.Amount);
+
+        var periodRevenue =
+            allPaidTransactions
+                .Where(payment =>
+                    payment.PaidAtUtc >=
+                        query.FromUtc &&
+                    payment.PaidAtUtc <
+                        periodEndExclusive)
+                .Sum(payment =>
+                    payment.Amount);
+
+        var revenueByMonth =
+            allPaidTransactions
+                .Where(payment =>
+                    payment.PaidAtUtc >=
+                        query.FromUtc &&
+                    payment.PaidAtUtc <
+                        periodEndExclusive)
+                .GroupBy(payment => new
+                {
+                    payment.PaidAtUtc.Year,
+                    payment.PaidAtUtc.Month
+                })
+                .OrderBy(group =>
+                    group.Key.Year)
+                .ThenBy(group =>
+                    group.Key.Month)
+                .Select(group =>
+                    new AdminDashboardMonthlyRevenueItemDto
+                    {
+                        Year =
+                            group.Key.Year,
+
+                        Month =
+                            group.Key.Month,
+
+                        Label =
+                            BuildMonthLabel(
+                                group.Key.Year,
+                                group.Key.Month),
+
+                        Revenue =
+                            group.Sum(payment =>
+                                payment.Amount)
+                    })
+                .ToList();
+
+        var newUsersByMonth =
+            await _context.Users
+                .AsNoTracking()
+                .Where(user =>
+                    user.CreatedAtUtc >=
+                        query.FromUtc &&
+                    user.CreatedAtUtc <
+                        periodEndExclusive)
+                .GroupBy(user => new
+                {
+                    user.CreatedAtUtc.Year,
+                    user.CreatedAtUtc.Month
+                })
+                .OrderBy(group =>
+                    group.Key.Year)
+                .ThenBy(group =>
+                    group.Key.Month)
+                .Select(group =>
+                    new AdminDashboardMonthlyCountItemDto
+                    {
+                        Year =
+                            group.Key.Year,
+
+                        Month =
+                            group.Key.Month,
+
+                        Count =
+                            group.Count()
+                    })
+                .ToListAsync(
+                    cancellationToken);
+
+        var verifiedTherapistsByMonth =
+    await _context
+        .TherapistVerificationAudits
+        .AsNoTracking()
+        .Where(audit =>
+            audit.NewStatus ==
+                TherapistVerificationStatus.Approved &&
+            audit.ChangedAtUtc >=
+                query.FromUtc &&
+            audit.ChangedAtUtc <
+                periodEndExclusive)
+        .GroupBy(audit => new
+        {
+            audit.ChangedAtUtc.Year,
+            audit.ChangedAtUtc.Month
+        })
+        .OrderBy(group =>
+            group.Key.Year)
+        .ThenBy(group =>
+            group.Key.Month)
+        .Select(group =>
+            new AdminDashboardMonthlyCountItemDto
+            {
+                Year =
+                    group.Key.Year,
+
+                Month =
+                    group.Key.Month,
+
+                Count =
+                    group
+                        .Select(audit =>
+                            audit.TherapistId)
+                        .Distinct()
+                        .Count()
+            })
+        .ToListAsync(
+            cancellationToken);
+
+        foreach (var item in verifiedTherapistsByMonth)
+        {
+            item.Label =
+                BuildMonthLabel(
+                    item.Year,
+                    item.Month);
+        }
+
+        foreach (var item in newUsersByMonth)
+        {
+            item.Label =
+                BuildMonthLabel(
+                    item.Year,
+                    item.Month);
+        }
+
+        var activeMemberships =
+            await _context.ClientMemberships
+                .AsNoTracking()
+                .CountAsync(
+                    membership =>
+                        !membership.IsDeleted &&
+                        membership.IsActive &&
+                        membership.RemainingSessions > 0 &&
+                        (
+                            membership.ExpiresAtUtc == null ||
+                            membership.ExpiresAtUtc >
+                                nowUtc
+                        ) &&
+                        membership.Payment != null &&
+                        membership.Payment.Status ==
+                            PaymentStatus.Paid,
+                    cancellationToken);
+
+        var pendingReviews =
+            await _context.Reviews
+                .AsNoTracking()
+                .CountAsync(
+                    review =>
+                        !review.IsDeleted &&
+                        !review.IsApproved,
+                    cancellationToken);
+
+        var publishedArticles =
+            await _context.Articles
+                .AsNoTracking()
+                .CountAsync(
+                    article =>
+                        !article.IsDeleted &&
+                        article.IsPublished,
+                    cancellationToken);
+
+        var activeWorkshops =
+            await _context.Workshops
+                .AsNoTracking()
+                .CountAsync(
+                    workshop =>
+                        !workshop.IsDeleted &&
+                        workshop.Status ==
+                            WorkshopStatus.Scheduled &&
+                        workshop.EndUtc >
+                            nowUtc,
+                    cancellationToken);
+
+        return new AdminDashboardReportDto
+        {
+            FromUtc =
+                query.FromUtc,
+
+            ToUtc =
+                query.ToUtc,
+
+            GeneratedAtUtc =
+                nowUtc,
+
+            TotalUsers =
+                totalUsers,
+
+            ActiveClients =
+                activeClients,
+
+            TotalTherapists =
+                totalTherapists,
+
+            VerifiedTherapists =
+                verifiedTherapists,
+
+            PendingTherapists =
+                pendingTherapists,
+
+            TotalAppointments =
+                appointmentsForPeriod.Count,
+
+            TodayAppointments =
+                todayAppointments,
+
+            CompletedAppointments =
+                appointmentsForPeriod.Count(
+                    appointment =>
+                        appointment.Status ==
+                            AppointmentStatus.Completed),
+
+            CancelledAppointments =
+                appointmentsForPeriod.Count(
+                    appointment =>
+                        appointment.Status ==
+                            AppointmentStatus.Cancelled ||
+                        appointment.Status ==
+                            AppointmentStatus.Rejected),
+
+            TotalRevenue =
+                totalRevenue,
+
+            CurrentMonthRevenue =
+                currentMonthRevenue,
+
+            PeriodRevenue =
+                periodRevenue,
+
+            ActiveMemberships =
+                activeMemberships,
+
+            PendingReviews =
+                pendingReviews,
+
+            PublishedArticles =
+                publishedArticles,
+
+            ActiveWorkshops =
+                activeWorkshops,
+
+            AppointmentsByStatus =
+                appointmentsByStatus,
+
+            RevenueByMonth =
+                revenueByMonth,
+
+            NewUsersByMonth = newUsersByMonth,
+
+            AppointmentsByTherapyApproach =
+    appointmentsByTherapyApproach,
+
+            VerifiedTherapistsByMonth =
+    verifiedTherapistsByMonth
+        };
+    }
+
     public async Task<AppointmentRevenueReportDto>
         GetAppointmentRevenueReportAsync(
             AdminReportPeriodQueryDto query,
@@ -517,5 +1043,51 @@ public class AdminReportService : IAdminReportService
         public int AppointmentId { get; set; }
 
         public int Rating { get; set; }
+    }
+
+    private static void ValidateDashboardPeriod(
+    AdminDashboardReportQueryDto query)
+    {
+        if (query.FromUtc == default)
+        {
+            throw new ArgumentException(
+                "Dashboard start date is required.");
+        }
+
+        if (query.ToUtc == default)
+        {
+            throw new ArgumentException(
+                "Dashboard end date is required.");
+        }
+
+        if (query.FromUtc > query.ToUtc)
+        {
+            throw new ArgumentException(
+                "Dashboard start date cannot be later than the end date.");
+        }
+
+        var maximumPeriod =
+            TimeSpan.FromDays(366 * 5);
+
+        if (query.ToUtc - query.FromUtc >
+            maximumPeriod)
+        {
+            throw new ArgumentException(
+                "Dashboard period cannot be longer than five years.");
+        }
+    }
+
+    private static string BuildMonthLabel(
+        int year,
+        int month)
+    {
+        return $"{year}-{month:D2}";
+    }
+
+    private sealed class DashboardPaymentRecord
+    {
+        public decimal Amount { get; set; }
+
+        public DateTime PaidAtUtc { get; set; }
     }
 }

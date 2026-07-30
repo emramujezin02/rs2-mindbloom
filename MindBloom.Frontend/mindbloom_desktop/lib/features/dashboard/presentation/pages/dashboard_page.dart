@@ -15,12 +15,21 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  final AdminDashboardViewModel _viewModel =
-      AppInjection.createAdminDashboardViewModel();
+  late final AdminDashboardViewModel _viewModel;
+
+  final DateFormat _dateFormatter = DateFormat('dd.MM.yyyy');
+
+  final NumberFormat _currencyFormatter = NumberFormat.currency(
+    locale: 'bs_BA',
+    symbol: 'KM',
+    decimalDigits: 2,
+  );
 
   @override
   void initState() {
     super.initState();
+
+    _viewModel = AppInjection.createAdminDashboardViewModel();
 
     _viewModel.addListener(_onViewModelChanged);
 
@@ -44,6 +53,38 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _refresh() {
     return _viewModel.refreshDashboard();
+  }
+
+  Future<void> _selectFromDate() async {
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: _viewModel.fromDate,
+      firstDate: DateTime(2020),
+      lastDate: _viewModel.toDate,
+      helpText: 'Select dashboard start date',
+    );
+
+    if (selectedDate == null) {
+      return;
+    }
+
+    _viewModel.setCustomFromDate(selectedDate);
+  }
+
+  Future<void> _selectToDate() async {
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: _viewModel.toDate,
+      firstDate: _viewModel.fromDate,
+      lastDate: DateTime.now(),
+      helpText: 'Select dashboard end date',
+    );
+
+    if (selectedDate == null) {
+      return;
+    }
+
+    _viewModel.setCustomToDate(selectedDate);
   }
 
   @override
@@ -77,10 +118,11 @@ class _DashboardPageState extends State<DashboardPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _DashboardHeader(
-              isRefreshing: _viewModel.isLoading,
-              onRefresh: _refresh,
-            ),
+            _buildHeader(),
+
+            const SizedBox(height: 22),
+
+            _buildPeriodFilter(),
 
             if (_viewModel.errorMessage != null) ...[
               const SizedBox(height: 16),
@@ -89,31 +131,33 @@ class _DashboardPageState extends State<DashboardPage> {
 
             const SizedBox(height: 28),
 
-            _SummaryCards(dashboard: dashboard),
+            if (!dashboard.hasAnyData)
+              const _DashboardEmptyState()
+            else ...[
+              _buildSummaryCards(dashboard),
 
-            const SizedBox(height: 28),
+              const SizedBox(height: 28),
 
-            _ChartsSection(dashboard: dashboard),
+              _buildStatusCharts(dashboard),
 
-            const SizedBox(height: 28),
+              const SizedBox(height: 28),
 
-            _AdditionalStatistics(dashboard: dashboard),
+              _buildTimelineCharts(dashboard),
+              const SizedBox(height: 28),
+
+              _buildAdditionalAnalyticsCharts(dashboard),
+
+              const SizedBox(height: 28),
+
+              _buildSystemStatistics(dashboard),
+            ],
           ],
         ),
       ),
     );
   }
-}
 
-class _DashboardHeader extends StatelessWidget {
-  final bool isRefreshing;
-
-  final Future<void> Function() onRefresh;
-
-  const _DashboardHeader({required this.isRefreshing, required this.onRefresh});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildHeader() {
     final session = SessionScope.of(context);
 
     final currentUser = session.currentUser;
@@ -126,9 +170,9 @@ class _DashboardHeader extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 650;
+        final compact = constraints.maxWidth < 680;
 
-        final introduction = Column(
+        final title = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -138,7 +182,7 @@ class _DashboardHeader extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               email.isEmpty
-                  ? 'MindBloom administration overview'
+                  ? 'MindBloom system analytics'
                   : 'Signed in as $email',
               style: Theme.of(context).textTheme.titleMedium,
             ),
@@ -146,31 +190,27 @@ class _DashboardHeader extends StatelessWidget {
         );
 
         final refreshButton = OutlinedButton.icon(
-          onPressed: isRefreshing
-              ? null
-              : () {
-                  onRefresh();
-                },
-          icon: isRefreshing
+          onPressed: _viewModel.isLoading ? null : _refresh,
+          icon: _viewModel.isLoading
               ? const SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.refresh),
-          label: Text(isRefreshing ? 'Refreshing...' : 'Refresh'),
+          label: Text(_viewModel.isLoading ? 'Refreshing...' : 'Refresh'),
         );
 
         if (compact) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [introduction, const SizedBox(height: 16), refreshButton],
+            children: [title, const SizedBox(height: 16), refreshButton],
           );
         }
 
         return Row(
           children: [
-            Expanded(child: introduction),
+            Expanded(child: title),
             const SizedBox(width: 20),
             refreshButton,
           ],
@@ -178,202 +218,285 @@ class _DashboardHeader extends StatelessWidget {
       },
     );
   }
-}
 
-class _SummaryCards extends StatelessWidget {
-  final AdminDashboardModel dashboard;
+  Widget _buildPeriodFilter() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 900;
 
-  const _SummaryCards({required this.dashboard});
+            final periodDropdown =
+                DropdownButtonFormField<AdminDashboardPeriod>(
+                  initialValue: _viewModel.selectedPeriod,
+                  decoration: const InputDecoration(
+                    labelText: 'Period',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.date_range),
+                  ),
+                  items: AdminDashboardPeriod.values.map((period) {
+                    return DropdownMenuItem(
+                      value: period,
+                      child: Text(period.label),
+                    );
+                  }).toList(),
+                  onChanged: _viewModel.isLoading
+                      ? null
+                      : (period) {
+                          if (period != null) {
+                            _viewModel.setPeriod(period);
+                          }
+                        },
+                );
 
-  @override
-  Widget build(BuildContext context) {
-    final currencyFormatter = NumberFormat.currency(
-      locale: 'bs_BA',
-      symbol: 'KM',
-      decimalDigits: 2,
+            final fromField = _DateField(
+              label: 'From date',
+              value: _dateFormatter.format(_viewModel.fromDate),
+              enabled: !_viewModel.isLoading,
+              onPressed: _selectFromDate,
+            );
+
+            final toField = _DateField(
+              label: 'To date',
+              value: _dateFormatter.format(_viewModel.toDate),
+              enabled: !_viewModel.isLoading,
+              onPressed: _selectToDate,
+            );
+
+            final applyButton = ElevatedButton.icon(
+              onPressed: _viewModel.isLoading ? null : _viewModel.loadDashboard,
+              icon: const Icon(Icons.filter_alt),
+              label: const Text('Apply period'),
+            );
+
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  periodDropdown,
+                  const SizedBox(height: 14),
+                  fromField,
+                  const SizedBox(height: 14),
+                  toField,
+                  const SizedBox(height: 16),
+                  applyButton,
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: periodDropdown),
+                const SizedBox(width: 14),
+                Expanded(child: fromField),
+                const SizedBox(width: 14),
+                Expanded(child: toField),
+                const SizedBox(width: 18),
+                applyButton,
+              ],
+            );
+          },
+        ),
+      ),
     );
+  }
+
+  Widget _buildSummaryCards(AdminDashboardModel dashboard) {
+    final cards = [
+      _SummaryData(
+        icon: Icons.people,
+        title: 'Total users',
+        value: dashboard.totalUsers.toString(),
+        description: '${dashboard.activeClients} active clients',
+      ),
+      _SummaryData(
+        icon: Icons.person_outline,
+        title: 'Active clients',
+        value: dashboard.activeClients.toString(),
+        description: 'Active client accounts',
+      ),
+      _SummaryData(
+        icon: Icons.psychology,
+        title: 'Therapists',
+        value: dashboard.totalTherapists.toString(),
+        description: '${dashboard.verifiedTherapists} verified',
+      ),
+      _SummaryData(
+        icon: Icons.verified,
+        title: 'Verified therapists',
+        value: dashboard.verifiedTherapists.toString(),
+        description: 'Approved profiles',
+      ),
+      _SummaryData(
+        icon: Icons.pending_actions,
+        title: 'Pending therapists',
+        value: dashboard.pendingTherapists.toString(),
+        description: 'Awaiting verification',
+        warning: dashboard.pendingTherapists > 0,
+      ),
+      _SummaryData(
+        icon: Icons.calendar_month,
+        title: 'Appointments',
+        value: dashboard.totalAppointments.toString(),
+        description: '${dashboard.todayAppointments} today',
+      ),
+      _SummaryData(
+        icon: Icons.today,
+        title: 'Today appointments',
+        value: dashboard.todayAppointments.toString(),
+        description: 'Scheduled for today',
+      ),
+      _SummaryData(
+        icon: Icons.task_alt,
+        title: 'Completed',
+        value: dashboard.completedAppointments.toString(),
+        description: 'Selected period',
+      ),
+      _SummaryData(
+        icon: Icons.event_busy,
+        title: 'Cancelled',
+        value: dashboard.cancelledAppointments.toString(),
+        description: 'Cancelled or rejected',
+      ),
+      _SummaryData(
+        icon: Icons.account_balance_wallet,
+        title: 'Total revenue',
+        value: _currencyFormatter.format(dashboard.totalRevenue),
+        description: 'All paid transactions',
+      ),
+      _SummaryData(
+        icon: Icons.calendar_view_month,
+        title: 'Monthly revenue',
+        value: _currencyFormatter.format(dashboard.currentMonthRevenue),
+        description: 'Current calendar month',
+      ),
+      _SummaryData(
+        icon: Icons.analytics,
+        title: 'Period revenue',
+        value: _currencyFormatter.format(dashboard.periodRevenue),
+        description: 'Selected period',
+      ),
+      _SummaryData(
+        icon: Icons.card_membership,
+        title: 'Active memberships',
+        value: dashboard.activeMemberships.toString(),
+        description: 'Paid and usable',
+      ),
+      _SummaryData(
+        icon: Icons.rate_review,
+        title: 'Pending reviews',
+        value: dashboard.pendingReviews.toString(),
+        description: 'Awaiting moderation',
+        warning: dashboard.pendingReviews > 0,
+      ),
+      _SummaryData(
+        icon: Icons.article,
+        title: 'Published articles',
+        value: dashboard.publishedArticles.toString(),
+        description: 'Currently published',
+      ),
+      _SummaryData(
+        icon: Icons.groups,
+        title: 'Active workshops',
+        value: dashboard.activeWorkshops.toString(),
+        description: 'Scheduled workshops',
+      ),
+    ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columnCount = constraints.maxWidth >= 1250
+        final columnCount = constraints.maxWidth >= 1300
             ? 4
-            : constraints.maxWidth >= 760
+            : constraints.maxWidth >= 820
             ? 2
             : 1;
 
         const spacing = 16.0;
 
-        final itemWidth =
+        final width =
             (constraints.maxWidth - ((columnCount - 1) * spacing)) /
             columnCount;
 
-        final cards = [
-          _DashboardSummaryCard(
-            width: itemWidth,
-            icon: Icons.people,
-            title: 'Users',
-            value: dashboard.totalUsers.toString(),
-            description: '${dashboard.totalClients} clients',
-          ),
-          _DashboardSummaryCard(
-            width: itemWidth,
-            icon: Icons.psychology,
-            title: 'Therapists',
-            value: dashboard.totalTherapists.toString(),
-            description: '${dashboard.pendingTherapists} pending verification',
-            isWarning: dashboard.pendingTherapists > 0,
-          ),
-          _DashboardSummaryCard(
-            width: itemWidth,
-            icon: Icons.calendar_month,
-            title: 'Appointments',
-            value: dashboard.totalAppointments.toString(),
-            description: '${dashboard.completedAppointments} completed',
-          ),
-          _DashboardSummaryCard(
-            width: itemWidth,
-            icon: Icons.payments,
-            title: 'Revenue',
-            value: currencyFormatter.format(dashboard.totalRevenue),
-            description: '${dashboard.totalPayments} payments',
-          ),
-          _DashboardSummaryCard(
-            width: itemWidth,
-            icon: Icons.reviews,
-            title: 'Reviews',
-            value: dashboard.totalReviews.toString(),
-            description: 'Submitted reviews',
-          ),
-          _DashboardSummaryCard(
-            width: itemWidth,
-            icon: Icons.pending_actions,
-            title: 'Pending appointments',
-            value: dashboard.pendingAppointments.toString(),
-            description: 'Waiting for therapist action',
-            isWarning: dashboard.pendingAppointments > 0,
-          ),
-          _DashboardSummaryCard(
-            width: itemWidth,
-            icon: Icons.check_circle,
-            title: 'Approved therapists',
-            value: dashboard.approvedTherapists.toString(),
-            description: 'Visible to clients',
-          ),
-          _DashboardSummaryCard(
-            width: itemWidth,
-            icon: Icons.cancel,
-            title: 'Cancelled appointments',
-            value: dashboard.cancelledAppointments.toString(),
-            description: 'Cancelled sessions',
-          ),
-        ];
-
-        return Wrap(spacing: spacing, runSpacing: spacing, children: cards);
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: cards.map((card) {
+            return _DashboardSummaryCard(width: width, data: card);
+          }).toList(),
+        );
       },
     );
   }
-}
 
-class _DashboardSummaryCard extends StatelessWidget {
-  final double width;
-  final IconData icon;
-  final String title;
-  final String value;
-  final String description;
-  final bool isWarning;
-
-  const _DashboardSummaryCard({
-    required this.width,
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.description,
-    this.isWarning = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    final iconColor = isWarning ? colorScheme.error : colorScheme.primary;
-
-    final backgroundColor = isWarning
-        ? colorScheme.errorContainer
-        : colorScheme.primaryContainer;
-
-    return SizedBox(
-      width: width,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.all(22),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: iconColor, size: 28),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    Text(
-                      value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ChartsSection extends StatelessWidget {
-  final AdminDashboardModel dashboard;
-
-  const _ChartsSection({required this.dashboard});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildStatusCharts(AdminDashboardModel dashboard) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final displaySideBySide = constraints.maxWidth >= 1050;
+        final appointments = _AppointmentStatusChart(dashboard: dashboard);
 
-        final therapistChart = _TherapistVerificationChart(
+        final therapists = _TherapistVerificationChart(dashboard: dashboard);
+
+        if (constraints.maxWidth < 1050) {
+          return Column(
+            children: [appointments, const SizedBox(height: 18), therapists],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: appointments),
+            const SizedBox(width: 18),
+            Expanded(child: therapists),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTimelineCharts(AdminDashboardModel dashboard) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final revenue = _RevenueByMonthChart(
+          dashboard: dashboard,
+          formatter: _currencyFormatter,
+        );
+
+        final users = _NewUsersByMonthChart(dashboard: dashboard);
+
+        if (constraints.maxWidth < 1050) {
+          return Column(children: [revenue, const SizedBox(height: 18), users]);
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: revenue),
+            const SizedBox(width: 18),
+            Expanded(child: users),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAdditionalAnalyticsCharts(AdminDashboardModel dashboard) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final therapyApproaches = _AppointmentsByTherapyApproachChart(
           dashboard: dashboard,
         );
 
-        final appointmentChart = _AppointmentStatusChart(dashboard: dashboard);
+        final verifiedTherapists = _VerifiedTherapistsByMonthChart(
+          dashboard: dashboard,
+        );
 
-        if (!displaySideBySide) {
+        if (constraints.maxWidth < 1050) {
           return Column(
             children: [
-              therapistChart,
+              therapyApproaches,
               const SizedBox(height: 18),
-              appointmentChart,
+              verifiedTherapists,
             ],
           );
         }
@@ -381,260 +504,23 @@ class _ChartsSection extends StatelessWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: therapistChart),
+            Expanded(child: therapyApproaches),
             const SizedBox(width: 18),
-            Expanded(child: appointmentChart),
+            Expanded(child: verifiedTherapists),
           ],
         );
       },
     );
   }
-}
 
-class _TherapistVerificationChart extends StatelessWidget {
-  final AdminDashboardModel dashboard;
-
-  const _TherapistVerificationChart({required this.dashboard});
-
-  @override
-  Widget build(BuildContext context) {
-    final total =
-        dashboard.approvedTherapists +
-        dashboard.pendingTherapists +
-        dashboard.rejectedTherapists;
-
-    return _DashboardChartCard(
-      title: 'Therapist verification',
-      subtitle: 'Distribution by verification status',
-      child: total == 0
-          ? const _EmptyChart(message: 'No therapist verification data.')
-          : Column(
-              children: [
-                SizedBox(
-                  height: 260,
-                  child: PieChart(
-                    PieChartData(
-                      centerSpaceRadius: 55,
-                      sectionsSpace: 3,
-                      sections: [
-                        PieChartSectionData(
-                          value: dashboard.approvedTherapists.toDouble(),
-                          title: dashboard.approvedTherapists.toString(),
-                          radius: 72,
-                          color: Colors.green,
-                          titleStyle: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        PieChartSectionData(
-                          value: dashboard.pendingTherapists.toDouble(),
-                          title: dashboard.pendingTherapists.toString(),
-                          radius: 72,
-                          color: Colors.orange,
-                          titleStyle: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        PieChartSectionData(
-                          value: dashboard.rejectedTherapists.toDouble(),
-                          title: dashboard.rejectedTherapists.toString(),
-                          radius: 72,
-                          color: Colors.red,
-                          titleStyle: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Wrap(
-                  spacing: 18,
-                  runSpacing: 10,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _ChartLegendItem(
-                      label: 'Approved',
-                      value: dashboard.approvedTherapists,
-                      color: Colors.green,
-                    ),
-                    _ChartLegendItem(
-                      label: 'Pending',
-                      value: dashboard.pendingTherapists,
-                      color: Colors.orange,
-                    ),
-                    _ChartLegendItem(
-                      label: 'Rejected',
-                      value: dashboard.rejectedTherapists,
-                      color: Colors.red,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-    );
-  }
-}
-
-class _AppointmentStatusChart extends StatelessWidget {
-  final AdminDashboardModel dashboard;
-
-  const _AppointmentStatusChart({required this.dashboard});
-
-  @override
-  Widget build(BuildContext context) {
-    final maxValue =
-        [
-          dashboard.pendingAppointments,
-          dashboard.completedAppointments,
-          dashboard.cancelledAppointments,
-          dashboard.otherAppointments,
-        ].fold<int>(
-          0,
-          (currentMax, value) => value > currentMax ? value : currentMax,
-        );
-
-    if (dashboard.totalAppointments == 0) {
-      return const _DashboardChartCard(
-        title: 'Appointment status',
-        subtitle: 'Appointments grouped by current status',
-        child: _EmptyChart(message: 'No appointment data.'),
-      );
-    }
-
-    final chartMaximum = maxValue <= 0 ? 1.0 : maxValue * 1.25;
-
-    return _DashboardChartCard(
-      title: 'Appointment status',
-      subtitle: 'Appointments grouped by current status',
-      child: SizedBox(
-        height: 330,
-        child: BarChart(
-          BarChartData(
-            maxY: chartMaximum,
-            alignment: BarChartAlignment.spaceAround,
-            barTouchData: BarTouchData(enabled: true),
-            borderData: FlBorderData(show: false),
-            gridData: FlGridData(show: true, drawVerticalLine: false),
-            titlesData: FlTitlesData(
-              topTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              rightTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 42,
-                  getTitlesWidget: (value, meta) {
-                    return Text(
-                      value.toInt().toString(),
-                      style: const TextStyle(fontSize: 11),
-                    );
-                  },
-                ),
-              ),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 42,
-                  getTitlesWidget: (value, meta) {
-                    final label = switch (value.toInt()) {
-                      0 => 'Pending',
-                      1 => 'Completed',
-                      2 => 'Cancelled',
-                      3 => 'Other',
-                      _ => '',
-                    };
-
-                    return SideTitleWidget(
-                      meta: meta,
-                      space: 10,
-                      child: Text(label, style: const TextStyle(fontSize: 11)),
-                    );
-                  },
-                ),
-              ),
-            ),
-            barGroups: [
-              _createBarGroup(
-                x: 0,
-                value: dashboard.pendingAppointments,
-                color: Colors.orange,
-              ),
-              _createBarGroup(
-                x: 1,
-                value: dashboard.completedAppointments,
-                color: Colors.green,
-              ),
-              _createBarGroup(
-                x: 2,
-                value: dashboard.cancelledAppointments,
-                color: Colors.red,
-              ),
-              _createBarGroup(
-                x: 3,
-                value: dashboard.otherAppointments,
-                color: Colors.blueGrey,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  static BarChartGroupData _createBarGroup({
-    required int x,
-    required int value,
-    required Color color,
-  }) {
-    return BarChartGroupData(
-      x: x,
-      barRods: [
-        BarChartRodData(
-          toY: value.toDouble(),
-          width: 28,
-          color: color,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
-        ),
-      ],
-      showingTooltipIndicators: const [],
-    );
-  }
-}
-
-class _AdditionalStatistics extends StatelessWidget {
-  final AdminDashboardModel dashboard;
-
-  const _AdditionalStatistics({required this.dashboard});
-
-  @override
-  Widget build(BuildContext context) {
-    final totalTherapists = dashboard.totalTherapists;
-
-    final approvalPercentage = totalTherapists == 0
+  Widget _buildSystemStatistics(AdminDashboardModel dashboard) {
+    final therapistApprovalRate = dashboard.totalTherapists == 0
         ? 0.0
-        : dashboard.approvedTherapists / totalTherapists;
+        : dashboard.verifiedTherapists / dashboard.totalTherapists;
 
-    final completedPercentage = dashboard.totalAppointments == 0
+    final completionRate = dashboard.totalAppointments == 0
         ? 0.0
         : dashboard.completedAppointments / dashboard.totalAppointments;
-
-    final averageRevenuePerPayment = dashboard.totalPayments == 0
-        ? 0.0
-        : dashboard.totalRevenue / dashboard.totalPayments;
-
-    final currencyFormatter = NumberFormat.currency(
-      locale: 'bs_BA',
-      symbol: 'KM',
-      decimalDigits: 2,
-    );
 
     return Card(
       child: Padding(
@@ -643,39 +529,35 @@ class _AdditionalStatistics extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Performance overview',
+              'System overview',
               style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
-              'Calculated indicators based on current dashboard data.',
+              'Calculated from the current reporting response.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
             LayoutBuilder(
               builder: (context, constraints) {
-                final horizontal = constraints.maxWidth >= 900;
-
                 final items = [
                   _ProgressStatistic(
-                    title: 'Therapist approval rate',
-                    value: approvalPercentage,
-                    valueLabel:
-                        '${(approvalPercentage * 100).toStringAsFixed(1)}%',
+                    title: 'Therapist verification rate',
+                    value: therapistApprovalRate,
                   ),
                   _ProgressStatistic(
                     title: 'Appointment completion rate',
-                    value: completedPercentage,
-                    valueLabel:
-                        '${(completedPercentage * 100).toStringAsFixed(1)}%',
+                    value: completionRate,
                   ),
                   _TextStatistic(
-                    title: 'Average revenue per payment',
-                    value: currencyFormatter.format(averageRevenuePerPayment),
+                    title: 'Generated at',
+                    value: DateFormat(
+                      'dd.MM.yyyy HH:mm',
+                    ).format(dashboard.generatedAtUtc),
                   ),
                 ];
 
-                if (!horizontal) {
+                if (constraints.maxWidth < 900) {
                   return Column(
                     children: [
                       for (var index = 0; index < items.length; index++) ...[
@@ -705,59 +587,643 @@ class _AdditionalStatistics extends StatelessWidget {
   }
 }
 
-class _ProgressStatistic extends StatelessWidget {
-  final String title;
-  final double value;
-  final String valueLabel;
+class _DateField extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool enabled;
+  final VoidCallback onPressed;
 
-  const _ProgressStatistic({
-    required this.title,
+  const _DateField({
+    required this.label,
     required this.value,
-    required this.valueLabel,
+    required this.enabled,
+    required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    final safeValue = value.clamp(0.0, 1.0);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
-        LinearProgressIndicator(
-          value: safeValue,
-          minHeight: 9,
-          borderRadius: BorderRadius.circular(10),
+    return InkWell(
+      onTap: enabled ? onPressed : null,
+      borderRadius: BorderRadius.circular(8),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          suffixIcon: const Icon(Icons.calendar_month),
+          enabled: enabled,
         ),
-        const SizedBox(height: 8),
-        Text(
-          valueLabel,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-      ],
+        child: Text(value),
+      ),
     );
   }
 }
 
-class _TextStatistic extends StatelessWidget {
+class _SummaryData {
+  final IconData icon;
   final String title;
   final String value;
+  final String description;
+  final bool warning;
 
-  const _TextStatistic({required this.title, required this.value});
+  const _SummaryData({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.description,
+    this.warning = false,
+  });
+}
+
+class _DashboardSummaryCard extends StatelessWidget {
+  final double width;
+  final _SummaryData data;
+
+  const _DashboardSummaryCard({required this.width, required this.data});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+    final colors = Theme.of(context).colorScheme;
+
+    final foreground = data.warning
+        ? colors.onErrorContainer
+        : colors.onPrimaryContainer;
+
+    final background = data.warning
+        ? colors.errorContainer
+        : colors.primaryContainer;
+
+    return SizedBox(
+      width: width,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: background,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(data.icon, color: foreground),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      data.value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      data.description,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
+    );
+  }
+}
+
+class _AppointmentStatusChart extends StatelessWidget {
+  final AdminDashboardModel dashboard;
+
+  const _AppointmentStatusChart({required this.dashboard});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = dashboard.appointmentsByStatus;
+
+    if (items.isEmpty) {
+      return const _DashboardChartCard(
+        title: 'Appointments by status',
+        subtitle: 'Selected reporting period',
+        child: _EmptyChart(message: 'No appointment data for this period.'),
+      );
+    }
+
+    final maximum = items
+        .map((item) => item.count)
+        .fold<int>(0, (current, value) => value > current ? value : current);
+
+    return _DashboardChartCard(
+      title: 'Appointments by status',
+      subtitle: 'Selected reporting period',
+      child: SizedBox(
+        height: 330,
+        child: BarChart(
+          BarChartData(
+            maxY: maximum <= 0 ? 1 : maximum * 1.25,
+            alignment: BarChartAlignment.spaceAround,
+            borderData: FlBorderData(show: false),
+            gridData: FlGridData(drawVerticalLine: false),
+            titlesData: FlTitlesData(
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 42,
+                  getTitlesWidget: (value, meta) {
+                    return Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(fontSize: 11),
+                    );
+                  },
+                ),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 56,
+                  getTitlesWidget: (value, meta) {
+                    final index = value.toInt();
+
+                    if (index < 0 || index >= items.length) {
+                      return const SizedBox();
+                    }
+
+                    return SideTitleWidget(
+                      meta: meta,
+                      space: 10,
+                      child: SizedBox(
+                        width: 70,
+                        child: Text(
+                          _formatLabel(items[index].label),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            barGroups: [
+              for (var index = 0; index < items.length; index++)
+                BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: items[index].count.toDouble(),
+                      width: 25,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(7),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TherapistVerificationChart extends StatelessWidget {
+  final AdminDashboardModel dashboard;
+
+  const _TherapistVerificationChart({required this.dashboard});
+
+  @override
+  Widget build(BuildContext context) {
+    final values = [
+      dashboard.verifiedTherapists,
+      dashboard.pendingTherapists,
+      dashboard.rejectedTherapists,
+    ];
+
+    final total = values.fold<int>(0, (a, b) => a + b);
+
+    return _DashboardChartCard(
+      title: 'Therapist verification',
+      subtitle: 'Current therapist profile statuses',
+      child: total == 0
+          ? const _EmptyChart(message: 'No therapist verification data.')
+          : Column(
+              children: [
+                SizedBox(
+                  height: 255,
+                  child: PieChart(
+                    PieChartData(
+                      centerSpaceRadius: 52,
+                      sectionsSpace: 3,
+                      sections: [
+                        PieChartSectionData(
+                          value: values[0].toDouble(),
+                          title: values[0].toString(),
+                          radius: 70,
+                        ),
+                        PieChartSectionData(
+                          value: values[1].toDouble(),
+                          title: values[1].toString(),
+                          radius: 70,
+                        ),
+                        PieChartSectionData(
+                          value: values[2].toDouble(),
+                          title: values[2].toString(),
+                          radius: 70,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 10,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    Text('Verified: ${values[0]}'),
+                    Text('Pending: ${values[1]}'),
+                    Text('Other: ${values[2]}'),
+                  ],
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class _RevenueByMonthChart extends StatelessWidget {
+  final AdminDashboardModel dashboard;
+  final NumberFormat formatter;
+
+  const _RevenueByMonthChart({
+    required this.dashboard,
+    required this.formatter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = dashboard.revenueByMonth;
+
+    if (items.isEmpty) {
+      return const _DashboardChartCard(
+        title: 'Revenue by month',
+        subtitle: 'Paid transactions in selected period',
+        child: _EmptyChart(message: 'No revenue data for this period.'),
+      );
+    }
+
+    final maximum = items
+        .map((item) => item.revenue)
+        .fold<double>(0, (current, value) => value > current ? value : current);
+
+    return _DashboardChartCard(
+      title: 'Revenue by month',
+      subtitle: 'Paid transactions in selected period',
+      child: SizedBox(
+        height: 330,
+        child: BarChart(
+          BarChartData(
+            maxY: maximum <= 0 ? 1 : maximum * 1.25,
+            borderData: FlBorderData(show: false),
+            gridData: FlGridData(drawVerticalLine: false),
+            barTouchData: BarTouchData(
+              touchTooltipData: BarTouchTooltipData(
+                getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                  return BarTooltipItem(
+                    formatter.format(rod.toY),
+                    const TextStyle(fontWeight: FontWeight.bold),
+                  );
+                },
+              ),
+            ),
+            titlesData: _monthlyTitles(
+              items.map((item) => item.label).toList(),
+            ),
+            barGroups: [
+              for (var index = 0; index < items.length; index++)
+                BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: items[index].revenue,
+                      width: 24,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(7),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NewUsersByMonthChart extends StatelessWidget {
+  final AdminDashboardModel dashboard;
+
+  const _NewUsersByMonthChart({required this.dashboard});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = dashboard.newUsersByMonth;
+
+    if (items.isEmpty) {
+      return const _DashboardChartCard(
+        title: 'New users by month',
+        subtitle: 'Registrations in selected period',
+        child: _EmptyChart(message: 'No new user data for this period.'),
+      );
+    }
+
+    final spots = [
+      for (var index = 0; index < items.length; index++)
+        FlSpot(index.toDouble(), items[index].count.toDouble()),
+    ];
+
+    return _DashboardChartCard(
+      title: 'New users by month',
+      subtitle: 'Registrations in selected period',
+      child: SizedBox(
+        height: 330,
+        child: LineChart(
+          LineChartData(
+            minY: 0,
+            borderData: FlBorderData(show: false),
+            gridData: FlGridData(drawVerticalLine: false),
+            titlesData: _monthlyTitles(
+              items.map((item) => item.label).toList(),
+            ),
+            lineBarsData: [
+              LineChartBarData(
+                spots: spots,
+                isCurved: true,
+                barWidth: 3,
+                dotData: const FlDotData(show: true),
+                belowBarData: BarAreaData(show: true),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+FlTitlesData _monthlyTitles(List<String> labels) {
+  return FlTitlesData(
+    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    leftTitles: AxisTitles(
+      sideTitles: SideTitles(
+        showTitles: true,
+        reservedSize: 48,
+        getTitlesWidget: (value, meta) {
+          return Text(
+            value.toInt().toString(),
+            style: const TextStyle(fontSize: 10),
+          );
+        },
+      ),
+    ),
+    bottomTitles: AxisTitles(
+      sideTitles: SideTitles(
+        showTitles: true,
+        reservedSize: 44,
+        getTitlesWidget: (value, meta) {
+          final index = value.toInt();
+
+          if (index < 0 || index >= labels.length) {
+            return const SizedBox();
+          }
+
+          return SideTitleWidget(
+            meta: meta,
+            space: 10,
+            child: Text(labels[index], style: const TextStyle(fontSize: 10)),
+          );
+        },
+      ),
+    ),
+  );
+}
+
+class _AppointmentsByTherapyApproachChart extends StatelessWidget {
+  final AdminDashboardModel dashboard;
+
+  const _AppointmentsByTherapyApproachChart({required this.dashboard});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = dashboard.appointmentsByTherapyApproach;
+
+    if (items.isEmpty) {
+      return const _DashboardChartCard(
+        title: 'Appointments by therapy approach',
+        subtitle: 'Appointments linked to therapists offering each approach',
+        child: _EmptyChart(
+          message: 'No therapy approach appointment data for this period.',
+        ),
+      );
+    }
+
+    final maximum = items
+        .map((item) => item.count)
+        .fold<int>(0, (current, value) => value > current ? value : current);
+
+    return _DashboardChartCard(
+      title: 'Appointments by therapy approach',
+      subtitle: 'A single appointment may appear under multiple approaches',
+      child: SizedBox(
+        height: 360,
+        child: BarChart(
+          BarChartData(
+            maxY: maximum <= 0 ? 1 : maximum * 1.25,
+            alignment: BarChartAlignment.spaceAround,
+            borderData: FlBorderData(show: false),
+            gridData: FlGridData(drawVerticalLine: false),
+            barTouchData: BarTouchData(
+              enabled: true,
+              touchTooltipData: BarTouchTooltipData(
+                getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                  if (groupIndex < 0 || groupIndex >= items.length) {
+                    return null;
+                  }
+
+                  return BarTooltipItem(
+                    '${items[groupIndex].label}\n'
+                    '${rod.toY.toInt()} appointments',
+                    const TextStyle(fontWeight: FontWeight.bold),
+                  );
+                },
+              ),
+            ),
+            titlesData: FlTitlesData(
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 42,
+                  getTitlesWidget: (value, meta) {
+                    return Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(fontSize: 10),
+                    );
+                  },
+                ),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 74,
+                  getTitlesWidget: (value, meta) {
+                    final index = value.toInt();
+
+                    if (index < 0 || index >= items.length) {
+                      return const SizedBox();
+                    }
+
+                    return SideTitleWidget(
+                      meta: meta,
+                      space: 10,
+                      child: SizedBox(
+                        width: 84,
+                        child: Text(
+                          items[index].label,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 9),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            barGroups: [
+              for (var index = 0; index < items.length; index++)
+                BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: items[index].count.toDouble(),
+                      width: 22,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(7),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VerifiedTherapistsByMonthChart extends StatelessWidget {
+  final AdminDashboardModel dashboard;
+
+  const _VerifiedTherapistsByMonthChart({required this.dashboard});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = dashboard.verifiedTherapistsByMonth;
+
+    if (items.isEmpty) {
+      return const _DashboardChartCard(
+        title: 'Verified therapists over time',
+        subtitle: 'New therapist approvals by month',
+        child: _EmptyChart(message: 'No therapist approvals for this period.'),
+      );
+    }
+
+    final spots = [
+      for (var index = 0; index < items.length; index++)
+        FlSpot(index.toDouble(), items[index].count.toDouble()),
+    ];
+
+    final maximum = items
+        .map((item) => item.count)
+        .fold<int>(0, (current, value) => value > current ? value : current);
+
+    return _DashboardChartCard(
+      title: 'Verified therapists over time',
+      subtitle: 'New therapist approvals by month',
+      child: SizedBox(
+        height: 360,
+        child: LineChart(
+          LineChartData(
+            minX: 0,
+            maxX: items.length == 1 ? 1 : (items.length - 1).toDouble(),
+            minY: 0,
+            maxY: maximum <= 0 ? 1 : maximum * 1.25,
+            borderData: FlBorderData(show: false),
+            gridData: FlGridData(drawVerticalLine: false),
+            lineTouchData: LineTouchData(
+              enabled: true,
+              touchTooltipData: LineTouchTooltipData(
+                getTooltipItems: (touchedSpots) {
+                  return touchedSpots.map((spot) {
+                    final index = spot.x.toInt();
+
+                    if (index < 0 || index >= items.length) {
+                      return null;
+                    }
+
+                    return LineTooltipItem(
+                      '${items[index].label}\n'
+                      '${spot.y.toInt()} verified',
+                      const TextStyle(fontWeight: FontWeight.bold),
+                    );
+                  }).toList();
+                },
+              ),
+            ),
+            titlesData: _monthlyTitles(
+              items.map((item) => item.label).toList(),
+            ),
+            lineBarsData: [
+              LineChartBarData(
+                spots: spots,
+                isCurved: items.length > 2,
+                barWidth: 3,
+                dotData: const FlDotData(show: true),
+                belowBarData: BarAreaData(show: true),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -796,31 +1262,52 @@ class _DashboardChartCard extends StatelessWidget {
   }
 }
 
-class _ChartLegendItem extends StatelessWidget {
-  final String label;
-  final int value;
-  final Color color;
+class _ProgressStatistic extends StatelessWidget {
+  final String title;
+  final double value;
 
-  const _ChartLegendItem({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _ProgressStatistic({required this.title, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    final safeValue = value.clamp(0.0, 1.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 10),
+        LinearProgressIndicator(
+          value: safeValue,
+          minHeight: 9,
+          borderRadius: BorderRadius.circular(10),
         ),
-        const SizedBox(width: 7),
+        const SizedBox(height: 8),
         Text(
-          '$label: $value',
-          style: const TextStyle(fontWeight: FontWeight.w500),
+          '${(safeValue * 100).toStringAsFixed(1)}%',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+}
+
+class _TextStatistic extends StatelessWidget {
+  final String title;
+  final String value;
+
+  const _TextStatistic({required this.title, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 10),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -835,18 +1322,69 @@ class _EmptyChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 300,
-      child: Center(
+      height: 280,
+      child: Center(child: Text(message, textAlign: TextAlign.center)),
+    );
+  }
+}
+
+class _DashboardEmptyState extends StatelessWidget {
+  const _DashboardEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 70),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.bar_chart,
-              size: 54,
-              color: Theme.of(context).colorScheme.outline,
+            Icon(Icons.analytics_outlined, size: 64),
+            SizedBox(height: 16),
+            Text(
+              'No dashboard data available',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 8),
+            Text(
+              'There is no system activity for the selected period.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardErrorState extends StatelessWidget {
+  final String message;
+  final Future<void> Function() onRetry;
+
+  const _DashboardErrorState({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 60),
+            const SizedBox(height: 16),
+            const Text(
+              'Dashboard could not be loaded',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
             Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try again'),
+            ),
           ],
         ),
       ),
@@ -861,23 +1399,23 @@ class _InlineErrorMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: colorScheme.errorContainer,
+        color: colors.errorContainer,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: colorScheme.onErrorContainer),
+          Icon(Icons.error_outline, color: colors.onErrorContainer),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: colorScheme.onErrorContainer),
+              style: TextStyle(color: colors.onErrorContainer),
             ),
           ),
         ],
@@ -886,53 +1424,18 @@ class _InlineErrorMessage extends StatelessWidget {
   }
 }
 
-class _DashboardErrorState extends StatelessWidget {
-  final String message;
+String _formatLabel(String value) {
+  final normalized = value
+      .replaceAllMapped(
+        RegExp(r'([a-z])([A-Z])'),
+        (match) => '${match.group(1)} ${match.group(2)}',
+      )
+      .replaceAll('_', ' ')
+      .trim();
 
-  final Future<void> Function() onRetry;
-
-  const _DashboardErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.dashboard_customize_outlined,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Dashboard could not be loaded',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(message, textAlign: TextAlign.center),
-                  const SizedBox(height: 22),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      onRetry();
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Try again'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+  if (normalized.isEmpty) {
+    return 'Unknown';
   }
+
+  return normalized[0].toUpperCase() + normalized.substring(1);
 }
