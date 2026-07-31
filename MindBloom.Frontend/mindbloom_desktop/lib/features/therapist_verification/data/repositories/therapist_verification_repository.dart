@@ -11,11 +11,13 @@ class TherapistVerificationRepository {
     required int pageNumber,
     required int pageSize,
     String? search,
+    String? status,
   }) {
     return apiService.getPendingTherapists(
       pageNumber: pageNumber,
       pageSize: pageSize,
       search: search,
+      status: status,
     );
   }
 

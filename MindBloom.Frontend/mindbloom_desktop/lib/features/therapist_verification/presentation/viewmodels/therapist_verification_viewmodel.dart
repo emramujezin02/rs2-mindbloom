@@ -19,18 +19,28 @@ class TherapistVerificationViewModel extends ChangeNotifier {
   int totalPages = 0;
 
   String search = '';
+  String? status = 'Pending';
 
   bool get hasPreviousPage => pageNumber > 1;
 
   bool get hasNextPage => pageNumber < totalPages;
 
-  Future<void> load({int? page, String? searchValue}) async {
+  Future<void> load({
+    int? page,
+    String? searchValue,
+    String? statusValue,
+    bool changeStatus = false,
+  }) async {
     if (isLoading) {
       return;
     }
 
     if (searchValue != null) {
       search = searchValue.trim();
+    }
+
+    if (changeStatus) {
+      status = statusValue?.trim().isEmpty == true ? null : statusValue;
     }
 
     isLoading = true;
@@ -42,6 +52,7 @@ class TherapistVerificationViewModel extends ChangeNotifier {
         pageNumber: page ?? pageNumber,
         pageSize: pageSize,
         search: search,
+        status: status,
       );
 
       therapists = result.items;
@@ -55,6 +66,10 @@ class TherapistVerificationViewModel extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> filterByStatus(String? value) {
+    return load(page: 1, statusValue: value, changeStatus: true);
   }
 
   Future<void> searchTherapists(String value) {

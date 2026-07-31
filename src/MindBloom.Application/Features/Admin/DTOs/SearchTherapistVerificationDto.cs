@@ -1,4 +1,6 @@
-﻿namespace MindBloom.Application.Features.Admin.DTOs;
+﻿using MindBloom.Domain.Enums;
+
+namespace MindBloom.Application.Features.Admin.DTOs;
 
 public class SearchTherapistVerificationDto
 {
@@ -35,4 +37,6 @@ public class SearchTherapistVerificationDto
     }
 
     public string? Search { get; set; }
+
+    public TherapistVerificationStatus? Status { get; set; }
 }

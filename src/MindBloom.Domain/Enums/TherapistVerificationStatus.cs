@@ -6,5 +6,7 @@ public enum TherapistVerificationStatus
 
     Approved = 2,
 
-    Rejected = 3
+    Rejected = 3,
+
+    RequiresChanges = 4
 }

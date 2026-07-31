@@ -76,11 +76,50 @@ class _TherapistVerificationPageState extends State<TherapistVerificationPage> {
                       _viewModel.searchTherapists(value);
                     },
                     decoration: const InputDecoration(
-                      labelText: 'Search pending therapists',
+                      labelText: 'Search therapists',
                       hintText: 'Name, email or specialization',
                       prefixIcon: Icon(Icons.search),
                       border: OutlineInputBorder(),
                     ),
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 210,
+                  child: DropdownButtonFormField<String?>(
+                    initialValue: _viewModel.status,
+                    decoration: const InputDecoration(
+                      labelText: 'Status',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('All statuses'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'Pending',
+                        child: Text('Pending'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'Approved',
+                        child: Text('Approved'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'Rejected',
+                        child: Text('Rejected'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'RequiresChanges',
+                        child: Text('Requires changes'),
+                      ),
+                    ],
+                    onChanged: _viewModel.isLoading
+                        ? null
+                        : (value) {
+                            _viewModel.filterByStatus(value);
+                          },
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -126,7 +165,9 @@ class _TherapistVerificationPageState extends State<TherapistVerificationPage> {
 
     if (_viewModel.therapists.isEmpty) {
       return const Center(
-        child: Text('There are no therapists waiting for verification.'),
+        child: Text(
+          'There are no therapist applications matching the selected filters.',
+        ),
       );
     }
 

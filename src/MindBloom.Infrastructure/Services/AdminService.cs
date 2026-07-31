@@ -483,40 +483,57 @@ public class AdminService : IAdminService
     }
 
     public async Task
-    UpdateTherapistVerificationAsync(
-        int authenticatedAdminUserId,
-        int therapistId,
-        UpdateTherapistVerificationDto request)
+     UpdateTherapistVerificationAsync(
+         int authenticatedAdminUserId,
+         int therapistId,
+         UpdateTherapistVerificationDto request)
     {
-        if (request.Status !=
-                TherapistVerificationStatus.Approved
-            && request.Status !=
-                TherapistVerificationStatus.Rejected)
+        var allowedStatuses =
+            new[]
+            {
+            TherapistVerificationStatus.Approved,
+            TherapistVerificationStatus.Rejected,
+            TherapistVerificationStatus.RequiresChanges
+            };
+
+        if (!allowedStatuses.Contains(
+                request.Status))
         {
-            throw new Exception(
-                "Therapist may only be approved or rejected.");
+            throw new BusinessException(
+                "Invalid therapist verification decision.");
         }
 
         var normalizedNotes =
             request.Notes?.Trim();
 
-        if (request.Status ==
+        if (
+            (
+                request.Status ==
                 TherapistVerificationStatus.Rejected
-            && string.IsNullOrWhiteSpace(
+                ||
+                request.Status ==
+                TherapistVerificationStatus.RequiresChanges
+            )
+            &&
+            string.IsNullOrWhiteSpace(
                 normalizedNotes))
         {
-            throw new Exception(
-                "Rejection reason is required.");
+            throw new BusinessException(
+                request.Status ==
+                TherapistVerificationStatus.Rejected
+                    ? "Rejection reason is required."
+                    : "Required changes must be described.");
         }
 
         if (normalizedNotes?.Length > 1000)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Verification notes may contain at most 1000 characters.");
         }
 
         var admin =
             await _context.Users
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x =>
                     x.Id ==
                     authenticatedAdminUserId);
@@ -540,7 +557,8 @@ public class AdminService : IAdminService
                 where
                     userRole.UserId ==
                         authenticatedAdminUserId
-                    && role.Name ==
+                    &&
+                    role.Name ==
                         RoleConstants.Admin
 
                 select userRole
@@ -555,7 +573,7 @@ public class AdminService : IAdminService
 
         var therapist =
             await _context.Therapists
-                .Include(x => x.User)
+                .AsNoTracking()
                 .Include(x => x.Documents)
                 .FirstOrDefaultAsync(x =>
                     x.Id == therapistId
@@ -567,113 +585,168 @@ public class AdminService : IAdminService
                 "Therapist not found.");
         }
 
-        if (therapist.VerificationStatus !=
-            TherapistVerificationStatus.Pending)
-        {
-            throw new Exception(
-                "Only pending therapist applications may be processed.");
-        }
-
-        if (request.Status ==
-                TherapistVerificationStatus.Approved
-            && !therapist.Documents.Any(x =>
+        if (
+            request.Status ==
+            TherapistVerificationStatus.Approved
+            &&
+            !therapist.Documents.Any(x =>
                 !x.IsDeleted))
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Therapist cannot be approved without uploaded verification documents.");
         }
-
-        var previousStatus =
-            therapist.VerificationStatus;
 
         await using var transaction =
             await _context.Database
                 .BeginTransactionAsync();
 
+        string title;
+        string message;
+
         try
         {
-            therapist.VerificationStatus =
-                request.Status;
+            var affectedRows =
+                await _context.Therapists
+                    .Where(x =>
+                        x.Id == therapistId
+                        &&
+                        !x.IsDeleted
+                        &&
+                        x.VerificationStatus ==
+                        TherapistVerificationStatus.Pending)
+                    .ExecuteUpdateAsync(setters =>
+                        setters
+                            .SetProperty(
+                                x => x.VerificationStatus,
+                                request.Status)
+                            .SetProperty(
+                                x => x.VerificationNotes,
+                                normalizedNotes)
+                            .SetProperty(
+                                x => x.UpdatedAtUtc,
+                                DateTime.UtcNow));
 
-            therapist.VerificationNotes =
-                normalizedNotes;
-
-            if (request.Status ==
-                TherapistVerificationStatus.Approved)
+            if (affectedRows == 0)
             {
-                foreach (var document
-                         in therapist.Documents
-                             .Where(x =>
-                                 !x.IsDeleted))
-                {
-                    document.IsApproved =
-                        true;
-                }
+                throw new BusinessException(
+                    "This therapist application has already been processed.");
             }
 
-            var audit =
-                new TherapistVerificationAudit
-                {
-                    TherapistId =
-                        therapist.Id,
+            if (
+                request.Status ==
+                TherapistVerificationStatus.Approved)
+            {
+                await _context.TherapistDocuments
+                    .Where(x =>
+                        x.TherapistId ==
+                        therapistId
+                        &&
+                        !x.IsDeleted)
+                    .ExecuteUpdateAsync(setters =>
+                        setters.SetProperty(
+                            x => x.IsApproved,
+                            true));
+            }
+            else
+            {
+                await _context.TherapistDocuments
+                    .Where(x =>
+                        x.TherapistId ==
+                        therapistId
+                        &&
+                        !x.IsDeleted)
+                    .ExecuteUpdateAsync(setters =>
+                        setters.SetProperty(
+                            x => x.IsApproved,
+                            false));
+            }
 
-                    AdminUserId =
-                        authenticatedAdminUserId,
-
-                    PreviousStatus =
-                        previousStatus,
-
-                    NewStatus =
-                        request.Status,
-
-                    Notes =
-                        normalizedNotes,
-
-                    ChangedAtUtc =
-                        DateTime.UtcNow
-                };
+            var changedAtUtc =
+                DateTime.UtcNow;
 
             _context
                 .TherapistVerificationAudits
-                .Add(audit);
+                .Add(
+                    new TherapistVerificationAudit
+                    {
+                        TherapistId =
+                            therapistId,
 
-            var approved =
-                request.Status ==
-                TherapistVerificationStatus.Approved;
+                        AdminUserId =
+                            authenticatedAdminUserId,
 
-            var notification =
+                        PreviousStatus =
+                            TherapistVerificationStatus.Pending,
+
+                        NewStatus =
+                            request.Status,
+
+                        Notes =
+                            normalizedNotes,
+
+                        ChangedAtUtc =
+                            changedAtUtc
+                    });
+
+            title =
+                request.Status switch
+                {
+                    TherapistVerificationStatus.Approved =>
+                        "Therapist profile approved",
+
+                    TherapistVerificationStatus.Rejected =>
+                        "Therapist profile rejected",
+
+                    TherapistVerificationStatus.RequiresChanges =>
+                        "Therapist profile requires changes",
+
+                    _ =>
+                        "Therapist verification updated"
+                };
+
+             message =
+                request.Status switch
+                {
+                    TherapistVerificationStatus.Approved =>
+                        "Your therapist profile has been verified and approved.",
+
+                    TherapistVerificationStatus.Rejected =>
+                        "Your therapist profile verification was rejected. "
+                        + $"Reason: {normalizedNotes}",
+
+                    TherapistVerificationStatus.RequiresChanges =>
+                        "Your therapist verification application requires changes. "
+                        + $"Required changes: {normalizedNotes}",
+
+                    _ =>
+                        "Your therapist verification status was updated."
+                };
+
+            _context.Notifications.Add(
                 new Notification
                 {
                     UserId =
                         therapist.UserId,
 
                     ActionType =
-    NotificationActionType
-        .TherapistProfile,
+                        NotificationActionType
+                            .TherapistProfile,
 
                     ResourceId =
-    therapist.Id,
+                        therapistId,
 
                     Title =
-                        approved
-                            ? "Therapist profile approved"
-                            : "Therapist profile rejected",
+                        title,
 
                     Message =
-                        approved
-                            ? "Your therapist profile has been verified and approved."
-                            : "Your therapist profile verification was rejected. "
-                              + $"Reason: {normalizedNotes}",
+                        message,
 
                     IsRead =
                         false,
 
                     SentAtUtc =
-                        DateTime.UtcNow
-                };
-
-            _context.Notifications.Add(
-                notification);
+                        changedAtUtc
+                });
 
             await _context.SaveChangesAsync();
 
@@ -686,24 +759,11 @@ public class AdminService : IAdminService
             throw;
         }
 
-        var realtimeTitle =
-            request.Status ==
-            TherapistVerificationStatus.Approved
-                ? "Therapist profile approved"
-                : "Therapist profile rejected";
-
-        var realtimeMessage =
-            request.Status ==
-            TherapistVerificationStatus.Approved
-                ? "Your therapist profile has been verified and approved."
-                : "Your therapist profile verification was rejected. "
-                  + $"Reason: {normalizedNotes}";
-
         await _notificationSender
-            .SendToUserAsync(
-                therapist.UserId,
-                realtimeTitle,
-                realtimeMessage);
+    .SendToUserAsync(
+        therapist.UserId,
+        title,
+        message);
     }
 
     public async Task<AdminDashboardDto>
@@ -986,21 +1046,24 @@ public class AdminService : IAdminService
     GetPendingTherapistsAsync(
         SearchTherapistVerificationDto request)
     {
-
         var pagination =
-    PaginationHelper.Normalize(
-        request.PageNumber,
-        request.PageSize);
+            PaginationHelper.Normalize(
+                request.PageNumber,
+                request.PageSize);
 
         var query =
             _context.Therapists
                 .AsNoTracking()
                 .Include(x => x.User)
-                .Where(x =>
-                    !x.IsDeleted
-                    && x.VerificationStatus ==
-                        TherapistVerificationStatus.Pending)
+                .Where(x => !x.IsDeleted)
                 .AsQueryable();
+
+        if (request.Status.HasValue)
+        {
+            query = query.Where(x =>
+                x.VerificationStatus ==
+                request.Status.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(
                 request.Search))
@@ -1018,15 +1081,27 @@ public class AdminService : IAdminService
                 )
                 .ToLower()
                 .Contains(search)
-                || (
+                ||
+                (
                     x.User.Email
                     ?? string.Empty
                 )
                 .ToLower()
                 .Contains(search)
-                || x.Specialization
-                    .ToLower()
-                    .Contains(search));
+                ||
+                (
+                    x.Specialization
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search)
+                ||
+                (
+                    x.Education
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(search));
         }
 
         var totalCount =
@@ -1035,11 +1110,14 @@ public class AdminService : IAdminService
         var items =
             await query
                 .OrderBy(x =>
+                    x.VerificationStatus ==
+                    TherapistVerificationStatus.Pending
+                        ? 0
+                        : 1)
+                .ThenBy(x =>
                     x.CreatedAtUtc)
-.Skip(
-    pagination.Skip)
-.Take(
-    pagination.PageSize)
+                .Skip(pagination.Skip)
+                .Take(pagination.PageSize)
                 .Select(x =>
                     new TherapistVerificationListDto
                     {
@@ -1102,6 +1180,10 @@ public class AdminService : IAdminService
                 .Include(x => x.User)
                 .Include(x => x.Documents)
                 .Include(x =>
+                    x.TherapyApproaches)
+                    .ThenInclude(x =>
+                        x.TherapyApproach)
+                .Include(x =>
                     x.VerificationAudits)
                     .ThenInclude(x =>
                         x.AdminUser)
@@ -1114,6 +1196,12 @@ public class AdminService : IAdminService
             throw new NotFoundException(
                 "Therapist not found.");
         }
+
+        var latestDecision =
+    therapist.VerificationAudits
+        .OrderByDescending(x =>
+            x.ChangedAtUtc)
+        .FirstOrDefault();
 
         return new TherapistVerificationDetailsDto
         {
@@ -1141,6 +1229,9 @@ public class AdminService : IAdminService
             Biography =
                 therapist.Biography,
 
+            Education =
+    therapist.Education,
+
             Specialization =
                 therapist.Specialization,
 
@@ -1163,6 +1254,41 @@ public class AdminService : IAdminService
 
             RegisteredAtUtc =
                 therapist.CreatedAtUtc,
+
+            DecisionAtUtc =
+    latestDecision?.ChangedAtUtc,
+
+            DecisionByAdminName =
+    latestDecision == null
+        ? null
+        : (
+            latestDecision
+                .AdminUser.FirstName
+            + " "
+            + latestDecision
+                .AdminUser.LastName
+        ).Trim(),
+
+            TherapyApproaches =
+    therapist.TherapyApproaches
+        .Where(x =>
+            !x.IsDeleted
+            && !x.TherapyApproach.IsDeleted)
+        .OrderBy(x =>
+            x.TherapyApproach.Name)
+        .Select(x =>
+            new TherapistVerificationApproachDto
+            {
+                Id =
+                    x.TherapyApproachId,
+
+                Name =
+                    x.TherapyApproach.Name,
+
+                Description =
+                    x.TherapyApproach.Description
+            })
+        .ToList(),
 
             Documents =
                 therapist.Documents

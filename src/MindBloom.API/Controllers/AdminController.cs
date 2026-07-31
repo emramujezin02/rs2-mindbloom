@@ -122,12 +122,26 @@ public class AdminController : ControllerBase
         return Ok(new
         {
             message =
-                request.Status ==
-                MindBloom.Domain.Enums
-                    .TherapistVerificationStatus
-                    .Approved
-                    ? "Therapist approved successfully."
-                    : "Therapist rejected successfully."
+                request.Status switch
+                {
+                    MindBloom.Domain.Enums
+                        .TherapistVerificationStatus
+                        .Approved =>
+                        "Therapist approved successfully.",
+
+                    MindBloom.Domain.Enums
+                        .TherapistVerificationStatus
+                        .Rejected =>
+                        "Therapist rejected successfully.",
+
+                    MindBloom.Domain.Enums
+                        .TherapistVerificationStatus
+                        .RequiresChanges =>
+                        "Therapist application returned for changes.",
+
+                    _ =>
+                        "Therapist verification updated."
+                }
         });
     }
 

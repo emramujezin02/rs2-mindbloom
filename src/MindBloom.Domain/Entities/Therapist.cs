@@ -74,4 +74,6 @@ public class Therapist : BaseEntity
 
     public ICollection<TherapistTherapyApproach> TherapyApproaches { get; set; } =
         new List<TherapistTherapyApproach>();
+
+    public string Education { get; set; } = string.Empty;
 }

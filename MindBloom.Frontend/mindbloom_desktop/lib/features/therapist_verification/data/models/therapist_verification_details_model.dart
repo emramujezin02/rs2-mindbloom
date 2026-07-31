@@ -1,3 +1,4 @@
+import 'therapist_verification_approach_model.dart';
 import 'therapist_verification_audit_model.dart';
 import 'therapist_verification_document_model.dart';
 
@@ -9,6 +10,7 @@ class TherapistVerificationDetailsModel {
   final String? phoneNumber;
   final DateTime dateOfBirth;
   final String biography;
+  final String education;
   final String specialization;
   final double hourlyRate;
   final int experienceYears;
@@ -16,7 +18,13 @@ class TherapistVerificationDetailsModel {
   final String? verificationNotes;
   final String? profileImageUrl;
   final DateTime registeredAtUtc;
+  final DateTime? decisionAtUtc;
+  final String? decisionByAdminName;
+
+  final List<TherapistVerificationApproachModel> therapyApproaches;
+
   final List<TherapistVerificationDocumentModel> documents;
+
   final List<TherapistVerificationAuditModel> auditHistory;
 
   const TherapistVerificationDetailsModel({
@@ -27,6 +35,7 @@ class TherapistVerificationDetailsModel {
     required this.phoneNumber,
     required this.dateOfBirth,
     required this.biography,
+    required this.education,
     required this.specialization,
     required this.hourlyRate,
     required this.experienceYears,
@@ -34,6 +43,9 @@ class TherapistVerificationDetailsModel {
     required this.verificationNotes,
     required this.profileImageUrl,
     required this.registeredAtUtc,
+    required this.decisionAtUtc,
+    required this.decisionByAdminName,
+    required this.therapyApproaches,
     required this.documents,
     required this.auditHistory,
   });
@@ -41,6 +53,8 @@ class TherapistVerificationDetailsModel {
   factory TherapistVerificationDetailsModel.fromJson(
     Map<String, dynamic> json,
   ) {
+    final rawApproaches = json['therapyApproaches'];
+
     final rawDocuments = json['documents'];
 
     final rawAudits = json['auditHistory'];
@@ -55,6 +69,7 @@ class TherapistVerificationDetailsModel {
           DateTime.tryParse(json['dateOfBirth']?.toString() ?? '') ??
           DateTime(1900),
       biography: json['biography']?.toString() ?? '',
+      education: json['education']?.toString() ?? '',
       specialization: json['specialization']?.toString() ?? '',
       hourlyRate: (json['hourlyRate'] as num?)?.toDouble() ?? 0,
       experienceYears: (json['experienceYears'] as num?)?.toInt() ?? 0,
@@ -66,6 +81,16 @@ class TherapistVerificationDetailsModel {
             json['registeredAtUtc']?.toString() ?? '',
           )?.toUtc() ??
           DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      decisionAtUtc: DateTime.tryParse(
+        json['decisionAtUtc']?.toString() ?? '',
+      )?.toUtc(),
+      decisionByAdminName: json['decisionByAdminName']?.toString(),
+      therapyApproaches: rawApproaches is List
+          ? rawApproaches
+                .whereType<Map<String, dynamic>>()
+                .map(TherapistVerificationApproachModel.fromJson)
+                .toList()
+          : [],
       documents: rawDocuments is List
           ? rawDocuments
                 .whereType<Map<String, dynamic>>()

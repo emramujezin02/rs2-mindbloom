@@ -42,4 +42,15 @@ public class TherapistVerificationDetailsDto
     public List<TherapistVerificationAuditDto>
         AuditHistory
     { get; set; } = new();
+
+    public string Education { get; set; }
+    = string.Empty;
+
+    public List<TherapistVerificationApproachDto>
+        TherapyApproaches
+    { get; set; } = new();
+
+    public DateTime? DecisionAtUtc { get; set; }
+
+    public string? DecisionByAdminName { get; set; }
 }

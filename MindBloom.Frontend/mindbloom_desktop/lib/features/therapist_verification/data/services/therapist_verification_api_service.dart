@@ -11,6 +11,7 @@ class TherapistVerificationApiService {
     required int pageNumber,
     required int pageSize,
     String? search,
+    String? status,
   }) async {
     final parameters = <String, String>{
       'pageNumber': pageNumber.toString(),
@@ -19,6 +20,10 @@ class TherapistVerificationApiService {
 
     if (search != null && search.trim().isNotEmpty) {
       parameters['search'] = search.trim();
+    }
+
+    if (status != null && status.trim().isNotEmpty) {
+      parameters['status'] = status.trim();
     }
 
     final uri = Uri(

@@ -230,6 +230,90 @@ class _TherapistVerificationDetailsPageState
     }
   }
 
+  Future<void> _requestChanges() async {
+    final formKey = GlobalKey<FormState>();
+
+    final reasonController = TextEditingController();
+
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Request changes'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: reasonController,
+              minLines: 4,
+              maxLines: 6,
+              maxLength: 1000,
+              decoration: const InputDecoration(
+                labelText: 'Required changes',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                final normalized = value?.trim() ?? '';
+
+                if (normalized.isEmpty) {
+                  return 'Description of required changes is required.';
+                }
+
+                if (normalized.length < 5) {
+                  return 'Description must contain at least 5 characters.';
+                }
+
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (!formKey.currentState!.validate()) {
+                  return;
+                }
+
+                Navigator.of(dialogContext).pop(reasonController.text.trim());
+              },
+              child: const Text('Request changes'),
+            ),
+          ],
+        );
+      },
+    );
+
+    reasonController.dispose();
+
+    if (reason == null || !mounted) {
+      return;
+    }
+
+    final success = await _viewModel.requestChanges(
+      therapistId: widget.therapistId,
+      reason: reason,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Therapist application returned for changes.'),
+        ),
+      );
+
+      Navigator.of(context).pop(true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_viewModel.isLoading && _viewModel.therapist == null) {
@@ -336,6 +420,19 @@ class _TherapistVerificationDetailsPageState
                         therapist.registeredAtUtc.toLocal(),
                       ),
                     ),
+                    if (therapist.decisionAtUtc != null)
+                      _InfoRow(
+                        label: 'Decision date',
+                        value: formatter.format(
+                          therapist.decisionAtUtc!.toLocal(),
+                        ),
+                      ),
+                    if (therapist.decisionByAdminName?.trim().isNotEmpty ==
+                        true)
+                      _InfoRow(
+                        label: 'Decision by',
+                        value: therapist.decisionByAdminName!,
+                      ),
                   ],
                 ),
               ),
@@ -350,6 +447,47 @@ class _TherapistVerificationDetailsPageState
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Text(therapist.biography),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Education',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Text(
+                  therapist.education.trim().isEmpty
+                      ? 'Education information was not provided.'
+                      : therapist.education,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Therapy approaches',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: therapist.therapyApproaches.isEmpty
+                    ? const Text('No therapy approaches selected.')
+                    : Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: therapist.therapyApproaches
+                            .map(
+                              (approach) => Tooltip(
+                                message: approach.description ?? '',
+                                child: Chip(label: Text(approach.name)),
+                              ),
+                            )
+                            .toList(),
+                      ),
               ),
             ),
             const SizedBox(height: 20),
@@ -432,6 +570,16 @@ class _TherapistVerificationDetailsPageState
                       onPressed: _viewModel.isSubmitting ? null : _reject,
                       icon: const Icon(Icons.close),
                       label: const Text('Reject'),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _viewModel.isSubmitting
+                          ? null
+                          : _requestChanges,
+                      icon: const Icon(Icons.edit_note),
+                      label: const Text('Request changes'),
                     ),
                   ),
                   const SizedBox(width: 14),

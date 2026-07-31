@@ -62,12 +62,22 @@ class TherapistVerificationDetailsViewModel extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      errorMessage = error.toString();
+      var message = error.toString();
+
+      if (message.startsWith('Exception: ')) {
+        message = message.substring('Exception: '.length);
+      }
+
+      errorMessage = message;
 
       return false;
-    } finally {
-      isSubmitting = false;
-      notifyListeners();
     }
+  }
+
+  Future<bool> requestChanges({
+    required int therapistId,
+    required String reason,
+  }) {
+    return _update(therapistId: therapistId, status: 4, notes: reason);
   }
 }
