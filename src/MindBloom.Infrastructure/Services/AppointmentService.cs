@@ -29,7 +29,7 @@ public class AppointmentService : IAppointmentService
     {
         if (currentStatus == newStatus)
         {
-            return true;
+            return false;
         }
 
         return currentStatus switch

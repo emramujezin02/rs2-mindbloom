@@ -2183,7 +2183,8 @@ public class AdminService : IAdminService
         if (appointment.Status ==
             AppointmentStatus.Cancelled)
         {
-            return;
+            throw new BusinessException(
+                "Appointment has already been cancelled.");
         }
 
         if (appointment.Status ==
@@ -2204,15 +2205,8 @@ public class AdminService : IAdminService
                 "Appointment is not in a cancellable state.");
         }
 
-        var previousStatus =
-            appointment.Status;
+        var previousStatus = appointment.Status;
 
-        /*
-         * Administrator otkazuje termin zbog
-         * administrativnog ili poslovnog razloga.
-         * Membership sesija se zato vraća bez
-         * primjene roka od 24 sata.
-         */
         await _membershipService
             .HandleAppointmentCancellationAsync(
                 appointment.Id,
