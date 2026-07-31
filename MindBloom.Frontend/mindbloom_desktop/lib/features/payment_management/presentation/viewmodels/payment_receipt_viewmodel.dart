@@ -14,18 +14,38 @@ class PaymentReceiptViewModel extends ChangeNotifier {
 
   AdminPaymentReceiptModel? receipt;
 
-  Future<void> load(int paymentId) async {
+  Future<void> load({
+    required String paymentType,
+    required int paymentId,
+  }) async {
+    if (isLoading) {
+      return;
+    }
+
     isLoading = true;
     error = null;
     notifyListeners();
 
     try {
-      receipt = await repository.getPaymentReceipt(paymentId);
+      receipt = await repository.getPaymentReceipt(
+        paymentType: paymentType,
+        paymentId: paymentId,
+      );
     } catch (exception) {
-      error = exception.toString();
+      error = _cleanError(exception);
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  String _cleanError(Object errorValue) {
+    final value = errorValue.toString();
+
+    if (value.startsWith('Exception: ')) {
+      return value.substring('Exception: '.length);
     }
 
-    isLoading = false;
-    notifyListeners();
+    return value;
   }
 }

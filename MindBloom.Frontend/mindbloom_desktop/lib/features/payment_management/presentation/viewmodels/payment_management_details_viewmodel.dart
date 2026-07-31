@@ -16,41 +16,74 @@ class PaymentManagementDetailsViewModel extends ChangeNotifier {
 
   AdminPaymentDetailsModel? payment;
 
-  Future<void> load(int paymentId) async {
+  Future<void> load({
+    required String paymentType,
+    required int paymentId,
+  }) async {
+    if (isLoading) {
+      return;
+    }
+
     isLoading = true;
     error = null;
     notifyListeners();
 
     try {
-      payment = await repository.getPaymentDetails(paymentId);
+      payment = await repository.getPaymentDetails(
+        paymentType: paymentType,
+        paymentId: paymentId,
+      );
     } catch (exception) {
-      error = exception.toString();
+      error = _cleanError(exception);
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 
-  Future<bool> refund({required int paymentId, required String reason}) async {
+  Future<bool> refund({
+    required String paymentType,
+    required int paymentId,
+    required String reason,
+  }) async {
+    if (isRefunding) {
+      return false;
+    }
+
     isRefunding = true;
     error = null;
     notifyListeners();
 
     try {
-      await repository.refundPayment(paymentId: paymentId, reason: reason);
+      await repository.refundPayment(
+        paymentType: paymentType,
+        paymentId: paymentId,
+        reason: reason,
+      );
 
-      payment = await repository.getPaymentDetails(paymentId);
-
-      isRefunding = false;
-      notifyListeners();
+      payment = await repository.getPaymentDetails(
+        paymentType: paymentType,
+        paymentId: paymentId,
+      );
 
       return true;
     } catch (exception) {
-      error = exception.toString();
-      isRefunding = false;
-      notifyListeners();
+      error = _cleanError(exception);
 
       return false;
+    } finally {
+      isRefunding = false;
+      notifyListeners();
     }
+  }
+
+  String _cleanError(Object errorValue) {
+    final value = errorValue.toString();
+
+    if (value.startsWith('Exception: ')) {
+      return value.substring('Exception: '.length);
+    }
+
+    return value;
   }
 }

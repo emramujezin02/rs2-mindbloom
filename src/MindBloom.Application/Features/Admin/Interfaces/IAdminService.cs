@@ -58,14 +58,17 @@ public interface IAdminService
 
     Task<AdminPaymentDetailsDto>
         GetPaymentDetailsAsync(
+            string paymentType,
             int paymentId);
 
     Task<AdminPaymentReceiptDto>
         GetPaymentReceiptAsync(
+            string paymentType,
             int paymentId);
 
     Task RefundPaymentAsync(
         int authenticatedAdminUserId,
+        string paymentType,
         int paymentId,
         AdminRefundPaymentDto request);
 

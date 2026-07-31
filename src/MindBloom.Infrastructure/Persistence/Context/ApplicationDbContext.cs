@@ -43,6 +43,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<AppointmentStatusAudit> AppointmentStatusAudits => Set<AppointmentStatusAudit>();
     public DbSet<ReviewModerationAudit> ReviewModerationAudits => Set<ReviewModerationAudit>();
     public DbSet<ArticleCategory> ArticleCategories => Set<ArticleCategory>();
+    public DbSet<PaymentAdminAudit> PaymentAdminAudits =>
+    Set<PaymentAdminAudit>();
     public DbSet<UserAudit> UserAudits => Set<UserAudit>();
     public DbSet<UserSettings> UserSettings =>
     Set<UserSettings>();
@@ -391,6 +393,36 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 x.ExpiresAtUtc
             });
         });
+
+        builder.Entity<PaymentAdminAudit>(
+    entity =>
+    {
+        entity.Property(x => x.PaymentType)
+            .IsRequired()
+            .HasMaxLength(30);
+
+        entity.Property(x => x.Action)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        entity.Property(x => x.Reason)
+            .IsRequired()
+            .HasMaxLength(500);
+
+        entity.HasOne(x => x.AdminUser)
+            .WithMany()
+            .HasForeignKey(x => x.AdminUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasIndex(x => new
+        {
+            x.PaymentType,
+            x.PaymentId,
+            x.PerformedAtUtc
+        });
+
+        entity.HasIndex(x => x.AdminUserId);
+    });
 
         builder.Entity<Article>(entity =>
         {

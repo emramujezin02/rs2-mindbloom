@@ -4,7 +4,12 @@ public class AdminPaymentListDto
 {
     public int Id { get; set; }
 
-    public int AppointmentId { get; set; }
+    public string PaymentType { get; set; }
+        = string.Empty;
+
+    public int? AppointmentId { get; set; }
+
+    public int? MembershipId { get; set; }
 
     public string ClientName { get; set; }
         = string.Empty;
@@ -18,12 +23,12 @@ public class AdminPaymentListDto
     public decimal Amount { get; set; }
 
     public string Currency { get; set; }
-        = "USD";
+        = string.Empty;
 
     public string Status { get; set; }
         = string.Empty;
 
-    public string AppointmentStatus { get; set; }
+    public string Purpose { get; set; }
         = string.Empty;
 
     public DateTime CreatedAtUtc { get; set; }
@@ -33,4 +38,6 @@ public class AdminPaymentListDto
     public DateTime? RefundedAtUtc { get; set; }
 
     public bool CanRefund { get; set; }
+
+    public string? RefundUnavailableReason { get; set; }
 }

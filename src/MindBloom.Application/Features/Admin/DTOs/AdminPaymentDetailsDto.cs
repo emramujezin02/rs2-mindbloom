@@ -4,7 +4,12 @@ public class AdminPaymentDetailsDto
 {
     public int Id { get; set; }
 
-    public int AppointmentId { get; set; }
+    public string PaymentType { get; set; }
+        = string.Empty;
+
+    public int? AppointmentId { get; set; }
+
+    public int? MembershipId { get; set; }
 
     public int ClientId { get; set; }
 
@@ -27,19 +32,12 @@ public class AdminPaymentDetailsDto
     public decimal Amount { get; set; }
 
     public string Currency { get; set; }
-        = "USD";
+        = string.Empty;
 
     public string Status { get; set; }
         = string.Empty;
 
-    public string AppointmentStatus { get; set; }
-        = string.Empty;
-
-    public DateTime AppointmentStartUtc { get; set; }
-
-    public DateTime AppointmentEndUtc { get; set; }
-
-    public string AppointmentType { get; set; }
+    public string Purpose { get; set; }
         = string.Empty;
 
     public string StripePaymentIntentId { get; set; }
@@ -59,7 +57,27 @@ public class AdminPaymentDetailsDto
 
     public string? RefundFailureReason { get; set; }
 
-    public bool AppointmentIsPaid { get; set; }
+    public string? AppointmentStatus { get; set; }
+
+    public DateTime? AppointmentStartUtc { get; set; }
+
+    public DateTime? AppointmentEndUtc { get; set; }
+
+    public string? AppointmentType { get; set; }
+
+    public bool? AppointmentIsPaid { get; set; }
+
+    public string? MembershipPlanType { get; set; }
+
+    public int? TotalSessions { get; set; }
+
+    public int? RemainingSessions { get; set; }
+
+    public bool? MembershipIsActive { get; set; }
+
+    public DateTime? MembershipExpiresAtUtc { get; set; }
 
     public bool CanRefund { get; set; }
+
+    public string? RefundUnavailableReason { get; set; }
 }

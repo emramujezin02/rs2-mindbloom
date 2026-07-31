@@ -18,6 +18,7 @@ public class SearchAdminPaymentsDto
 
     public DateTime? DateToUtc { get; set; }
 
+    public string? PaymentType { get; set; }
     public decimal? MinimumAmount { get; set; }
 
     public decimal? MaximumAmount { get; set; }

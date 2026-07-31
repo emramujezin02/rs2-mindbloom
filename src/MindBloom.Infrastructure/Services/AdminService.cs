@@ -2345,52 +2345,84 @@ new Notification
     }
 
     public async Task<
-    PagedResponse<AdminPaymentListDto>>
-    GetPaymentsAsync(
-        SearchAdminPaymentsDto request)
+     PagedResponse<AdminPaymentListDto>>
+     GetPaymentsAsync(
+         SearchAdminPaymentsDto request)
     {
-        if (request.DateFromUtc.HasValue &&
-            request.DateToUtc.HasValue &&
+        if (
+            request.DateFromUtc.HasValue
+            &&
+            request.DateToUtc.HasValue
+            &&
             request.DateFromUtc.Value >
             request.DateToUtc.Value)
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Start date cannot be later than end date.");
         }
 
-        if (request.MinimumAmount.HasValue &&
+        if (
+            request.MinimumAmount.HasValue
+            &&
             request.MinimumAmount.Value < 0)
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Minimum amount cannot be negative.");
         }
 
-        if (request.MaximumAmount.HasValue &&
+        if (
+            request.MaximumAmount.HasValue
+            &&
             request.MaximumAmount.Value < 0)
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Maximum amount cannot be negative.");
         }
 
-        if (request.MinimumAmount.HasValue &&
-            request.MaximumAmount.HasValue &&
+        if (
+            request.MinimumAmount.HasValue
+            &&
+            request.MaximumAmount.HasValue
+            &&
             request.MinimumAmount.Value >
             request.MaximumAmount.Value)
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Minimum amount cannot be greater than maximum amount.");
         }
 
-        var query =
+        var normalizedPaymentType =
+            request.PaymentType?
+                .Trim();
+
+        if (
+            !string.IsNullOrWhiteSpace(
+                normalizedPaymentType)
+            &&
+            !normalizedPaymentType.Equals(
+                "Appointment",
+                StringComparison.OrdinalIgnoreCase)
+            &&
+            !normalizedPaymentType.Equals(
+                "Membership",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BadRequestException(
+                "Payment type must be Appointment or Membership.");
+        }
+
+        var appointmentPayments =
             _context.Payments
                 .AsNoTracking()
-                .Include(x => x.Appointment)
-                    .ThenInclude(x => x.Client)
-                        .ThenInclude(x => x.User)
-                .Include(x => x.Appointment)
-                    .ThenInclude(x => x.Therapist)
-                        .ThenInclude(x => x.User)
-                .Where(x => !x.IsDeleted)
+                .Where(x =>
+                    !x.IsDeleted)
+                .AsQueryable();
+
+        var membershipPayments =
+            _context.MembershipPayments
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted)
                 .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(
@@ -2401,75 +2433,108 @@ new Notification
                     .Trim()
                     .ToLower();
 
-            query = query.Where(x =>
-                x.Id.ToString()
-                    .Contains(search)
-                ||
-                x.AppointmentId.ToString()
-                    .Contains(search)
-                ||
-                x.StripePaymentIntentId
+            appointmentPayments =
+                appointmentPayments.Where(x =>
+                    x.Id.ToString()
+                        .Contains(search)
+                    ||
+                    x.AppointmentId.ToString()
+                        .Contains(search)
+                    ||
+                    x.StripePaymentIntentId
+                        .ToLower()
+                        .Contains(search)
+                    ||
+                    (
+                        x.StripeRefundId
+                        ?? string.Empty
+                    )
                     .ToLower()
                     .Contains(search)
-                ||
-                (
-                    x.StripeRefundId
-                    ?? string.Empty
-                )
-                .ToLower()
-                .Contains(search)
-                ||
-                (
-                    x.Appointment
-                        .Client
-                        .User
-                        .FirstName
-                    + " "
-                    + x.Appointment
-                        .Client
-                        .User
-                        .LastName
-                )
-                .ToLower()
-                .Contains(search)
-                ||
-                (
-                    x.Appointment
-                        .Client
-                        .User
-                        .Email
-                    ?? string.Empty
-                )
-                .ToLower()
-                .Contains(search)
-                ||
-                (
-                    x.Appointment
-                        .Therapist
-                        .User
-                        .FirstName
-                    + " "
-                    + x.Appointment
-                        .Therapist
-                        .User
-                        .LastName
-                )
-                .ToLower()
-                .Contains(search));
+                    ||
+                    (
+                        x.Appointment.Client.User.FirstName
+                        + " "
+                        + x.Appointment.Client.User.LastName
+                    )
+                    .ToLower()
+                    .Contains(search)
+                    ||
+                    (
+                        x.Appointment.Client.User.Email
+                        ?? string.Empty
+                    )
+                    .ToLower()
+                    .Contains(search)
+                    ||
+                    (
+                        x.Appointment.Therapist.User.FirstName
+                        + " "
+                        + x.Appointment.Therapist.User.LastName
+                    )
+                    .ToLower()
+                    .Contains(search));
+
+            membershipPayments =
+                membershipPayments.Where(x =>
+                    x.Id.ToString()
+                        .Contains(search)
+                    ||
+                    x.ClientMembershipId.ToString()
+                        .Contains(search)
+                    ||
+                    x.StripePaymentIntentId
+                        .ToLower()
+                        .Contains(search)
+                    ||
+                    (
+                        x.ClientMembership.Client.User.FirstName
+                        + " "
+                        + x.ClientMembership.Client.User.LastName
+                    )
+                    .ToLower()
+                    .Contains(search)
+                    ||
+                    (
+                        x.ClientMembership.Client.User.Email
+                        ?? string.Empty
+                    )
+                    .ToLower()
+                    .Contains(search)
+                    ||
+                    (
+                        x.ClientMembership.Therapist.User.FirstName
+                        + " "
+                        + x.ClientMembership.Therapist.User.LastName
+                    )
+                    .ToLower()
+                    .Contains(search));
         }
 
         if (request.Status.HasValue)
         {
-            query = query.Where(x =>
-                x.Status ==
-                request.Status.Value);
+            appointmentPayments =
+                appointmentPayments.Where(x =>
+                    x.Status ==
+                    request.Status.Value);
+
+            membershipPayments =
+                membershipPayments.Where(x =>
+                    x.Status ==
+                    request.Status.Value);
         }
 
         if (request.DateFromUtc.HasValue)
         {
-            query = query.Where(x =>
-                x.CreatedAtUtc >=
-                request.DateFromUtc.Value);
+            appointmentPayments =
+                appointmentPayments.Where(x =>
+                    x.CreatedAtUtc >=
+                    request.DateFromUtc.Value);
+
+            membershipPayments =
+                membershipPayments.Where(x =>
+                    x.CreatedAtUtc >=
+                    request.DateFromUtc.Value);
         }
 
         if (request.DateToUtc.HasValue)
@@ -2479,383 +2544,778 @@ new Notification
                     .Date
                     .AddDays(1);
 
-            query = query.Where(x =>
-                x.CreatedAtUtc <
-                exclusiveEnd);
+            appointmentPayments =
+                appointmentPayments.Where(x =>
+                    x.CreatedAtUtc <
+                    exclusiveEnd);
+
+            membershipPayments =
+                membershipPayments.Where(x =>
+                    x.CreatedAtUtc <
+                    exclusiveEnd);
         }
 
         if (request.MinimumAmount.HasValue)
         {
-            query = query.Where(x =>
-                x.Amount >=
-                request.MinimumAmount.Value);
+            appointmentPayments =
+                appointmentPayments.Where(x =>
+                    x.Amount >=
+                    request.MinimumAmount.Value);
+
+            membershipPayments =
+                membershipPayments.Where(x =>
+                    x.Amount >=
+                    request.MinimumAmount.Value);
         }
 
         if (request.MaximumAmount.HasValue)
         {
-            query = query.Where(x =>
-                x.Amount <=
-                request.MaximumAmount.Value);
+            appointmentPayments =
+                appointmentPayments.Where(x =>
+                    x.Amount <=
+                    request.MaximumAmount.Value);
+
+            membershipPayments =
+                membershipPayments.Where(x =>
+                    x.Amount <=
+                    request.MaximumAmount.Value);
+        }
+
+        var appointmentProjection =
+            appointmentPayments.Select(x =>
+                new AdminPaymentListDto
+                {
+                    Id =
+                        x.Id,
+
+                    PaymentType =
+                        "Appointment",
+
+                    AppointmentId =
+                        x.AppointmentId,
+
+                    MembershipId =
+                        null,
+
+                    ClientName =
+                        x.Appointment.Client.User.FirstName
+                        + " "
+                        + x.Appointment.Client.User.LastName,
+
+                    ClientEmail =
+                        x.Appointment.Client.User.Email
+                        ?? string.Empty,
+
+                    TherapistName =
+                        x.Appointment.Therapist.User.FirstName
+                        + " "
+                        + x.Appointment.Therapist.User.LastName,
+
+                    Amount =
+                        x.Amount,
+
+                    Currency =
+                        "USD",
+
+                    Status =
+                        x.Status.ToString(),
+
+                    Purpose =
+                        "Therapy appointment",
+
+                    CreatedAtUtc =
+                        x.CreatedAtUtc,
+
+                    PaidAtUtc =
+                        x.PaidAtUtc,
+
+                    RefundedAtUtc =
+                        x.RefundedAtUtc,
+
+                    CanRefund =
+                        x.Status ==
+                        PaymentStatus.Paid
+                        ||
+                        x.Status ==
+                        PaymentStatus.RefundFailed,
+
+                    RefundUnavailableReason =
+                        x.Status ==
+                            PaymentStatus.Refunded
+                            ? "This payment has already been refunded."
+                            : x.Status ==
+                                PaymentStatus.RefundPending
+                                ? "A refund is already being processed."
+                                : x.Status !=
+                                        PaymentStatus.Paid
+                                    &&
+                                    x.Status !=
+                                        PaymentStatus.RefundFailed
+                                    ? "This payment is not in a refundable state."
+                                    : null
+                });
+
+        var membershipProjection =
+            membershipPayments.Select(x =>
+                new AdminPaymentListDto
+                {
+                    Id =
+                        x.Id,
+
+                    PaymentType =
+                        "Membership",
+
+                    AppointmentId =
+                        null,
+
+                    MembershipId =
+                        x.ClientMembershipId,
+
+                    ClientName =
+                        x.ClientMembership.Client.User.FirstName
+                        + " "
+                        + x.ClientMembership.Client.User.LastName,
+
+                    ClientEmail =
+                        x.ClientMembership.Client.User.Email
+                        ?? string.Empty,
+
+                    TherapistName =
+                        x.ClientMembership.Therapist.User.FirstName
+                        + " "
+                        + x.ClientMembership.Therapist.User.LastName,
+
+                    Amount =
+                        x.Amount,
+
+                    Currency =
+                        x.Currency.ToUpper(),
+
+                    Status =
+                        x.Status.ToString(),
+
+                    Purpose =
+                        x.ClientMembership.PlanType ==
+                            MembershipPlanType.TenSessions
+                            ? "Ten-session membership"
+                            : x.ClientMembership.PlanType ==
+                                MembershipPlanType.TwentySessions
+                                ? "Twenty-session membership"
+                                : "Thirty-session membership",
+
+                    CreatedAtUtc =
+                        x.CreatedAtUtc,
+
+                    PaidAtUtc =
+                        x.PaidAtUtc,
+
+                    RefundedAtUtc =
+                        null,
+
+                    CanRefund =
+                        false,
+
+                    RefundUnavailableReason =
+                        "Membership payment refunds are not currently supported."
+                });
+
+        IQueryable<AdminPaymentListDto>
+            combinedQuery;
+
+        if (
+            normalizedPaymentType?.Equals(
+                "Appointment",
+                StringComparison.OrdinalIgnoreCase)
+            == true)
+        {
+            combinedQuery =
+                appointmentProjection;
+        }
+        else if (
+            normalizedPaymentType?.Equals(
+                "Membership",
+                StringComparison.OrdinalIgnoreCase)
+            == true)
+        {
+            combinedQuery =
+                membershipProjection;
+        }
+        else
+        {
+            combinedQuery =
+                appointmentProjection.Concat(
+                    membershipProjection);
         }
 
         var totalCount =
-            await query.CountAsync();
+            await combinedQuery.CountAsync();
+
+        var pagination =
+            PaginationHelper.Normalize(
+                request.PageNumber,
+                request.PageSize);
 
         var items =
-            await query
+            await combinedQuery
                 .OrderByDescending(x =>
                     x.CreatedAtUtc)
                 .ThenByDescending(x =>
                     x.Id)
-                .Skip(
-                    (request.PageNumber - 1)
-                    * request.PageSize)
-                .Take(request.PageSize)
-                .Select(x =>
-                    new AdminPaymentListDto
-                    {
-                        Id =
-                            x.Id,
-
-                        AppointmentId =
-                            x.AppointmentId,
-
-                        ClientName =
-                            x.Appointment
-                                .Client
-                                .User
-                                .FirstName
-                            + " "
-                            + x.Appointment
-                                .Client
-                                .User
-                                .LastName,
-
-                        ClientEmail =
-                            x.Appointment
-                                .Client
-                                .User
-                                .Email
-                            ?? string.Empty,
-
-                        TherapistName =
-                            x.Appointment
-                                .Therapist
-                                .User
-                                .FirstName
-                            + " "
-                            + x.Appointment
-                                .Therapist
-                                .User
-                                .LastName,
-
-                        Amount =
-                            x.Amount,
-
-                        Currency =
-                            "USD",
-
-                        Status =
-                            x.Status.ToString(),
-
-                        AppointmentStatus =
-                            x.Appointment
-                                .Status
-                                .ToString(),
-
-                        CreatedAtUtc =
-                            x.CreatedAtUtc,
-
-                        PaidAtUtc =
-                            x.PaidAtUtc,
-
-                        RefundedAtUtc =
-                            x.RefundedAtUtc,
-
-                        CanRefund =
-                            x.Status ==
-                                PaymentStatus.Paid
-                            || x.Status ==
-                                PaymentStatus
-                                    .RefundFailed
-                    })
+                .Skip(pagination.Skip)
+                .Take(pagination.PageSize)
                 .ToListAsync();
 
-        return new PagedResponse<
-            AdminPaymentListDto>
-        {
-            Items =
+        return PagedResponse<
+                AdminPaymentListDto>
+            .Create(
                 items,
-
-            PageNumber =
-                request.PageNumber,
-
-            PageSize =
-                request.PageSize,
-
-            TotalCount =
-                totalCount,
-
-            TotalPages =
-                totalCount == 0
-                    ? 0
-                    : (int)Math.Ceiling(
-                        totalCount /
-                        (double)request.PageSize)
-        };
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<AdminPaymentDetailsDto>
-        GetPaymentDetailsAsync(
-            int paymentId)
+     GetPaymentDetailsAsync(
+         string paymentType,
+         int paymentId)
     {
-        var payment =
-            await _context.Payments
-                .AsNoTracking()
-                .Include(x => x.Appointment)
-                    .ThenInclude(x => x.Client)
-                        .ThenInclude(x => x.User)
-                .Include(x => x.Appointment)
-                    .ThenInclude(x => x.Therapist)
-                        .ThenInclude(x => x.User)
-                .FirstOrDefaultAsync(x =>
-                    x.Id == paymentId &&
-                    !x.IsDeleted);
+        var normalizedPaymentType =
+            paymentType?
+                .Trim();
 
-        if (payment == null)
+        if (normalizedPaymentType.Equals(
+                "Appointment",
+                StringComparison.OrdinalIgnoreCase))
         {
-            throw new NotFoundException(
-                "Payment not found.");
+            var payment =
+                await _context.Payments
+                    .AsNoTracking()
+                    .Include(x => x.Appointment)
+                        .ThenInclude(x => x.Client)
+                            .ThenInclude(x => x.User)
+                    .Include(x => x.Appointment)
+                        .ThenInclude(x => x.Therapist)
+                            .ThenInclude(x => x.User)
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == paymentId
+                        &&
+                        !x.IsDeleted);
+
+            if (payment == null)
+            {
+                throw new NotFoundException(
+                    "Appointment payment not found.");
+            }
+
+            return new AdminPaymentDetailsDto
+            {
+                Id =
+                    payment.Id,
+
+                PaymentType =
+                    "Appointment",
+
+                AppointmentId =
+                    payment.AppointmentId,
+
+                MembershipId =
+                    null,
+
+                ClientId =
+                    payment.Appointment.ClientId,
+
+                ClientUserId =
+                    payment.Appointment.Client.UserId,
+
+                ClientName =
+                    payment.Appointment.Client.User.FirstName
+                    + " "
+                    + payment.Appointment.Client.User.LastName,
+
+                ClientEmail =
+                    payment.Appointment.Client.User.Email
+                    ?? string.Empty,
+
+                TherapistId =
+                    payment.Appointment.TherapistId,
+
+                TherapistName =
+                    payment.Appointment.Therapist.User.FirstName
+                    + " "
+                    + payment.Appointment.Therapist.User.LastName,
+
+                TherapistEmail =
+                    payment.Appointment.Therapist.User.Email
+                    ?? string.Empty,
+
+                Amount =
+                    payment.Amount,
+
+                Currency =
+                    "USD",
+
+                Status =
+                    payment.Status.ToString(),
+
+                Purpose =
+                    "Therapy appointment",
+
+                StripePaymentIntentId =
+                    payment.StripePaymentIntentId,
+
+                CreatedAtUtc =
+                    payment.CreatedAtUtc,
+
+                PaidAtUtc =
+                    payment.PaidAtUtc,
+
+                StripeRefundId =
+                    payment.StripeRefundId,
+
+                RefundReason =
+                    payment.RefundReason,
+
+                RefundRequestedAtUtc =
+                    payment.RefundRequestedAtUtc,
+
+                RefundedAtUtc =
+                    payment.RefundedAtUtc,
+
+                RefundFailureReason =
+                    payment.RefundFailureReason,
+
+                AppointmentStatus =
+                    payment.Appointment.Status
+                        .ToString(),
+
+                AppointmentStartUtc =
+                    payment.Appointment.StartUtc,
+
+                AppointmentEndUtc =
+                    payment.Appointment.EndUtc,
+
+                AppointmentType =
+                    payment.Appointment.Type
+                        .ToString(),
+
+                AppointmentIsPaid =
+                    payment.Appointment.IsPaid,
+
+                MembershipPlanType =
+                    null,
+
+                TotalSessions =
+                    null,
+
+                RemainingSessions =
+                    null,
+
+                MembershipIsActive =
+                    null,
+
+                MembershipExpiresAtUtc =
+                    null,
+
+                CanRefund =
+                    payment.Status ==
+                        PaymentStatus.Paid
+                    ||
+                    payment.Status ==
+                        PaymentStatus.RefundFailed,
+
+                RefundUnavailableReason =
+                    payment.Status ==
+                        PaymentStatus.Refunded
+                        ? "This payment has already been refunded."
+                        : payment.Status ==
+                            PaymentStatus.RefundPending
+                            ? "A refund is already being processed."
+                            : payment.Status !=
+                                    PaymentStatus.Paid
+                                &&
+                                payment.Status !=
+                                    PaymentStatus.RefundFailed
+                                ? "This payment is not in a refundable state."
+                                : null
+            };
         }
 
-        return new AdminPaymentDetailsDto
+        if (normalizedPaymentType.Equals(
+                "Membership",
+                StringComparison.OrdinalIgnoreCase))
         {
-            Id =
-                payment.Id,
+            var payment =
+                await _context.MembershipPayments
+                    .AsNoTracking()
+                    .Include(x => x.ClientMembership)
+                        .ThenInclude(x => x.Client)
+                            .ThenInclude(x => x.User)
+                    .Include(x => x.ClientMembership)
+                        .ThenInclude(x => x.Therapist)
+                            .ThenInclude(x => x.User)
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == paymentId
+                        &&
+                        !x.IsDeleted);
 
-            AppointmentId =
-                payment.AppointmentId,
+            if (payment == null)
+            {
+                throw new NotFoundException(
+                    "Membership payment not found.");
+            }
 
-            ClientId =
-                payment.Appointment
-                    .ClientId,
+            var membership =
+                payment.ClientMembership;
 
-            ClientUserId =
-                payment.Appointment
-                    .Client
-                    .UserId,
+            return new AdminPaymentDetailsDto
+            {
+                Id =
+                    payment.Id,
 
-            ClientName =
-                payment.Appointment
-                    .Client
-                    .User
-                    .FirstName
-                + " "
-                + payment.Appointment
-                    .Client
-                    .User
-                    .LastName,
+                PaymentType =
+                    "Membership",
 
-            ClientEmail =
-                payment.Appointment
-                    .Client
-                    .User
-                    .Email
-                ?? string.Empty,
+                AppointmentId =
+                    null,
 
-            TherapistId =
-                payment.Appointment
-                    .TherapistId,
+                MembershipId =
+                    membership.Id,
 
-            TherapistName =
-                payment.Appointment
-                    .Therapist
-                    .User
-                    .FirstName
-                + " "
-                + payment.Appointment
-                    .Therapist
-                    .User
-                    .LastName,
+                ClientId =
+                    membership.ClientId,
 
-            TherapistEmail =
-                payment.Appointment
-                    .Therapist
-                    .User
-                    .Email
-                ?? string.Empty,
+                ClientUserId =
+                    membership.Client.UserId,
 
-            Amount =
-                payment.Amount,
+                ClientName =
+                    membership.Client.User.FirstName
+                    + " "
+                    + membership.Client.User.LastName,
 
-            Currency =
-                "USD",
+                ClientEmail =
+                    membership.Client.User.Email
+                    ?? string.Empty,
 
-            Status =
-                payment.Status
-                    .ToString(),
+                TherapistId =
+                    membership.TherapistId,
 
-            AppointmentStatus =
-                payment.Appointment
-                    .Status
-                    .ToString(),
+                TherapistName =
+                    membership.Therapist.User.FirstName
+                    + " "
+                    + membership.Therapist.User.LastName,
 
-            AppointmentStartUtc =
-                payment.Appointment
-                    .StartUtc,
+                TherapistEmail =
+                    membership.Therapist.User.Email
+                    ?? string.Empty,
 
-            AppointmentEndUtc =
-                payment.Appointment
-                    .EndUtc,
+                Amount =
+                    payment.Amount,
 
-            AppointmentType =
-                payment.Appointment
-                    .Type
-                    .ToString(),
+                Currency =
+                    payment.Currency.ToUpperInvariant(),
 
-            StripePaymentIntentId =
-                payment.StripePaymentIntentId,
+                Status =
+                    payment.Status.ToString(),
 
-            CreatedAtUtc =
-                payment.CreatedAtUtc,
+                Purpose =
+                    membership.PlanType switch
+                    {
+                        MembershipPlanType.TenSessions =>
+                            "Ten-session membership",
 
-            PaidAtUtc =
-                payment.PaidAtUtc,
+                        MembershipPlanType.TwentySessions =>
+                            "Twenty-session membership",
 
-            StripeRefundId =
-                payment.StripeRefundId,
+                        MembershipPlanType.ThirtySessions =>
+                            "Thirty-session membership",
 
-            RefundReason =
-                payment.RefundReason,
+                        _ =>
+                            "Therapy membership"
+                    },
 
-            RefundRequestedAtUtc =
-                payment
-                    .RefundRequestedAtUtc,
+                StripePaymentIntentId =
+                    payment.StripePaymentIntentId,
 
-            RefundedAtUtc =
-                payment.RefundedAtUtc,
+                CreatedAtUtc =
+                    payment.CreatedAtUtc,
 
-            RefundFailureReason =
-                payment
-                    .RefundFailureReason,
+                PaidAtUtc =
+                    payment.PaidAtUtc,
 
-            AppointmentIsPaid =
-                payment.Appointment
-                    .IsPaid,
+                StripeRefundId =
+                    null,
 
-            CanRefund =
-                payment.Status ==
-                    PaymentStatus.Paid
-                || payment.Status ==
-                    PaymentStatus
-                        .RefundFailed
-        };
+                RefundReason =
+                    null,
+
+                RefundRequestedAtUtc =
+                    null,
+
+                RefundedAtUtc =
+                    null,
+
+                RefundFailureReason =
+                    null,
+
+                AppointmentStatus =
+                    null,
+
+                AppointmentStartUtc =
+                    null,
+
+                AppointmentEndUtc =
+                    null,
+
+                AppointmentType =
+                    null,
+
+                AppointmentIsPaid =
+                    null,
+
+                MembershipPlanType =
+                    membership.PlanType
+                        .ToString(),
+
+                TotalSessions =
+                    membership.TotalSessions,
+
+                RemainingSessions =
+                    membership.RemainingSessions,
+
+                MembershipIsActive =
+                    membership.IsActive,
+
+                MembershipExpiresAtUtc =
+                    membership.ExpiresAtUtc,
+
+                CanRefund =
+                    false,
+
+                RefundUnavailableReason =
+                    "Membership payment refunds are not currently supported."
+            };
+        }
+
+        throw new BadRequestException(
+            "Payment type must be Appointment or Membership.");
     }
 
     public async Task<AdminPaymentReceiptDto>
-        GetPaymentReceiptAsync(
-            int paymentId)
+    GetPaymentReceiptAsync(
+        string paymentType,
+        int paymentId)
     {
-        var payment =
-            await _context.Payments
-                .AsNoTracking()
-                .Include(x => x.Appointment)
-                    .ThenInclude(x => x.Client)
-                        .ThenInclude(x => x.User)
-                .Include(x => x.Appointment)
-                    .ThenInclude(x => x.Therapist)
-                        .ThenInclude(x => x.User)
-                .FirstOrDefaultAsync(x =>
-                    x.Id == paymentId &&
-                    !x.IsDeleted);
+        var normalizedPaymentType =
+            paymentType?
+                .Trim();
 
-        if (payment == null)
+        if (normalizedPaymentType.Equals(
+                "Appointment",
+                StringComparison.OrdinalIgnoreCase))
         {
-            throw new NotFoundException(
-                "Payment not found.");
+            var payment =
+                await _context.Payments
+                    .AsNoTracking()
+                    .Include(x => x.Appointment)
+                        .ThenInclude(x => x.Client)
+                            .ThenInclude(x => x.User)
+                    .Include(x => x.Appointment)
+                        .ThenInclude(x => x.Therapist)
+                            .ThenInclude(x => x.User)
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == paymentId
+                        &&
+                        !x.IsDeleted);
+
+            if (payment == null)
+            {
+                throw new NotFoundException(
+                    "Appointment payment not found.");
+            }
+
+            return new AdminPaymentReceiptDto
+            {
+                InvoiceNumber =
+                    $"APT-INV-{payment.Id:D6}",
+
+                PaymentId =
+                    payment.Id,
+
+                PaymentType =
+                    "Appointment",
+
+                AppointmentId =
+                    payment.AppointmentId,
+
+                MembershipId =
+                    null,
+
+                ClientName =
+                    payment.Appointment.Client.User.FirstName
+                    + " "
+                    + payment.Appointment.Client.User.LastName,
+
+                ClientEmail =
+                    payment.Appointment.Client.User.Email
+                    ?? string.Empty,
+
+                TherapistName =
+                    payment.Appointment.Therapist.User.FirstName
+                    + " "
+                    + payment.Appointment.Therapist.User.LastName,
+
+                Amount =
+                    payment.Amount,
+
+                Currency =
+                    "USD",
+
+                Status =
+                    payment.Status.ToString(),
+
+                Purpose =
+                    "Therapy appointment",
+
+                PaymentDateUtc =
+                    payment.PaidAtUtc
+                    ?? payment.CreatedAtUtc,
+
+                AppointmentStartUtc =
+                    payment.Appointment.StartUtc,
+
+                AppointmentEndUtc =
+                    payment.Appointment.EndUtc,
+
+                StripePaymentIntentId =
+                    payment.StripePaymentIntentId,
+
+                StripeRefundId =
+                    payment.StripeRefundId,
+
+                RefundReason =
+                    payment.RefundReason,
+
+                RefundedAtUtc =
+                    payment.RefundedAtUtc
+            };
         }
 
-        return new AdminPaymentReceiptDto
+        if (normalizedPaymentType.Equals(
+                "Membership",
+                StringComparison.OrdinalIgnoreCase))
         {
-            InvoiceNumber =
-                $"INV-{payment.Id:D6}",
+            var payment =
+                await _context.MembershipPayments
+                    .AsNoTracking()
+                    .Include(x => x.ClientMembership)
+                        .ThenInclude(x => x.Client)
+                            .ThenInclude(x => x.User)
+                    .Include(x => x.ClientMembership)
+                        .ThenInclude(x => x.Therapist)
+                            .ThenInclude(x => x.User)
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == paymentId
+                        &&
+                        !x.IsDeleted);
 
-            PaymentId =
-                payment.Id,
+            if (payment == null)
+            {
+                throw new NotFoundException(
+                    "Membership payment not found.");
+            }
 
-            AppointmentId =
-                payment.AppointmentId,
+            var membership =
+                payment.ClientMembership;
 
-            ClientName =
-                payment.Appointment
-                    .Client
-                    .User
-                    .FirstName
-                + " "
-                + payment.Appointment
-                    .Client
-                    .User
-                    .LastName,
+            return new AdminPaymentReceiptDto
+            {
+                InvoiceNumber =
+                    $"MEM-INV-{payment.Id:D6}",
 
-            ClientEmail =
-                payment.Appointment
-                    .Client
-                    .User
-                    .Email
-                ?? string.Empty,
+                PaymentId =
+                    payment.Id,
 
-            TherapistName =
-                payment.Appointment
-                    .Therapist
-                    .User
-                    .FirstName
-                + " "
-                + payment.Appointment
-                    .Therapist
-                    .User
-                    .LastName,
+                PaymentType =
+                    "Membership",
 
-            Amount =
-                payment.Amount,
+                AppointmentId =
+                    null,
 
-            Currency =
-                "USD",
+                MembershipId =
+                    membership.Id,
 
-            Status =
-                payment.Status
-                    .ToString(),
+                ClientName =
+                    membership.Client.User.FirstName
+                    + " "
+                    + membership.Client.User.LastName,
 
-            PaymentDateUtc =
-                payment.PaidAtUtc
-                ?? payment.CreatedAtUtc,
+                ClientEmail =
+                    membership.Client.User.Email
+                    ?? string.Empty,
 
-            AppointmentStartUtc =
-                payment.Appointment
-                    .StartUtc,
+                TherapistName =
+                    membership.Therapist.User.FirstName
+                    + " "
+                    + membership.Therapist.User.LastName,
 
-            AppointmentEndUtc =
-                payment.Appointment
-                    .EndUtc,
+                Amount =
+                    payment.Amount,
 
-            StripePaymentIntentId =
-                payment
-                    .StripePaymentIntentId,
+                Currency =
+                    payment.Currency.ToUpperInvariant(),
 
-            StripeRefundId =
-                payment.StripeRefundId,
+                Status =
+                    payment.Status.ToString(),
 
-            RefundReason =
-                payment.RefundReason,
+                Purpose =
+                    membership.PlanType switch
+                    {
+                        MembershipPlanType.TenSessions =>
+                            "Ten-session membership",
 
-            RefundedAtUtc =
-                payment.RefundedAtUtc
-        };
+                        MembershipPlanType.TwentySessions =>
+                            "Twenty-session membership",
+
+                        MembershipPlanType.ThirtySessions =>
+                            "Thirty-session membership",
+
+                        _ =>
+                            "Therapy membership"
+                    },
+
+                PaymentDateUtc =
+                    payment.PaidAtUtc
+                    ?? payment.CreatedAtUtc,
+
+                AppointmentStartUtc =
+                    null,
+
+                AppointmentEndUtc =
+                    null,
+
+                StripePaymentIntentId =
+                    payment.StripePaymentIntentId,
+
+                StripeRefundId =
+                    null,
+
+                RefundReason =
+                    null,
+
+                RefundedAtUtc =
+                    null
+            };
+        }
+
+        throw new BadRequestException(
+            "Payment type must be Appointment or Membership.");
     }
 
     public async Task RefundPaymentAsync(
-        int authenticatedAdminUserId,
-        int paymentId,
-        AdminRefundPaymentDto request)
+     int authenticatedAdminUserId,
+     string paymentType,
+     int paymentId,
+     AdminRefundPaymentDto request)
     {
         var normalizedReason =
             request.Reason?.Trim()
@@ -2864,20 +3324,40 @@ new Notification
         if (string.IsNullOrWhiteSpace(
                 normalizedReason))
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Refund reason is required.");
         }
 
         if (normalizedReason.Length < 5)
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Refund reason must contain at least 5 characters.");
         }
 
         if (normalizedReason.Length > 500)
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Refund reason may contain at most 500 characters.");
+        }
+
+        var normalizedPaymentType =
+            paymentType?
+                .Trim();
+
+        if (normalizedPaymentType.Equals(
+                "Membership",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BusinessException(
+                "Membership payment refunds are not currently supported.");
+        }
+
+        if (!normalizedPaymentType.Equals(
+                "Appointment",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BadRequestException(
+                "Payment type must be Appointment or Membership.");
         }
 
         var admin =
@@ -2886,7 +3366,10 @@ new Notification
                 .FirstOrDefaultAsync(x =>
                     x.Id ==
                         authenticatedAdminUserId
-                    && !x.IsBlocked);
+                    &&
+                    !x.IsBlocked
+                    &&
+                    x.IsActive);
 
         if (admin == null)
         {
@@ -2900,19 +3383,21 @@ new Notification
                 .Include(x => x.Appointment)
                     .ThenInclude(x => x.Client)
                 .FirstOrDefaultAsync(x =>
-                    x.Id == paymentId &&
+                    x.Id == paymentId
+                    &&
                     !x.IsDeleted);
 
         if (payment == null)
         {
             throw new NotFoundException(
-                "Payment not found.");
+                "Appointment payment not found.");
         }
 
         if (payment.Status ==
             PaymentStatus.Refunded)
         {
-            return;
+            throw new BusinessException(
+                "This payment has already been refunded.");
         }
 
         if (payment.Status ==
@@ -2922,27 +3407,119 @@ new Notification
                 "A refund for this payment is already being processed.");
         }
 
-        if (payment.Status !=
-                PaymentStatus.Paid &&
+        if (
+            payment.Status !=
+                PaymentStatus.Paid
+            &&
             payment.Status !=
                 PaymentStatus.RefundFailed)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Only a paid payment or a failed refund may be refunded.");
         }
+
+        var previousStatus =
+            payment.Status;
 
         var completeReason =
             $"Admin {admin.FirstName} "
             + $"{admin.LastName}: "
             + normalizedReason;
 
-        await _paymentService
-            .RefundAppointmentPaymentAsync(
-                payment.Appointment
-                    .Client
-                    .UserId,
-                payment.AppointmentId,
-                completeReason);
+        try
+        {
+            await _paymentService
+                .RefundAppointmentPaymentAsync(
+                    payment.Appointment.Client.UserId,
+                    payment.AppointmentId,
+                    completeReason);
+
+            var currentStatus =
+                await _context.Payments
+                    .AsNoTracking()
+                    .Where(x =>
+                        x.Id == paymentId)
+                    .Select(x =>
+                        x.Status)
+                    .FirstAsync();
+
+            _context.PaymentAdminAudits.Add(
+                new PaymentAdminAudit
+                {
+                    AdminUserId =
+                        authenticatedAdminUserId,
+
+                    PaymentType =
+                        "Appointment",
+
+                    PaymentId =
+                        paymentId,
+
+                    PreviousStatus =
+                        previousStatus,
+
+                    NewStatus =
+                        currentStatus,
+
+                    Action =
+                        "FullRefundRequested",
+
+                    Reason =
+                        normalizedReason,
+
+                    PerformedAtUtc =
+                        DateTime.UtcNow
+                });
+
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception exception)
+        {
+            var currentStatus =
+                await _context.Payments
+                    .AsNoTracking()
+                    .Where(x =>
+                        x.Id == paymentId)
+                    .Select(x =>
+                        x.Status)
+                    .FirstOrDefaultAsync();
+
+            _context.PaymentAdminAudits.Add(
+                new PaymentAdminAudit
+                {
+                    AdminUserId =
+                        authenticatedAdminUserId,
+
+                    PaymentType =
+                        "Appointment",
+
+                    PaymentId =
+                        paymentId,
+
+                    PreviousStatus =
+                        previousStatus,
+
+                    NewStatus =
+                        currentStatus == 0
+                            ? previousStatus
+                            : currentStatus,
+
+                    Action =
+                        "FullRefundFailed",
+
+                    Reason =
+                        normalizedReason
+                        + " | Provider error: "
+                        + exception.Message,
+
+                    PerformedAtUtc =
+                        DateTime.UtcNow
+                });
+
+            await _context.SaveChangesAsync();
+
+            throw;
+        }
     }
 
     public async Task<

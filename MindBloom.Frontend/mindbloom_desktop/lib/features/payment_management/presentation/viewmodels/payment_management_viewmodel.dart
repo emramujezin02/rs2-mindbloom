@@ -26,6 +26,8 @@ class PaymentManagementViewModel extends ChangeNotifier {
 
   int? currentStatus;
 
+  String? currentPaymentType;
+
   DateTime? currentDateFrom;
 
   DateTime? currentDateTo;
@@ -42,12 +44,14 @@ class PaymentManagementViewModel extends ChangeNotifier {
     DateTime? dateTo,
     double? minimumAmount,
     double? maximumAmount,
+    String? paymentType,
   }) async {
     isLoading = true;
     error = null;
 
     currentSearch = search;
     currentStatus = status;
+    currentPaymentType = paymentType;
     currentDateFrom = dateFrom;
     currentDateTo = dateTo;
     currentMinimumAmount = minimumAmount;
@@ -65,6 +69,7 @@ class PaymentManagementViewModel extends ChangeNotifier {
         dateTo: dateTo,
         minimumAmount: minimumAmount,
         maximumAmount: maximumAmount,
+        paymentType: paymentType,
       );
 
       payments = response.items;
@@ -88,6 +93,7 @@ class PaymentManagementViewModel extends ChangeNotifier {
       dateTo: currentDateTo,
       minimumAmount: currentMinimumAmount,
       maximumAmount: currentMaximumAmount,
+      paymentType: currentPaymentType,
     );
   }
 
@@ -104,6 +110,7 @@ class PaymentManagementViewModel extends ChangeNotifier {
       dateTo: currentDateTo,
       minimumAmount: currentMinimumAmount,
       maximumAmount: currentMaximumAmount,
+      paymentType: currentPaymentType,
     );
   }
 
@@ -120,6 +127,7 @@ class PaymentManagementViewModel extends ChangeNotifier {
       dateTo: currentDateTo,
       minimumAmount: currentMinimumAmount,
       maximumAmount: currentMaximumAmount,
+      paymentType: currentPaymentType,
     );
   }
 }

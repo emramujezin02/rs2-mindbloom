@@ -7,7 +7,12 @@ public class AdminPaymentReceiptDto
 
     public int PaymentId { get; set; }
 
-    public int AppointmentId { get; set; }
+    public string PaymentType { get; set; }
+        = string.Empty;
+
+    public int? AppointmentId { get; set; }
+
+    public int? MembershipId { get; set; }
 
     public string ClientName { get; set; }
         = string.Empty;
@@ -21,16 +26,19 @@ public class AdminPaymentReceiptDto
     public decimal Amount { get; set; }
 
     public string Currency { get; set; }
-        = "USD";
+        = string.Empty;
 
     public string Status { get; set; }
         = string.Empty;
 
+    public string Purpose { get; set; }
+        = string.Empty;
+
     public DateTime PaymentDateUtc { get; set; }
 
-    public DateTime AppointmentStartUtc { get; set; }
+    public DateTime? AppointmentStartUtc { get; set; }
 
-    public DateTime AppointmentEndUtc { get; set; }
+    public DateTime? AppointmentEndUtc { get; set; }
 
     public string StripePaymentIntentId { get; set; }
         = string.Empty;

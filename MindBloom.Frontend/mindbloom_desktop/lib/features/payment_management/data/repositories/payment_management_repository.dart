@@ -13,6 +13,7 @@ class PaymentManagementRepository {
     required int pageSize,
     String? search,
     int? status,
+    String? paymentType,
     DateTime? dateFrom,
     DateTime? dateTo,
     double? minimumAmount,
@@ -23,6 +24,7 @@ class PaymentManagementRepository {
       pageSize: pageSize,
       search: search,
       status: status,
+      paymentType: paymentType,
       dateFrom: dateFrom,
       dateTo: dateTo,
       minimumAmount: minimumAmount,
@@ -30,15 +32,35 @@ class PaymentManagementRepository {
     );
   }
 
-  Future<AdminPaymentDetailsModel> getPaymentDetails(int paymentId) {
-    return apiService.getPaymentDetails(paymentId);
+  Future<AdminPaymentDetailsModel> getPaymentDetails({
+    required String paymentType,
+    required int paymentId,
+  }) {
+    return apiService.getPaymentDetails(
+      paymentType: paymentType,
+      paymentId: paymentId,
+    );
   }
 
-  Future<AdminPaymentReceiptModel> getPaymentReceipt(int paymentId) {
-    return apiService.getPaymentReceipt(paymentId);
+  Future<AdminPaymentReceiptModel> getPaymentReceipt({
+    required String paymentType,
+    required int paymentId,
+  }) {
+    return apiService.getPaymentReceipt(
+      paymentType: paymentType,
+      paymentId: paymentId,
+    );
   }
 
-  Future<void> refundPayment({required int paymentId, required String reason}) {
-    return apiService.refundPayment(paymentId: paymentId, reason: reason);
+  Future<void> refundPayment({
+    required String paymentType,
+    required int paymentId,
+    required String reason,
+  }) {
+    return apiService.refundPayment(
+      paymentType: paymentType,
+      paymentId: paymentId,
+      reason: reason,
+    );
   }
 }

@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../data/models/admin_payment_model.dart';
+import '../../data/models/payment_route_arguments.dart';
 import '../viewmodels/payment_management_viewmodel.dart';
 
 class PaymentManagementPage extends StatefulWidget {
@@ -26,6 +28,8 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
 
   int? _status;
 
+  String? _selectedPaymentType;
+
   DateTime? _dateFrom;
 
   DateTime? _dateTo;
@@ -42,6 +46,8 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
+
+    _viewModel.dispose();
 
     _searchController.dispose();
     _minimumAmountController.dispose();
@@ -68,12 +74,42 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
 
   Future<void> _applyFilters() {
     return _viewModel.load(
+      requestedPage: 1,
       search: _searchController.text.trim(),
       status: _status,
+      paymentType: _selectedPaymentType,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
       minimumAmount: _parseAmount(_minimumAmountController),
       maximumAmount: _parseAmount(_maximumAmountController),
+    );
+  }
+
+  Future<void> _openDetails(AdminPaymentModel payment) async {
+    final result = await Navigator.of(context).pushNamed(
+      AppRouter.paymentManagementDetails,
+      arguments: PaymentRouteArguments(
+        paymentId: payment.id,
+        paymentType: payment.paymentType,
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (result == true) {
+      await _viewModel.reload();
+    }
+  }
+
+  Future<void> _openReceipt(AdminPaymentModel payment) async {
+    await Navigator.of(context).pushNamed(
+      AppRouter.paymentReceipt,
+      arguments: PaymentRouteArguments(
+        paymentId: payment.id,
+        paymentType: payment.paymentType,
+      ),
     );
   }
 
@@ -84,11 +120,21 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
 
     setState(() {
       _status = null;
+      _selectedPaymentType = null;
       _dateFrom = null;
       _dateTo = null;
     });
 
-    await _viewModel.load();
+    await _viewModel.load(
+      requestedPage: 1,
+      search: null,
+      status: null,
+      paymentType: null,
+      dateFrom: null,
+      dateTo: null,
+      minimumAmount: null,
+      maximumAmount: null,
+    );
   }
 
   Future<void> _selectDate({required bool isFrom}) async {
@@ -142,6 +188,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
               width: 280,
               child: TextField(
                 controller: _searchController,
+                enabled: !_viewModel.isLoading,
                 decoration: const InputDecoration(
                   labelText: 'Search ID, client or Stripe reference',
                   prefixIcon: Icon(Icons.search),
@@ -155,6 +202,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
             SizedBox(
               width: 190,
               child: DropdownButtonFormField<int?>(
+                key: ValueKey<int?>(_status),
                 initialValue: _status,
                 decoration: const InputDecoration(
                   labelText: 'Status',
@@ -178,17 +226,52 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
                     child: Text('Refund failed'),
                   ),
                 ],
-                onChanged: (value) {
-                  setState(() {
-                    _status = value;
-                  });
-                },
+                onChanged: _viewModel.isLoading
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _status = value;
+                        });
+                      },
+              ),
+            ),
+            SizedBox(
+              width: 190,
+              child: DropdownButtonFormField<String?>(
+                key: ValueKey<String?>(_selectedPaymentType),
+                initialValue: _selectedPaymentType,
+                decoration: const InputDecoration(
+                  labelText: 'Payment type',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('All payment types'),
+                  ),
+                  DropdownMenuItem<String?>(
+                    value: 'Appointment',
+                    child: Text('Appointment'),
+                  ),
+                  DropdownMenuItem<String?>(
+                    value: 'Membership',
+                    child: Text('Membership'),
+                  ),
+                ],
+                onChanged: _viewModel.isLoading
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _selectedPaymentType = value;
+                        });
+                      },
               ),
             ),
             SizedBox(
               width: 150,
               child: TextField(
                 controller: _minimumAmountController,
+                enabled: !_viewModel.isLoading,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
@@ -202,6 +285,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
               width: 150,
               child: TextField(
                 controller: _maximumAmountController,
+                enabled: !_viewModel.isLoading,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
@@ -212,18 +296,22 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
               ),
             ),
             OutlinedButton.icon(
-              onPressed: () {
-                _selectDate(isFrom: true);
-              },
+              onPressed: _viewModel.isLoading
+                  ? null
+                  : () {
+                      _selectDate(isFrom: true);
+                    },
               icon: const Icon(Icons.date_range),
               label: Text(
                 _dateFrom == null ? 'Date from' : formatter.format(_dateFrom!),
               ),
             ),
             OutlinedButton.icon(
-              onPressed: () {
-                _selectDate(isFrom: false);
-              },
+              onPressed: _viewModel.isLoading
+                  ? null
+                  : () {
+                      _selectDate(isFrom: false);
+                    },
               icon: const Icon(Icons.event),
               label: Text(
                 _dateTo == null ? 'Date to' : formatter.format(_dateTo!),
@@ -260,12 +348,13 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
               Text(
                 _viewModel.error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
               const SizedBox(height: 12),
-              ElevatedButton(
+              ElevatedButton.icon(
                 onPressed: _viewModel.reload,
-                child: const Text('Try again'),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try again'),
               ),
             ],
           ),
@@ -281,15 +370,33 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
 
     return Column(
       children: [
+        if (_viewModel.error != null)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _viewModel.error!,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(
-              width: double.infinity,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
               child: DataTable(
                 columns: const [
                   DataColumn(label: Text('ID')),
-                  DataColumn(label: Text('Appointment')),
+                  DataColumn(label: Text('Payment type')),
+                  DataColumn(label: Text('Related item')),
+                  DataColumn(label: Text('Purpose')),
                   DataColumn(label: Text('Client')),
                   DataColumn(label: Text('Therapist')),
                   DataColumn(label: Text('Amount')),
@@ -302,7 +409,25 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
                       (payment) => DataRow(
                         cells: [
                           DataCell(Text(payment.id.toString())),
-                          DataCell(Text('#${payment.appointmentId}')),
+                          DataCell(Text(payment.paymentType)),
+                          DataCell(
+                            Text(
+                              payment.appointmentId != null
+                                  ? 'Appointment #${payment.appointmentId}'
+                                  : payment.membershipId != null
+                                  ? 'Membership #${payment.membershipId}'
+                                  : '-',
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: 190,
+                              child: Text(
+                                payment.purpose,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
                           DataCell(
                             Tooltip(
                               message: payment.clientEmail,
@@ -313,7 +438,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
                           DataCell(
                             Text(
                               '${payment.amount.toStringAsFixed(2)} '
-                              '${payment.currency}',
+                              '${payment.currency.toUpperCase()}',
                             ),
                           ),
                           DataCell(_PaymentStatusChip(status: payment.status)),
@@ -328,24 +453,20 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
                               children: [
                                 IconButton(
                                   tooltip: 'Details',
-                                  onPressed: () async {
-                                    await Navigator.of(context).pushNamed(
-                                      AppRouter.paymentManagementDetails,
-                                      arguments: payment.id,
-                                    );
-
-                                    await _viewModel.reload();
-                                  },
+                                  onPressed: _viewModel.isLoading
+                                      ? null
+                                      : () {
+                                          _openDetails(payment);
+                                        },
                                   icon: const Icon(Icons.visibility),
                                 ),
                                 IconButton(
                                   tooltip: 'Receipt',
-                                  onPressed: () {
-                                    Navigator.of(context).pushNamed(
-                                      AppRouter.paymentReceipt,
-                                      arguments: payment.id,
-                                    );
-                                  },
+                                  onPressed: _viewModel.isLoading
+                                      ? null
+                                      : () {
+                                          _openReceipt(payment);
+                                        },
                                   icon: const Icon(Icons.receipt_long),
                                 ),
                               ],
@@ -366,19 +487,23 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
               Text('${_viewModel.totalCount} payments'),
               const Spacer(),
               IconButton(
-                onPressed: _viewModel.pageNumber > 1
+                tooltip: 'Previous page',
+                onPressed: _viewModel.pageNumber > 1 && !_viewModel.isLoading
                     ? _viewModel.previousPage
                     : null,
                 icon: const Icon(Icons.chevron_left),
               ),
               Text(
-                'Page '
-                '${_viewModel.pageNumber} '
-                'of '
-                '${_viewModel.totalPages}',
+                _viewModel.totalPages == 0
+                    ? 'Page 0 of 0'
+                    : 'Page ${_viewModel.pageNumber} '
+                          'of ${_viewModel.totalPages}',
               ),
               IconButton(
-                onPressed: _viewModel.pageNumber < _viewModel.totalPages
+                tooltip: 'Next page',
+                onPressed:
+                    _viewModel.pageNumber < _viewModel.totalPages &&
+                        !_viewModel.isLoading
                     ? _viewModel.nextPage
                     : null,
                 icon: const Icon(Icons.chevron_right),
@@ -398,7 +523,7 @@ class _PaymentStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final normalized = status.toLowerCase();
+    final normalized = status.trim().toLowerCase();
 
     IconData icon;
 

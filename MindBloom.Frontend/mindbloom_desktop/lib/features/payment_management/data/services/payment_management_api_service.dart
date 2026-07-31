@@ -13,6 +13,7 @@ class PaymentManagementApiService {
     required int pageSize,
     String? search,
     int? status,
+    String? paymentType,
     DateTime? dateFrom,
     DateTime? dateTo,
     double? minimumAmount,
@@ -23,12 +24,20 @@ class PaymentManagementApiService {
       'PageSize': pageSize.toString(),
     };
 
-    if (search != null && search.trim().isNotEmpty) {
-      queryParameters['Search'] = search.trim();
+    final normalizedSearch = search?.trim() ?? '';
+
+    final normalizedPaymentType = paymentType?.trim() ?? '';
+
+    if (normalizedSearch.isNotEmpty) {
+      queryParameters['Search'] = normalizedSearch;
     }
 
     if (status != null) {
       queryParameters['Status'] = status.toString();
+    }
+
+    if (normalizedPaymentType.isNotEmpty) {
+      queryParameters['PaymentType'] = normalizedPaymentType;
     }
 
     if (dateFrom != null) {
@@ -47,40 +56,59 @@ class PaymentManagementApiService {
       queryParameters['MaximumAmount'] = maximumAmount.toString();
     }
 
-    final queryString = Uri(queryParameters: queryParameters).query;
+    final uri = Uri(path: '/Admin/payments', queryParameters: queryParameters);
 
-    final response = await apiClient.get('/Admin/payments?$queryString');
+    final response = await apiClient.get(uri.toString());
 
-    return AdminPaymentPagedResponse.fromJson(
-      Map<String, dynamic>.from(response as Map),
-    );
+    if (response is! Map<String, dynamic>) {
+      throw Exception('The server returned invalid payment data.');
+    }
+
+    return AdminPaymentPagedResponse.fromJson(response);
   }
 
-  Future<AdminPaymentDetailsModel> getPaymentDetails(int paymentId) async {
-    final response = await apiClient.get('/Admin/payments/$paymentId');
-
-    return AdminPaymentDetailsModel.fromJson(
-      Map<String, dynamic>.from(response as Map),
-    );
-  }
-
-  Future<AdminPaymentReceiptModel> getPaymentReceipt(int paymentId) async {
+  Future<AdminPaymentDetailsModel> getPaymentDetails({
+    required String paymentType,
+    required int paymentId,
+  }) async {
     final response = await apiClient.get(
       '/Admin/payments/'
+      '${Uri.encodeComponent(paymentType)}/'
+      '$paymentId',
+    );
+
+    if (response is! Map<String, dynamic>) {
+      throw Exception('The server returned invalid payment details.');
+    }
+
+    return AdminPaymentDetailsModel.fromJson(response);
+  }
+
+  Future<AdminPaymentReceiptModel> getPaymentReceipt({
+    required String paymentType,
+    required int paymentId,
+  }) async {
+    final response = await apiClient.get(
+      '/Admin/payments/'
+      '${Uri.encodeComponent(paymentType)}/'
       '$paymentId/receipt',
     );
 
-    return AdminPaymentReceiptModel.fromJson(
-      Map<String, dynamic>.from(response as Map),
-    );
+    if (response is! Map<String, dynamic>) {
+      throw Exception('The server returned invalid receipt data.');
+    }
+
+    return AdminPaymentReceiptModel.fromJson(response);
   }
 
   Future<void> refundPayment({
+    required String paymentType,
     required int paymentId,
     required String reason,
   }) async {
     await apiClient.put(
       '/Admin/payments/'
+      '${Uri.encodeComponent(paymentType)}/'
       '$paymentId/refund',
       body: {'reason': reason},
     );

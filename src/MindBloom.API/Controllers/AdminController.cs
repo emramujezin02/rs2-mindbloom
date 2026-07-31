@@ -292,39 +292,45 @@ public class AdminController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("payments/{paymentId}")]
+    [HttpGet(
+     "payments/{paymentType}/{paymentId:int}")]
     public async Task<IActionResult>
-        GetPaymentDetails(
-            int paymentId)
+     GetPaymentDetails(
+         string paymentType,
+         int paymentId)
     {
         var result =
             await _adminService
                 .GetPaymentDetailsAsync(
+                    paymentType,
                     paymentId);
 
         return Ok(result);
     }
 
     [HttpGet(
-        "payments/{paymentId}/receipt")]
+        "payments/{paymentType}/{paymentId:int}/receipt")]
     public async Task<IActionResult>
         GetPaymentReceipt(
-            int paymentId)
+           string paymentType,
+int paymentId)
     {
         var result =
             await _adminService
                 .GetPaymentReceiptAsync(
+                    paymentType,
                     paymentId);
 
         return Ok(result);
     }
 
     [HttpPut(
-        "payments/{paymentId}/refund")]
+        "payments/{paymentType}/{paymentId:int}/refund")]
     public async Task<IActionResult>
         RefundPayment(
-            int paymentId,
-            AdminRefundPaymentDto request)
+string paymentType,
+int paymentId,
+AdminRefundPaymentDto request)
     {
         var adminUserId =
             GetAuthenticatedUserId();
@@ -332,6 +338,7 @@ public class AdminController : ControllerBase
         await _adminService
             .RefundPaymentAsync(
                 adminUserId,
+                paymentType,
                 paymentId,
                 request);
 

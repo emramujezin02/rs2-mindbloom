@@ -3,12 +3,18 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../data/models/payment_route_arguments.dart';
 import '../viewmodels/payment_management_details_viewmodel.dart';
 
 class PaymentManagementDetailsPage extends StatefulWidget {
   final int paymentId;
+  final String paymentType;
 
-  const PaymentManagementDetailsPage({super.key, required this.paymentId});
+  const PaymentManagementDetailsPage({
+    super.key,
+    required this.paymentId,
+    required this.paymentType,
+  });
 
   @override
   State<PaymentManagementDetailsPage> createState() =>
@@ -26,12 +32,16 @@ class _PaymentManagementDetailsPageState
 
     _viewModel.addListener(_refresh);
 
-    _viewModel.load(widget.paymentId);
+    _viewModel.load(
+      paymentType: widget.paymentType,
+      paymentId: widget.paymentId,
+    );
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
+    _viewModel.dispose();
 
     super.dispose();
   }
@@ -42,9 +52,24 @@ class _PaymentManagementDetailsPageState
     }
   }
 
-  Future<void> _refundPayment() async {
-    final controller = TextEditingController();
+  Future<void> _openReceipt() async {
+    await Navigator.of(context).pushNamed(
+      AppRouter.paymentReceipt,
+      arguments: PaymentRouteArguments(
+        paymentId: widget.paymentId,
+        paymentType: widget.paymentType,
+      ),
+    );
+  }
 
+  Future<void> _refundPayment() async {
+    final payment = _viewModel.payment;
+
+    if (payment == null || !payment.canRefund) {
+      return;
+    }
+
+    final controller = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
     final reason = await showDialog<String>(
@@ -69,14 +94,18 @@ class _PaymentManagementDetailsPageState
                   alignLabelWithHint: true,
                 ),
                 validator: (value) {
-                  final reason = value?.trim() ?? '';
+                  final normalized = value?.trim() ?? '';
 
-                  if (reason.isEmpty) {
+                  if (normalized.isEmpty) {
                     return 'Refund reason is required.';
                   }
 
-                  if (reason.length < 5) {
+                  if (normalized.length < 5) {
                     return 'Reason must contain at least 5 characters.';
+                  }
+
+                  if (normalized.length > 500) {
+                    return 'Reason may contain at most 500 characters.';
                   }
 
                   return null;
@@ -118,10 +147,9 @@ class _PaymentManagementDetailsPageState
         return AlertDialog(
           title: const Text('Confirm Stripe refund'),
           content: const Text(
-            'This action will send a refund request '
-            'to Stripe for the actually charged amount. '
-            'The same payment cannot be refunded twice. '
-            'Do you want to continue?',
+            'This action will send a full refund request to Stripe '
+            'for the actually charged amount. The same payment cannot '
+            'be refunded twice. Do you want to continue?',
           ),
           actions: [
             TextButton(
@@ -147,6 +175,7 @@ class _PaymentManagementDetailsPageState
     }
 
     final success = await _viewModel.refund(
+      paymentType: widget.paymentType,
       paymentId: widget.paymentId,
       reason: reason,
     );
@@ -164,7 +193,7 @@ class _PaymentManagementDetailsPageState
 
   @override
   Widget build(BuildContext context) {
-    if (_viewModel.isLoading) {
+    if (_viewModel.isLoading && _viewModel.payment == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
@@ -176,9 +205,26 @@ class _PaymentManagementDetailsPageState
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text(
-              _viewModel.error ?? 'Payment could not be loaded.',
-              textAlign: TextAlign.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _viewModel.error ?? 'Payment could not be loaded.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    _viewModel.load(
+                      paymentType: widget.paymentType,
+                      paymentId: widget.paymentId,
+                    );
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Try again'),
+                ),
+              ],
             ),
           ),
         ),
@@ -189,15 +235,23 @@ class _PaymentManagementDetailsPageState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Payment #${payment.id}'),
+        title: Text('${payment.paymentType} payment #${payment.id}'),
         actions: [
           IconButton(
+            tooltip: 'Refresh',
+            onPressed: _viewModel.isLoading
+                ? null
+                : () {
+                    _viewModel.load(
+                      paymentType: widget.paymentType,
+                      paymentId: widget.paymentId,
+                    );
+                  },
+            icon: const Icon(Icons.refresh),
+          ),
+          IconButton(
             tooltip: 'Open receipt',
-            onPressed: () {
-              Navigator.of(
-                context,
-              ).pushNamed(AppRouter.paymentReceipt, arguments: payment.id);
-            },
+            onPressed: _openReceipt,
             icon: const Icon(Icons.receipt_long),
           ),
         ],
@@ -210,6 +264,23 @@ class _PaymentManagementDetailsPageState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (_viewModel.error != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _viewModel.error!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 Wrap(
                   spacing: 16,
                   runSpacing: 16,
@@ -218,10 +289,12 @@ class _PaymentManagementDetailsPageState
                       title: 'Payment',
                       rows: {
                         'Payment ID': payment.id.toString(),
+                        'Payment type': payment.paymentType,
+                        'Purpose': payment.purpose,
                         'Status': payment.status,
                         'Amount':
                             '${payment.amount.toStringAsFixed(2)} '
-                            '${payment.currency}',
+                            '${payment.currency.toUpperCase()}',
                         'Created': formatter.format(
                           payment.createdAtUtc.toLocal(),
                         ),
@@ -247,23 +320,52 @@ class _PaymentManagementDetailsPageState
                         'Therapist ID': payment.therapistId.toString(),
                       },
                     ),
+                    if (payment.isAppointmentPayment)
+                      _DetailsCard(
+                        title: 'Appointment',
+                        rows: {
+                          'Appointment ID':
+                              payment.appointmentId?.toString() ?? '-',
+                          'Status': payment.appointmentStatus ?? '-',
+                          'Type': payment.appointmentType ?? '-',
+                          'Start': payment.appointmentStartUtc == null
+                              ? '-'
+                              : formatter.format(
+                                  payment.appointmentStartUtc!.toLocal(),
+                                ),
+                          'End': payment.appointmentEndUtc == null
+                              ? '-'
+                              : formatter.format(
+                                  payment.appointmentEndUtc!.toLocal(),
+                                ),
+                          'Marked paid': payment.appointmentIsPaid == true
+                              ? 'Yes'
+                              : 'No',
+                        },
+                      ),
+                    if (payment.isMembershipPayment)
+                      _DetailsCard(
+                        title: 'Membership',
+                        rows: {
+                          'Membership ID':
+                              payment.membershipId?.toString() ?? '-',
+                          'Plan': payment.membershipPlanType ?? '-',
+                          'Total sessions':
+                              payment.totalSessions?.toString() ?? '-',
+                          'Remaining sessions':
+                              payment.remainingSessions?.toString() ?? '-',
+                          'Active': payment.membershipIsActive == true
+                              ? 'Yes'
+                              : 'No',
+                          'Expires': payment.membershipExpiresAtUtc == null
+                              ? '-'
+                              : formatter.format(
+                                  payment.membershipExpiresAtUtc!.toLocal(),
+                                ),
+                        },
+                      ),
                     _DetailsCard(
-                      title: 'Appointment',
-                      rows: {
-                        'Appointment ID': payment.appointmentId.toString(),
-                        'Status': payment.appointmentStatus,
-                        'Type': payment.appointmentType,
-                        'Start': formatter.format(
-                          payment.appointmentStartUtc.toLocal(),
-                        ),
-                        'End': formatter.format(
-                          payment.appointmentEndUtc.toLocal(),
-                        ),
-                        'Marked paid': payment.appointmentIsPaid ? 'Yes' : 'No',
-                      },
-                    ),
-                    _DetailsCard(
-                      title: 'Stripe',
+                      title: 'Provider',
                       rows: {
                         'Payment intent': payment.stripePaymentIntentId,
                         'Refund ID': payment.stripeRefundId ?? 'Not available',
@@ -283,21 +385,50 @@ class _PaymentManagementDetailsPageState
                             : formatter.format(
                                 payment.refundedAtUtc!.toLocal(),
                               ),
-                        'Failure': payment.refundFailureReason ?? 'None',
+                        'Provider failure':
+                            payment.refundFailureReason ?? 'None',
                       },
                     ),
                   ],
                 ),
+                if (!payment.canRefund &&
+                    payment.refundUnavailableReason != null &&
+                    payment.refundUnavailableReason!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            payment.refundUnavailableReason!,
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onErrorContainer,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 Row(
                   children: [
                     ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pushNamed(
-                          AppRouter.paymentReceipt,
-                          arguments: payment.id,
-                        );
-                      },
+                      onPressed: _openReceipt,
                       icon: const Icon(Icons.receipt_long),
                       label: const Text('View receipt'),
                     ),
@@ -319,36 +450,14 @@ class _PaymentManagementDetailsPageState
                         label: Text(
                           _viewModel.isRefunding
                               ? 'Processing refund...'
-                              : payment.status == 'RefundFailed'
+                              : payment.status.trim().toLowerCase() ==
+                                    'refundfailed'
                               ? 'Retry refund'
                               : 'Refund payment',
                         ),
                       ),
                   ],
                 ),
-                if (!payment.canRefund) ...[
-                  const SizedBox(height: 16),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.info_outline),
-                      title: const Text('Refund unavailable'),
-                      subtitle: Text(
-                        payment.status == 'Refunded'
-                            ? 'This payment has already been refunded.'
-                            : payment.status == 'RefundPending'
-                            ? 'A refund is already being processed.'
-                            : 'Only a paid payment may be refunded.',
-                      ),
-                    ),
-                  ),
-                ],
-                if (_viewModel.error != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    _viewModel.error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ],
               ],
             ),
           ),
@@ -360,7 +469,6 @@ class _PaymentManagementDetailsPageState
 
 class _DetailsCard extends StatelessWidget {
   final String title;
-
   final Map<String, String> rows;
 
   const _DetailsCard({required this.title, required this.rows});
@@ -390,7 +498,7 @@ class _DetailsCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(
-                        width: 110,
+                        width: 120,
                         child: Text(
                           entry.key,
                           style: const TextStyle(fontWeight: FontWeight.w600),

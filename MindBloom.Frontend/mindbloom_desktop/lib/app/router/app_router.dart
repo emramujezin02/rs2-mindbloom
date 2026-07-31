@@ -15,6 +15,7 @@ import '../../features/session/presentation/pages/session_gate_page.dart';
 import '../../features/therapist_verification/presentation/pages/therapist_verification_details_page.dart';
 import '../../features/workshop_management/presentation/pages/workshop_details_page.dart';
 import '../../features/workshop_management/presentation/pages/workshop_form_page.dart';
+import '../../features/payment_management/data/models/payment_route_arguments.dart';
 
 class AppRouter {
   static const String root = '/';
@@ -154,19 +155,22 @@ class AppRouter {
         );
 
       case paymentManagementDetails:
-        final paymentId = settings.arguments as int;
+        final arguments = settings.arguments as PaymentRouteArguments;
 
-        return _guardedRoute(
-          settings,
-          PaymentManagementDetailsPage(paymentId: paymentId),
+        return MaterialPageRoute(
+          builder: (_) => PaymentManagementDetailsPage(
+            paymentId: arguments.paymentId,
+            paymentType: arguments.paymentType,
+          ),
         );
-
       case paymentReceipt:
-        final paymentId = settings.arguments as int;
+        final arguments = settings.arguments as PaymentRouteArguments;
 
-        return _guardedRoute(
-          settings,
-          PaymentReceiptPage(paymentId: paymentId),
+        return MaterialPageRoute(
+          builder: (_) => PaymentReceiptPage(
+            paymentId: arguments.paymentId,
+            paymentType: arguments.paymentType,
+          ),
         );
 
       case membershipManagementDetails:
