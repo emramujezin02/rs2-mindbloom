@@ -579,4 +579,48 @@ AdminRefundPaymentDto request)
 
         return Ok(result);
     }
+
+    [HttpPut("reviews/{reviewId}/reject")]
+    public async Task<IActionResult>
+    RejectReview(
+        int reviewId,
+        RejectAdminReviewDto request)
+    {
+        var adminUserId =
+            GetAuthenticatedUserId();
+
+        await _adminService
+            .RejectReviewAsync(
+                adminUserId,
+                reviewId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                "Review rejected successfully."
+        });
+    }
+
+    [HttpPut("reviews/{reviewId}/hide")]
+    public async Task<IActionResult>
+    HideReview(
+        int reviewId,
+        HideAdminReviewDto request)
+    {
+        var adminUserId =
+            GetAuthenticatedUserId();
+
+        await _adminService
+            .HideReviewAsync(
+                adminUserId,
+                reviewId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                "Review hidden successfully."
+        });
+    }
 }

@@ -1,5 +1,6 @@
+import 'package:mindbloom_desktop/features/review_moderation/data/models/admin_review_details_model.dart';
+
 import '../../../../core/network/api_client.dart';
-import '../models/admin_review_details_model.dart';
 import '../models/admin_reviews_paged_response.dart';
 
 class ReviewModerationApiService {
@@ -12,8 +13,9 @@ class ReviewModerationApiService {
     required int pageSize,
     String? search,
     int? rating,
+    int? therapistId,
+    int? status,
     bool? hasTherapistReply,
-    bool? isDeleted,
   }) async {
     final parameters = <String, String>{
       'pageNumber': pageNumber.toString(),
@@ -30,12 +32,16 @@ class ReviewModerationApiService {
       parameters['rating'] = rating.toString();
     }
 
-    if (hasTherapistReply != null) {
-      parameters['hasTherapistReply'] = hasTherapistReply.toString();
+    if (therapistId != null) {
+      parameters['therapistId'] = therapistId.toString();
     }
 
-    if (isDeleted != null) {
-      parameters['isDeleted'] = isDeleted.toString();
+    if (status != null) {
+      parameters['status'] = status.toString();
+    }
+
+    if (hasTherapistReply != null) {
+      parameters['hasTherapistReply'] = hasTherapistReply.toString();
     }
 
     final uri = Uri(path: '/Admin/reviews', queryParameters: parameters);
@@ -49,16 +55,6 @@ class ReviewModerationApiService {
     return AdminReviewsPagedResponse.fromJson(response);
   }
 
-  Future<AdminReviewDetailsModel> getDetails(int reviewId) async {
-    final response = await apiClient.get('/Admin/reviews/$reviewId');
-
-    if (response is! Map<String, dynamic>) {
-      throw Exception('The server returned invalid review details.');
-    }
-
-    return AdminReviewDetailsModel.fromJson(response);
-  }
-
   Future<void> deleteReview({
     required int reviewId,
     required String reason,
@@ -67,5 +63,39 @@ class ReviewModerationApiService {
       '/Admin/reviews/$reviewId/delete',
       body: {'reason': reason},
     );
+  }
+
+  Future<void> approveReview(int reviewId) async {
+    await apiClient.put('/Admin/reviews/$reviewId/approve', body: const {});
+  }
+
+  Future<void> rejectReview({
+    required int reviewId,
+    required String reason,
+  }) async {
+    await apiClient.put(
+      '/Admin/reviews/$reviewId/reject',
+      body: {'reason': reason},
+    );
+  }
+
+  Future<void> hideReview({
+    required int reviewId,
+    required String reason,
+  }) async {
+    await apiClient.put(
+      '/Admin/reviews/$reviewId/hide',
+      body: {'reason': reason},
+    );
+  }
+
+  Future<AdminReviewDetailsModel> getDetails(int reviewId) async {
+    final response = await apiClient.get('/Admin/reviews/$reviewId');
+
+    if (response is! Map<String, dynamic>) {
+      throw Exception('The server returned invalid review details.');
+    }
+
+    return AdminReviewDetailsModel.fromJson(response);
   }
 }

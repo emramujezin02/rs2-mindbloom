@@ -10,7 +10,7 @@ class ReviewModerationDetailsViewModel extends ChangeNotifier {
 
   bool isLoading = false;
 
-  bool isDeleting = false;
+  bool isProcessing = false;
 
   String? errorMessage;
 
@@ -19,6 +19,7 @@ class ReviewModerationDetailsViewModel extends ChangeNotifier {
   Future<void> load(int reviewId) async {
     isLoading = true;
     errorMessage = null;
+
     notifyListeners();
 
     try {
@@ -27,26 +28,73 @@ class ReviewModerationDetailsViewModel extends ChangeNotifier {
       errorMessage = _cleanError(error);
     } finally {
       isLoading = false;
+
       notifyListeners();
     }
+  }
+
+  Future<bool> approveReview(int reviewId) async {
+    return _runAction(
+      reviewId: reviewId,
+      action: () {
+        return repository.approveReview(reviewId);
+      },
+    );
+  }
+
+  Future<bool> rejectReview({
+    required int reviewId,
+    required String reason,
+  }) async {
+    return _runAction(
+      reviewId: reviewId,
+      action: () {
+        return repository.rejectReview(reviewId: reviewId, reason: reason);
+      },
+    );
+  }
+
+  Future<bool> hideReview({
+    required int reviewId,
+    required String reason,
+  }) async {
+    return _runAction(
+      reviewId: reviewId,
+      action: () {
+        return repository.hideReview(reviewId: reviewId, reason: reason);
+      },
+    );
   }
 
   Future<bool> deleteReview({
     required int reviewId,
     required String reason,
   }) async {
-    if (isDeleting) {
+    return _runAction(
+      reviewId: reviewId,
+      action: () {
+        return repository.deleteReview(reviewId: reviewId, reason: reason);
+      },
+    );
+  }
+
+  Future<bool> _runAction({
+    required int reviewId,
+    required Future<void> Function() action,
+  }) async {
+    if (isProcessing) {
       return false;
     }
 
-    isDeleting = true;
+    isProcessing = true;
     errorMessage = null;
+
     notifyListeners();
 
     try {
-      await repository.deleteReview(reviewId: reviewId, reason: reason);
+      await action();
 
-      await load(reviewId);
+      review = await repository.getDetails(reviewId);
 
       return true;
     } catch (error) {
@@ -54,7 +102,8 @@ class ReviewModerationDetailsViewModel extends ChangeNotifier {
 
       return false;
     } finally {
-      isDeleting = false;
+      isProcessing = false;
+
       notifyListeners();
     }
   }

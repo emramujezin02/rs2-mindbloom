@@ -26,9 +26,11 @@ class ReviewModerationViewModel extends ChangeNotifier {
 
   int? currentRating;
 
-  bool? currentHasReply;
+  int? currentTherapistId;
 
-  bool? currentIsDeleted = false;
+  int? currentStatus;
+
+  bool? currentHasReply;
 
   bool get hasPreviousPage => pageNumber > 1;
 
@@ -41,6 +43,7 @@ class ReviewModerationViewModel extends ChangeNotifier {
 
     isLoading = true;
     errorMessage = null;
+
     notifyListeners();
 
     try {
@@ -49,8 +52,9 @@ class ReviewModerationViewModel extends ChangeNotifier {
         pageSize: pageSize,
         search: currentSearch,
         rating: currentRating,
+        therapistId: currentTherapistId,
+        status: currentStatus,
         hasTherapistReply: currentHasReply,
-        isDeleted: currentIsDeleted,
       );
 
       reviews = result.items;
@@ -66,6 +70,7 @@ class ReviewModerationViewModel extends ChangeNotifier {
       errorMessage = _cleanError(error);
     } finally {
       isLoading = false;
+
       notifyListeners();
     }
   }
@@ -73,16 +78,19 @@ class ReviewModerationViewModel extends ChangeNotifier {
   Future<void> applyFilters({
     required String search,
     int? rating,
+    int? therapistId,
+    int? status,
     bool? hasReply,
-    bool? isDeleted,
   }) {
     currentSearch = search.trim();
 
     currentRating = rating;
 
-    currentHasReply = hasReply;
+    currentTherapistId = therapistId;
 
-    currentIsDeleted = isDeleted;
+    currentStatus = status;
+
+    currentHasReply = hasReply;
 
     return load(page: 1);
   }
@@ -92,9 +100,11 @@ class ReviewModerationViewModel extends ChangeNotifier {
 
     currentRating = null;
 
-    currentHasReply = null;
+    currentTherapistId = null;
 
-    currentIsDeleted = false;
+    currentStatus = null;
+
+    currentHasReply = null;
 
     return load(page: 1);
   }

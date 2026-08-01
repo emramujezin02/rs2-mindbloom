@@ -32,6 +32,9 @@ class AdminReviewDetailsModel {
   final String? moderationReason;
 
   final DateTime? moderatedAtUtc;
+  final bool isApproved;
+
+  final String moderationStatus;
 
   final String? moderatedByAdminName;
 
@@ -56,6 +59,8 @@ class AdminReviewDetailsModel {
     required this.moderatedAtUtc,
     required this.moderatedByAdminName,
     required this.auditHistory,
+    required this.isApproved,
+    required this.moderationStatus,
   });
 
   factory AdminReviewDetailsModel.fromJson(Map<String, dynamic> json) {
@@ -72,6 +77,9 @@ class AdminReviewDetailsModel {
       therapistEmail: json['therapistEmail']?.toString() ?? '',
       rating: _toInt(json['rating']),
       comment: json['comment']?.toString() ?? '',
+      isApproved: json['isApproved'] == true,
+
+      moderationStatus: json['moderationStatus']?.toString() ?? 'Pending',
       createdAtUtc:
           DateTime.tryParse(json['createdAtUtc']?.toString() ?? '')?.toUtc() ??
           DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),

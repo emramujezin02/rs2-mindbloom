@@ -125,4 +125,14 @@ public interface IAdminService
     Task<List<AdminMembershipPlanAuditDto>>
         GetMembershipPlanHistoryAsync(
             int planId);
+
+    Task RejectReviewAsync(
+    int authenticatedAdminUserId,
+    int reviewId,
+    RejectAdminReviewDto request);
+
+    Task HideReviewAsync(
+        int authenticatedAdminUserId,
+        int reviewId,
+        HideAdminReviewDto request);
 }

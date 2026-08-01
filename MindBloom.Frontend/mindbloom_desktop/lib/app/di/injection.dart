@@ -1,5 +1,5 @@
 import 'package:mindbloom_desktop/features/reports/data/services/appointment_revenue_pdf_service.dart';
-import 'package:mindbloom_desktop/features/review_moderation/presentation/viewmodels/review_moderation_viremodel.dart';
+import 'package:mindbloom_desktop/features/review_moderation/presentation/viewmodels/review_moderation_viewmodel.dart';
 import 'package:mindbloom_desktop/features/workshop_management/presentation/pages/workshop_details_viewmodel.dart';
 
 import '../../core/network/api_client.dart';

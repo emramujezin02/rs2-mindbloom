@@ -1,4 +1,6 @@
-﻿namespace MindBloom.Application.Features.Admin.DTOs;
+﻿using MindBloom.Domain.Enums;
+
+namespace MindBloom.Application.Features.Admin.DTOs;
 
 public class SearchAdminReviewsDto
 {
@@ -42,4 +44,7 @@ public class SearchAdminReviewsDto
 
     public bool? IsDeleted { get; set; }
     public bool? IsApproved { get; set; }
+    public ReviewModerationStatus? Status { get; set; }
+
+    public int? TherapistId { get; set; }
 }

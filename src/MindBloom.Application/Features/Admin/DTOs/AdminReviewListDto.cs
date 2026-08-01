@@ -10,6 +10,8 @@ public class AdminReviewListDto
 
     public string ClientEmail { get; set; } = string.Empty;
 
+    public int TherapistId { get; set; }
+
     public string TherapistName { get; set; } = string.Empty;
 
     public string TherapistEmail { get; set; } = string.Empty;
@@ -23,6 +25,9 @@ public class AdminReviewListDto
     public bool IsDeleted { get; set; }
 
     public bool IsApproved { get; set; }
+
+    public string ModerationStatus { get; set; }
+        = string.Empty;
 
     public DateTime CreatedAtUtc { get; set; }
 

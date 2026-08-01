@@ -849,21 +849,19 @@ public class AdminService : IAdminService
     }
 
     public async Task<PagedResponse<AdminReviewListDto>>
-        GetReviewsAsync(
-            SearchAdminReviewsDto request)
+     GetReviewsAsync(
+         SearchAdminReviewsDto request)
     {
         var pagination =
-    PaginationHelper.Normalize(
-        request.PageNumber,
-        request.PageSize);
+            PaginationHelper.Normalize(
+                request.PageNumber,
+                request.PageSize);
 
         if (request.Rating.HasValue &&
-            (
-                request.Rating.Value < 1 ||
-                request.Rating.Value > 5
-            ))
+            (request.Rating.Value < 1 ||
+             request.Rating.Value > 5))
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Rating filter must be between 1 and 5.");
         }
 
@@ -876,7 +874,13 @@ public class AdminService : IAdminService
                     .ThenInclude(x => x.User)
                 .AsQueryable();
 
-        if (request.IsDeleted.HasValue)
+        if (request.Status.HasValue)
+        {
+            query = query.Where(x =>
+                x.ModerationStatus ==
+                request.Status.Value);
+        }
+        else if (request.IsDeleted.HasValue)
         {
             query = query.Where(x =>
                 x.IsDeleted ==
@@ -900,6 +904,13 @@ public class AdminService : IAdminService
             query = query.Where(x =>
                 x.Rating ==
                 request.Rating.Value);
+        }
+
+        if (request.TherapistId.HasValue)
+        {
+            query = query.Where(x =>
+                x.TherapistId ==
+                request.TherapistId.Value);
         }
 
         if (request.HasTherapistReply.HasValue)
@@ -959,14 +970,7 @@ public class AdminService : IAdminService
                 ||
                 x.Comment
                     .ToLower()
-                    .Contains(search)
-                ||
-                (
-                    x.TherapistReply
-                    ?? string.Empty
-                )
-                .ToLower()
-                .Contains(search));
+                    .Contains(search));
         }
 
         var totalCount =
@@ -978,10 +982,10 @@ public class AdminService : IAdminService
                     x.CreatedAtUtc)
                 .ThenByDescending(x =>
                     x.Id)
-.Skip(
-    pagination.Skip)
-.Take(
-    pagination.PageSize)
+                .Skip(
+                    pagination.Skip)
+                .Take(
+                    pagination.PageSize)
                 .Select(x =>
                     new AdminReviewListDto
                     {
@@ -1000,6 +1004,9 @@ public class AdminService : IAdminService
                             x.Client.User.Email
                             ?? string.Empty,
 
+                        TherapistId =
+                            x.TherapistId,
+
                         TherapistName =
                             x.Therapist.User.FirstName
                             + " "
@@ -1017,13 +1024,18 @@ public class AdminService : IAdminService
 
                         HasTherapistReply =
                             x.TherapistReply != null
-                            && x.TherapistReply !=
-                                string.Empty,
+                            &&
+                            x.TherapistReply != string.Empty,
 
                         IsDeleted =
                             x.IsDeleted,
 
-                        IsApproved = x.IsApproved,
+                        IsApproved =
+                            x.IsApproved,
+
+                        ModerationStatus =
+                            x.ModerationStatus
+                                .ToString(),
 
                         CreatedAtUtc =
                             x.CreatedAtUtc,
@@ -1427,6 +1439,9 @@ public class AdminService : IAdminService
                 review.IsDeleted,
 
             IsApproved = review.IsApproved,
+            ModerationStatus =
+    review.ModerationStatus
+        .ToString(),
 
             ModerationReason =
                 review.ModerationReason,
@@ -1474,15 +1489,17 @@ public class AdminService : IAdminService
     }
 
     public async Task ApproveReviewAsync(
-    int authenticatedAdminUserId,
-    int reviewId)
+     int authenticatedAdminUserId,
+     int reviewId)
     {
         var admin =
             await _context.Users
                 .FirstOrDefaultAsync(x =>
                     x.Id ==
-                        authenticatedAdminUserId &&
-                    !x.IsBlocked &&
+                        authenticatedAdminUserId
+                    &&
+                    !x.IsBlocked
+                    &&
                     x.IsActive);
 
         if (admin == null)
@@ -1495,6 +1512,7 @@ public class AdminService : IAdminService
             await _context.Reviews
                 .Include(x => x.Client)
                     .ThenInclude(x => x.User)
+                .Include(x => x.Appointment)
                 .FirstOrDefaultAsync(x =>
                     x.Id == reviewId);
 
@@ -1506,13 +1524,62 @@ public class AdminService : IAdminService
 
         if (review.IsDeleted)
         {
-            throw new Exception(
-                "A deleted review cannot be approved.");
+            throw new BusinessException(
+                "A removed review cannot be approved.");
         }
 
-        if (review.IsApproved)
+        if (review.ModerationStatus ==
+            ReviewModerationStatus.Approved)
         {
-            return;
+            throw new BusinessException(
+                "This review has already been approved.");
+        }
+
+        if (review.Rating < 1 ||
+            review.Rating > 5)
+        {
+            throw new BusinessException(
+                "A review with an invalid rating cannot be approved.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                review.Comment))
+        {
+            throw new BusinessException(
+                "A review without a comment cannot be approved.");
+        }
+
+        if (review.Comment.Trim().Length < 3)
+        {
+            throw new BusinessException(
+                "The review comment is too short to be approved.");
+        }
+
+        if (review.Appointment == null)
+        {
+            throw new BusinessException(
+                "The review is not linked to a valid appointment.");
+        }
+
+        if (review.Appointment.Status !=
+            AppointmentStatus.Completed)
+        {
+            throw new BusinessException(
+                "Only reviews linked to completed appointments can be approved.");
+        }
+
+        if (review.Appointment.ClientId !=
+            review.ClientId)
+        {
+            throw new BusinessException(
+                "The review client does not match the appointment client.");
+        }
+
+        if (review.Appointment.TherapistId !=
+            review.TherapistId)
+        {
+            throw new BusinessException(
+                "The review therapist does not match the appointment therapist.");
         }
 
         var now =
@@ -1527,6 +1594,12 @@ public class AdminService : IAdminService
             review.IsApproved =
                 true;
 
+            review.IsDeleted =
+                false;
+
+            review.ModerationStatus =
+                ReviewModerationStatus.Approved;
+
             review.ModeratedByUserId =
                 authenticatedAdminUserId;
 
@@ -1539,7 +1612,7 @@ public class AdminService : IAdminService
             review.UpdatedAtUtc =
                 now;
 
-            var audit =
+            _context.ReviewModerationAudits.Add(
                 new ReviewModerationAudit
                 {
                     ReviewId =
@@ -1549,19 +1622,14 @@ public class AdminService : IAdminService
                         authenticatedAdminUserId,
 
                     Action =
-                        ReviewModerationAction
-                            .Approved,
+                        ReviewModerationAction.Approved,
 
                     Reason =
                         "Approved for public display.",
 
                     PerformedAtUtc =
                         now
-                };
-
-            _context
-                .ReviewModerationAudits
-                .Add(audit);
+                });
 
             await _context.SaveChangesAsync();
 
@@ -1570,7 +1638,6 @@ public class AdminService : IAdminService
         catch
         {
             await transaction.RollbackAsync();
-
             throw;
         }
 
@@ -1579,7 +1646,7 @@ public class AdminService : IAdminService
                 review.Client.UserId,
                 "Review approved",
                 "Your review has been approved "
-                + "for public display.",
+                + "and is now visible publicly.",
                 actionType:
                     NotificationActionType.Review,
                 resourceId:
@@ -1656,6 +1723,9 @@ public class AdminService : IAdminService
             review.IsDeleted = true;
 
             review.IsApproved = false;
+
+            review.ModerationStatus =
+    ReviewModerationStatus.Hidden;
 
             review.ModerationReason = reason;
 
@@ -5003,6 +5073,337 @@ new Notification
             UpdatedAtUtc =
                 plan.UpdatedAtUtc
         };
+    }
+
+    public async Task RejectReviewAsync(
+    int authenticatedAdminUserId,
+    int reviewId,
+    RejectAdminReviewDto request)
+    {
+        var reason =
+            request.Reason?.Trim()
+            ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new BadRequestException(
+                "Rejection reason is required.");
+        }
+
+        if (reason.Length < 5)
+        {
+            throw new BadRequestException(
+                "Rejection reason must contain at least 5 characters.");
+        }
+
+        if (reason.Length > 1000)
+        {
+            throw new BadRequestException(
+                "Rejection reason may contain at most 1000 characters.");
+        }
+
+        var admin =
+            await _context.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Id == authenticatedAdminUserId
+                    &&
+                    !x.IsBlocked
+                    &&
+                    x.IsActive);
+
+        if (admin == null)
+        {
+            throw new NotFoundException(
+                "Administrator not found.");
+        }
+
+        var review =
+            await _context.Reviews
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == reviewId);
+
+        if (review == null)
+        {
+            throw new NotFoundException(
+                "Review not found.");
+        }
+
+        if (review.IsDeleted)
+        {
+            throw new BusinessException(
+                "A removed review cannot be rejected.");
+        }
+
+        if (review.ModerationStatus ==
+            ReviewModerationStatus.Approved)
+        {
+            throw new BusinessException(
+                "An approved review cannot be rejected. Hide it instead.");
+        }
+
+        if (review.ModerationStatus ==
+            ReviewModerationStatus.Rejected)
+        {
+            throw new BusinessException(
+                "This review has already been rejected.");
+        }
+
+        var now =
+            DateTime.UtcNow;
+
+        await using var transaction =
+            await _context.Database
+                .BeginTransactionAsync();
+
+        try
+        {
+            review.IsApproved =
+                false;
+
+            review.IsDeleted =
+                false;
+
+            review.ModerationStatus =
+                ReviewModerationStatus.Rejected;
+
+            review.ModeratedByUserId =
+                authenticatedAdminUserId;
+
+            review.ModeratedAtUtc =
+                now;
+
+            review.ModerationReason =
+                reason;
+
+            review.UpdatedAtUtc =
+                now;
+
+            _context.ReviewModerationAudits.Add(
+                new ReviewModerationAudit
+                {
+                    ReviewId =
+                        review.Id,
+
+                    AdminUserId =
+                        authenticatedAdminUserId,
+
+                    Action =
+                        ReviewModerationAction.Rejected,
+
+                    Reason =
+                        reason,
+
+                    PerformedAtUtc =
+                        now
+                });
+
+            _context.Notifications.Add(
+                new Notification
+                {
+                    UserId =
+                        review.Client.UserId,
+
+                    ActionType =
+                        NotificationActionType.Review,
+
+                    ResourceId =
+                        review.Id,
+
+                    Title =
+                        "Review rejected",
+
+                    Message =
+                        "Your review was rejected. "
+                        + $"Reason: {reason}",
+
+                    IsRead =
+                        false,
+
+                    SentAtUtc =
+                        now
+                });
+
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+        await _notificationSender
+            .SendToUserAsync(
+                review.Client.UserId,
+                "Review rejected",
+                "Your review was rejected. "
+                + $"Reason: {reason}");
+    }
+
+    public async Task HideReviewAsync(
+    int authenticatedAdminUserId,
+    int reviewId,
+    HideAdminReviewDto request)
+    {
+        var reason =
+            request.Reason?.Trim()
+            ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new BadRequestException(
+                "Hide reason is required.");
+        }
+
+        if (reason.Length < 5)
+        {
+            throw new BadRequestException(
+                "Hide reason must contain at least 5 characters.");
+        }
+
+        if (reason.Length > 1000)
+        {
+            throw new BadRequestException(
+                "Hide reason may contain at most 1000 characters.");
+        }
+
+        var admin =
+            await _context.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Id == authenticatedAdminUserId
+                    &&
+                    !x.IsBlocked
+                    &&
+                    x.IsActive);
+
+        if (admin == null)
+        {
+            throw new NotFoundException(
+                "Administrator not found.");
+        }
+
+        var review =
+            await _context.Reviews
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == reviewId);
+
+        if (review == null)
+        {
+            throw new NotFoundException(
+                "Review not found.");
+        }
+
+        if (review.IsDeleted)
+        {
+            throw new BusinessException(
+                "A removed review cannot be hidden.");
+        }
+
+        if (review.ModerationStatus !=
+            ReviewModerationStatus.Approved)
+        {
+            throw new BusinessException(
+                "Only an approved review can be hidden.");
+        }
+
+        var now =
+            DateTime.UtcNow;
+
+        await using var transaction =
+            await _context.Database
+                .BeginTransactionAsync();
+
+        try
+        {
+            review.IsApproved =
+                false;
+
+            review.IsDeleted =
+                false;
+
+            review.ModerationStatus =
+                ReviewModerationStatus.Hidden;
+
+            review.ModeratedByUserId =
+                authenticatedAdminUserId;
+
+            review.ModeratedAtUtc =
+                now;
+
+            review.ModerationReason =
+                reason;
+
+            review.UpdatedAtUtc =
+                now;
+
+            _context.ReviewModerationAudits.Add(
+                new ReviewModerationAudit
+                {
+                    ReviewId =
+                        review.Id,
+
+                    AdminUserId =
+                        authenticatedAdminUserId,
+
+                    Action =
+                        ReviewModerationAction.Hidden,
+
+                    Reason =
+                        reason,
+
+                    PerformedAtUtc =
+                        now
+                });
+
+            _context.Notifications.Add(
+                new Notification
+                {
+                    UserId =
+                        review.Client.UserId,
+
+                    ActionType =
+                        NotificationActionType.Review,
+
+                    ResourceId =
+                        review.Id,
+
+                    Title =
+                        "Review hidden",
+
+                    Message =
+                        "Your previously published review "
+                        + "has been hidden by an administrator. "
+                        + $"Reason: {reason}",
+
+                    IsRead =
+                        false,
+
+                    SentAtUtc =
+                        now
+                });
+
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+        await _notificationSender
+            .SendToUserAsync(
+                review.Client.UserId,
+                "Review hidden",
+                "Your previously published review "
+                + "has been hidden by an administrator. "
+                + $"Reason: {reason}");
     }
 
     private void AddMembershipPlanAudit(

@@ -12,21 +12,35 @@ class ReviewModerationRepository {
     required int pageSize,
     String? search,
     int? rating,
+    int? therapistId,
+    int? status,
     bool? hasTherapistReply,
-    bool? isDeleted,
   }) {
     return apiService.getReviews(
       pageNumber: pageNumber,
       pageSize: pageSize,
       search: search,
       rating: rating,
+      therapistId: therapistId,
+      status: status,
       hasTherapistReply: hasTherapistReply,
-      isDeleted: isDeleted,
     );
   }
 
   Future<AdminReviewDetailsModel> getDetails(int reviewId) {
     return apiService.getDetails(reviewId);
+  }
+
+  Future<void> approveReview(int reviewId) {
+    return apiService.approveReview(reviewId);
+  }
+
+  Future<void> rejectReview({required int reviewId, required String reason}) {
+    return apiService.rejectReview(reviewId: reviewId, reason: reason);
+  }
+
+  Future<void> hideReview({required int reviewId, required String reason}) {
+    return apiService.hideReview(reviewId: reviewId, reason: reason);
   }
 
   Future<void> deleteReview({required int reviewId, required String reason}) {

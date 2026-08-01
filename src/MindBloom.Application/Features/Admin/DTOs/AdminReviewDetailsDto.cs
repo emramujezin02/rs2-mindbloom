@@ -37,6 +37,8 @@ public class AdminReviewDetailsDto
     public DateTime? ModeratedAtUtc { get; set; }
 
     public string? ModeratedByAdminName { get; set; }
+    public string ModerationStatus { get; set; }
+    = string.Empty;
 
     public List<ReviewModerationAuditDto>
         AuditHistory

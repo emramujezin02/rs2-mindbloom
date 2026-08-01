@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mindbloom_desktop/features/review_moderation/presentation/viewmodels/review_moderation_viremodel.dart';
+import 'package:mindbloom_desktop/features/review_moderation/presentation/viewmodels/review_moderation_viewmodel.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
@@ -18,11 +18,13 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
 
   final TextEditingController _searchController = TextEditingController();
 
+  final TextEditingController _therapistIdController = TextEditingController();
+
   int? _selectedRating;
 
-  String _selectedReply = 'all';
+  int? _selectedStatus;
 
-  String _selectedStatus = 'active';
+  String _selectedReply = 'all';
 
   @override
   void initState() {
@@ -40,6 +42,8 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
     _viewModel.dispose();
 
     _searchController.dispose();
+
+    _therapistIdController.dispose();
 
     super.dispose();
   }
@@ -63,35 +67,45 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
     }
   }
 
-  bool? _deletedFilter() {
-    switch (_selectedStatus) {
-      case 'active':
-        return false;
+  int? _therapistIdFilter() {
+    final value = _therapistIdController.text.trim();
 
-      case 'deleted':
-        return true;
-
-      default:
-        return null;
+    if (value.isEmpty) {
+      return null;
     }
+
+    return int.tryParse(value);
   }
 
-  Future<void> _applyFilters() {
-    return _viewModel.applyFilters(
+  Future<void> _applyFilters() async {
+    final therapistText = _therapistIdController.text.trim();
+
+    if (therapistText.isNotEmpty && int.tryParse(therapistText) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Therapist ID must be a valid number.')),
+      );
+
+      return;
+    }
+
+    await _viewModel.applyFilters(
       search: _searchController.text,
       rating: _selectedRating,
+      therapistId: _therapistIdFilter(),
+      status: _selectedStatus,
       hasReply: _replyFilter(),
-      isDeleted: _deletedFilter(),
     );
   }
 
   Future<void> _clearFilters() async {
     _searchController.clear();
 
+    _therapistIdController.clear();
+
     setState(() {
       _selectedRating = null;
+      _selectedStatus = null;
       _selectedReply = 'all';
-      _selectedStatus = 'active';
     });
 
     await _viewModel.clearFilters();
@@ -133,39 +147,84 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
         padding: const EdgeInsets.all(18),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final compact = constraints.maxWidth < 1000;
+            final compact = constraints.maxWidth < 1150;
 
             final search = TextField(
               controller: _searchController,
+              enabled: !_viewModel.isLoading,
               onSubmitted: (_) {
                 _applyFilters();
               },
               decoration: const InputDecoration(
                 labelText: 'Search reviews',
-                hintText: 'Client, therapist, email or comment',
+                hintText: 'Client name, email, therapist or comment',
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(),
               ),
             );
 
-            final rating = DropdownButtonFormField<int>(
+            final therapist = TextField(
+              controller: _therapistIdController,
+              enabled: !_viewModel.isLoading,
+              keyboardType: TextInputType.number,
+              onSubmitted: (_) {
+                _applyFilters();
+              },
+              decoration: const InputDecoration(
+                labelText: 'Therapist ID',
+                prefixIcon: Icon(Icons.person_search),
+                border: OutlineInputBorder(),
+              ),
+            );
+
+            final rating = DropdownButtonFormField<int?>(
+              key: ValueKey<int?>(_selectedRating),
               initialValue: _selectedRating,
               decoration: const InputDecoration(
                 labelText: 'Rating',
                 border: OutlineInputBorder(),
               ),
               items: const [
-                DropdownMenuItem(value: 1, child: Text('1 star')),
-                DropdownMenuItem(value: 2, child: Text('2 stars')),
-                DropdownMenuItem(value: 3, child: Text('3 stars')),
-                DropdownMenuItem(value: 4, child: Text('4 stars')),
-                DropdownMenuItem(value: 5, child: Text('5 stars')),
+                DropdownMenuItem<int?>(value: null, child: Text('All ratings')),
+                DropdownMenuItem<int?>(value: 1, child: Text('1 star')),
+                DropdownMenuItem<int?>(value: 2, child: Text('2 stars')),
+                DropdownMenuItem<int?>(value: 3, child: Text('3 stars')),
+                DropdownMenuItem<int?>(value: 4, child: Text('4 stars')),
+                DropdownMenuItem<int?>(value: 5, child: Text('5 stars')),
               ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedRating = value;
-                });
-              },
+              onChanged: _viewModel.isLoading
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _selectedRating = value;
+                      });
+                    },
+            );
+
+            final status = DropdownButtonFormField<int?>(
+              key: ValueKey<int?>(_selectedStatus),
+              initialValue: _selectedStatus,
+              decoration: const InputDecoration(
+                labelText: 'Moderation status',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('All statuses'),
+                ),
+                DropdownMenuItem<int?>(value: 1, child: Text('Pending')),
+                DropdownMenuItem<int?>(value: 2, child: Text('Approved')),
+                DropdownMenuItem<int?>(value: 3, child: Text('Rejected')),
+                DropdownMenuItem<int?>(value: 4, child: Text('Hidden')),
+              ],
+              onChanged: _viewModel.isLoading
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _selectedStatus = value;
+                      });
+                    },
             );
 
             final reply = DropdownButtonFormField<String>(
@@ -179,29 +238,13 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
                 DropdownMenuItem(value: 'replied', child: Text('Has reply')),
                 DropdownMenuItem(value: 'notReplied', child: Text('No reply')),
               ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedReply = value ?? 'all';
-                });
-              },
-            );
-
-            final status = DropdownButtonFormField<String>(
-              initialValue: _selectedStatus,
-              decoration: const InputDecoration(
-                labelText: 'Status',
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'active', child: Text('Active')),
-                DropdownMenuItem(value: 'deleted', child: Text('Removed')),
-                DropdownMenuItem(value: 'all', child: Text('All statuses')),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedStatus = value ?? 'active';
-                });
-              },
+              onChanged: _viewModel.isLoading
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _selectedReply = value ?? 'all';
+                      });
+                    },
             );
 
             final actions = Row(
@@ -210,7 +253,7 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
                   child: ElevatedButton.icon(
                     onPressed: _viewModel.isLoading ? null : _applyFilters,
                     icon: const Icon(Icons.search),
-                    label: const Text('Search'),
+                    label: const Text('Apply'),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -225,17 +268,16 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
             );
 
             if (compact) {
-              return Column(
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
                 children: [
-                  search,
-                  const SizedBox(height: 12),
-                  rating,
-                  const SizedBox(height: 12),
-                  reply,
-                  const SizedBox(height: 12),
-                  status,
-                  const SizedBox(height: 12),
-                  actions,
+                  SizedBox(width: 320, child: search),
+                  SizedBox(width: 180, child: therapist),
+                  SizedBox(width: 180, child: rating),
+                  SizedBox(width: 220, child: status),
+                  SizedBox(width: 200, child: reply),
+                  SizedBox(width: 260, child: actions),
                 ],
               );
             }
@@ -244,13 +286,15 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
               children: [
                 Expanded(flex: 3, child: search),
                 const SizedBox(width: 12),
-                Expanded(child: rating),
+                Expanded(child: therapist),
                 const SizedBox(width: 12),
-                Expanded(child: reply),
+                Expanded(child: rating),
                 const SizedBox(width: 12),
                 Expanded(child: status),
                 const SizedBox(width: 12),
-                SizedBox(width: 260, child: actions),
+                Expanded(child: reply),
+                const SizedBox(width: 12),
+                SizedBox(width: 250, child: actions),
               ],
             );
           },
@@ -275,7 +319,7 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       itemCount: _viewModel.reviews.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final review = _viewModel.reviews[index];
 
@@ -290,7 +334,9 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CircleAvatar(child: Text(review.rating.toString())),
+
                   const SizedBox(width: 16),
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,23 +345,29 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
                           children: [
                             Expanded(
                               child: Text(
-                                '${review.clientName} → ${review.therapistName}',
+                                '${review.clientName} → '
+                                '${review.therapistName}',
                                 style: const TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
+
                             _RatingStars(rating: review.rating),
                           ],
                         ),
+
                         const SizedBox(height: 8),
+
                         Text(
                           review.comment,
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
+
                         const SizedBox(height: 10),
+
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
@@ -324,6 +376,17 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
                             Text(
                               formatter.format(review.createdAtUtc.toLocal()),
                             ),
+
+                            Chip(
+                              avatar: const Icon(Icons.person, size: 17),
+                              label: Text('Therapist #${review.therapistId}'),
+                              visualDensity: VisualDensity.compact,
+                            ),
+
+                            _ModerationStatusChip(
+                              status: review.moderationStatus,
+                            ),
+
                             Chip(
                               label: Text(
                                 review.hasTherapistReply
@@ -332,18 +395,14 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
                               ),
                               visualDensity: VisualDensity.compact,
                             ),
-                            Chip(
-                              label: Text(
-                                review.isDeleted ? 'Removed' : 'Active',
-                              ),
-                              visualDensity: VisualDensity.compact,
-                            ),
                           ],
                         ),
                       ],
                     ),
                   ),
+
                   const SizedBox(width: 12),
+
                   const Icon(Icons.chevron_right),
                 ],
               ),
@@ -360,9 +419,13 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
       child: Row(
         children: [
           Text('${_viewModel.totalCount} reviews'),
+
           const Spacer(),
+
           const Text('Rows per page:'),
+
           const SizedBox(width: 8),
+
           DropdownButton<int>(
             value: _viewModel.pageSize,
             items: const [
@@ -378,19 +441,23 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
                     }
                   },
           ),
+
           const SizedBox(width: 18),
+
           Text(
             _viewModel.totalPages == 0
                 ? 'Page 0 of 0'
                 : 'Page ${_viewModel.pageNumber} '
                       'of ${_viewModel.totalPages}',
           ),
+
           IconButton(
             onPressed: _viewModel.hasPreviousPage && !_viewModel.isLoading
                 ? _viewModel.previousPage
                 : null,
             icon: const Icon(Icons.chevron_left),
           ),
+
           IconButton(
             onPressed: _viewModel.hasNextPage && !_viewModel.isLoading
                 ? _viewModel.nextPage
@@ -407,9 +474,13 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(24, 0, 24, 12),
       padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Text(
         _viewModel.errorMessage!,
-        style: const TextStyle(color: Colors.red),
+        style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
       ),
     );
   }
@@ -429,6 +500,43 @@ class _RatingStars extends StatelessWidget {
         (index) =>
             Icon(index < rating ? Icons.star : Icons.star_border, size: 19),
       ),
+    );
+  }
+}
+
+class _ModerationStatusChip extends StatelessWidget {
+  final String status;
+
+  const _ModerationStatusChip({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = status.trim().toLowerCase();
+
+    IconData icon;
+
+    switch (normalized) {
+      case 'approved':
+        icon = Icons.check_circle;
+        break;
+
+      case 'rejected':
+        icon = Icons.cancel;
+        break;
+
+      case 'hidden':
+        icon = Icons.visibility_off;
+        break;
+
+      default:
+        icon = Icons.hourglass_top;
+        break;
+    }
+
+    return Chip(
+      avatar: Icon(icon, size: 17),
+      label: Text(status),
+      visualDensity: VisualDensity.compact,
     );
   }
 }

@@ -1,4 +1,6 @@
-﻿namespace MindBloom.Domain.Entities;
+﻿using MindBloom.Domain.Enums;
+
+namespace MindBloom.Domain.Entities;
 
 public class Review : BaseEntity
 {
@@ -29,6 +31,8 @@ public class Review : BaseEntity
     public ApplicationUser? ModeratedByUser { get; set; }
 
     public string? ModerationReason { get; set; }
+    public ReviewModerationStatus ModerationStatus { get; set; }
+    = ReviewModerationStatus.Pending;
 
     public DateTime? ModeratedAtUtc { get; set; }
 

@@ -76,14 +76,28 @@ public class ReviewService : IReviewService
             "A review has already been submitted for this appointment.");
 
         var review = new Review
-            {
-                ClientId = client.Id,
-                TherapistId = appointment.TherapistId,
-                AppointmentId = appointment.Id,
-                Rating = request.Rating,
-                Comment = request.Comment.Trim(),
-                IsApproved = false
-            };
+        {
+            ClientId =
+                client.Id,
+
+            TherapistId =
+                appointment.TherapistId,
+
+            AppointmentId =
+                appointment.Id,
+
+            Rating =
+                request.Rating,
+
+            Comment =
+                request.Comment.Trim(),
+
+            IsApproved =
+                false,
+
+            ModerationStatus =
+                ReviewModerationStatus.Pending
+        };
 
         _context.Reviews.Add(review);
 
@@ -121,18 +135,20 @@ public class ReviewService : IReviewService
                     .ThenInclude(x => x.User)
                 .Include(x => x.Therapist)
                     .ThenInclude(x => x.User)
-                .Where(x =>
-                    x.IsApproved &&
-                    !x.IsDeleted &&
-                    !x.Client.IsDeleted &&
-                    !x.Therapist.IsDeleted &&
-                    !x.Client.User.IsBlocked &&
-                    x.Client.User.IsActive &&
-                    !x.Therapist.User.IsBlocked &&
-                    x.Therapist.User.IsActive &&
-                    x.Therapist.VerificationStatus ==
-                        TherapistVerificationStatus
-                            .Approved)
+.Where(x =>
+    x.IsApproved &&
+    !x.IsDeleted &&
+    x.ModerationStatus ==
+        ReviewModerationStatus.Approved &&
+    !x.Client.IsDeleted &&
+    !x.Therapist.IsDeleted &&
+    !x.Client.User.IsBlocked &&
+    x.Client.User.IsActive &&
+    !x.Therapist.User.IsBlocked &&
+    x.Therapist.User.IsActive &&
+    x.Therapist.VerificationStatus ==
+        TherapistVerificationStatus
+            .Approved)
                 .OrderByDescending(x =>
                     x.CreatedAtUtc)
                 .ThenByDescending(x =>
@@ -216,10 +232,12 @@ public class ReviewService : IReviewService
                 .AsNoTracking()
                 .Include(x => x.Client)
                     .ThenInclude(x => x.User)
-.Where(x =>
-    x.TherapistId == therapistId &&
-    x.IsApproved &&
-    !x.IsDeleted);
+                .Where(x =>
+                    x.TherapistId == therapistId &&
+                    x.IsApproved &&
+                    !x.IsDeleted &&
+                    x.ModerationStatus ==
+                        ReviewModerationStatus.Approved);
 
         query = filter.SortBy switch
         {
@@ -303,7 +321,12 @@ public class ReviewService : IReviewService
     {
         var reviews =
             await _context.Reviews
-                .Where(x => x.TherapistId == therapistId && x.IsApproved && !x.IsDeleted)
+                .Where(x =>
+                    x.TherapistId == therapistId &&
+                    x.IsApproved &&
+                    !x.IsDeleted &&
+                    x.ModerationStatus ==
+                        ReviewModerationStatus.Approved)
                 .ToListAsync();
 
         if (!reviews.Any())
@@ -388,11 +411,11 @@ public class ReviewService : IReviewService
                 .Where(x =>
                     x.AppointmentId == appointmentId &&
                     !x.IsDeleted)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.IsApproved
-                })
+.Select(x => new
+{
+    x.Id,
+    x.ModerationStatus
+})
                 .FirstOrDefaultAsync();
 
         if (existingReview != null)
@@ -404,9 +427,8 @@ public class ReviewService : IReviewService
                 ExistingReviewId =
                     existingReview.Id,
                 ModerationStatus =
-                    existingReview.IsApproved
-                        ? "Approved"
-                        : "Pending moderation",
+    existingReview.ModerationStatus
+        .ToString(),
                 Message =
                     "A review has already been submitted for this appointment."
             };
@@ -506,7 +528,13 @@ public class ReviewService : IReviewService
             request.Comment.Trim();
 
         review.IsApproved =
-    false;
+            false;
+
+        review.IsDeleted =
+            false;
+
+        review.ModerationStatus =
+            ReviewModerationStatus.Pending;
 
         review.ModeratedByUserId =
             null;
@@ -598,9 +626,8 @@ new ClientReviewDto
         x.IsApproved,
 
     ModerationStatus =
-        x.IsApproved
-            ? "Approved"
-            : "Pending moderation",
+    x.ModerationStatus
+        .ToString(),
 
     CanEdit =
         true,
