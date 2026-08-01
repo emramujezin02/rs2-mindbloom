@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
+import '../../data/models/article_category_model.dart';
 import '../../data/models/article_management_model.dart';
 import '../../data/repositories/article_management_repository.dart';
 
@@ -11,6 +11,7 @@ class ArticleManagementViewModel extends ChangeNotifier {
   ArticleManagementViewModel({required this.repository});
 
   final List<ArticleManagementModel> articles = [];
+  final List<ArticleCategoryModel> categories = [];
 
   Timer? _searchDebounce;
 
@@ -21,6 +22,7 @@ class ArticleManagementViewModel extends ChangeNotifier {
 
   String search = '';
   bool? publishedFilter;
+  int? categoryFilter;
 
   int pageNumber = 1;
   int pageSize = 10;
@@ -33,6 +35,20 @@ class ArticleManagementViewModel extends ChangeNotifier {
 
   bool get canGoNext {
     return pageNumber < totalPages;
+  }
+
+  Future<void> loadCategories() async {
+    try {
+      final result = await repository.getCategories();
+
+      categories
+        ..clear()
+        ..addAll(result);
+    } catch (error) {
+      errorMessage = error.toString();
+    }
+
+    notifyListeners();
   }
 
   Future<void> loadArticles({int? requestedPage}) async {
@@ -51,6 +67,7 @@ class ArticleManagementViewModel extends ChangeNotifier {
         pageSize: pageSize,
         search: search,
         isPublished: publishedFilter,
+        articleCategoryId: categoryFilter,
       );
 
       articles
@@ -86,6 +103,12 @@ class ArticleManagementViewModel extends ChangeNotifier {
     _searchDebounce?.cancel();
 
     search = '';
+
+    await loadArticles(requestedPage: 1);
+  }
+
+  Future<void> updateCategoryFilter(int? value) async {
+    categoryFilter = value;
 
     await loadArticles(requestedPage: 1);
   }

@@ -1,13 +1,26 @@
 class ArticleManagementModel {
   final int id;
+
   final String title;
+
   final String description;
+
   final String content;
+
   final String imageUrl;
+
   final int authorUserId;
+
   final int? therapistId;
+
   final String authorName;
-  final DateTime publishedAtUtc;
+
+  final int? articleCategoryId;
+
+  final String articleCategoryName;
+
+  final DateTime? publishedAtUtc;
+
   final bool isPublished;
 
   const ArticleManagementModel({
@@ -19,22 +32,56 @@ class ArticleManagementModel {
     required this.authorUserId,
     required this.therapistId,
     required this.authorName,
+    required this.articleCategoryId,
+    required this.articleCategoryName,
     required this.publishedAtUtc,
     required this.isPublished,
   });
 
   factory ArticleManagementModel.fromJson(Map<String, dynamic> json) {
     return ArticleManagementModel(
-      id: json['id'] ?? 0,
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      content: json['content'] ?? '',
-      imageUrl: json['imageUrl'] ?? '',
-      authorUserId: json['authorUserId'] ?? 0,
-      therapistId: json['therapistId'],
-      authorName: json['authorName'] ?? '',
-      publishedAtUtc: DateTime.parse(json['publishedAtUtc']),
-      isPublished: json['isPublished'] ?? false,
+      id: _toInt(json['id']),
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      content: json['content']?.toString() ?? '',
+      imageUrl: json['imageUrl']?.toString() ?? '',
+      authorUserId: _toInt(json['authorUserId']),
+      therapistId: _toNullableInt(json['therapistId']),
+      authorName: json['authorName']?.toString() ?? '',
+      articleCategoryId: _toNullableInt(json['articleCategoryId']),
+      articleCategoryName: json['articleCategoryName']?.toString() ?? '',
+      publishedAtUtc: json['publishedAtUtc'] == null
+          ? null
+          : DateTime.tryParse(json['publishedAtUtc'].toString())?.toUtc(),
+      isPublished: json['isPublished'] == true,
     );
+  }
+
+  static int _toInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static int? _toNullableInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value.toString());
   }
 }

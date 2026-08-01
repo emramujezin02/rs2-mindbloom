@@ -48,4 +48,8 @@ public interface IArticleService
         int authorUserId,
         bool isAdmin,
         int articleId);
+
+    Task<ArticleImageUploadDto>
+    UploadImageAsync(
+        IFormFile file);
 }

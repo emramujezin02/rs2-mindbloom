@@ -26,7 +26,7 @@ public class Article : BaseEntity
 
     public ArticleCategory? ArticleCategory { get; set; }
 
-    public DateTime PublishedAtUtc { get; set; }
+    public DateTime? PublishedAtUtc { get; set; }
 
     public bool IsPublished { get; set; } = true;
 }

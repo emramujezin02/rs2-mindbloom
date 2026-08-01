@@ -23,7 +23,7 @@ public class ArticleResponseDto
     public string AuthorName { get; set; } =
         string.Empty;
 
-    public DateTime PublishedAtUtc { get; set; }
+    public DateTime? PublishedAtUtc { get; set; }
 
     public bool IsPublished { get; set; }
 

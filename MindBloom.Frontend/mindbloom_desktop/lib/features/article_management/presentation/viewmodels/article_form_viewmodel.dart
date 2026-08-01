@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mindbloom_desktop/features/article_management/data/models/article_from_request.dart';
-
+import 'package:mindbloom_desktop/features/article_management/data/models/article_form_request.dart';
+import '../../data/models/article_category_model.dart';
 import '../../data/models/article_management_model.dart';
 import '../../data/repositories/article_management_repository.dart';
 
@@ -10,9 +10,11 @@ class ArticleFormViewModel extends ChangeNotifier {
   ArticleFormViewModel({required this.repository});
 
   ArticleManagementModel? article;
+  final List<ArticleCategoryModel> categories = [];
 
   bool isLoading = false;
   bool isSaving = false;
+  bool isUploadingImage = false;
 
   String? errorMessage;
 
@@ -36,12 +38,56 @@ class ArticleFormViewModel extends ChangeNotifier {
     }
   }
 
+  Future<bool> loadCategories() async {
+    try {
+      final result = await repository.getCategories();
+
+      categories
+        ..clear()
+        ..addAll(result);
+
+      notifyListeners();
+
+      return true;
+    } catch (error) {
+      errorMessage = error.toString();
+
+      notifyListeners();
+
+      return false;
+    }
+  }
+
+  Future<String?> uploadImage(String filePath) async {
+    if (isUploadingImage) {
+      return null;
+    }
+
+    isUploadingImage = true;
+    errorMessage = null;
+
+    notifyListeners();
+
+    try {
+      return await repository.uploadArticleImage(filePath);
+    } catch (error) {
+      errorMessage = _cleanError(error);
+
+      return null;
+    } finally {
+      isUploadingImage = false;
+
+      notifyListeners();
+    }
+  }
+
   Future<bool> saveArticle({
     int? articleId,
     required String title,
     required String description,
     required String content,
     required String imageUrl,
+    required int articleCategoryId,
     required bool isPublished,
   }) async {
     if (isSaving) {
@@ -60,6 +106,7 @@ class ArticleFormViewModel extends ChangeNotifier {
         content: content,
         imageUrl: imageUrl.trim().isEmpty ? null : imageUrl.trim(),
         isPublished: isPublished,
+        articleCategoryId: articleCategoryId,
       );
 
       if (articleId == null) {
@@ -77,5 +124,15 @@ class ArticleFormViewModel extends ChangeNotifier {
       isSaving = false;
       notifyListeners();
     }
+  }
+
+  String _cleanError(Object error) {
+    var value = error.toString();
+
+    if (value.startsWith('Exception: ')) {
+      value = value.substring('Exception: '.length);
+    }
+
+    return value;
   }
 }

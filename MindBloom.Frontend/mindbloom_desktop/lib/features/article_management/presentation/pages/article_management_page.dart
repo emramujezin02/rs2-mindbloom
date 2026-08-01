@@ -26,6 +26,7 @@ class _ArticleManagementPageState extends State<ArticleManagementPage> {
 
     _viewModel.addListener(_onViewModelChanged);
 
+    _viewModel.loadCategories();
     _viewModel.loadArticles();
   }
 
@@ -285,6 +286,33 @@ class _ArticleManagementPageState extends State<ArticleManagementPage> {
           ),
         ),
         SizedBox(
+          width: 220,
+          child: DropdownButtonFormField<int?>(
+            initialValue: _viewModel.categoryFilter,
+            decoration: const InputDecoration(
+              labelText: 'Article category',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem<int?>(
+                value: null,
+                child: Text('All categories'),
+              ),
+              ..._viewModel.categories.map(
+                (category) => DropdownMenuItem<int?>(
+                  value: category.id,
+                  child: Text(category.name),
+                ),
+              ),
+            ],
+            onChanged: _viewModel.isLoading
+                ? null
+                : (value) {
+                    _viewModel.updateCategoryFilter(value);
+                  },
+          ),
+        ),
+        SizedBox(
           width: 130,
           child: DropdownButtonFormField<int>(
             initialValue: _viewModel.pageSize,
@@ -340,6 +368,7 @@ class _ArticleManagementPageState extends State<ArticleManagementPage> {
               DataColumn(label: Text('Image')),
               DataColumn(label: Text('Title')),
               DataColumn(label: Text('Author')),
+              DataColumn(label: Text('Category')),
               DataColumn(label: Text('Status')),
               DataColumn(label: Text('Published')),
               DataColumn(label: Text('Actions')),
@@ -382,6 +411,13 @@ class _ArticleManagementPageState extends State<ArticleManagementPage> {
         ),
         DataCell(Text(article.authorName)),
         DataCell(
+          Text(
+            article.articleCategoryName.isEmpty
+                ? '—'
+                : article.articleCategoryName,
+          ),
+        ),
+        DataCell(
           Chip(
             label: Text(article.isPublished ? 'Published' : 'Unpublished'),
             avatar: Icon(
@@ -390,7 +426,13 @@ class _ArticleManagementPageState extends State<ArticleManagementPage> {
             ),
           ),
         ),
-        DataCell(Text(formatter.format(article.publishedAtUtc.toLocal()))),
+        DataCell(
+          Text(
+            article.publishedAtUtc == null
+                ? '—'
+                : formatter.format(article.publishedAtUtc!.toLocal()),
+          ),
+        ),
         DataCell(
           Row(
             mainAxisSize: MainAxisSize.min,

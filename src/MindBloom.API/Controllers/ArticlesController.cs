@@ -219,4 +219,18 @@ public class ArticlesController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpPost("image")]
+    [Authorize(Roles = "Admin")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ArticleImageUploadDto>>
+    UploadImage(
+        IFormFile file)
+    {
+        var result =
+            await _articleService
+                .UploadImageAsync(file);
+
+        return Ok(result);
+    }
 }

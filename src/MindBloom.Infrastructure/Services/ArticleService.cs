@@ -6,6 +6,9 @@ using MindBloom.Application.Features.Articles.DTOs;
 using MindBloom.Application.Features.Articles.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
+using System;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -14,7 +17,8 @@ public class ArticleService : IArticleService
     private readonly ApplicationDbContext _context;
 
     public ArticleService(
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+            IWebHostEnvironment environment)
     {
         _context = context;
     }
@@ -174,6 +178,14 @@ public class ArticleService : IArticleService
                     query.IsPublished.Value);
         }
 
+        if (query.ArticleCategoryId.HasValue)
+        {
+            articles =
+                articles.Where(x =>
+                    x.ArticleCategoryId ==
+                    query.ArticleCategoryId.Value);
+        }
+
         return await CreatePagedResponseAsync(
             articles,
             pagination);
@@ -271,10 +283,12 @@ public class ArticleService : IArticleService
                     category.Id,
 
                 PublishedAtUtc =
-                    DateTime.UtcNow,
+    request.IsPublished
+        ? DateTime.UtcNow
+        : null,
 
                 IsPublished =
-                    request.IsPublished
+    request.IsPublished
             };
 
         _context.Articles.Add(article);
@@ -588,6 +602,173 @@ public class ArticleService : IArticleService
             ArticleCategoryName =
                 article.ArticleCategory?.Name
                 ?? string.Empty
+        };
+    }
+
+    public async Task<ArticleImageUploadDto>
+    UploadImageAsync(
+        IFormFile file)
+    {
+        if (file == null ||
+            file.Length == 0)
+        {
+            throw new Exception(
+                "Article image is required.");
+        }
+
+        const long maximumFileSize =
+            5 * 1024 * 1024;
+
+        if (file.Length > maximumFileSize)
+        {
+            throw new Exception(
+                "Article image may not exceed 5 MB.");
+        }
+
+        var extension =
+            Path.GetExtension(file.FileName)
+                .ToLowerInvariant();
+
+        var allowedExtensions =
+            new HashSet<string>
+            {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+            };
+
+        if (!allowedExtensions.Contains(
+                extension))
+        {
+            throw new Exception(
+                "Only JPG, JPEG, PNG and WEBP images are allowed.");
+        }
+
+        var allowedContentTypes =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+            };
+
+        if (!allowedContentTypes.Contains(
+                file.ContentType))
+        {
+            throw new Exception(
+                "Invalid image content type.");
+        }
+
+        await using var validationStream =
+            file.OpenReadStream();
+
+        var header = new byte[12];
+
+        var bytesRead =
+            await validationStream.ReadAsync(
+                header.AsMemory(
+                    0,
+                    header.Length));
+
+        if (bytesRead < 4)
+        {
+            throw new Exception(
+                "Invalid image file.");
+        }
+
+        var isJpeg =
+            header[0] == 0xFF &&
+            header[1] == 0xD8 &&
+            header[2] == 0xFF;
+
+        var isPng =
+            bytesRead >= 8 &&
+            header[0] == 0x89 &&
+            header[1] == 0x50 &&
+            header[2] == 0x4E &&
+            header[3] == 0x47 &&
+            header[4] == 0x0D &&
+            header[5] == 0x0A &&
+            header[6] == 0x1A &&
+            header[7] == 0x0A;
+
+        var isWebp =
+            bytesRead >= 12 &&
+            header[0] == 0x52 &&
+            header[1] == 0x49 &&
+            header[2] == 0x46 &&
+            header[3] == 0x46 &&
+            header[8] == 0x57 &&
+            header[9] == 0x45 &&
+            header[10] == 0x42 &&
+            header[11] == 0x50;
+
+        var signatureMatchesExtension =
+            extension switch
+            {
+                ".jpg" or ".jpeg" =>
+                    isJpeg,
+
+                ".png" =>
+                    isPng,
+
+                ".webp" =>
+                    isWebp,
+
+                _ => false
+            };
+
+        if (!signatureMatchesExtension)
+        {
+            throw new Exception(
+                "The uploaded file is not a valid image.");
+        }
+
+        var webRootPath =
+            environment.WebRootPath;
+
+        if (string.IsNullOrWhiteSpace(
+                webRootPath))
+        {
+            webRootPath =
+                Path.Combine(
+                    environment.ContentRootPath,
+                    "wwwroot");
+        }
+
+        var uploadDirectory =
+            Path.Combine(
+                webRootPath,
+                "uploads",
+                "articles");
+
+        Directory.CreateDirectory(
+            uploadDirectory);
+
+        var safeFileName =
+            $"{Guid.NewGuid():N}{extension}";
+
+        var physicalPath =
+            Path.Combine(
+                uploadDirectory,
+                safeFileName);
+
+        await using (
+            var outputStream =
+                new FileStream(
+                    physicalPath,
+                    FileMode.CreateNew))
+        {
+            await file.CopyToAsync(
+                outputStream);
+        }
+
+        return new ArticleImageUploadDto
+        {
+            ImageUrl =
+                $"/uploads/articles/{safeFileName}"
         };
     }
 }

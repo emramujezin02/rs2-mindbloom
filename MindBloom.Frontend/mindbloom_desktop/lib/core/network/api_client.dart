@@ -43,6 +43,34 @@ class ApiClient {
     );
   }
 
+  Future<dynamic> postMultipartFile(
+    String endpoint, {
+    required String filePath,
+    String fieldName = 'file',
+    bool requiresAuth = true,
+  }) {
+    return _executeRequest(
+      requiresAuth: requiresAuth,
+      request: () async {
+        final request = http.MultipartRequest('POST', _buildUri(endpoint));
+
+        final headers = await _buildHeaders(requiresAuth: requiresAuth);
+
+        headers.remove('Content-Type');
+
+        request.headers.addAll(headers);
+
+        request.files.add(
+          await http.MultipartFile.fromPath(fieldName, filePath),
+        );
+
+        final streamedResponse = await request.send();
+
+        return http.Response.fromStream(streamedResponse);
+      },
+    );
+  }
+
   Future<dynamic> put(
     String endpoint, {
     Object? body,

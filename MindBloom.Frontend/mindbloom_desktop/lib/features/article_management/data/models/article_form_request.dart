@@ -1,8 +1,14 @@
 class ArticleFormRequest {
   final String title;
+
   final String description;
+
   final String content;
+
   final String? imageUrl;
+
+  final int articleCategoryId;
+
   final bool isPublished;
 
   const ArticleFormRequest({
@@ -10,6 +16,7 @@ class ArticleFormRequest {
     required this.description,
     required this.content,
     required this.imageUrl,
+    required this.articleCategoryId,
     required this.isPublished,
   });
 
@@ -21,6 +28,7 @@ class ArticleFormRequest {
       'imageUrl': imageUrl == null || imageUrl!.trim().isEmpty
           ? null
           : imageUrl!.trim(),
+      'articleCategoryId': articleCategoryId,
       'isPublished': isPublished,
     };
   }

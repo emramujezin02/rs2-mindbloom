@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-
+import 'article_preview_page.dart';
 import '../../../../app/di/injection.dart';
 import '../viewmodels/article_form_viewmodel.dart';
+import 'package:file_picker/file_picker.dart';
+import '../../../../core/constants/api_constants.dart';
 
 class ArticleFormPage extends StatefulWidget {
   final int? articleId;
@@ -29,7 +31,8 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
 
   final TextEditingController _imageUrlController = TextEditingController();
 
-  bool _isPublished = true;
+  bool _isPublished = false;
+  int? _selectedCategoryId;
   bool _formInitialized = false;
 
   @override
@@ -42,11 +45,47 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
 
     _imageUrlController.addListener(_onImageUrlChanged);
 
-    if (widget.articleId != null) {
-      _loadArticle();
-    } else {
-      _formInitialized = true;
+    _initialize();
+  }
+
+  void _openPreview() {
+    final selectedCategory = _viewModel.categories
+        .where((category) => category.id == _selectedCategoryId)
+        .firstOrNull;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ArticlePreviewPage(
+          title: _titleController.text,
+          description: _descriptionController.text,
+          content: _contentController.text,
+          imageUrl: _imageUrlController.text,
+          categoryName: selectedCategory?.name ?? '',
+          isPublished: _isPublished,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _initialize() async {
+    final categoriesLoaded = await _viewModel.loadCategories();
+
+    if (!categoriesLoaded || !mounted) {
+      return;
     }
+
+    if (widget.articleId != null) {
+      await _loadArticle();
+      return;
+    }
+
+    if (_viewModel.categories.isNotEmpty) {
+      _selectedCategoryId = _viewModel.categories.first.id;
+    }
+
+    _formInitialized = true;
+
+    setState(() {});
   }
 
   Future<void> _loadArticle() async {
@@ -69,7 +108,7 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
     _contentController.text = article.content;
 
     _imageUrlController.text = article.imageUrl;
-
+    _selectedCategoryId = article.articleCategoryId;
     _isPublished = article.isPublished;
 
     _formInitialized = true;
@@ -103,8 +142,79 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
     super.dispose();
   }
 
+  Future<void> _pickAndUploadImage() async {
+    if (_viewModel.isUploadingImage) {
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+      allowMultiple: false,
+      withData: false,
+    );
+
+    if (result == null || result.files.isEmpty || !mounted) {
+      return;
+    }
+
+    final selectedFile = result.files.single;
+
+    final filePath = selectedFile.path;
+
+    if (filePath == null || filePath.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The selected file could not be read.')),
+      );
+
+      return;
+    }
+
+    const maximumFileSize = 5 * 1024 * 1024;
+
+    if (selectedFile.size > maximumFileSize) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Article image may not exceed 5 MB.')),
+      );
+
+      return;
+    }
+
+    final imageUrl = await _viewModel.uploadImage(filePath);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (imageUrl == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_viewModel.errorMessage ?? 'Image upload failed.'),
+        ),
+      );
+
+      return;
+    }
+
+    _imageUrlController.text = imageUrl;
+
+    setState(() {});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Article image uploaded successfully.')),
+    );
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_selectedCategoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select an article category.')),
+      );
+
       return;
     }
 
@@ -115,6 +225,7 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
       content: _contentController.text,
       imageUrl: _imageUrlController.text,
       isPublished: _isPublished,
+      articleCategoryId: _selectedCategoryId!,
     );
 
     if (!mounted) {
@@ -185,33 +296,6 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
 
     if (normalized.length > 20000) {
       return 'Content may contain at most 20000 characters.';
-    }
-
-    return null;
-  }
-
-  String? _validateImageUrl(String? value) {
-    final normalized = value?.trim() ?? '';
-
-    if (normalized.isEmpty) {
-      return null;
-    }
-
-    if (normalized.length > 1000) {
-      return 'Image URL may contain at most 1000 characters.';
-    }
-
-    final uri = Uri.tryParse(normalized);
-
-    final isAbsoluteHttp =
-        uri != null &&
-        uri.hasScheme &&
-        (uri.scheme == 'http' || uri.scheme == 'https');
-
-    final isRelative = normalized.startsWith('/');
-
-    if (!isAbsoluteHttp && !isRelative) {
-      return 'Enter an HTTP/HTTPS URL or a relative application path.';
     }
 
     return null;
@@ -294,6 +378,37 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
 
                 const SizedBox(height: 16),
 
+                DropdownButtonFormField<int>(
+                  initialValue: _selectedCategoryId,
+                  decoration: const InputDecoration(
+                    labelText: 'Article category',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _viewModel.categories
+                      .map(
+                        (category) => DropdownMenuItem<int>(
+                          value: category.id,
+                          child: Text(category.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _viewModel.isSaving
+                      ? null
+                      : (value) {
+                          setState(() {
+                            _selectedCategoryId = value;
+                          });
+                        },
+                  validator: (value) {
+                    if (value == null) {
+                      return 'Article category is required.';
+                    }
+
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _contentController,
                   minLines: 12,
@@ -309,24 +424,62 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
 
                 const SizedBox(height: 16),
 
-                TextFormField(
-                  controller: _imageUrlController,
-                  maxLength: 1000,
-                  decoration: const InputDecoration(
-                    labelText: 'Image URL',
-                    hintText: 'https://example.com/image.jpg',
-                    prefixIcon: Icon(Icons.image_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: _validateImageUrl,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _imageUrlController.text.trim().isEmpty
+                                ? 'No cover image uploaded.'
+                                : 'Cover image uploaded.',
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        OutlinedButton.icon(
+                          onPressed:
+                              _viewModel.isSaving || _viewModel.isUploadingImage
+                              ? null
+                              : _pickAndUploadImage,
+                          icon: _viewModel.isUploadingImage
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.upload_file),
+                          label: Text(
+                            _viewModel.isUploadingImage
+                                ? 'Uploading...'
+                                : _imageUrlController.text.trim().isEmpty
+                                ? 'Upload cover image'
+                                : 'Replace image',
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    if (_imageUrlController.text.trim().isNotEmpty) ...[
+                      const SizedBox(height: 16),
+
+                      _ImagePreview(imageUrl: _imageUrlController.text.trim()),
+
+                      const SizedBox(height: 8),
+
+                      Text(
+                        _imageUrlController.text,
+                        style: Theme.of(context).textTheme.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
                 ),
-
-                if (_imageUrlController.text.trim().isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _ImagePreview(imageUrl: _imageUrlController.text.trim()),
-                  const SizedBox(height: 16),
-                ],
-
                 SwitchListTile(
                   value: _isPublished,
                   onChanged: (value) {
@@ -365,22 +518,27 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
                       child: const Text('Cancel'),
                     ),
                     const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: _viewModel.isSaving ? null : _save,
-                      icon: _viewModel.isSaving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.save),
-                      label: Text(
-                        _viewModel.isSaving
-                            ? 'Saving...'
-                            : widget.isEditing
-                            ? 'Save changes'
-                            : 'Create article',
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _viewModel.isSaving ? null : _openPreview,
+                          icon: const Icon(Icons.visibility_outlined),
+                          label: const Text('Preview'),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        ElevatedButton.icon(
+                          onPressed: _viewModel.isSaving ? null : _save,
+                          icon: const Icon(Icons.save),
+                          label: Text(
+                            widget.articleId == null
+                                ? 'Create article'
+                                : 'Save changes',
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -400,10 +558,31 @@ class _ImagePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalizedUrl = imageUrl.trim();
+
+    final String resolvedUrl;
+
+    if (normalizedUrl.startsWith('http://') ||
+        normalizedUrl.startsWith('https://')) {
+      resolvedUrl = normalizedUrl;
+    } else {
+      final apiUri = Uri.parse(ApiConstants.apiBaseUrl);
+
+      resolvedUrl = apiUri
+          .replace(
+            path: normalizedUrl.startsWith('/')
+                ? normalizedUrl
+                : '/$normalizedUrl',
+            query: null,
+            fragment: null,
+          )
+          .toString();
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Image.network(
-        imageUrl,
+        resolvedUrl,
         height: 260,
         width: double.infinity,
         fit: BoxFit.cover,

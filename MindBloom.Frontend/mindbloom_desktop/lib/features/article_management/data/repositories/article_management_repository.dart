@@ -1,5 +1,5 @@
-import 'package:mindbloom_desktop/features/article_management/data/models/article_from_request.dart';
-
+import 'package:mindbloom_desktop/features/article_management/data/models/article_form_request.dart';
+import '../models/article_category_model.dart';
 import '../models/article_management_model.dart';
 import '../models/article_paged_response.dart';
 import '../services/article_management_api_service.dart';
@@ -14,13 +14,19 @@ class ArticleManagementRepository {
     required int pageSize,
     String? search,
     bool? isPublished,
+    int? articleCategoryId,
   }) {
     return apiService.getArticles(
       pageNumber: pageNumber,
       pageSize: pageSize,
       search: search,
       isPublished: isPublished,
+      articleCategoryId: articleCategoryId,
     );
+  }
+
+  Future<List<ArticleCategoryModel>> getCategories() {
+    return apiService.getCategories();
   }
 
   Future<ArticleManagementModel> getArticle(int articleId) {
@@ -50,5 +56,9 @@ class ArticleManagementRepository {
 
   Future<void> deleteArticle(int articleId) {
     return apiService.deleteArticle(articleId);
+  }
+
+  Future<String> uploadArticleImage(String filePath) {
+    return apiService.uploadArticleImage(filePath);
   }
 }
