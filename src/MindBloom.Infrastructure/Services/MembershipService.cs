@@ -45,11 +45,12 @@ public class MembershipService : IMembershipService
         var therapist =
             await _context.Therapists
                 .AsNoTracking()
+                .Include(x => x.User)
                 .FirstOrDefaultAsync(x =>
-                    x.Id == therapistId &&
-                    !x.IsDeleted &&
-                    !x.User.IsBlocked &&
-                    x.User.IsActive);
+                    x.Id == therapistId
+                    && !x.IsDeleted
+                    && !x.User.IsBlocked
+                    && x.User.IsActive);
 
         if (therapist == null)
         {
@@ -57,47 +58,65 @@ public class MembershipService : IMembershipService
                 "Therapist not found.");
         }
 
-        var sessionPrice =
-            therapist.HourlyRate;
-
-        if (sessionPrice <= 0)
-        {
-            throw new BusinessException(
-                "Therapist session price is invalid.");
-        }
-
-        var plans = new List<MembershipPlanDto>
-    {
-        CreatePlan(
-            MembershipPlanType.TenSessions,
-            "10 sessions package",
-            "A starter package for regular therapy sessions.",
-            totalSessions: 10,
-            freeSessions: 1,
-            sessionPrice: sessionPrice,
-            isActive: true),
-
-        CreatePlan(
-            MembershipPlanType.TwentySessions,
-            "20 sessions package",
-            "A larger package for continued therapeutic work.",
-            totalSessions: 20,
-            freeSessions: 2,
-            sessionPrice: sessionPrice,
-            isActive: true),
-
-        CreatePlan(
-            MembershipPlanType.ThirtySessions,
-            "30 sessions package",
-            "The largest package with the highest included benefit.",
-            totalSessions: 30,
-            freeSessions: 3,
-            sessionPrice: sessionPrice,
-            isActive: true)
-    };
+        var plans =
+            await _context.MembershipPlans
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted
+                    && x.IsActive)
+                .OrderBy(x =>
+                    x.IncludedSessions)
+                .ThenBy(x =>
+                    x.Price)
+                .ToListAsync();
 
         return plans
-            .Where(x => x.IsActive)
+            .Select(plan =>
+            {
+                var benefits =
+                    DeserializeBenefits(
+                        plan.BenefitsJson);
+
+                return new MembershipPlanDto
+                {
+                    PlanType =
+                        plan.PlanType,
+
+                    Name =
+                        plan.Name,
+
+                    Description =
+                        plan.Description,
+
+                    TotalSessions =
+                        plan.IncludedSessions,
+
+                    FreeSessions =
+                        CalculateFreeSessions(
+                            plan.IncludedSessions,
+                            plan.DiscountPercentage),
+
+                    Price =
+                        plan.Price,
+
+                    PricePerSession =
+                        plan.IncludedSessions <= 0
+                            ? 0
+                            : decimal.Round(
+                                plan.Price
+                                / plan.IncludedSessions,
+                                2),
+
+                    DurationMonths =
+                        plan.DurationMonths,
+
+                    IsActive =
+                        plan.IsActive,
+
+                    Benefits =
+                        benefits
+                };
+            })
             .ToList();
     }
 
@@ -225,19 +244,18 @@ public class MembershipService : IMembershipService
         }
 
         var plan =
-            CreatePlan(
-                request.PlanType,
-                GetPlanName(
-                    request.PlanType),
-                GetPlanDescription(
-                    request.PlanType),
-                GetTotalSessions(
-                    request.PlanType),
-                GetFreeSessions(
-                    request.PlanType),
-                therapist.HourlyRate,
-                IsPlanActive(
-                    request.PlanType));
+            await _context.MembershipPlans
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.PlanType ==
+                        request.PlanType
+                    && !x.IsDeleted);
+
+        if (plan == null)
+        {
+            throw new NotFoundException(
+                "Membership plan not found.");
+        }
 
         BusinessRuleGuard.Against(
             !plan.IsActive,
@@ -245,8 +263,20 @@ public class MembershipService : IMembershipService
 
         if (plan.Price <= 0)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Membership price is invalid.");
+        }
+
+        if (plan.IncludedSessions <= 0)
+        {
+            throw new BusinessException(
+                "Membership plan must include at least one session.");
+        }
+
+        if (plan.DurationMonths <= 0)
+        {
+            throw new BusinessException(
+                "Membership duration is invalid.");
         }
 
         var membership =
@@ -262,7 +292,7 @@ public class MembershipService : IMembershipService
                     request.PlanType,
 
                 TotalSessions =
-                    plan.TotalSessions,
+    plan.IncludedSessions,
 
                 RemainingSessions =
                     0,
@@ -277,7 +307,10 @@ public class MembershipService : IMembershipService
                     null,
 
                 ExpiresAtUtc =
-                    null
+                    null,
+
+                DurationMonths =
+    plan.DurationMonths,
             };
 
         _context.ClientMemberships.Add(
@@ -587,9 +620,15 @@ public class MembershipService : IMembershipService
         membership.PurchasedAtUtc =
             DateTime.UtcNow;
 
+        if (membership.DurationMonths <= 0)
+        {
+            throw new BusinessException(
+                "Membership duration is invalid.");
+        }
+
         membership.ExpiresAtUtc =
             DateTime.UtcNow.AddMonths(
-                MembershipDurationMonths);
+                membership.DurationMonths);
 
         await _context.SaveChangesAsync();
 
@@ -1578,5 +1617,45 @@ public class MembershipService : IMembershipService
             _ =>
                 "Membership package"
         };
+    }
+
+    private static List<string>
+    DeserializeBenefits(
+        string? benefitsJson)
+    {
+        if (string.IsNullOrWhiteSpace(
+                benefitsJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            return System.Text.Json.JsonSerializer
+                .Deserialize<List<string>>(
+                    benefitsJson)
+                ?? [];
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static int CalculateFreeSessions(
+        int totalSessions,
+        decimal discountPercentage)
+    {
+        if (totalSessions <= 0
+            || discountPercentage <= 0)
+        {
+            return 0;
+        }
+
+        return (int)Math.Round(
+            totalSessions
+            * discountPercentage
+            / 100m,
+            MidpointRounding.AwayFromZero);
     }
 }

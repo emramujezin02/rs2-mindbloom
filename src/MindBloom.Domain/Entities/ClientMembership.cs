@@ -19,6 +19,7 @@ public class ClientMembership : BaseEntity
     public int RemainingSessions { get; set; }
 
     public decimal Price { get; set; }
+    public int DurationMonths { get; set; }
 
     public bool IsActive { get; set; }
 

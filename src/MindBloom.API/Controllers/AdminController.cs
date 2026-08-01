@@ -443,4 +443,140 @@ AdminRefundPaymentDto request)
             message = "User updated successfully."
         });
     }
+
+    [HttpGet("membership-plans")]
+    public async Task<IActionResult>
+    GetMembershipPlans()
+    {
+        var result =
+            await _adminService
+                .GetMembershipPlansAsync();
+
+        return Ok(result);
+    }
+
+    [HttpGet(
+        "membership-plans/{planId:int}")]
+    public async Task<IActionResult>
+        GetMembershipPlan(
+            int planId)
+    {
+        var result =
+            await _adminService
+                .GetMembershipPlanAsync(
+                    planId);
+
+        return Ok(result);
+    }
+
+    [HttpPost("membership-plans")]
+    public async Task<IActionResult>
+        CreateMembershipPlan(
+            CreateMembershipPlanDto request)
+    {
+        var adminUserId =
+            GetAuthenticatedUserId();
+
+        var planId =
+            await _adminService
+                .CreateMembershipPlanAsync(
+                    adminUserId,
+                    request);
+
+        return CreatedAtAction(
+            nameof(GetMembershipPlan),
+            new
+            {
+                planId
+            },
+            new
+            {
+                id = planId,
+                message =
+                    "Membership plan created successfully."
+            });
+    }
+
+    [HttpPut(
+        "membership-plans/{planId:int}")]
+    public async Task<IActionResult>
+        UpdateMembershipPlan(
+            int planId,
+            UpdateMembershipPlanDto request)
+    {
+        var adminUserId =
+            GetAuthenticatedUserId();
+
+        await _adminService
+            .UpdateMembershipPlanAsync(
+                adminUserId,
+                planId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                "Membership plan updated successfully."
+        });
+    }
+
+    [HttpPut(
+        "membership-plans/{planId:int}/status")]
+    public async Task<IActionResult>
+        UpdateMembershipPlanStatus(
+            int planId,
+            UpdateMembershipPlanStatusDto request)
+    {
+        var adminUserId =
+            GetAuthenticatedUserId();
+
+        await _adminService
+            .UpdateMembershipPlanStatusAsync(
+                adminUserId,
+                planId,
+                request);
+
+        return Ok(new
+        {
+            message =
+                request.IsActive
+                    ? "Membership plan activated successfully."
+                    : "Membership plan deactivated successfully."
+        });
+    }
+
+    [HttpDelete(
+        "membership-plans/{planId:int}")]
+    public async Task<IActionResult>
+        DeleteMembershipPlan(
+            int planId)
+    {
+        var adminUserId =
+            GetAuthenticatedUserId();
+
+        await _adminService
+            .DeleteMembershipPlanAsync(
+                adminUserId,
+                planId);
+
+        return Ok(new
+        {
+            message =
+                "Membership plan removed or deactivated successfully."
+        });
+    }
+
+    [HttpGet(
+        "membership-plans/{planId:int}/history")]
+    public async Task<IActionResult>
+        GetMembershipPlanHistory(
+            int planId)
+    {
+        var result =
+            await _adminService
+                .GetMembershipPlanHistoryAsync(
+                    planId);
+
+        return Ok(result);
+    }
 }

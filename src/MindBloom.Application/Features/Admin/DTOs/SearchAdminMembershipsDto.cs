@@ -14,6 +14,10 @@ public class SearchAdminMembershipsDto
 
     public int? TherapistId { get; set; }
 
+    public DateTime? ExpiresFromUtc { get; set; }
+
+    public DateTime? ExpiresToUtc { get; set; }
+
     public MembershipPlanType? PlanType
     {
         get;

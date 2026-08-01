@@ -3610,6 +3610,40 @@ new Notification
                 request.PlanType.Value);
         }
 
+        if (request.ExpiresFromUtc.HasValue
+    &&
+    request.ExpiresToUtc.HasValue
+    &&
+    request.ExpiresFromUtc.Value >
+    request.ExpiresToUtc.Value)
+        {
+            throw new BadRequestException(
+                "Expiration start date cannot be later than expiration end date.");
+        }
+
+        if (request.ExpiresFromUtc.HasValue)
+        {
+            query = query.Where(x =>
+                x.ExpiresAtUtc != null
+                &&
+                x.ExpiresAtUtc >=
+                    request.ExpiresFromUtc.Value);
+        }
+
+        if (request.ExpiresToUtc.HasValue)
+        {
+            var exclusiveEnd =
+                request.ExpiresToUtc.Value
+                    .Date
+                    .AddDays(1);
+
+            query = query.Where(x =>
+                x.ExpiresAtUtc != null
+                &&
+                x.ExpiresAtUtc <
+                    exclusiveEnd);
+        }
+
         if (request.PaymentStatus.HasValue)
         {
             query = query.Where(x =>
@@ -4345,6 +4379,671 @@ new Notification
                     ? null
                     : reason.Trim(),
                 ChangedAtUtc = DateTime.UtcNow
+            });
+    }
+
+    public async Task<List<AdminMembershipPlanDto>>
+    GetMembershipPlansAsync()
+    {
+        var plans =
+            await _context.MembershipPlans
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted)
+                .OrderBy(x =>
+                    x.IncludedSessions)
+                .ThenBy(x =>
+                    x.Name)
+                .ToListAsync();
+
+        return plans
+            .Select(MapAdminMembershipPlan)
+            .ToList();
+    }
+
+    public async Task<AdminMembershipPlanDto>
+    GetMembershipPlanAsync(
+        int planId)
+    {
+        var plan =
+            await _context.MembershipPlans
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.Id == planId
+                    && !x.IsDeleted);
+
+        if (plan == null)
+        {
+            throw new NotFoundException(
+                "Membership plan not found.");
+        }
+
+        return MapAdminMembershipPlan(
+            plan);
+    }
+
+    public async Task<int>
+    CreateMembershipPlanAsync(
+        int authenticatedAdminUserId,
+        CreateMembershipPlanDto request)
+    {
+        ValidateMembershipPlan(
+            request.Name,
+            request.Description,
+            request.Price,
+            request.DurationMonths,
+            request.IncludedSessions,
+            request.DiscountPercentage,
+            request.Benefits);
+
+        await EnsureActiveAdminAsync(
+            authenticatedAdminUserId);
+
+        if (!Enum.IsDefined(
+                typeof(MembershipPlanType),
+                request.PlanType))
+        {
+            throw new BadRequestException(
+                "Invalid membership plan type.");
+        }
+
+        var existingPlan =
+            await _context.MembershipPlans
+                .FirstOrDefaultAsync(x =>
+                    x.PlanType ==
+                        request.PlanType
+                    && !x.IsDeleted);
+
+        if (existingPlan != null)
+        {
+            throw new BusinessException(
+                "A membership plan with this type already exists.");
+        }
+
+        var normalizedBenefits =
+            NormalizeBenefits(
+                request.Benefits);
+
+        var plan =
+            new MembershipPlan
+            {
+                PlanType =
+                    request.PlanType,
+
+                Name =
+                    request.Name.Trim(),
+
+                Description =
+                    request.Description.Trim(),
+
+                Price =
+                    request.Price,
+
+                DurationMonths =
+                    request.DurationMonths,
+
+                IncludedSessions =
+                    request.IncludedSessions,
+
+                DiscountPercentage =
+                    request.DiscountPercentage,
+
+                BenefitsJson =
+                    JsonSerializer.Serialize(
+                        normalizedBenefits),
+
+                IsActive =
+                    request.IsActive
+            };
+
+        _context.MembershipPlans.Add(
+            plan);
+
+        await _context.SaveChangesAsync();
+
+        AddMembershipPlanAudit(
+            plan.Id,
+            authenticatedAdminUserId,
+            "Created",
+            previousValues: null,
+            newValues: new
+            {
+                plan.PlanType,
+                plan.Name,
+                plan.Description,
+                plan.Price,
+                plan.DurationMonths,
+                plan.IncludedSessions,
+                plan.DiscountPercentage,
+                Benefits = normalizedBenefits,
+                plan.IsActive
+            },
+            reason:
+                "Membership plan created by administrator.");
+
+        await _context.SaveChangesAsync();
+
+        return plan.Id;
+    }
+
+    public async Task
+    UpdateMembershipPlanAsync(
+        int authenticatedAdminUserId,
+        int planId,
+        UpdateMembershipPlanDto request)
+    {
+        ValidateMembershipPlan(
+            request.Name,
+            request.Description,
+            request.Price,
+            request.DurationMonths,
+            request.IncludedSessions,
+            request.DiscountPercentage,
+            request.Benefits);
+
+        await EnsureActiveAdminAsync(
+            authenticatedAdminUserId);
+
+        var plan =
+            await _context.MembershipPlans
+                .FirstOrDefaultAsync(x =>
+                    x.Id == planId
+                    && !x.IsDeleted);
+
+        if (plan == null)
+        {
+            throw new NotFoundException(
+                "Membership plan not found.");
+        }
+
+        var previousBenefits =
+            DeserializeAdminBenefits(
+                plan.BenefitsJson);
+
+        var previousValues =
+            new
+            {
+                plan.Name,
+                plan.Description,
+                plan.Price,
+                plan.DurationMonths,
+                plan.IncludedSessions,
+                plan.DiscountPercentage,
+                Benefits =
+                    previousBenefits,
+                plan.IsActive
+            };
+
+        var normalizedBenefits =
+            NormalizeBenefits(
+                request.Benefits);
+
+        plan.Name =
+            request.Name.Trim();
+
+        plan.Description =
+            request.Description.Trim();
+
+        plan.Price =
+            request.Price;
+
+        plan.DurationMonths =
+            request.DurationMonths;
+
+        plan.IncludedSessions =
+            request.IncludedSessions;
+
+        plan.DiscountPercentage =
+            request.DiscountPercentage;
+
+        plan.BenefitsJson =
+            JsonSerializer.Serialize(
+                normalizedBenefits);
+
+        AddMembershipPlanAudit(
+            plan.Id,
+            authenticatedAdminUserId,
+            "Updated",
+            previousValues,
+            new
+            {
+                plan.Name,
+                plan.Description,
+                plan.Price,
+                plan.DurationMonths,
+                plan.IncludedSessions,
+                plan.DiscountPercentage,
+                Benefits =
+                    normalizedBenefits,
+                plan.IsActive
+            },
+            "Membership plan updated by administrator.");
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task
+    UpdateMembershipPlanStatusAsync(
+        int authenticatedAdminUserId,
+        int planId,
+        UpdateMembershipPlanStatusDto request)
+    {
+        await EnsureActiveAdminAsync(
+            authenticatedAdminUserId);
+
+        var plan =
+            await _context.MembershipPlans
+                .FirstOrDefaultAsync(x =>
+                    x.Id == planId
+                    && !x.IsDeleted);
+
+        if (plan == null)
+        {
+            throw new NotFoundException(
+                "Membership plan not found.");
+        }
+
+        if (plan.IsActive ==
+            request.IsActive)
+        {
+            return;
+        }
+
+        var previousStatus =
+            plan.IsActive;
+
+        plan.IsActive =
+            request.IsActive;
+
+        AddMembershipPlanAudit(
+            plan.Id,
+            authenticatedAdminUserId,
+            request.IsActive
+                ? "Activated"
+                : "Deactivated",
+            new
+            {
+                IsActive =
+                    previousStatus
+            },
+            new
+            {
+                plan.IsActive
+            },
+            string.IsNullOrWhiteSpace(
+                request.Reason)
+                ? request.IsActive
+                    ? "Membership plan activated by administrator."
+                    : "Membership plan deactivated by administrator."
+                : request.Reason.Trim());
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task
+    DeleteMembershipPlanAsync(
+        int authenticatedAdminUserId,
+        int planId)
+    {
+        await EnsureActiveAdminAsync(
+            authenticatedAdminUserId);
+
+        var plan =
+            await _context.MembershipPlans
+                .FirstOrDefaultAsync(x =>
+                    x.Id == planId
+                    && !x.IsDeleted);
+
+        if (plan == null)
+        {
+            throw new NotFoundException(
+                "Membership plan not found.");
+        }
+
+        var hasBeenUsed =
+            await _context.ClientMemberships
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.PlanType ==
+                        plan.PlanType);
+
+        if (hasBeenUsed)
+        {
+            if (!plan.IsActive)
+            {
+                return;
+            }
+
+            plan.IsActive =
+                false;
+
+            AddMembershipPlanAudit(
+                plan.Id,
+                authenticatedAdminUserId,
+                "DeactivatedBecauseUsed",
+                new
+                {
+                    IsActive = true
+                },
+                new
+                {
+                    IsActive = false
+                },
+                "Used membership plans cannot be deleted and were deactivated instead.");
+
+            await _context.SaveChangesAsync();
+
+            return;
+        }
+
+        plan.IsActive =
+            false;
+
+        plan.IsDeleted =
+            true;
+
+        AddMembershipPlanAudit(
+            plan.Id,
+            authenticatedAdminUserId,
+            "SoftDeleted",
+            new
+            {
+                IsActive = true,
+                IsDeleted = false
+            },
+            new
+            {
+                IsActive = false,
+                IsDeleted = true
+            },
+            "Unused membership plan soft-deleted by administrator.");
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<
+    List<AdminMembershipPlanAuditDto>>
+    GetMembershipPlanHistoryAsync(
+        int planId)
+    {
+        var exists =
+            await _context.MembershipPlans
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.Id == planId);
+
+        if (!exists)
+        {
+            throw new NotFoundException(
+                "Membership plan not found.");
+        }
+
+        return await _context
+            .MembershipPlanAudits
+            .AsNoTracking()
+            .Include(x =>
+                x.ChangedByUser)
+            .Where(x =>
+                x.MembershipPlanId ==
+                    planId)
+            .OrderByDescending(x =>
+                x.ChangedAtUtc)
+            .ThenByDescending(x =>
+                x.Id)
+            .Select(x =>
+                new AdminMembershipPlanAuditDto
+                {
+                    Id =
+                        x.Id,
+
+                    Action =
+                        x.Action,
+
+                    ChangedByName =
+                        x.ChangedByUser
+                            .FirstName
+                        + " "
+                        + x.ChangedByUser
+                            .LastName,
+
+                    PreviousValues =
+                        x.PreviousValues,
+
+                    NewValues =
+                        x.NewValues,
+
+                    Reason =
+                        x.Reason,
+
+                    ChangedAtUtc =
+                        x.ChangedAtUtc
+                })
+            .ToListAsync();
+    }
+
+    private async Task EnsureActiveAdminAsync(
+    int authenticatedAdminUserId)
+    {
+        var adminExists =
+            await _context.Users
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.Id ==
+                        authenticatedAdminUserId
+                    && x.IsActive
+                    && !x.IsBlocked);
+
+        if (!adminExists)
+        {
+            throw new NotFoundException(
+                "Administrator not found.");
+        }
+    }
+
+    private static void ValidateMembershipPlan(
+        string? name,
+        string? description,
+        decimal price,
+        int durationMonths,
+        int includedSessions,
+        decimal discountPercentage,
+        List<string>? benefits)
+    {
+        if (string.IsNullOrWhiteSpace(
+                name))
+        {
+            throw new BadRequestException(
+                "Membership plan name is required.");
+        }
+
+        if (name.Trim().Length > 150)
+        {
+            throw new BadRequestException(
+                "Membership plan name may contain at most 150 characters.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                description))
+        {
+            throw new BadRequestException(
+                "Membership plan description is required.");
+        }
+
+        if (description.Trim().Length >
+            1000)
+        {
+            throw new BadRequestException(
+                "Membership plan description may contain at most 1000 characters.");
+        }
+
+        if (price < 0)
+        {
+            throw new BadRequestException(
+                "Membership plan price cannot be negative.");
+        }
+
+        if (price == 0)
+        {
+            throw new BadRequestException(
+                "Membership plan price must be greater than zero.");
+        }
+
+        if (durationMonths <= 0)
+        {
+            throw new BadRequestException(
+                "Membership duration must be greater than zero.");
+        }
+
+        if (includedSessions <= 0)
+        {
+            throw new BadRequestException(
+                "Number of included sessions must be greater than zero.");
+        }
+
+        if (discountPercentage < 0
+            ||
+            discountPercentage > 100)
+        {
+            throw new BadRequestException(
+                "Discount percentage must be between 0 and 100.");
+        }
+
+        if (benefits != null
+            &&
+            benefits.Any(x =>
+                x != null
+                &&
+                x.Trim().Length > 300))
+        {
+            throw new BadRequestException(
+                "A membership benefit may contain at most 300 characters.");
+        }
+    }
+
+    private static List<string> NormalizeBenefits(
+        List<string>? benefits)
+    {
+        return benefits?
+            .Where(x =>
+                !string.IsNullOrWhiteSpace(x))
+            .Select(x =>
+                x.Trim())
+            .Distinct(
+                StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            ?? [];
+    }
+
+    private static List<string>
+        DeserializeAdminBenefits(
+            string? value)
+    {
+        if (string.IsNullOrWhiteSpace(
+                value))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer
+                .Deserialize<List<string>>(
+                    value)
+                ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static AdminMembershipPlanDto
+        MapAdminMembershipPlan(
+            MembershipPlan plan)
+    {
+        return new AdminMembershipPlanDto
+        {
+            Id =
+                plan.Id,
+
+            PlanType =
+                plan.PlanType,
+
+            Name =
+                plan.Name,
+
+            Description =
+                plan.Description,
+
+            Price =
+                plan.Price,
+
+            DurationMonths =
+                plan.DurationMonths,
+
+            IncludedSessions =
+                plan.IncludedSessions,
+
+            DiscountPercentage =
+                plan.DiscountPercentage,
+
+            Benefits =
+                DeserializeAdminBenefits(
+                    plan.BenefitsJson),
+
+            IsActive =
+                plan.IsActive,
+
+            IsDeleted =
+                plan.IsDeleted,
+
+            CreatedAtUtc =
+                plan.CreatedAtUtc,
+
+            UpdatedAtUtc =
+                plan.UpdatedAtUtc
+        };
+    }
+
+    private void AddMembershipPlanAudit(
+        int membershipPlanId,
+        int changedByUserId,
+        string action,
+        object? previousValues,
+        object? newValues,
+        string? reason)
+    {
+        _context.MembershipPlanAudits.Add(
+            new MembershipPlanAudit
+            {
+                MembershipPlanId =
+                    membershipPlanId,
+
+                ChangedByUserId =
+                    changedByUserId,
+
+                Action =
+                    action,
+
+                PreviousValues =
+                    previousValues == null
+                        ? null
+                        : JsonSerializer
+                            .Serialize(
+                                previousValues),
+
+                NewValues =
+                    newValues == null
+                        ? null
+                        : JsonSerializer
+                            .Serialize(
+                                newValues),
+
+                Reason =
+                    reason,
+
+                ChangedAtUtc =
+                    DateTime.UtcNow
             });
     }
 }

@@ -45,6 +45,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ArticleCategory> ArticleCategories => Set<ArticleCategory>();
     public DbSet<PaymentAdminAudit> PaymentAdminAudits =>
     Set<PaymentAdminAudit>();
+
+    public DbSet<MembershipPlan> MembershipPlans =>
+    Set<MembershipPlan>();
+
+    public DbSet<MembershipPlanAudit> MembershipPlanAudits =>
+        Set<MembershipPlanAudit>();
     public DbSet<UserAudit> UserAudits => Set<UserAudit>();
     public DbSet<UserSettings> UserSettings =>
     Set<UserSettings>();
@@ -212,6 +218,80 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 x.IsDeleted
             });
         });
+
+        builder.Entity<MembershipPlan>(
+    entity =>
+    {
+        entity.Property(x => x.Name)
+            .IsRequired()
+            .HasMaxLength(150);
+
+        entity.Property(x => x.Description)
+            .IsRequired()
+            .HasMaxLength(1000);
+
+        entity.Property(x => x.Price)
+            .HasPrecision(18, 2);
+
+        entity.Property(x => x.DiscountPercentage)
+            .HasPrecision(5, 2);
+
+        entity.Property(x => x.BenefitsJson)
+            .IsRequired()
+            .HasMaxLength(4000);
+
+        entity.Property(x => x.IsActive)
+            .HasDefaultValue(true);
+
+        entity.HasIndex(x => new
+        {
+            x.PlanType,
+            x.IsDeleted
+        })
+        .IsUnique()
+        .HasFilter("[IsDeleted] = 0");
+
+        entity.HasIndex(x => new
+        {
+            x.IsActive,
+            x.IsDeleted
+        });
+    });
+
+        builder.Entity<MembershipPlanAudit>(
+            entity =>
+            {
+                entity.Property(x => x.Action)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(x => x.PreviousValues)
+                    .HasMaxLength(4000);
+
+                entity.Property(x => x.NewValues)
+                    .HasMaxLength(4000);
+
+                entity.Property(x => x.Reason)
+                    .HasMaxLength(500);
+
+                entity.HasOne(x => x.MembershipPlan)
+                    .WithMany(x => x.Audits)
+                    .HasForeignKey(x => x.MembershipPlanId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.ChangedByUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.ChangedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(x => new
+                {
+                    x.MembershipPlanId,
+                    x.ChangedAtUtc
+                });
+
+                entity.HasIndex(x => x.ChangedByUserId);
+            });
 
         builder.Entity<Review>()
             .HasOne(x => x.Therapist)

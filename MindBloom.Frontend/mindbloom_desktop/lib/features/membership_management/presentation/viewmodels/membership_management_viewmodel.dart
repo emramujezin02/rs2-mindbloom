@@ -22,6 +22,10 @@ class MembershipManagementViewModel extends ChangeNotifier {
 
   int? paymentStatus;
 
+  DateTime? expiresFrom;
+
+  DateTime? expiresTo;
+
   int pageNumber = 1;
 
   final int pageSize = 10;
@@ -50,16 +54,21 @@ class MembershipManagementViewModel extends ChangeNotifier {
         planType: planType,
         membershipStatus: membershipStatus,
         paymentStatus: paymentStatus,
+        expiresFrom: expiresFrom,
+        expiresTo: expiresTo,
         pageNumber: pageNumber,
         pageSize: pageSize,
       );
 
       memberships = result.items;
+
       pageNumber = result.pageNumber;
+
       totalCount = result.totalCount;
+
       totalPages = result.totalPages;
     } catch (exception) {
-      error = exception.toString();
+      error = _cleanError(exception);
     } finally {
       isLoading = false;
 
@@ -91,11 +100,21 @@ class MembershipManagementViewModel extends ChangeNotifier {
     await loadMemberships(resetPage: true);
   }
 
+  Future<void> setExpirationRange({DateTime? from, DateTime? to}) async {
+    expiresFrom = from;
+
+    expiresTo = to;
+
+    await loadMemberships(resetPage: true);
+  }
+
   Future<void> clearFilters() async {
     search = '';
     planType = null;
     membershipStatus = null;
     paymentStatus = null;
+    expiresFrom = null;
+    expiresTo = null;
 
     await loadMemberships(resetPage: true);
   }
@@ -118,5 +137,19 @@ class MembershipManagementViewModel extends ChangeNotifier {
     pageNumber--;
 
     await loadMemberships();
+  }
+
+  Future<void> refresh() {
+    return loadMemberships();
+  }
+
+  String _cleanError(Object exception) {
+    var value = exception.toString();
+
+    if (value.startsWith('Exception: ')) {
+      value = value.substring('Exception: '.length);
+    }
+
+    return value;
   }
 }

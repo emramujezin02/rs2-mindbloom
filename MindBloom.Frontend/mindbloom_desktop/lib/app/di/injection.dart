@@ -66,6 +66,8 @@ import '../../features/reports/presentation/viewmodels/appointment_revenue_repor
 import '../../features/reports/data/services/therapist_performance_pdf_service.dart';
 import '../../features/reports/presentation/viewmodels/therapist_performance_report_viewmodel.dart';
 
+import '../../features/membership_management/presentation/viewmodels/membership_plan_management_viewmodel.dart';
+
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
 
@@ -285,6 +287,13 @@ class AppInjection {
     return TherapistPerformanceReportViewModel(
       _createAdminReportRepository(),
       TherapistPerformancePdfService(),
+    );
+  }
+
+  static MembershipPlanManagementViewModel
+  createMembershipPlanManagementViewModel() {
+    return MembershipPlanManagementViewModel(
+      repository: _createMembershipManagementRepository(),
     );
   }
 }

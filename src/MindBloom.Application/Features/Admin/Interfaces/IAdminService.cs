@@ -95,4 +95,34 @@ public interface IAdminService
         int authenticatedAdminUserId,
         int userId,
         UpdateAdminUserDto request);
+
+    Task<List<AdminMembershipPlanDto>>
+    GetMembershipPlansAsync();
+
+    Task<AdminMembershipPlanDto>
+        GetMembershipPlanAsync(
+            int planId);
+
+    Task<int>
+        CreateMembershipPlanAsync(
+            int authenticatedAdminUserId,
+            CreateMembershipPlanDto request);
+
+    Task UpdateMembershipPlanAsync(
+        int authenticatedAdminUserId,
+        int planId,
+        UpdateMembershipPlanDto request);
+
+    Task UpdateMembershipPlanStatusAsync(
+        int authenticatedAdminUserId,
+        int planId,
+        UpdateMembershipPlanStatusDto request);
+
+    Task DeleteMembershipPlanAsync(
+        int authenticatedAdminUserId,
+        int planId);
+
+    Task<List<AdminMembershipPlanAuditDto>>
+        GetMembershipPlanHistoryAsync(
+            int planId);
 }
