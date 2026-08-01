@@ -10,6 +10,8 @@ using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Application.Common.BusinessRules;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Common.Pagination;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -20,16 +22,23 @@ public class WorkshopService : IWorkshopService
     private readonly IBusinessNotificationService
     _businessNotificationService;
 
+    private readonly IWebHostEnvironment
+    _environment;
+
     public WorkshopService(
-    ApplicationDbContext context,
-    IBusinessNotificationService
-        businessNotificationService)
+        ApplicationDbContext context,
+        IBusinessNotificationService
+            businessNotificationService,
+        IWebHostEnvironment environment)
     {
         _context =
             context;
 
         _businessNotificationService =
             businessNotificationService;
+
+        _environment =
+            environment;
     }
 
     public async Task<PagedResponse<WorkshopResponseDto>>
@@ -90,6 +99,11 @@ public class WorkshopService : IWorkshopService
                     {
                         Id = x.Id,
                         Title = x.Title,
+                        ImageUrl =
+    x.ImageUrl,
+
+                        RegistrationDeadlineUtc =
+    x.RegistrationDeadlineUtc,
                         Description =
                             x.Description,
                         StartUtc =
@@ -160,7 +174,13 @@ public class WorkshopService : IWorkshopService
                         UpdatedAtUtc =
                             x.UpdatedAtUtc,
                         StatusChangeReason =
-                            x.StatusChangeReason
+                            x.StatusChangeReason,
+                        TherapistName =
+    x.Therapist != null
+        ? x.Therapist.User.FirstName
+          + " "
+          + x.Therapist.User.LastName
+        : null,
                     })
                 .ToListAsync();
 
@@ -214,6 +234,11 @@ public class WorkshopService : IWorkshopService
                             x.StartUtc,
                         EndUtc =
                             x.EndUtc,
+                        ImageUrl =
+    x.ImageUrl,
+
+                        RegistrationDeadlineUtc =
+    x.RegistrationDeadlineUtc,
                         Type =
                             x.Type.ToString(),
                         OnlineLink =
@@ -254,6 +279,12 @@ public class WorkshopService : IWorkshopService
                                     .Registered),
                         Price =
                             x.Price,
+                        TherapistName =
+    x.Therapist != null
+        ? x.Therapist.User.FirstName
+          + " "
+          + x.Therapist.User.LastName
+        : null,
                         Status =
                             x.Status.ToString(),
                         OrganizerUserId =
@@ -341,6 +372,11 @@ public class WorkshopService : IWorkshopService
                             x.Description,
                         StartUtc =
                             x.StartUtc,
+                        ImageUrl =
+    x.ImageUrl,
+
+                        RegistrationDeadlineUtc =
+    x.RegistrationDeadlineUtc,
                         EndUtc =
                             x.EndUtc,
                         Type =
@@ -349,6 +385,12 @@ public class WorkshopService : IWorkshopService
                             x.OnlineLink,
                         Location =
                             x.Location,
+                        TherapistName =
+    x.Therapist != null
+        ? x.Therapist.User.FirstName
+          + " "
+          + x.Therapist.User.LastName
+        : null,
                         Capacity =
                             x.Capacity,
                         RegisteredCount =
@@ -474,6 +516,12 @@ public class WorkshopService : IWorkshopService
                 Location =
                     Normalize(
                         request.Location),
+                ImageUrl =
+    Normalize(
+        request.ImageUrl),
+
+                RegistrationDeadlineUtc =
+    request.RegistrationDeadlineUtc,
                 Capacity =
                     request.Capacity,
                 Price =
@@ -511,11 +559,50 @@ public class WorkshopService : IWorkshopService
                 isAdmin,
                 workshopId);
 
+        var scheduleChanged =
+    workshop.StartUtc != request.StartUtc ||
+    workshop.EndUtc != request.EndUtc;
+
+        var typeChanged =
+            workshop.Type != request.Type;
+
+        var locationChanged =
+            !string.Equals(
+                workshop.Location,
+                Normalize(request.Location),
+                StringComparison.Ordinal);
+
+        var onlineLinkChanged =
+            !string.Equals(
+                workshop.OnlineLink,
+                Normalize(request.OnlineLink),
+                StringComparison.Ordinal);
+
+        var registrationDeadlineChanged =
+            workshop.RegistrationDeadlineUtc !=
+                request.RegistrationDeadlineUtc;
+
+        var importantDetailsChanged =
+            scheduleChanged ||
+            typeChanged ||
+            locationChanged ||
+            onlineLinkChanged ||
+            registrationDeadlineChanged;
+
         if (workshop.Status !=
-            WorkshopStatus.Scheduled)
+                WorkshopStatus.Scheduled &&
+            workshop.Status !=
+                WorkshopStatus.Inactive)
         {
             throw new BusinessException(
-                "Only scheduled workshops can be edited.");
+                "Only scheduled or inactive workshops can be edited.");
+        }
+
+        if (workshop.StartUtc <=
+        DateTime.UtcNow)
+        {
+            throw new BusinessException(
+                "A past workshop cannot be edited.");
         }
 
         var registeredCount =
@@ -577,9 +664,11 @@ public class WorkshopService : IWorkshopService
             Normalize(
                 request.OnlineLink);
 
-        workshop.Location =
-            Normalize(
-                request.Location);
+        workshop.Location = Normalize(request.Location);
+
+        workshop.ImageUrl = Normalize(request.ImageUrl);
+
+        workshop.RegistrationDeadlineUtc = request.RegistrationDeadlineUtc;
 
         workshop.Capacity =
             request.Capacity;
@@ -588,6 +677,14 @@ public class WorkshopService : IWorkshopService
             request.Price;
 
         await _context.SaveChangesAsync();
+
+        if (importantDetailsChanged)
+        {
+            await NotifyRegisteredParticipantsAsync(
+                workshop.Id,
+                "Workshop details updated",
+                $"Important details for \"{workshop.Title}\" have been updated. Please review the workshop details.");
+        }
 
         return await GetByIdAsync(
             workshop.Id,
@@ -610,6 +707,15 @@ public class WorkshopService : IWorkshopService
         ValidateStatusTransition(
             workshop.Status,
             request.Status);
+
+        if (request.Status ==
+        WorkshopStatus.Scheduled &&
+    workshop.StartUtc <=
+        DateTime.UtcNow)
+        {
+            throw new BusinessException(
+                "A past workshop cannot be activated again.");
+        }
 
         if (request.Status ==
         WorkshopStatus.Completed &&
@@ -643,6 +749,35 @@ public class WorkshopService : IWorkshopService
                 request.Reason);
 
         await _context.SaveChangesAsync();
+
+        if (request.Status ==
+    WorkshopStatus.Cancelled)
+        {
+            await NotifyRegisteredParticipantsAsync(
+                workshop.Id,
+                "Workshop cancelled",
+                $"\"{workshop.Title}\" has been cancelled. "
+                + $"Reason: {workshop.StatusChangeReason}");
+        }
+
+        if (request.Status ==
+    WorkshopStatus.Inactive)
+        {
+            await NotifyRegisteredParticipantsAsync(
+                workshop.Id,
+                "Workshop temporarily unavailable",
+                $"\"{workshop.Title}\" is currently inactive. Please check the workshop details for future updates.");
+        }
+
+        if (request.Status ==
+        WorkshopStatus.Scheduled &&
+    workshop.StatusChangedAtUtc.HasValue)
+        {
+            await NotifyRegisteredParticipantsAsync(
+                workshop.Id,
+                "Workshop available again",
+                $"\"{workshop.Title}\" is active again. Please review the workshop details.");
+        }
 
         return await GetByIdAsync(
             workshop.Id,
@@ -736,9 +871,9 @@ public class WorkshopService : IWorkshopService
                 "Registration is available only for scheduled workshops.");
 
             BusinessRuleGuard.Against(
-                workshop.StartUtc <=
-                    DateTime.UtcNow,
-                "Registration is closed because the workshop has already started.");
+    workshop.RegistrationDeadlineUtc <=
+        DateTime.UtcNow,
+    "Registration is closed because the registration deadline has passed.");
 
             var existingRegistration =
                 await _context
@@ -1002,6 +1137,9 @@ public class WorkshopService : IWorkshopService
                             x.Workshop.Title,
                         Description =
                             x.Workshop.Description,
+                        ImageUrl = x.Workshop.ImageUrl,
+
+                        RegistrationDeadlineUtc = x.Workshop.RegistrationDeadlineUtc,
                         StartUtc =
                             x.Workshop.StartUtc,
                         EndUtc =
@@ -1021,6 +1159,12 @@ public class WorkshopService : IWorkshopService
         : null,
                         Location =
                             x.Workshop.Location,
+                        TherapistName =
+    x.Workshop.Therapist != null
+        ? x.Workshop.Therapist.User.FirstName
+          + " "
+          + x.Workshop.Therapist.User.LastName
+        : null,
                         Capacity =
                             x.Workshop.Capacity,
                         RegisteredCount =
@@ -1255,9 +1399,20 @@ public class WorkshopService : IWorkshopService
             {
                 WorkshopStatus.Scheduled =>
                     newStatus ==
-                        WorkshopStatus.Cancelled ||
+                        WorkshopStatus.Cancelled
+                    ||
                     newStatus ==
-                        WorkshopStatus.Completed,
+                        WorkshopStatus.Completed
+                    ||
+                    newStatus ==
+                        WorkshopStatus.Inactive,
+
+                WorkshopStatus.Inactive =>
+                    newStatus ==
+                        WorkshopStatus.Scheduled
+                    ||
+                    newStatus ==
+                        WorkshopStatus.Cancelled,
 
                 WorkshopStatus.Cancelled =>
                     false,
@@ -1265,7 +1420,8 @@ public class WorkshopService : IWorkshopService
                 WorkshopStatus.Completed =>
                     false,
 
-                _ => false
+                _ =>
+                    false
             };
 
         if (!allowed)
@@ -1291,5 +1447,208 @@ public class WorkshopService : IWorkshopService
             : value.Trim();
     }
 
-   
+    private async Task NotifyRegisteredParticipantsAsync(
+    int workshopId,
+    string title,
+    string message)
+    {
+        var participantUserIds =
+            await _context.WorkshopRegistrations
+                .AsNoTracking()
+                .Where(x =>
+                    x.WorkshopId == workshopId &&
+                    !x.IsDeleted &&
+                    x.Status ==
+                        WorkshopRegistrationStatus.Registered)
+                .Select(x =>
+                    x.Client.UserId)
+                .Distinct()
+                .ToListAsync();
+
+        foreach (var participantUserId
+                 in participantUserIds)
+        {
+            await _businessNotificationService
+                .PublishAsync(
+                    participantUserId,
+                    title,
+                    message,
+                    actionType:
+                        NotificationActionType.Workshop,
+                    resourceId:
+                        workshopId);
+        }
+    }
+
+
+    public async Task<WorkshopImageUploadDto>
+    UploadImageAsync(
+        IFormFile file)
+    {
+        if (file == null ||
+            file.Length == 0)
+        {
+            throw new BadRequestException(
+                "Workshop image is required.");
+        }
+
+        const long maximumFileSize =
+            5 * 1024 * 1024;
+
+        if (file.Length >
+            maximumFileSize)
+        {
+            throw new BadRequestException(
+                "Workshop image may not exceed 5 MB.");
+        }
+
+        var extension =
+            Path.GetExtension(
+                    file.FileName)
+                .ToLowerInvariant();
+
+        var allowedExtensions =
+            new HashSet<string>
+            {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+            };
+
+        if (!allowedExtensions.Contains(
+                extension))
+        {
+            throw new BadRequestException(
+                "Only JPG, JPEG, PNG and WEBP images are allowed.");
+        }
+
+        var allowedContentTypes =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+            };
+
+        if (!allowedContentTypes.Contains(
+                file.ContentType))
+        {
+            throw new BadRequestException(
+                "Invalid image content type.");
+        }
+
+        await using var validationStream =
+            file.OpenReadStream();
+
+        var header =
+            new byte[12];
+
+        var bytesRead =
+            await validationStream.ReadAsync(
+                header.AsMemory(
+                    0,
+                    header.Length));
+
+        if (bytesRead < 4)
+        {
+            throw new BadRequestException(
+                "Invalid image file.");
+        }
+
+        var isJpeg =
+            header[0] == 0xFF &&
+            header[1] == 0xD8 &&
+            header[2] == 0xFF;
+
+        var isPng =
+            bytesRead >= 8 &&
+            header[0] == 0x89 &&
+            header[1] == 0x50 &&
+            header[2] == 0x4E &&
+            header[3] == 0x47 &&
+            header[4] == 0x0D &&
+            header[5] == 0x0A &&
+            header[6] == 0x1A &&
+            header[7] == 0x0A;
+
+        var isWebp =
+            bytesRead >= 12 &&
+            header[0] == 0x52 &&
+            header[1] == 0x49 &&
+            header[2] == 0x46 &&
+            header[3] == 0x46 &&
+            header[8] == 0x57 &&
+            header[9] == 0x45 &&
+            header[10] == 0x42 &&
+            header[11] == 0x50;
+
+        var signatureMatchesExtension =
+            extension switch
+            {
+                ".jpg" or ".jpeg" =>
+                    isJpeg,
+
+                ".png" =>
+                    isPng,
+
+                ".webp" =>
+                    isWebp,
+
+                _ =>
+                    false
+            };
+
+        if (!signatureMatchesExtension)
+        {
+            throw new BadRequestException(
+                "The uploaded file is not a valid image.");
+        }
+
+        var webRootPath =
+            _environment.WebRootPath;
+
+        if (string.IsNullOrWhiteSpace(
+                webRootPath))
+        {
+            webRootPath =
+                Path.Combine(
+                    _environment.ContentRootPath,
+                    "wwwroot");
+        }
+
+        var uploadDirectory =
+            Path.Combine(
+                webRootPath,
+                "uploads",
+                "workshops");
+
+        Directory.CreateDirectory(
+            uploadDirectory);
+
+        var safeFileName =
+            $"{Guid.NewGuid():N}{extension}";
+
+        var physicalPath =
+            Path.Combine(
+                uploadDirectory,
+                safeFileName);
+
+        await using (
+            var outputStream =
+                new FileStream(
+                    physicalPath,
+                    FileMode.CreateNew))
+        {
+            await file.CopyToAsync(
+                outputStream);
+        }
+
+        return new WorkshopImageUploadDto
+        {
+            ImageUrl =
+                $"/uploads/workshops/{safeFileName}"
+        };
+    }
 }

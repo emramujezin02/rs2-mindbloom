@@ -91,6 +91,8 @@ class WorkshopManagementApiService {
     required int type,
     required String? onlineLink,
     required String? location,
+    required String? imageUrl,
+    required DateTime registrationDeadlineUtc,
     required int capacity,
     required double price,
     required int? therapistId,
@@ -108,6 +110,10 @@ class WorkshopManagementApiService {
         'capacity': capacity,
         'price': price,
         'therapistId': therapistId,
+        'imageUrl': imageUrl,
+        'registrationDeadlineUtc': registrationDeadlineUtc
+            .toUtc()
+            .toIso8601String(),
       },
     );
 
@@ -126,6 +132,8 @@ class WorkshopManagementApiService {
     required int capacity,
     required double price,
     required int? therapistId,
+    required String? imageUrl,
+    required DateTime registrationDeadlineUtc,
   }) async {
     final response = await apiClient.put(
       '/Workshops/$workshopId',
@@ -140,6 +148,10 @@ class WorkshopManagementApiService {
         'capacity': capacity,
         'price': price,
         'therapistId': therapistId,
+        'imageUrl': imageUrl,
+        'registrationDeadlineUtc': registrationDeadlineUtc
+            .toUtc()
+            .toIso8601String(),
       },
     );
 
@@ -160,5 +172,40 @@ class WorkshopManagementApiService {
 
   Future<void> deleteWorkshop(int workshopId) async {
     await apiClient.delete('/Workshops/$workshopId');
+  }
+
+  Future<String> uploadWorkshopImage(String filePath) async {
+    final response = await apiClient.postMultipartFile(
+      '/Workshops/image',
+      filePath: filePath,
+      fieldName: 'file',
+    );
+
+    if (response is! Map) {
+      throw Exception('The server returned invalid workshop image data.');
+    }
+
+    final data = Map<String, dynamic>.from(response);
+
+    final imageUrl = data['imageUrl']?.toString().trim();
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      throw Exception('The server did not return a workshop image URL.');
+    }
+
+    return imageUrl;
+  }
+
+  Future<WorkshopModel> updateWorkshopStatus({
+    required int workshopId,
+    required int status,
+    String? reason,
+  }) async {
+    final response = await apiClient.put(
+      '/Workshops/$workshopId/status',
+      body: {'status': status, 'reason': reason},
+    );
+
+    return WorkshopModel.fromJson(Map<String, dynamic>.from(response));
   }
 }

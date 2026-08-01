@@ -129,4 +129,40 @@ class WorkshopManagementViewModel extends ChangeNotifier {
     fromUtc = null;
     toUtc = null;
   }
+
+  Future<bool> deactivateWorkshop(int workshopId) async {
+    error = null;
+
+    try {
+      await repository.deactivateWorkshop(workshopId);
+
+      await loadWorkshops();
+
+      return true;
+    } catch (exception) {
+      error = exception.toString();
+
+      notifyListeners();
+
+      return false;
+    }
+  }
+
+  Future<bool> activateWorkshop(int workshopId) async {
+    error = null;
+
+    try {
+      await repository.activateWorkshop(workshopId);
+
+      await loadWorkshops();
+
+      return true;
+    } catch (exception) {
+      error = exception.toString();
+
+      notifyListeners();
+
+      return false;
+    }
+  }
 }

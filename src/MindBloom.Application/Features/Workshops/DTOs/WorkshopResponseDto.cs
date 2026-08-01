@@ -46,4 +46,9 @@ public class WorkshopResponseDto
     public DateTime? UpdatedAtUtc { get; set; }
 
     public string? StatusChangeReason { get; set; }
+    public string? ImageUrl { get; set; }
+
+    public string? TherapistName { get; set; }
+
+    public DateTime RegistrationDeadlineUtc { get; set; }
 }

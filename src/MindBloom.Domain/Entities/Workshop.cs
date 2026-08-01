@@ -32,6 +32,10 @@ public class Workshop : BaseEntity
     public ApplicationUser OrganizerUser { get; set; } =
         null!;
 
+    public string? ImageUrl { get; set; }
+
+    public DateTime RegistrationDeadlineUtc { get; set; }
+
     public int? TherapistId { get; set; }
 
     public Therapist? Therapist { get; set; }

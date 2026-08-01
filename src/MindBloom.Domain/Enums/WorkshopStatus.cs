@@ -3,6 +3,10 @@
 public enum WorkshopStatus
 {
     Scheduled = 1,
+
     Cancelled = 2,
-    Completed = 3
+
+    Completed = 3,
+
+    Inactive = 4
 }

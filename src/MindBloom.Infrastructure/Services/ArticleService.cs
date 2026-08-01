@@ -15,12 +15,14 @@ namespace MindBloom.Infrastructure.Services;
 public class ArticleService : IArticleService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IWebHostEnvironment _environment;
 
     public ArticleService(
         ApplicationDbContext context,
             IWebHostEnvironment environment)
     {
         _context = context;
+        _environment= environment;
     }
 
     public async Task<PagedResponse<ArticleResponseDto>>
@@ -726,15 +728,14 @@ public class ArticleService : IArticleService
                 "The uploaded file is not a valid image.");
         }
 
-        var webRootPath =
-            environment.WebRootPath;
+        var webRootPath = _environment.WebRootPath;
 
         if (string.IsNullOrWhiteSpace(
                 webRootPath))
         {
             webRootPath =
                 Path.Combine(
-                    environment.ContentRootPath,
+                    _environment.ContentRootPath,
                     "wwwroot");
         }
 

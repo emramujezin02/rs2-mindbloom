@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
 
+import '../../../../core/constants/api_constants.dart';
 import '../../../../app/di/injection.dart';
 import '../viewmodels/workshop_form_viewmodel.dart';
 
@@ -21,7 +23,7 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
   final TextEditingController _titleController = TextEditingController();
 
   final TextEditingController _descriptionController = TextEditingController();
-
+  final TextEditingController _imageUrlController = TextEditingController();
   final TextEditingController _onlineLinkController = TextEditingController();
 
   final TextEditingController _locationController = TextEditingController();
@@ -40,6 +42,8 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
 
   bool _initialValuesApplied = false;
 
+  DateTime? _registrationDeadline;
+
   bool get _isEditing {
     return widget.workshopId != null;
   }
@@ -51,6 +55,10 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
     _startDateTime = DateTime.now().add(const Duration(days: 1));
 
     _endDateTime = _startDateTime.add(const Duration(hours: 2));
+
+    if (widget.workshopId == null) {
+      _registrationDeadline = _startDateTime.subtract(const Duration(hours: 1));
+    }
 
     _capacityController.text = '20';
 
@@ -79,6 +87,8 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
 
     _priceController.dispose();
 
+    _imageUrlController.dispose();
+
     super.dispose();
   }
 
@@ -105,6 +115,10 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
 
     _descriptionController.text = workshop.description;
 
+    _imageUrlController.text = workshop.imageUrl ?? '';
+
+    _registrationDeadline = workshop.registrationDeadlineUtc.toLocal();
+
     _onlineLinkController.text = workshop.onlineLink ?? '';
 
     _locationController.text = workshop.location ?? '';
@@ -122,6 +136,122 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
     _therapistId = workshop.therapistId;
 
     _initialValuesApplied = true;
+  }
+
+  Future<void> _pickRegistrationDeadline() async {
+    final current =
+        _registrationDeadline ?? DateTime.now().add(const Duration(days: 1));
+
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+    );
+
+    if (selectedDate == null || !mounted) {
+      return;
+    }
+
+    final selectedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(current),
+    );
+
+    if (selectedTime == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _registrationDeadline = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+        selectedTime.hour,
+        selectedTime.minute,
+      );
+    });
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    if (_viewModel.isUploadingImage) {
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+      allowMultiple: false,
+      withData: false,
+    );
+
+    if (result == null || result.files.isEmpty || !mounted) {
+      return;
+    }
+
+    final selectedFile = result.files.single;
+
+    final filePath = selectedFile.path;
+
+    if (filePath == null || filePath.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The selected image could not be read.')),
+      );
+
+      return;
+    }
+
+    const maximumFileSize = 5 * 1024 * 1024;
+
+    if (selectedFile.size > maximumFileSize) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Workshop image may not exceed 5 MB.')),
+      );
+
+      return;
+    }
+
+    final imageUrl = await _viewModel.uploadImage(filePath);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (imageUrl == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_viewModel.error ?? 'Workshop image upload failed.'),
+        ),
+      );
+
+      return;
+    }
+
+    _imageUrlController.text = imageUrl;
+
+    setState(() {});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Workshop image uploaded successfully.')),
+    );
+  }
+
+  String _resolveImageUrl(String imageUrl) {
+    final normalized = imageUrl.trim();
+
+    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+      return normalized;
+    }
+
+    final apiUri = Uri.parse(ApiConstants.apiBaseUrl);
+
+    return apiUri
+        .replace(
+          path: normalized.startsWith('/') ? normalized : '/$normalized',
+          query: null,
+          fragment: null,
+        )
+        .toString();
   }
 
   Future<void> _selectStartDate() async {
@@ -218,6 +348,36 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
       return;
     }
 
+    if (_registrationDeadline == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a registration deadline.')),
+      );
+
+      return;
+    }
+
+    if (_registrationDeadline!.isBefore(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Registration deadline must be in the future.'),
+        ),
+      );
+
+      return;
+    }
+
+    if (_registrationDeadline!.isAfter(_startDateTime)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Registration deadline cannot be after workshop start time.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
     final success = await _viewModel.save(
       workshopId: widget.workshopId,
       title: _titleController.text.trim(),
@@ -230,6 +390,11 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
       capacity: capacity,
       price: price,
       therapistId: _therapistId,
+      imageUrl: _imageUrlController.text.trim().isEmpty
+          ? null
+          : _imageUrlController.text.trim(),
+
+      registrationDeadlineUtc: _registrationDeadline!,
     );
 
     if (!mounted) {
@@ -317,6 +482,87 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
                               },
                             ),
                             const SizedBox(height: 12),
+                            const SizedBox(height: 16),
+
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        _imageUrlController.text.trim().isEmpty
+                                            ? 'No cover image uploaded.'
+                                            : 'Cover image uploaded.',
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    OutlinedButton.icon(
+                                      onPressed:
+                                          _viewModel.isSaving ||
+                                              _viewModel.isUploadingImage
+                                          ? null
+                                          : _pickAndUploadImage,
+                                      icon: _viewModel.isUploadingImage
+                                          ? const SizedBox(
+                                              width: 18,
+                                              height: 18,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(Icons.upload_file),
+                                      label: Text(
+                                        _viewModel.isUploadingImage
+                                            ? 'Uploading...'
+                                            : _imageUrlController.text
+                                                  .trim()
+                                                  .isEmpty
+                                            ? 'Upload cover image'
+                                            : 'Replace image',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                if (_imageUrlController.text
+                                    .trim()
+                                    .isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.network(
+                                      _resolveImageUrl(
+                                        _imageUrlController.text,
+                                      ),
+                                      height: 240,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          height: 180,
+                                          alignment: Alignment.center,
+                                          child: const Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.broken_image_outlined,
+                                                size: 48,
+                                              ),
+                                              SizedBox(height: 8),
+                                              Text(
+                                                'Image preview could not be loaded.',
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                             DropdownButtonFormField<int>(
                               initialValue: _type,
                               decoration: const InputDecoration(
@@ -406,6 +652,28 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
                                   icon: const Icon(Icons.event_busy),
                                   label: Text(
                                     'End: ${formatter.format(_endDateTime)}',
+                                  ),
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                InkWell(
+                                  onTap: _viewModel.isSaving
+                                      ? null
+                                      : _pickRegistrationDeadline,
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: InputDecorator(
+                                    decoration: const InputDecoration(
+                                      labelText: 'Registration deadline',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.event_busy),
+                                    ),
+                                    child: Text(
+                                      _registrationDeadline == null
+                                          ? 'Select registration deadline'
+                                          : '${MaterialLocalizations.of(context).formatFullDate(_registrationDeadline!)}  '
+                                                '${TimeOfDay.fromDateTime(_registrationDeadline!).format(context)}',
+                                    ),
                                   ),
                                 ),
                               ],

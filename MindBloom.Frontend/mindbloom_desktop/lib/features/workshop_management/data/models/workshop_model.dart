@@ -18,12 +18,17 @@ class WorkshopModel {
   final DateTime createdAtUtc;
   final DateTime? updatedAtUtc;
   final String? statusChangeReason;
+  final String? imageUrl;
+  final String? therapistName;
+
+  final DateTime registrationDeadlineUtc;
 
   const WorkshopModel({
     required this.id,
     required this.title,
     required this.description,
     required this.startUtc,
+    required this.therapistName,
     required this.endUtc,
     required this.type,
     required this.onlineLink,
@@ -39,6 +44,8 @@ class WorkshopModel {
     required this.createdAtUtc,
     required this.updatedAtUtc,
     required this.statusChangeReason,
+    required this.imageUrl,
+    required this.registrationDeadlineUtc,
   });
 
   factory WorkshopModel.fromJson(Map<String, dynamic> json) {
@@ -56,9 +63,13 @@ class WorkshopModel {
       availableSeats: json['availableSeats'] ?? 0,
       price: (json['price'] as num?)?.toDouble() ?? 0,
       status: json['status'] ?? '',
+      therapistName: json['therapistName']?.toString(),
       organizerUserId: json['organizerUserId'] ?? 0,
       organizerName: json['organizerName'] ?? '',
       therapistId: json['therapistId'],
+      imageUrl: json['imageUrl']?.toString(),
+
+      registrationDeadlineUtc: DateTime.parse(json['registrationDeadlineUtc']),
       createdAtUtc: DateTime.parse(json['createdAtUtc']),
       updatedAtUtc: json['updatedAtUtc'] == null
           ? null
@@ -81,5 +92,23 @@ class WorkshopModel {
 
   bool get isOnline {
     return type.toLowerCase() == 'online';
+  }
+
+  bool get isInactive {
+    return status.toLowerCase() == 'inactive';
+  }
+
+  Duration get duration {
+    return endUtc.difference(startUtc);
+  }
+
+  String get presenterName {
+    final therapist = therapistName?.trim() ?? '';
+
+    if (therapist.isNotEmpty) {
+      return therapist;
+    }
+
+    return organizerName;
   }
 }

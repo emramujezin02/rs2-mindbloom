@@ -5,6 +5,7 @@ import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../data/models/workshop_model.dart';
 import '../viewmodels/workshop_management_viewmodel.dart';
+import '../../../../core/constants/api_constants.dart';
 
 class WorkshopManagementPage extends StatefulWidget {
   const WorkshopManagementPage({super.key});
@@ -374,6 +375,10 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
                           value: 3,
                           child: Text('Completed'),
                         ),
+                        DropdownMenuItem<int?>(
+                          value: 4,
+                          child: Text('Inactive'),
+                        ),
                       ],
                       onChanged: (value) {
                         _viewModel.selectedStatus = value;
@@ -517,9 +522,42 @@ class _WorkshopCard extends StatelessWidget {
     required this.onDelete,
   });
 
+  String _resolveImageUrl(String imageUrl) {
+    final normalized = imageUrl.trim();
+
+    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+      return normalized;
+    }
+
+    final apiUri = Uri.parse(ApiConstants.apiBaseUrl);
+
+    return apiUri
+        .replace(
+          path: normalized.startsWith('/') ? normalized : '/$normalized',
+          query: null,
+          fragment: null,
+        )
+        .toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final formatter = DateFormat('dd.MM.yyyy. HH:mm');
+
+    String formatDuration(Duration duration) {
+      final hours = duration.inHours;
+      final minutes = duration.inMinutes.remainder(60);
+
+      if (hours > 0 && minutes > 0) {
+        return '$hours h $minutes min';
+      }
+
+      if (hours > 0) {
+        return '$hours h';
+      }
+
+      return '$minutes min';
+    }
 
     return Card(
       child: Padding(
@@ -527,12 +565,39 @@ class _WorkshopCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 25,
-              child: Icon(
-                workshop.isOnline
-                    ? Icons.video_camera_front_outlined
-                    : Icons.location_on_outlined,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 90,
+                height: 90,
+                child:
+                    workshop.imageUrl == null ||
+                        workshop.imageUrl!.trim().isEmpty
+                    ? Container(
+                        alignment: Alignment.center,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        child: Icon(
+                          workshop.isOnline
+                              ? Icons.video_camera_front_outlined
+                              : Icons.location_on_outlined,
+                          size: 34,
+                        ),
+                      )
+                    : Image.network(
+                        _resolveImageUrl(workshop.imageUrl!),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.broken_image_outlined,
+                              size: 34,
+                            ),
+                          );
+                        },
+                      ),
               ),
             ),
             const SizedBox(width: 16),
@@ -570,12 +635,30 @@ class _WorkshopCard extends StatelessWidget {
                       Text(
                         'Start: ${formatter.format(workshop.startUtc.toLocal())}',
                       ),
-                      Text('Organizer: ${workshop.organizerName}'),
+
+                      Text('Duration: ${formatDuration(workshop.duration)}'),
+
                       Text(
-                        'Registrations: ${workshop.registeredCount}/${workshop.capacity}',
+                        'Deadline: ${formatter.format(workshop.registrationDeadlineUtc.toLocal())}',
                       ),
-                      Text('Available: ${workshop.availableSeats}'),
-                      Text('Price: ${workshop.price.toStringAsFixed(2)} KM'),
+
+                      Text('Presenter: ${workshop.presenterName}'),
+
+                      Text(
+                        'Registrations: '
+                        '${workshop.registeredCount}/'
+                        '${workshop.capacity}',
+                      ),
+
+                      Text(
+                        'Available: '
+                        '${workshop.availableSeats}',
+                      ),
+
+                      Text(
+                        'Price: '
+                        '${workshop.price.toStringAsFixed(2)} KM',
+                      ),
                     ],
                   ),
                 ],

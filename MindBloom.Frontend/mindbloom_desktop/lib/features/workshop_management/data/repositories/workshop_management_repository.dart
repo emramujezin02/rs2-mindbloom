@@ -60,6 +60,8 @@ class WorkshopManagementRepository {
     required int capacity,
     required double price,
     required int? therapistId,
+    required String? imageUrl,
+    required DateTime registrationDeadlineUtc,
   }) {
     return apiService.createWorkshop(
       title: title,
@@ -72,6 +74,8 @@ class WorkshopManagementRepository {
       capacity: capacity,
       price: price,
       therapistId: therapistId,
+      imageUrl: imageUrl,
+      registrationDeadlineUtc: registrationDeadlineUtc,
     );
   }
 
@@ -87,6 +91,8 @@ class WorkshopManagementRepository {
     required int capacity,
     required double price,
     required int? therapistId,
+    required String? imageUrl,
+    required DateTime registrationDeadlineUtc,
   }) {
     return apiService.updateWorkshop(
       workshopId: workshopId,
@@ -100,6 +106,8 @@ class WorkshopManagementRepository {
       capacity: capacity,
       price: price,
       therapistId: therapistId,
+      imageUrl: imageUrl,
+      registrationDeadlineUtc: registrationDeadlineUtc,
     );
   }
 
@@ -110,7 +118,27 @@ class WorkshopManagementRepository {
     return apiService.cancelWorkshop(workshopId: workshopId, reason: reason);
   }
 
+  Future<WorkshopModel> deactivateWorkshop(int workshopId) {
+    return apiService.updateWorkshopStatus(
+      workshopId: workshopId,
+      status: 4,
+      reason: 'Workshop deactivated by administrator.',
+    );
+  }
+
+  Future<WorkshopModel> activateWorkshop(int workshopId) {
+    return apiService.updateWorkshopStatus(
+      workshopId: workshopId,
+      status: 1,
+      reason: 'Workshop activated by administrator.',
+    );
+  }
+
   Future<void> deleteWorkshop(int workshopId) {
     return apiService.deleteWorkshop(workshopId);
+  }
+
+  Future<String> uploadWorkshopImage(String filePath) {
+    return apiService.uploadWorkshopImage(filePath);
   }
 }

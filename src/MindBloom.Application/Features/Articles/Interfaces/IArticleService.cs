@@ -1,4 +1,5 @@
-﻿using MindBloom.Application.Common.Models;
+﻿using Microsoft.AspNetCore.Http;
+using MindBloom.Application.Common.Models;
 using MindBloom.Application.Features.Articles.DTOs;
 
 namespace MindBloom.Application.Features.Articles.Interfaces;

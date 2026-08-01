@@ -13,6 +13,8 @@ class WorkshopFormViewModel extends ChangeNotifier {
 
   bool isSaving = false;
 
+  bool isUploadingImage = false;
+
   String? error;
 
   WorkshopModel? workshop;
@@ -43,6 +45,29 @@ class WorkshopFormViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<String?> uploadImage(String filePath) async {
+    if (isUploadingImage) {
+      return null;
+    }
+
+    isUploadingImage = true;
+    error = null;
+
+    notifyListeners();
+
+    try {
+      return await repository.uploadWorkshopImage(filePath);
+    } catch (exception) {
+      error = exception.toString();
+
+      return null;
+    } finally {
+      isUploadingImage = false;
+
+      notifyListeners();
+    }
+  }
+
   Future<bool> save({
     required int? workshopId,
     required String title,
@@ -55,6 +80,8 @@ class WorkshopFormViewModel extends ChangeNotifier {
     required int capacity,
     required double price,
     required int? therapistId,
+    required String? imageUrl,
+    required DateTime registrationDeadlineUtc,
   }) async {
     isSaving = true;
     error = null;
@@ -73,6 +100,8 @@ class WorkshopFormViewModel extends ChangeNotifier {
           capacity: capacity,
           price: price,
           therapistId: therapistId,
+          imageUrl: imageUrl,
+          registrationDeadlineUtc: registrationDeadlineUtc,
         );
       } else {
         await repository.updateWorkshop(
@@ -87,6 +116,8 @@ class WorkshopFormViewModel extends ChangeNotifier {
           capacity: capacity,
           price: price,
           therapistId: therapistId,
+          imageUrl: imageUrl,
+          registrationDeadlineUtc: registrationDeadlineUtc,
         );
       }
 

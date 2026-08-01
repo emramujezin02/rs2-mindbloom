@@ -1,5 +1,6 @@
 ﻿using MindBloom.Application.Common.Models;
 using MindBloom.Application.Features.Workshops.DTOs;
+using Microsoft.AspNetCore.Http;
 
 namespace MindBloom.Application.Features.Workshops.Interfaces;
 
@@ -67,4 +68,8 @@ public interface IWorkshopService
             int workshopId,
             int pageNumber,
             int pageSize);
+
+    Task<WorkshopImageUploadDto>
+    UploadImageAsync(
+        IFormFile file);
 }

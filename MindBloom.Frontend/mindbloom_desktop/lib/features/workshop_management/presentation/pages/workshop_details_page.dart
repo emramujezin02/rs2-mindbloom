@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mindbloom_desktop/features/workshop_management/presentation/pages/workshop_details_viewmodel.dart';
-
+import 'package:mindbloom_desktop/features/workshop_management/presentation/viewmodels/workshop_details_viewmodel.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../data/models/workshop_model.dart';
@@ -138,6 +138,120 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
     }
   }
 
+  Future<void> _deactivateWorkshop() async {
+    final workshop = _viewModel.workshop;
+
+    if (workshop == null) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Deactivate workshop'),
+          content: Text(
+            'Deactivate "${workshop.title}"?\n\n'
+            'The workshop will no longer be available for new registrations.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Back'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              icon: const Icon(Icons.pause_circle_outline),
+              label: const Text('Deactivate'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final success = await _viewModel.deactivate(widget.workshopId);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Workshop deactivated successfully.')),
+      );
+    }
+  }
+
+  Future<void> _activateWorkshop() async {
+    final workshop = _viewModel.workshop;
+
+    if (workshop == null) {
+      return;
+    }
+
+    if (!workshop.startUtc.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('A past workshop cannot be activated again.'),
+        ),
+      );
+
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Activate workshop'),
+          content: Text(
+            'Activate "${workshop.title}"?\n\n'
+            'The workshop will become available again if all backend business rules are satisfied.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Back'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              icon: const Icon(Icons.play_circle_outline),
+              label: const Text('Activate'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final success = await _viewModel.activate(widget.workshopId);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Workshop activated successfully.')),
+      );
+    }
+  }
+
   Future<void> _deleteWorkshop() async {
     final workshop = _viewModel.workshop;
 
@@ -244,7 +358,9 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
         padding: const EdgeInsets.all(24),
         children: [
           _WorkshopDetailsCard(workshop: workshop),
+
           const SizedBox(height: 16),
+
           Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -255,12 +371,39 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
                   icon: const Icon(Icons.edit_outlined),
                   label: const Text('Edit workshop'),
                 ),
+
               if (workshop.isScheduled)
+                OutlinedButton.icon(
+                  onPressed: _viewModel.isProcessing
+                      ? null
+                      : _deactivateWorkshop,
+                  icon: const Icon(Icons.pause_circle_outline),
+                  label: const Text('Deactivate'),
+                ),
+
+              if (workshop.isInactive &&
+                  workshop.startUtc.isAfter(DateTime.now()))
+                FilledButton.icon(
+                  onPressed: _viewModel.isProcessing ? null : _activateWorkshop,
+                  icon: const Icon(Icons.play_circle_outline),
+                  label: const Text('Activate'),
+                ),
+
+              if (workshop.isInactive &&
+                  workshop.startUtc.isAfter(DateTime.now()))
+                FilledButton.icon(
+                  onPressed: _viewModel.isProcessing ? null : _editWorkshop,
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Edit workshop'),
+                ),
+
+              if (workshop.isScheduled || workshop.isInactive)
                 OutlinedButton.icon(
                   onPressed: _viewModel.isProcessing ? null : _cancelWorkshop,
                   icon: const Icon(Icons.cancel_outlined),
                   label: const Text('Cancel workshop'),
                 ),
+
               if (workshop.registeredCount == 0)
                 OutlinedButton.icon(
                   onPressed: _viewModel.isProcessing ? null : _deleteWorkshop,
@@ -269,6 +412,7 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
                 ),
             ],
           ),
+
           if (_viewModel.error != null) ...[
             const SizedBox(height: 16),
             Text(
@@ -276,14 +420,21 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ],
+
           const SizedBox(height: 24),
+
           Text(
-            'Registrations (${_viewModel.registrationTotalCount})',
+            'Registrations '
+            '(${_viewModel.registrationTotalCount})',
             style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
           ),
+
           const SizedBox(height: 12),
+
           _buildRegistrations(),
+
           const SizedBox(height: 12),
+
           _buildRegistrationPagination(),
         ],
       ),
@@ -394,6 +545,40 @@ class _WorkshopDetailsCard extends StatelessWidget {
 
   const _WorkshopDetailsCard({required this.workshop});
 
+  String _resolveImageUrl(String imageUrl) {
+    final normalized = imageUrl.trim();
+
+    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+      return normalized;
+    }
+
+    final apiUri = Uri.parse(ApiConstants.apiBaseUrl);
+
+    return apiUri
+        .replace(
+          path: normalized.startsWith('/') ? normalized : '/$normalized',
+          query: null,
+          fragment: null,
+        )
+        .toString();
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+
+    final minutes = duration.inMinutes.remainder(60);
+
+    if (hours > 0 && minutes > 0) {
+      return '$hours h $minutes min';
+    }
+
+    if (hours > 0) {
+      return '$hours h';
+    }
+
+    return '$minutes min';
+  }
+
   @override
   Widget build(BuildContext context) {
     final formatter = DateFormat('dd.MM.yyyy. HH:mm');
@@ -404,6 +589,27 @@ class _WorkshopDetailsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (workshop.imageUrl != null &&
+                workshop.imageUrl!.trim().isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(
+                  _resolveImageUrl(workshop.imageUrl!),
+                  height: 320,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 200,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.broken_image_outlined, size: 48),
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 20),
+            ],
             Wrap(
               spacing: 10,
               runSpacing: 8,
@@ -431,7 +637,19 @@ class _WorkshopDetailsCard extends StatelessWidget {
               label: 'End',
               value: formatter.format(workshop.endUtc.toLocal()),
             ),
+            _DetailsRow(
+              label: 'Duration',
+              value: _formatDuration(workshop.duration),
+            ),
+
+            _DetailsRow(
+              label: 'Registration deadline',
+              value: formatter.format(
+                workshop.registrationDeadlineUtc.toLocal(),
+              ),
+            ),
             _DetailsRow(label: 'Organizer', value: workshop.organizerName),
+            _DetailsRow(label: 'Presenter', value: workshop.presenterName),
             _DetailsRow(label: 'Capacity', value: workshop.capacity.toString()),
             _DetailsRow(
               label: 'Active registrations',

@@ -14,6 +14,8 @@ public static class WorkshopValidationRules
 
     public const int MinCapacity = 1;
     public const int MaxCapacity = 10000;
+
+    public const int MaximumImageUrlLength = 1000;
 }
 
 public sealed class CreateWorkshopDtoValidator
@@ -49,6 +51,26 @@ public sealed class CreateWorkshopDtoValidator
 
         RuleFor(x => x.Price)
             .GreaterThanOrEqualTo(0);
+
+        RuleFor(x => x.RegistrationDeadlineUtc)
+    .GreaterThan(DateTime.UtcNow)
+    .WithMessage(
+        "Registration deadline must be in the future.");
+
+        RuleFor(x => x.RegistrationDeadlineUtc)
+            .LessThanOrEqualTo(x => x.StartUtc)
+            .WithMessage(
+                "Registration deadline must be before or equal to workshop start time.");
+
+        RuleFor(x => x.ImageUrl)
+    .MaximumLength(
+        WorkshopValidationRules
+            .MaximumImageUrlLength)
+    .WithMessage(
+        "Image URL may contain at most 1000 characters.")
+    .When(x =>
+        !string.IsNullOrWhiteSpace(
+            x.ImageUrl));
 
         When(x => x.Type == WorkshopType.Online, () =>
         {
@@ -111,6 +133,27 @@ public sealed class UpdateWorkshopDtoValidator
 
         RuleFor(x => x.Price)
             .GreaterThanOrEqualTo(0);
+
+        RuleFor(x => x.RegistrationDeadlineUtc)
+    .GreaterThan(DateTime.UtcNow)
+    .WithMessage(
+        "Registration deadline must be in the future.");
+
+        RuleFor(x => x.RegistrationDeadlineUtc)
+            .LessThanOrEqualTo(x => x.StartUtc)
+            .WithMessage(
+                "Registration deadline must be before or equal to workshop start time.");
+
+        RuleFor(x => x.ImageUrl)
+    .MaximumLength(
+        WorkshopValidationRules
+            .MaximumImageUrlLength)
+    .WithMessage(
+        "Image URL may contain at most 1000 characters.")
+    .When(x =>
+        !string.IsNullOrWhiteSpace(
+            x.ImageUrl));
+
 
         When(x => x.Type == WorkshopType.Online, () =>
         {

@@ -25,4 +25,7 @@ public class UpdateWorkshopDto
     public decimal Price { get; set; }
 
     public int? TherapistId { get; set; }
+    public string? ImageUrl { get; set; }
+
+    public DateTime RegistrationDeadlineUtc { get; set; }
 }

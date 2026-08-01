@@ -176,4 +176,54 @@ class WorkshopDetailsViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> deactivate(int workshopId) async {
+    if (isProcessing) {
+      return false;
+    }
+
+    isProcessing = true;
+    error = null;
+
+    notifyListeners();
+
+    try {
+      workshop = await repository.deactivateWorkshop(workshopId);
+
+      return true;
+    } catch (exception) {
+      error = exception.toString();
+
+      return false;
+    } finally {
+      isProcessing = false;
+
+      notifyListeners();
+    }
+  }
+
+  Future<bool> activate(int workshopId) async {
+    if (isProcessing) {
+      return false;
+    }
+
+    isProcessing = true;
+    error = null;
+
+    notifyListeners();
+
+    try {
+      workshop = await repository.activateWorkshop(workshopId);
+
+      return true;
+    } catch (exception) {
+      error = exception.toString();
+
+      return false;
+    } finally {
+      isProcessing = false;
+
+      notifyListeners();
+    }
+  }
 }

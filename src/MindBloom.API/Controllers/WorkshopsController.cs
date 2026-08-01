@@ -330,4 +330,23 @@ public class WorkshopsController : ControllerBase
             ? userId
             : null;
     }
+
+    [Authorize(
+    Roles =
+        RoleConstants.Admin
+        + ","
+        + RoleConstants.Therapist)]
+    [HttpPost("image")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult>
+    UploadImage(
+        IFormFile file)
+    {
+        var result =
+            await _workshopService
+                .UploadImageAsync(
+                    file);
+
+        return Ok(result);
+    }
 }
