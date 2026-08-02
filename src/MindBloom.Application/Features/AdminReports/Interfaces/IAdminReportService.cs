@@ -11,7 +11,8 @@ public interface IAdminReportService
 
     Task<AppointmentRevenueReportDto>
         GetAppointmentRevenueReportAsync(
-            AdminReportPeriodQueryDto query,
+            int authenticatedAdminUserId,
+            AppointmentRevenueReportQueryDto query,
             CancellationToken cancellationToken = default);
 
     Task<TherapistPerformanceReportDto>

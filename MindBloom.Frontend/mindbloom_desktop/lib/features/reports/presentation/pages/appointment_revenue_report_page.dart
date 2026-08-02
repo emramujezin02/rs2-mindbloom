@@ -27,6 +27,25 @@ class _AppointmentRevenueReportPageState
     decimalDigits: 2,
   );
 
+  static const List<String> _appointmentStatuses = [
+    'Pending',
+    'Accepted',
+    'Rejected',
+    'Cancelled',
+    'Completed',
+  ];
+
+  static const List<String> _appointmentTypes = ['Online', 'InPerson'];
+
+  static const List<String> _paymentStatuses = [
+    'Pending',
+    'Paid',
+    'Failed',
+    'Refunded',
+    'RefundPending',
+    'RefundFailed',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +53,8 @@ class _AppointmentRevenueReportPageState
     _viewModel = AppInjection.createAppointmentRevenueReportViewModel();
 
     _viewModel.addListener(_onViewModelChanged);
+
+    _viewModel.initialize();
   }
 
   @override
@@ -169,7 +190,9 @@ class _AppointmentRevenueReportPageState
               'Appointment revenue report',
               style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
             ),
+
             const SizedBox(height: 6),
+
             Text(
               'Review appointment, payment, refund and '
               'revenue data for a selected period.',
@@ -197,6 +220,7 @@ class _AppointmentRevenueReportPageState
                 _viewModel.isSavingPdf ? 'Saving...' : 'Download PDF',
               ),
             ),
+
             ElevatedButton.icon(
               onPressed: _viewModel.pdfBytes == null || _viewModel.isPrintingPdf
                   ? null
@@ -254,6 +278,101 @@ class _AppointmentRevenueReportPageState
               onPressed: _selectToDate,
             );
 
+            final therapistField = DropdownButtonFormField<int?>(
+              initialValue: _viewModel.therapistId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Therapist',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('All therapists'),
+                ),
+                ..._viewModel.therapists.map(
+                  (therapist) => DropdownMenuItem<int?>(
+                    value: therapist.id,
+                    child: Text(
+                      therapist.fullName,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: _viewModel.isBusy ? null : _viewModel.setTherapistId,
+            );
+
+            final appointmentStatusField = DropdownButtonFormField<String?>(
+              initialValue: _viewModel.appointmentStatus,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Appointment status',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All statuses'),
+                ),
+                ..._appointmentStatuses.map(
+                  (status) => DropdownMenuItem<String?>(
+                    value: status,
+                    child: Text(_formatStatus(status)),
+                  ),
+                ),
+              ],
+              onChanged: _viewModel.isBusy
+                  ? null
+                  : _viewModel.setAppointmentStatus,
+            );
+
+            final appointmentTypeField = DropdownButtonFormField<String?>(
+              initialValue: _viewModel.appointmentType,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Session type',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All session types'),
+                ),
+                ..._appointmentTypes.map(
+                  (type) => DropdownMenuItem<String?>(
+                    value: type,
+                    child: Text(_formatStatus(type)),
+                  ),
+                ),
+              ],
+              onChanged: _viewModel.isBusy
+                  ? null
+                  : _viewModel.setAppointmentType,
+            );
+
+            final paymentStatusField = DropdownButtonFormField<String?>(
+              initialValue: _viewModel.paymentStatus,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Payment status',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All payment statuses'),
+                ),
+                ..._paymentStatuses.map(
+                  (status) => DropdownMenuItem<String?>(
+                    value: status,
+                    child: Text(_formatStatus(status)),
+                  ),
+                ),
+              ],
+              onChanged: _viewModel.isBusy ? null : _viewModel.setPaymentStatus,
+            );
+
             final generateButton = ElevatedButton.icon(
               onPressed: _viewModel.isBusy ? null : _loadReport,
               icon: _viewModel.isLoading
@@ -276,30 +395,109 @@ class _AppointmentRevenueReportPageState
                     'Report filters',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
+
                   const SizedBox(height: 18),
+
                   fromField,
+
                   const SizedBox(height: 14),
+
                   toField,
+
+                  const SizedBox(height: 14),
+
+                  therapistField,
+
+                  const SizedBox(height: 14),
+
+                  appointmentStatusField,
+
+                  const SizedBox(height: 14),
+
+                  appointmentTypeField,
+
+                  const SizedBox(height: 14),
+
+                  paymentStatusField,
+
                   const SizedBox(height: 18),
-                  generateButton,
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _viewModel.isBusy
+                              ? null
+                              : _viewModel.clearFilters,
+                          icon: const Icon(Icons.filter_alt_off),
+                          label: const Text('Clear filters'),
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      Expanded(child: generateButton),
+                    ],
+                  ),
                 ],
               );
             }
 
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
                   'Report filters',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
+
                 const SizedBox(height: 18),
+
                 Row(
                   children: [
                     Expanded(child: fromField),
+
                     const SizedBox(width: 16),
+
                     Expanded(child: toField),
-                    const SizedBox(width: 20),
+
+                    const SizedBox(width: 16),
+
+                    Expanded(child: therapistField),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                Row(
+                  children: [
+                    Expanded(child: appointmentStatusField),
+
+                    const SizedBox(width: 16),
+
+                    Expanded(child: appointmentTypeField),
+
+                    const SizedBox(width: 16),
+
+                    Expanded(child: paymentStatusField),
+                  ],
+                ),
+
+                const SizedBox(height: 18),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _viewModel.isBusy
+                          ? null
+                          : _viewModel.clearFilters,
+                      icon: const Icon(Icons.filter_alt_off),
+                      label: const Text('Clear filters'),
+                    ),
+
+                    const SizedBox(width: 12),
+
                     generateButton,
                   ],
                 ),
@@ -366,6 +564,23 @@ class _AppointmentRevenueReportPageState
                   value: report.totalAppointments.toString(),
                   description: '${report.uniqueClientsCount} unique clients',
                 ),
+
+                _SummaryCard(
+                  width: itemWidth,
+                  icon: Icons.check_circle_outline,
+                  title: 'Completed',
+                  value: report.completedAppointments.toString(),
+                  description: 'Completed appointments',
+                ),
+
+                _SummaryCard(
+                  width: itemWidth,
+                  icon: Icons.cancel_outlined,
+                  title: 'Cancelled',
+                  value: report.cancelledAppointments.toString(),
+                  description: 'Cancelled appointments',
+                ),
+
                 _SummaryCard(
                   width: itemWidth,
                   icon: Icons.payments,
@@ -376,6 +591,7 @@ class _AppointmentRevenueReportPageState
                   description:
                       '${report.paymentSummary.paidPaymentsCount} successful payments',
                 ),
+
                 _SummaryCard(
                   width: itemWidth,
                   icon: Icons.undo,
@@ -386,6 +602,7 @@ class _AppointmentRevenueReportPageState
                   description:
                       '${report.paymentSummary.refundedPaymentsCount} completed refunds',
                 ),
+
                 _SummaryCard(
                   width: itemWidth,
                   icon: Icons.account_balance_wallet,
@@ -471,13 +688,16 @@ class _AppointmentRevenueReportPageState
             child: Row(
               children: [
                 const Icon(Icons.picture_as_pdf),
+
                 const SizedBox(width: 10),
+
                 const Expanded(
                   child: Text(
                     'PDF preview',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
+
                 Text(
                   '${(bytes.length / 1024).toStringAsFixed(1)} KB',
                   style: Theme.of(context).textTheme.bodySmall,
@@ -485,7 +705,9 @@ class _AppointmentRevenueReportPageState
               ],
             ),
           ),
+
           const Divider(height: 1),
+
           SizedBox(
             height: 720,
             child: PdfPreview(
@@ -529,7 +751,9 @@ class _AppointmentRevenueReportPageState
       child: Row(
         children: [
           Icon(Icons.error_outline, color: colorScheme.onErrorContainer),
+
           const SizedBox(width: 12),
+
           Expanded(
             child: Text(
               message,
@@ -564,9 +788,13 @@ class _AppointmentRevenueReportPageState
 
 class _SummaryCard extends StatelessWidget {
   final double width;
+
   final IconData icon;
+
   final String title;
+
   final String value;
+
   final String description;
 
   const _SummaryCard({
@@ -611,7 +839,9 @@ class _SummaryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title, style: Theme.of(context).textTheme.titleMedium),
+
                     const SizedBox(height: 8),
+
                     Text(
                       value,
                       maxLines: 1,
@@ -621,7 +851,9 @@ class _SummaryCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+
                     const SizedBox(height: 4),
+
                     Text(
                       description,
                       style: Theme.of(context).textTheme.bodySmall,

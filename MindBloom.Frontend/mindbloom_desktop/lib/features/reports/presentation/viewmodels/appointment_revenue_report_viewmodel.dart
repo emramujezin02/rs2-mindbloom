@@ -2,7 +2,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:mindbloom_desktop/features/reports/data/services/appointment_revenue_pdf_service.dart';
-
+import '../../data/models/report_therapist_option_model.dart';
 import '../../data/models/appointment_revenue_report_model.dart';
 import '../../data/repositories/admin_report_repository.dart';
 
@@ -23,6 +23,18 @@ class AppointmentRevenueReportViewModel extends ChangeNotifier {
     DateTime.now().month,
     DateTime.now().day,
   );
+
+  final List<ReportTherapistOptionModel> _therapists = [];
+
+  int? _therapistId;
+
+  String? _appointmentStatus;
+
+  String? _appointmentType;
+
+  String? _paymentStatus;
+
+  bool _isLoadingFilters = false;
 
   AppointmentRevenueReportModel? _report;
   Uint8List? _pdfBytes;
@@ -57,6 +69,19 @@ class AppointmentRevenueReportViewModel extends ChangeNotifier {
 
   bool get hasReport => _report != null;
 
+  List<ReportTherapistOptionModel> get therapists =>
+      List.unmodifiable(_therapists);
+
+  int? get therapistId => _therapistId;
+
+  String? get appointmentStatus => _appointmentStatus;
+
+  String? get appointmentType => _appointmentType;
+
+  String? get paymentStatus => _paymentStatus;
+
+  bool get isLoadingFilters => _isLoadingFilters;
+
   void setFromDate(DateTime value) {
     final normalized = DateTime(value.year, value.month, value.day);
 
@@ -78,6 +103,94 @@ class AppointmentRevenueReportViewModel extends ChangeNotifier {
     }
 
     _toDate = normalized;
+    _clearGeneratedReport();
+
+    notifyListeners();
+  }
+
+  Future<void> initialize() async {
+    if (_isLoadingFilters) {
+      return;
+    }
+
+    _isLoadingFilters = true;
+    _errorMessage = null;
+
+    notifyListeners();
+
+    try {
+      final result = await _repository.getTherapists();
+
+      _therapists
+        ..clear()
+        ..addAll(result);
+
+      _therapists.sort(
+        (first, second) => first.fullName.compareTo(second.fullName),
+      );
+    } catch (error) {
+      _errorMessage = _readableError(error);
+    } finally {
+      _isLoadingFilters = false;
+
+      notifyListeners();
+    }
+  }
+
+  void setTherapistId(int? value) {
+    if (_therapistId == value) {
+      return;
+    }
+
+    _therapistId = value;
+
+    _clearGeneratedReport();
+
+    notifyListeners();
+  }
+
+  void setAppointmentStatus(String? value) {
+    if (_appointmentStatus == value) {
+      return;
+    }
+
+    _appointmentStatus = value;
+
+    _clearGeneratedReport();
+
+    notifyListeners();
+  }
+
+  void setAppointmentType(String? value) {
+    if (_appointmentType == value) {
+      return;
+    }
+
+    _appointmentType = value;
+
+    _clearGeneratedReport();
+
+    notifyListeners();
+  }
+
+  void setPaymentStatus(String? value) {
+    if (_paymentStatus == value) {
+      return;
+    }
+
+    _paymentStatus = value;
+
+    _clearGeneratedReport();
+
+    notifyListeners();
+  }
+
+  void clearFilters() {
+    _therapistId = null;
+    _appointmentStatus = null;
+    _appointmentType = null;
+    _paymentStatus = null;
+
     _clearGeneratedReport();
 
     notifyListeners();
@@ -120,9 +233,22 @@ class AppointmentRevenueReportViewModel extends ChangeNotifier {
       final loadedReport = await _repository.getAppointmentRevenueReport(
         fromUtc: fromUtc,
         toUtc: toUtc,
+        therapistId: _therapistId,
+        appointmentStatus: _appointmentStatus,
+        appointmentType: _appointmentType,
+        paymentStatus: _paymentStatus,
       );
 
       _report = loadedReport;
+
+      if (loadedReport.totalAppointments == 0) {
+        _pdfBytes = null;
+
+        _errorMessage =
+            'No appointment data was found for the selected report parameters.';
+
+        return false;
+      }
 
       await _generatePdfInternal(loadedReport);
 

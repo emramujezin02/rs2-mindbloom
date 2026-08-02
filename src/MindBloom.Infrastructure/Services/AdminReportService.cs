@@ -543,122 +543,370 @@ public class AdminReportService : IAdminReportService
     }
 
     public async Task<AppointmentRevenueReportDto>
-        GetAppointmentRevenueReportAsync(
-            AdminReportPeriodQueryDto query,
-            CancellationToken cancellationToken = default)
+    GetAppointmentRevenueReportAsync(
+        int authenticatedAdminUserId,
+        AppointmentRevenueReportQueryDto query,
+        CancellationToken cancellationToken = default)
     {
-        ValidatePeriod(query);
+        ValidateAppointmentRevenuePeriod(
+            query);
 
-        var appointments = await _context.Appointments
-            .AsNoTracking()
-            .Where(x =>
-                !x.IsDeleted &&
-                x.StartUtc >= query.FromUtc &&
-                x.StartUtc <= query.ToUtc)
-            .Select(x => new AppointmentReportRecord
+        var admin =
+            await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    x =>
+                        x.Id ==
+                            authenticatedAdminUserId &&
+                        !x.IsBlocked,
+                    cancellationToken);
+
+        if (admin == null)
+        {
+            throw new InvalidOperationException(
+                "Administrator was not found.");
+        }
+
+        string generatedByAdmin =
+            BuildFullName(
+                admin.FirstName,
+                admin.LastName,
+                admin.Id);
+
+        string? therapistName = null;
+
+        if (query.TherapistId.HasValue)
+        {
+            var therapist =
+                await _context.Therapists
+                    .AsNoTracking()
+                    .Where(x =>
+                        x.Id ==
+                            query.TherapistId.Value &&
+                        !x.IsDeleted)
+                    .Select(x => new
+                    {
+                        x.Id,
+                        x.User.FirstName,
+                        x.User.LastName
+                    })
+                    .FirstOrDefaultAsync(
+                        cancellationToken);
+
+            if (therapist == null)
             {
-                AppointmentId = x.Id,
-                ClientId = x.ClientId,
-                TherapistId = x.TherapistId,
-                Status = x.Status,
-                IsPaid = x.IsPaid,
+                throw new ArgumentException(
+                    "Selected therapist was not found.");
+            }
 
-                PaymentId =
+            therapistName =
+                BuildFullName(
+                    therapist.FirstName,
+                    therapist.LastName,
+                    therapist.Id);
+        }
+
+        var appointmentsQuery =
+            _context.Appointments
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.StartUtc >= query.FromUtc &&
+                    x.StartUtc <= query.ToUtc);
+
+        if (query.TherapistId.HasValue)
+        {
+            appointmentsQuery =
+                appointmentsQuery.Where(x =>
+                    x.TherapistId ==
+                    query.TherapistId.Value);
+        }
+
+        if (query.AppointmentStatus.HasValue)
+        {
+            appointmentsQuery =
+                appointmentsQuery.Where(x =>
+                    x.Status ==
+                    query.AppointmentStatus.Value);
+        }
+
+        if (query.AppointmentType.HasValue)
+        {
+            appointmentsQuery =
+                appointmentsQuery.Where(x =>
+                    x.Type ==
+                    query.AppointmentType.Value);
+        }
+
+        if (query.PaymentStatus.HasValue)
+        {
+            appointmentsQuery =
+                appointmentsQuery.Where(x =>
                     x.Payment != null &&
-                    !x.Payment.IsDeleted
-                        ? x.Payment.Id
-                        : null,
+                    !x.Payment.IsDeleted &&
+                    x.Payment.Status ==
+                        query.PaymentStatus.Value);
+        }
 
-                PaymentAmount =
-                    x.Payment != null &&
-                    !x.Payment.IsDeleted
-                        ? x.Payment.Amount
-                        : 0,
+        var appointments =
+            await appointmentsQuery
+                .OrderBy(x => x.StartUtc)
+                .ThenBy(x => x.Id)
+                .Select(x =>
+                    new AppointmentRevenueReportRecord
+                    {
+                        AppointmentId =
+                            x.Id,
 
-                PaidAtUtc =
-                    x.Payment != null &&
-                    !x.Payment.IsDeleted
-                        ? x.Payment.PaidAtUtc
-                        : null,
+                        ClientId =
+                            x.ClientId,
 
-                RefundRequestedAtUtc =
-                    x.Payment != null &&
-                    !x.Payment.IsDeleted
-                        ? x.Payment.RefundRequestedAtUtc
-                        : null,
+                        ClientName =
+                            x.Client.User.FirstName
+                            + " "
+                            + x.Client.User.LastName,
 
-                RefundedAtUtc =
-                    x.Payment != null &&
-                    !x.Payment.IsDeleted
-                        ? x.Payment.RefundedAtUtc
-                        : null,
+                        TherapistId =
+                            x.TherapistId,
 
-                RefundFailureReason =
-                    x.Payment != null &&
-                    !x.Payment.IsDeleted
-                        ? x.Payment.RefundFailureReason
-                        : null
-            })
-            .ToListAsync(cancellationToken);
+                        TherapistName =
+                            x.Therapist.User.FirstName
+                            + " "
+                            + x.Therapist.User.LastName,
 
-        var appointmentsByStatus = appointments
-            .GroupBy(x => x.Status)
-            .OrderBy(x => x.Key)
-            .Select(group => new AppointmentStatusReportItemDto
-            {
-                Status = group.Key.ToString(),
-                Count = group.Count()
-            })
-            .ToList();
+                        StartUtc =
+                            x.StartUtc,
 
-        var paymentRecords = appointments
-            .Where(x => x.PaymentId.HasValue)
-            .ToList();
+                        EndUtc =
+                            x.EndUtc,
 
-        var paidPayments = paymentRecords
-            .Where(x => x.PaidAtUtc.HasValue)
-            .ToList();
+                        Status =
+                            x.Status,
 
-        var refundRequestedPayments = paidPayments
-            .Where(x => x.RefundRequestedAtUtc.HasValue)
-            .ToList();
+                        Type =
+                            x.Type,
 
-        var refundedPayments = paidPayments
-            .Where(x => x.RefundedAtUtc.HasValue)
-            .ToList();
+                        AppointmentPrice =
+                            x.Price,
 
-        var failedRefundPayments = paidPayments
-            .Where(x =>
-                !string.IsNullOrWhiteSpace(
-                    x.RefundFailureReason))
-            .ToList();
+                        IsPaid =
+                            x.IsPaid,
 
-        var grossRevenue = paidPayments.Sum(
-            x => x.PaymentAmount);
+                        PaymentId =
+                            x.Payment != null &&
+                            !x.Payment.IsDeleted
+                                ? x.Payment.Id
+                                : null,
 
-        var refundedAmount = refundedPayments.Sum(
-            x => x.PaymentAmount);
+                        PaymentStatus =
+                            x.Payment != null &&
+                            !x.Payment.IsDeleted
+                                ? x.Payment.Status
+                                : null,
+
+                        PaymentAmount =
+                            x.Payment != null &&
+                            !x.Payment.IsDeleted
+                                ? x.Payment.Amount
+                                : 0,
+
+                        PaidAtUtc =
+                            x.Payment != null &&
+                            !x.Payment.IsDeleted
+                                ? x.Payment.PaidAtUtc
+                                : null,
+
+                        RefundRequestedAtUtc =
+                            x.Payment != null &&
+                            !x.Payment.IsDeleted
+                                ? x.Payment.RefundRequestedAtUtc
+                                : null,
+
+                        RefundedAtUtc =
+                            x.Payment != null &&
+                            !x.Payment.IsDeleted
+                                ? x.Payment.RefundedAtUtc
+                                : null,
+
+                        RefundFailureReason =
+                            x.Payment != null &&
+                            !x.Payment.IsDeleted
+                                ? x.Payment.RefundFailureReason
+                                : null
+                    })
+                .ToListAsync(
+                    cancellationToken);
+
+        var appointmentsByStatus =
+            appointments
+                .GroupBy(x => x.Status)
+                .OrderBy(x => x.Key)
+                .Select(group =>
+                    new AppointmentStatusReportItemDto
+                    {
+                        Status =
+                            group.Key.ToString(),
+
+                        Count =
+                            group.Count()
+                    })
+                .ToList();
+
+        var paymentRecords =
+            appointments
+                .Where(x =>
+                    x.PaymentId.HasValue)
+                .ToList();
+
+        var paidPayments =
+            paymentRecords
+                .Where(x =>
+                    x.PaidAtUtc.HasValue)
+                .ToList();
+
+        var refundRequestedPayments =
+            paidPayments
+                .Where(x =>
+                    x.RefundRequestedAtUtc
+                        .HasValue)
+                .ToList();
+
+        var refundedPayments =
+            paidPayments
+                .Where(x =>
+                    x.RefundedAtUtc.HasValue)
+                .ToList();
+
+        var failedRefundPayments =
+            paidPayments
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(
+                        x.RefundFailureReason))
+                .ToList();
+
+        var grossRevenue =
+            paidPayments.Sum(x =>
+                x.PaymentAmount);
+
+        /*
+         * Trenutni Payment model nema zaseban
+         * PartialRefundAmount, pa refund predstavlja
+         * puni refund originalnog iznosa.
+         */
+        var refundedAmount =
+            refundedPayments.Sum(x =>
+                x.PaymentAmount);
 
         var netRevenue =
-            grossRevenue - refundedAmount;
+            grossRevenue -
+            refundedAmount;
+
+        var reportItems =
+            appointments
+                .Select(x =>
+                    new AppointmentRevenueReportItemDto
+                    {
+                        AppointmentId =
+                            x.AppointmentId,
+
+                        ClientName =
+                            x.ClientName.Trim(),
+
+                        TherapistName =
+                            x.TherapistName.Trim(),
+
+                        StartUtc =
+                            x.StartUtc,
+
+                        EndUtc =
+                            x.EndUtc,
+
+                        AppointmentStatus =
+                            x.Status.ToString(),
+
+                        AppointmentType =
+                            x.Type.ToString(),
+
+                        Price =
+                            x.AppointmentPrice,
+
+                        PaymentStatus =
+                            x.PaymentStatus.HasValue
+                                ? x.PaymentStatus
+                                    .Value
+                                    .ToString()
+                                : "Unpaid",
+
+                        PaidAmount =
+                            x.PaidAtUtc.HasValue
+                                ? x.PaymentAmount
+                                : 0,
+
+                        RefundedAmount =
+                            x.RefundedAtUtc.HasValue
+                                ? x.PaymentAmount
+                                : 0
+                    })
+                .ToList();
 
         return new AppointmentRevenueReportDto
         {
-            FromUtc = query.FromUtc,
-            ToUtc = query.ToUtc,
+            FromUtc =
+                query.FromUtc,
+
+            ToUtc =
+                query.ToUtc,
+
+            GeneratedAtUtc =
+                DateTime.UtcNow,
+
+            GeneratedByAdmin =
+                generatedByAdmin,
+
+            TherapistId =
+                query.TherapistId,
+
+            TherapistName =
+                therapistName,
+
+            AppointmentStatusFilter =
+                query.AppointmentStatus?
+                    .ToString(),
+
+            AppointmentTypeFilter =
+                query.AppointmentType?
+                    .ToString(),
+
+            PaymentStatusFilter =
+                query.PaymentStatus?
+                    .ToString(),
 
             TotalAppointments =
                 appointments.Count,
 
-            UniqueClientsCount = appointments
-                .Select(x => x.ClientId)
-                .Distinct()
-                .Count(),
+            CompletedAppointments =
+                appointments.Count(x =>
+                    x.Status ==
+                        AppointmentStatus.Completed),
 
-            UniqueTherapistsCount = appointments
-                .Select(x => x.TherapistId)
-                .Distinct()
-                .Count(),
+            CancelledAppointments =
+                appointments.Count(x =>
+                    x.Status ==
+                        AppointmentStatus.Cancelled ||
+                    x.Status ==
+                        AppointmentStatus.Rejected),
+
+            UniqueClientsCount =
+                appointments
+                    .Select(x => x.ClientId)
+                    .Distinct()
+                    .Count(),
+
+            UniqueTherapistsCount =
+                appointments
+                    .Select(x => x.TherapistId)
+                    .Distinct()
+                    .Count(),
 
             AppointmentsByStatus =
                 appointmentsByStatus,
@@ -695,7 +943,10 @@ public class AdminReportService : IAdminReportService
 
                     NetRevenue =
                         netRevenue
-                }
+                },
+
+            Appointments =
+                reportItems
         };
     }
 
@@ -926,6 +1177,49 @@ public class AdminReportService : IAdminReportService
         };
     }
 
+    private static void
+    ValidateAppointmentRevenuePeriod(
+        AppointmentRevenueReportQueryDto query)
+    {
+        if (query.FromUtc == default)
+        {
+            throw new ArgumentException(
+                "Report start date is required.");
+        }
+
+        if (query.ToUtc == default)
+        {
+            throw new ArgumentException(
+                "Report end date is required.");
+        }
+
+        if (query.FromUtc >
+            query.ToUtc)
+        {
+            throw new ArgumentException(
+                "Report start date cannot be later than the end date.");
+        }
+
+        var maximumPeriod =
+            TimeSpan.FromDays(
+                366 * 5);
+
+        if (query.ToUtc -
+            query.FromUtc >
+            maximumPeriod)
+        {
+            throw new ArgumentException(
+                "Report period cannot be longer than five years.");
+        }
+
+        if (query.TherapistId.HasValue &&
+            query.TherapistId.Value <= 0)
+        {
+            throw new ArgumentException(
+                "Therapist ID must be greater than zero.");
+        }
+    }
+
     private static void ValidatePeriod(
         AdminReportPeriodQueryDto query)
     {
@@ -1089,5 +1383,46 @@ public class AdminReportService : IAdminReportService
         public decimal Amount { get; set; }
 
         public DateTime PaidAtUtc { get; set; }
+    }
+
+    private sealed class AppointmentRevenueReportRecord
+    {
+        public int AppointmentId { get; set; }
+
+        public int ClientId { get; set; }
+
+        public string ClientName { get; set; } =
+            string.Empty;
+
+        public int TherapistId { get; set; }
+
+        public string TherapistName { get; set; } =
+            string.Empty;
+
+        public DateTime StartUtc { get; set; }
+
+        public DateTime EndUtc { get; set; }
+
+        public AppointmentStatus Status { get; set; }
+
+        public AppointmentType Type { get; set; }
+
+        public decimal AppointmentPrice { get; set; }
+
+        public bool IsPaid { get; set; }
+
+        public int? PaymentId { get; set; }
+
+        public PaymentStatus? PaymentStatus { get; set; }
+
+        public decimal PaymentAmount { get; set; }
+
+        public DateTime? PaidAtUtc { get; set; }
+
+        public DateTime? RefundRequestedAtUtc { get; set; }
+
+        public DateTime? RefundedAtUtc { get; set; }
+
+        public string? RefundFailureReason { get; set; }
     }
 }

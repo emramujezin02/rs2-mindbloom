@@ -28,61 +28,45 @@ class AppointmentRevenuePdfService {
 
     document.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(36),
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.all(30),
         header: (context) {
           return _buildHeader(report);
         },
         footer: (context) {
-          return pw.Container(
-            margin: const pw.EdgeInsets.only(top: 12),
-            padding: const pw.EdgeInsets.only(top: 8),
-            decoration: const pw.BoxDecoration(
-              border: pw.Border(
-                top: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-              ),
-            ),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'MindBloom administration',
-                  style: const pw.TextStyle(
-                    fontSize: 8,
-                    color: PdfColors.grey700,
-                  ),
-                ),
-                pw.Text(
-                  'Page ${context.pageNumber} of '
-                  '${context.pagesCount}',
-                  style: const pw.TextStyle(
-                    fontSize: 8,
-                    color: PdfColors.grey700,
-                  ),
-                ),
-              ],
-            ),
-          );
+          return _buildFooter(context, report);
         },
         build: (context) {
           return [
+            pw.SizedBox(height: 14),
+
+            _buildReportInformation(report),
+
+            pw.SizedBox(height: 18),
+
+            _buildAppliedFilters(report),
+
             pw.SizedBox(height: 18),
 
             _buildOverviewSection(report),
 
-            pw.SizedBox(height: 20),
-
-            _buildAppointmentStatusSection(report),
-
-            pw.SizedBox(height: 20),
-
-            _buildPaymentSection(report),
-
-            pw.SizedBox(height: 20),
+            pw.SizedBox(height: 18),
 
             _buildRevenueSection(report),
 
+            pw.SizedBox(height: 18),
+
+            _buildAppointmentStatusSection(report),
+
+            pw.SizedBox(height: 18),
+
+            _buildPaymentSection(report),
+
             pw.SizedBox(height: 22),
+
+            _buildAppointmentsTable(report),
+
+            pw.SizedBox(height: 20),
 
             _buildReportNote(),
           ];
@@ -143,7 +127,7 @@ class AppointmentRevenuePdfService {
 
   pw.Widget _buildHeader(AppointmentRevenueReportModel report) {
     return pw.Container(
-      padding: const pw.EdgeInsets.only(bottom: 14),
+      padding: const pw.EdgeInsets.only(bottom: 12),
       decoration: const pw.BoxDecoration(
         border: pw.Border(
           bottom: pw.BorderSide(color: PdfColors.green700, width: 1.5),
@@ -152,24 +136,7 @@ class AppointmentRevenuePdfService {
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Container(
-            width: 42,
-            height: 42,
-            alignment: pw.Alignment.center,
-            decoration: pw.BoxDecoration(
-              color: PdfColors.green50,
-              borderRadius: pw.BorderRadius.circular(8),
-              border: pw.Border.all(color: PdfColors.green700),
-            ),
-            child: pw.Text(
-              'MB',
-              style: pw.TextStyle(
-                fontSize: 15,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.green800,
-              ),
-            ),
-          ),
+          _buildLogo(),
 
           pw.SizedBox(width: 12),
 
@@ -185,7 +152,9 @@ class AppointmentRevenuePdfService {
                     color: PdfColors.green800,
                   ),
                 ),
+
                 pw.SizedBox(height: 3),
+
                 pw.Text(
                   'Appointment and Revenue Report',
                   style: pw.TextStyle(
@@ -207,20 +176,24 @@ class AppointmentRevenuePdfService {
                   color: PdfColors.grey700,
                 ),
               ),
+
               pw.SizedBox(height: 3),
+
               pw.Text(
-                '${_dateFormatter.format(report.fromUtc)}'
+                '${_dateFormatter.format(report.fromUtc.toLocal())}'
                 ' - '
-                '${_dateFormatter.format(report.toUtc)}',
+                '${_dateFormatter.format(report.toUtc.toLocal())}',
                 style: pw.TextStyle(
                   fontSize: 10,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
+
               pw.SizedBox(height: 3),
+
               pw.Text(
                 'Generated: '
-                '${_dateTimeFormatter.format(DateTime.now())}',
+                '${_dateTimeFormatter.format(report.generatedAtUtc.toLocal())}',
                 style: const pw.TextStyle(
                   fontSize: 8,
                   color: PdfColors.grey700,
@@ -230,6 +203,180 @@ class AppointmentRevenuePdfService {
           ),
         ],
       ),
+    );
+  }
+
+  pw.Widget _buildLogo() {
+    return pw.Container(
+      width: 44,
+      height: 44,
+      alignment: pw.Alignment.center,
+      decoration: pw.BoxDecoration(
+        color: PdfColors.green50,
+        borderRadius: pw.BorderRadius.circular(22),
+        border: pw.Border.all(color: PdfColors.green700, width: 1.5),
+      ),
+      child: pw.Text(
+        'MB',
+        style: pw.TextStyle(
+          fontSize: 14,
+          fontWeight: pw.FontWeight.bold,
+          color: PdfColors.green800,
+        ),
+      ),
+    );
+  }
+
+  pw.Widget _buildFooter(
+    pw.Context context,
+    AppointmentRevenueReportModel report,
+  ) {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 12),
+      padding: const pw.EdgeInsets.only(top: 8),
+      decoration: const pw.BoxDecoration(
+        border: pw.Border(
+          top: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+        ),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'MindBloom administration',
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+          ),
+
+          pw.Text(
+            'Generated by: '
+            '${_safeText(report.generatedByAdmin)}',
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+          ),
+
+          pw.Text(
+            'Page ${context.pageNumber} '
+            'of ${context.pagesCount}',
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildReportInformation(AppointmentRevenueReportModel report) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Report information'),
+
+        pw.SizedBox(height: 8),
+
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+            borderRadius: pw.BorderRadius.circular(6),
+            border: pw.Border.all(color: PdfColors.grey300),
+          ),
+          child: pw.Wrap(
+            spacing: 24,
+            runSpacing: 7,
+            children: [
+              _buildInformationItem(
+                'Period',
+                '${_dateFormatter.format(report.fromUtc.toLocal())}'
+                    ' - '
+                    '${_dateFormatter.format(report.toUtc.toLocal())}',
+              ),
+
+              _buildInformationItem(
+                'Generated',
+                _dateTimeFormatter.format(report.generatedAtUtc.toLocal()),
+              ),
+
+              _buildInformationItem(
+                'Administrator',
+                _safeText(report.generatedByAdmin),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _buildInformationItem(String label, String value) {
+    return pw.Row(
+      mainAxisSize: pw.MainAxisSize.min,
+      children: [
+        pw.Text(
+          '$label: ',
+          style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+        ),
+        pw.Text(value, style: const pw.TextStyle(fontSize: 8)),
+      ],
+    );
+  }
+
+  pw.Widget _buildAppliedFilters(AppointmentRevenueReportModel report) {
+    final filters = <List<String>>[
+      [
+        'Therapist',
+        report.therapistName?.trim().isNotEmpty == true
+            ? report.therapistName!
+            : 'All therapists',
+      ],
+      [
+        'Appointment status',
+        _formatOptionalFilter(report.appointmentStatusFilter, 'All statuses'),
+      ],
+      [
+        'Session type',
+        _formatOptionalFilter(
+          report.appointmentTypeFilter,
+          'All session types',
+        ),
+      ],
+      [
+        'Payment status',
+        _formatOptionalFilter(
+          report.paymentStatusFilter,
+          'All payment statuses',
+        ),
+      ],
+    ];
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Applied filters'),
+
+        pw.SizedBox(height: 8),
+
+        pw.TableHelper.fromTextArray(
+          headers: const ['Filter', 'Value'],
+          data: filters,
+          headerStyle: pw.TextStyle(
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.white,
+            fontSize: 8,
+          ),
+          headerDecoration: const pw.BoxDecoration(
+            color: PdfColors.blueGrey700,
+          ),
+          cellStyle: const pw.TextStyle(fontSize: 8),
+          cellPadding: const pw.EdgeInsets.symmetric(
+            horizontal: 7,
+            vertical: 5,
+          ),
+          border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(1),
+            1: pw.FlexColumnWidth(3),
+          },
+        ),
+      ],
     );
   }
 
@@ -249,14 +396,36 @@ class AppointmentRevenuePdfService {
                 value: report.totalAppointments.toString(),
               ),
             ),
+
             pw.SizedBox(width: 8),
+
+            pw.Expanded(
+              child: _buildMetricCard(
+                title: 'Completed',
+                value: report.completedAppointments.toString(),
+              ),
+            ),
+
+            pw.SizedBox(width: 8),
+
+            pw.Expanded(
+              child: _buildMetricCard(
+                title: 'Cancelled',
+                value: report.cancelledAppointments.toString(),
+              ),
+            ),
+
+            pw.SizedBox(width: 8),
+
             pw.Expanded(
               child: _buildMetricCard(
                 title: 'Unique clients',
                 value: report.uniqueClientsCount.toString(),
               ),
             ),
+
             pw.SizedBox(width: 8),
+
             pw.Expanded(
               child: _buildMetricCard(
                 title: 'Therapists',
@@ -381,14 +550,18 @@ class AppointmentRevenuePdfService {
                 value: _currencyFormatter.format(summary.grossRevenue),
               ),
             ),
+
             pw.SizedBox(width: 8),
+
             pw.Expanded(
               child: _buildRevenueCard(
                 title: 'Refunded amount',
                 value: _currencyFormatter.format(summary.refundedAmount),
               ),
             ),
+
             pw.SizedBox(width: 8),
+
             pw.Expanded(
               child: _buildRevenueCard(
                 title: 'Net revenue',
@@ -402,9 +575,106 @@ class AppointmentRevenuePdfService {
     );
   }
 
+  pw.Widget _buildAppointmentsTable(AppointmentRevenueReportModel report) {
+    final appointments = report.appointments;
+
+    if (appointments.isEmpty) {
+      return pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('Appointments'),
+
+          pw.SizedBox(height: 10),
+
+          _buildEmptyMessage(
+            'No appointments match the selected report parameters.',
+          ),
+        ],
+      );
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Appointments'),
+
+        pw.SizedBox(height: 4),
+
+        pw.Text(
+          '${appointments.length} appointment(s)',
+          style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+        ),
+
+        pw.SizedBox(height: 10),
+
+        pw.TableHelper.fromTextArray(
+          headers: const [
+            'ID',
+            'Date / time',
+            'Client',
+            'Therapist',
+            'Session',
+            'Status',
+            'Payment',
+            'Price',
+            'Paid',
+            'Refunded',
+          ],
+          data: appointments.map((appointment) {
+            return [
+              appointment.appointmentId.toString(),
+
+              _dateTimeFormatter.format(appointment.startUtc.toLocal()),
+
+              _safeText(appointment.clientName),
+
+              _safeText(appointment.therapistName),
+
+              _formatStatus(appointment.appointmentType),
+
+              _formatStatus(appointment.appointmentStatus),
+
+              _formatStatus(appointment.paymentStatus),
+
+              _currencyFormatter.format(appointment.price),
+
+              _currencyFormatter.format(appointment.paidAmount),
+
+              _currencyFormatter.format(appointment.refundedAmount),
+            ];
+          }).toList(),
+          headerStyle: pw.TextStyle(
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.white,
+            fontSize: 7,
+          ),
+          headerDecoration: const pw.BoxDecoration(color: PdfColors.green700),
+          cellStyle: const pw.TextStyle(fontSize: 6.8),
+          cellPadding: const pw.EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: 5,
+          ),
+          border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.4),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(0.5),
+            1: pw.FlexColumnWidth(1.25),
+            2: pw.FlexColumnWidth(1.25),
+            3: pw.FlexColumnWidth(1.25),
+            4: pw.FlexColumnWidth(0.85),
+            5: pw.FlexColumnWidth(0.9),
+            6: pw.FlexColumnWidth(0.9),
+            7: pw.FlexColumnWidth(0.85),
+            8: pw.FlexColumnWidth(0.85),
+            9: pw.FlexColumnWidth(0.85),
+          },
+        ),
+      ],
+    );
+  }
+
   pw.Widget _buildMetricCard({required String title, required String value}) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(12),
+      padding: const pw.EdgeInsets.all(10),
       decoration: pw.BoxDecoration(
         color: PdfColors.grey100,
         borderRadius: pw.BorderRadius.circular(6),
@@ -417,10 +687,12 @@ class AppointmentRevenuePdfService {
             title,
             style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
           ),
+
           pw.SizedBox(height: 6),
+
           pw.Text(
             value,
-            style: pw.TextStyle(fontSize: 17, fontWeight: pw.FontWeight.bold),
+            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
           ),
         ],
       ),
@@ -448,7 +720,9 @@ class AppointmentRevenuePdfService {
             title,
             style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
           ),
+
           pw.SizedBox(height: 6),
+
           pw.Text(
             value,
             style: pw.TextStyle(
@@ -506,6 +780,20 @@ class AppointmentRevenuePdfService {
     );
   }
 
+  String _formatOptionalFilter(String? value, String fallback) {
+    if (value == null || value.trim().isEmpty) {
+      return fallback;
+    }
+
+    return _formatStatus(value);
+  }
+
+  String _safeText(String? value) {
+    final normalized = value?.trim() ?? '';
+
+    return normalized.isEmpty ? 'N/A' : normalized;
+  }
+
   String _formatStatus(String value) {
     if (value.trim().isEmpty) {
       return 'Unknown';
@@ -514,7 +802,9 @@ class AppointmentRevenuePdfService {
     final normalized = value
         .replaceAllMapped(
           RegExp(r'([a-z])([A-Z])'),
-          (match) => '${match.group(1)} ${match.group(2)}',
+          (match) =>
+              '${match.group(1)} '
+              '${match.group(2)}',
         )
         .replaceAll('_', ' ')
         .trim();

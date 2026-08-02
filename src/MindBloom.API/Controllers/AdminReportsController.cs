@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.AdminReports.DTOs;
 using MindBloom.Application.Features.AdminReports.Interfaces;
 using MindBloom.Shared.Constants;
+using System.Security.Claims;
 
 namespace MindBloom.API.Controllers;
 
@@ -48,12 +49,24 @@ public class AdminReportsController : ControllerBase
         AppointmentRevenueReportDto>>
         GetAppointmentRevenueReport(
             [FromQuery]
-            AdminReportPeriodQueryDto query,
+        AppointmentRevenueReportQueryDto query,
             CancellationToken cancellationToken)
     {
+        var userIdValue =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(
+                userIdValue,
+                out var adminUserId))
+        {
+            return Unauthorized();
+        }
+
         var result =
             await _adminReportService
                 .GetAppointmentRevenueReportAsync(
+                    adminUserId,
                     query,
                     cancellationToken);
 
