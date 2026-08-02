@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/models/admin_review_details_model.dart';
 import '../../data/repositories/review_moderation_repository.dart';
+import '../../../../core/error/app_error_helper.dart';
 
 class ReviewModerationDetailsViewModel extends ChangeNotifier {
   final ReviewModerationRepository repository;
@@ -109,12 +110,6 @@ class ReviewModerationDetailsViewModel extends ChangeNotifier {
   }
 
   String _cleanError(Object error) {
-    final value = error.toString();
-
-    if (value.startsWith('Exception: ')) {
-      return value.substring('Exception: '.length);
-    }
-
-    return value;
+    return AppErrorHelper.message(error);
   }
 }

@@ -5,6 +5,7 @@ import '../../data/models/therapy_approach_model.dart';
 import '../../data/models/therapist_specialization_model.dart';
 import '../../data/repositories/reference_data_repository.dart';
 import '../../data/models/article_category_reference_model.dart';
+import '../../../../core/error/app_error_helper.dart';
 
 class ReferenceDataManagementViewModel extends ChangeNotifier {
   final ReferenceDataRepository repository;
@@ -89,7 +90,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
       totalCount = response.totalCount;
       totalPages = response.totalPages;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
     } finally {
       isLoading = false;
 
@@ -130,7 +131,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
       articleCategoryTotalCount = response.totalCount;
       articleCategoryTotalPages = response.totalPages;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
     } finally {
       isLoading = false;
 
@@ -143,6 +144,9 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
     String? description,
     required bool isActive,
   }) async {
+    if (isActionLoading) {
+      return false;
+    }
     isActionLoading = true;
     errorMessage = null;
 
@@ -159,7 +163,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
 
       return false;
     } finally {
@@ -174,6 +178,9 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
     required String name,
     String? description,
   }) async {
+    if (isActionLoading) {
+      return false;
+    }
     isActionLoading = true;
     errorMessage = null;
 
@@ -190,7 +197,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
 
       return false;
     } finally {
@@ -204,6 +211,9 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
     required ArticleCategoryReferenceModel category,
     required bool isActive,
   }) async {
+    if (isActionLoading) {
+      return false;
+    }
     isActionLoading = true;
     errorMessage = null;
 
@@ -219,7 +229,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
 
       return false;
     } finally {
@@ -230,6 +240,9 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
   }
 
   Future<bool> deleteArticleCategory(int id) async {
+    if (isActionLoading) {
+      return false;
+    }
     isActionLoading = true;
     errorMessage = null;
 
@@ -247,7 +260,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
 
       return false;
     } finally {
@@ -283,7 +296,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       therapyApproachTotalPages = response.totalPages;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
     } finally {
       isLoading = false;
 
@@ -296,6 +309,9 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
     String? description,
     required bool isActive,
   }) async {
+    if (isActionLoading) {
+      return false;
+    }
     isActionLoading = true;
     errorMessage = null;
 
@@ -312,7 +328,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
 
       return false;
     } finally {
@@ -327,6 +343,9 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
     required String name,
     String? description,
   }) async {
+    if (isActionLoading) {
+      return false;
+    }
     isActionLoading = true;
     errorMessage = null;
 
@@ -343,7 +362,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
 
       return false;
     } finally {
@@ -357,6 +376,9 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
     required TherapyApproachModel approach,
     required bool isActive,
   }) async {
+    if (isActionLoading) {
+      return false;
+    }
     isActionLoading = true;
     errorMessage = null;
 
@@ -372,7 +394,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
 
       return false;
     } finally {
@@ -383,6 +405,9 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
   }
 
   Future<bool> deleteTherapyApproach(int id) async {
+    if (isActionLoading) {
+      return false;
+    }
     isActionLoading = true;
     errorMessage = null;
 
@@ -400,7 +425,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
 
       return false;
     } finally {
@@ -451,6 +476,9 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
     String? description,
     required bool isActive,
   }) async {
+    if (isActionLoading) {
+      return false;
+    }
     isActionLoading = true;
     errorMessage = null;
 
@@ -467,7 +495,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
 
       return false;
     } finally {
@@ -482,6 +510,9 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
     required String name,
     String? description,
   }) async {
+    if (isActionLoading) {
+      return false;
+    }
     isActionLoading = true;
     errorMessage = null;
 
@@ -498,7 +529,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
 
       return false;
     } finally {
@@ -512,6 +543,9 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
     required TherapistSpecializationModel specialization,
     required bool isActive,
   }) async {
+    if (isActionLoading) {
+      return false;
+    }
     isActionLoading = true;
     errorMessage = null;
 
@@ -527,7 +561,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
 
       return false;
     } finally {
@@ -538,6 +572,9 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
   }
 
   Future<bool> deleteSpecialization(int id) async {
+    if (isActionLoading) {
+      return false;
+    }
     isActionLoading = true;
     errorMessage = null;
 
@@ -554,7 +591,7 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      errorMessage = exception.toString();
+      errorMessage = AppErrorHelper.message(exception);
 
       return false;
     } finally {
@@ -562,6 +599,15 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
       notifyListeners();
     }
+  }
+
+  void clearError() {
+    if (errorMessage == null) {
+      return;
+    }
+
+    errorMessage = null;
+    notifyListeners();
   }
 
   @override

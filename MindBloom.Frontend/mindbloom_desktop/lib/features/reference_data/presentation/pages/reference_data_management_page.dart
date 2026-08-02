@@ -5,6 +5,9 @@ import '../../../../app/di/injection.dart';
 import '../../data/models/therapist_specialization_model.dart';
 import '../viewmodels/reference_data_management_viewmodel.dart';
 import '../../data/models/article_category_reference_model.dart';
+import '../../../../core/validation/app_validators.dart';
+import '../../../../core/widgets/app_error_banner.dart';
+import '../../../../core/widgets/app_confirmation_dialog.dart';
 
 enum _ReferenceDataSection {
   specializations,
@@ -59,7 +62,11 @@ class _ReferenceDataManagementPageState
     final result = await showDialog<_ArticleCategoryFormResult>(
       context: context,
       builder: (_) {
-        return const _ArticleCategoryFormDialog();
+        return _ArticleCategoryFormDialog(
+          existingNames: _viewModel.articleCategories
+              .map((item) => item.name)
+              .toList(),
+        );
       },
     );
 
@@ -79,7 +86,9 @@ class _ReferenceDataManagementPageState
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Article category created successfully.')),
+        const SnackBar(
+          content: Text('Kategorija članaka je uspješno kreirana.'),
+        ),
       );
     }
   }
@@ -90,7 +99,12 @@ class _ReferenceDataManagementPageState
     final result = await showDialog<_ArticleCategoryFormResult>(
       context: context,
       builder: (_) {
-        return _ArticleCategoryFormDialog(category: category);
+        return _ArticleCategoryFormDialog(
+          category: category,
+          existingNames: _viewModel.articleCategories
+              .map((item) => item.name)
+              .toList(),
+        );
       },
     );
 
@@ -120,41 +134,20 @@ class _ReferenceDataManagementPageState
   ) async {
     final nextStatus = !category.isActive;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(
-            nextStatus
-                ? 'Activate article category'
-                : 'Deactivate article category',
-          ),
-          content: Text(
-            nextStatus
-                ? 'Are you sure you want to activate "${category.name}"?'
-                : 'Are you sure you want to deactivate "${category.name}"? '
-                      'Existing articles will keep this category, but it will no longer '
-                      'be available for new article selections.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: Text(nextStatus ? 'Activate' : 'Deactivate'),
-            ),
-          ],
-        );
-      },
+    final confirmed = await AppConfirmationDialog.show(
+      context,
+      title: nextStatus
+          ? 'Aktiviraj kategoriju članka'
+          : 'Deaktiviraj kategoriju članka',
+      message: nextStatus
+          ? 'Da li ste sigurni da želite aktivirati "${category.name}"?'
+          : 'Da li ste sigurni da želite deaktivirati "${category.name}"? '
+                'Postojeći članci će zadržati ovu kategoriju, ali ona više neće biti dostupna za nove članke.',
+      confirmText: nextStatus ? 'Aktiviraj' : 'Deaktiviraj',
+      destructive: !nextStatus,
     );
 
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -172,8 +165,8 @@ class _ReferenceDataManagementPageState
         SnackBar(
           content: Text(
             nextStatus
-                ? 'Article category activated successfully.'
-                : 'Article category deactivated successfully.',
+                ? 'Kategorija članka je aktivirana.'
+                : 'Kategorija članka je deaktivirana.',
           ),
         ),
       );
@@ -187,8 +180,8 @@ class _ReferenceDataManagementPageState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'This category is used by ${category.articleCount} article(s). '
-            'Deactivate it instead.',
+            'Kategoriju koristi ${category.articleCount} članaka. '
+            'Umjesto brisanja deaktivirajte kategoriju.',
           ),
         ),
       );
@@ -196,32 +189,16 @@ class _ReferenceDataManagementPageState
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Delete article category'),
-          content: Text('Are you sure you want to delete "${category.name}"?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Delete'),
-            ),
-          ],
-        );
-      },
+    final confirmed = await AppConfirmationDialog.show(
+      context,
+      title: 'Obriši kategoriju članka',
+      message: 'Da li ste sigurni da želite obrisati "${category.name}"?',
+      confirmText: 'Obriši',
+      destructive: true,
+      icon: Icons.delete_outline,
     );
 
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -233,7 +210,7 @@ class _ReferenceDataManagementPageState
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Article category deleted successfully.')),
+        const SnackBar(content: Text('Kategorija članka je obrisana.')),
       );
     }
   }
@@ -289,7 +266,11 @@ class _ReferenceDataManagementPageState
     final result = await showDialog<_TherapyApproachFormResult>(
       context: context,
       builder: (_) {
-        return const _TherapyApproachFormDialog();
+        return _TherapyApproachFormDialog(
+          existingNames: _viewModel.therapyApproaches
+              .map((item) => item.name)
+              .toList(),
+        );
       },
     );
 
@@ -320,7 +301,12 @@ class _ReferenceDataManagementPageState
     final result = await showDialog<_TherapyApproachFormResult>(
       context: context,
       builder: (_) {
-        return _TherapyApproachFormDialog(approach: approach);
+        return _TherapyApproachFormDialog(
+          approach: approach,
+          existingNames: _viewModel.therapyApproaches
+              .map((item) => item.name)
+              .toList(),
+        );
       },
     );
 
@@ -350,39 +336,21 @@ class _ReferenceDataManagementPageState
   ) async {
     final nextStatus = !approach.isActive;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(
-            nextStatus
-                ? 'Activate therapy approach'
-                : 'Deactivate therapy approach',
-          ),
-          content: Text(
-            nextStatus
-                ? 'Are you sure you want to activate "${approach.name}"?'
-                : 'Are you sure you want to deactivate "${approach.name}"? Existing therapists and clients will keep this value, but it will no longer be offered for new selections.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: Text(nextStatus ? 'Activate' : 'Deactivate'),
-            ),
-          ],
-        );
-      },
+    final confirmed = await AppConfirmationDialog.show(
+      context,
+      title: nextStatus
+          ? 'Aktiviraj terapijski pravac'
+          : 'Deaktiviraj terapijski pravac',
+      message: nextStatus
+          ? 'Da li ste sigurni da želite aktivirati "${approach.name}"?'
+          : 'Da li ste sigurni da želite deaktivirati "${approach.name}"? '
+                'Postojeći terapeuti i klijenti će zadržati ovu vrijednost, '
+                'ali ona više neće biti dostupna za nove izbore.',
+      confirmText: nextStatus ? 'Aktiviraj' : 'Deaktiviraj',
+      destructive: !nextStatus,
     );
 
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -400,8 +368,8 @@ class _ReferenceDataManagementPageState
         SnackBar(
           content: Text(
             nextStatus
-                ? 'Therapy approach activated successfully.'
-                : 'Therapy approach deactivated successfully.',
+                ? 'Terapijski pravac je aktiviran.'
+                : 'Terapijski pravac je deaktiviran.',
           ),
         ),
       );
@@ -417,10 +385,9 @@ class _ReferenceDataManagementPageState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'This therapy approach is used by '
-            '${approach.therapistCount} therapist(s) and '
-            '${approach.clientCount} client(s). '
-            'Deactivate it instead.',
+            'Terapijski pravac koristi ${approach.therapistCount} terapeuta '
+            'i ${approach.clientCount} klijenata. '
+            'Umjesto brisanja deaktivirajte terapijski pravac.',
           ),
         ),
       );
@@ -428,32 +395,16 @@ class _ReferenceDataManagementPageState
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Delete therapy approach'),
-          content: Text('Are you sure you want to delete "${approach.name}"?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Delete'),
-            ),
-          ],
-        );
-      },
+    final confirmed = await AppConfirmationDialog.show(
+      context,
+      title: 'Obriši terapijski pravac',
+      message: 'Da li ste sigurni da želite obrisati "${approach.name}"?',
+      confirmText: 'Obriši',
+      destructive: true,
+      icon: Icons.delete_outline,
     );
 
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -465,7 +416,7 @@ class _ReferenceDataManagementPageState
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Therapy approach deleted successfully.')),
+        const SnackBar(content: Text('Terapijski pravac je obrisan.')),
       );
     }
   }
@@ -474,7 +425,11 @@ class _ReferenceDataManagementPageState
     final result = await showDialog<_SpecializationFormResult>(
       context: context,
       builder: (_) {
-        return const _SpecializationFormDialog();
+        return _SpecializationFormDialog(
+          existingNames: _viewModel.specializations
+              .map((item) => item.name)
+              .toList(),
+        );
       },
     );
 
@@ -507,7 +462,12 @@ class _ReferenceDataManagementPageState
     final result = await showDialog<_SpecializationFormResult>(
       context: context,
       builder: (_) {
-        return _SpecializationFormDialog(specialization: specialization);
+        return _SpecializationFormDialog(
+          specialization: specialization,
+          existingNames: _viewModel.specializations
+              .map((item) => item.name)
+              .toList(),
+        );
       },
     );
 
@@ -539,39 +499,20 @@ class _ReferenceDataManagementPageState
   ) async {
     final nextStatus = !specialization.isActive;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(
-            nextStatus
-                ? 'Activate specialization'
-                : 'Deactivate specialization',
-          ),
-          content: Text(
-            nextStatus
-                ? 'Are you sure you want to activate "${specialization.name}"?'
-                : 'Are you sure you want to deactivate "${specialization.name}"? Existing therapists will keep the specialization, but it will no longer be available for new selections.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: Text(nextStatus ? 'Activate' : 'Deactivate'),
-            ),
-          ],
-        );
-      },
+    final confirmed = await AppConfirmationDialog.show(
+      context,
+      title: nextStatus
+          ? 'Aktiviraj specijalizaciju'
+          : 'Deaktiviraj specijalizaciju',
+      message: nextStatus
+          ? 'Da li ste sigurni da želite aktivirati "${specialization.name}"?'
+          : 'Da li ste sigurni da želite deaktivirati "${specialization.name}"? '
+                'Postojeći terapeuti će zadržati specijalizaciju, ali ona više neće biti dostupna za nove izbore.',
+      confirmText: nextStatus ? 'Aktiviraj' : 'Deaktiviraj',
+      destructive: !nextStatus,
     );
 
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -589,8 +530,8 @@ class _ReferenceDataManagementPageState
         SnackBar(
           content: Text(
             nextStatus
-                ? 'Specialization activated successfully.'
-                : 'Specialization deactivated successfully.',
+                ? 'Specijalizacija je aktivirana.'
+                : 'Specijalizacija je deaktivirana.',
           ),
         ),
       );
@@ -600,35 +541,29 @@ class _ReferenceDataManagementPageState
   Future<void> _confirmDelete(
     TherapistSpecializationModel specialization,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Delete specialization'),
+    if (specialization.therapistCount > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
           content: Text(
-            'Are you sure you want to delete "${specialization.name}"?\n\n'
-            'A specialization used by therapists cannot be deleted. It must be deactivated instead.',
+            'Specijalizaciju koristi ${specialization.therapistCount} terapeuta. '
+            'Umjesto brisanja deaktivirajte specijalizaciju.',
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Delete'),
-            ),
-          ],
-        );
-      },
+        ),
+      );
+
+      return;
+    }
+
+    final confirmed = await AppConfirmationDialog.show(
+      context,
+      title: 'Obriši specijalizaciju',
+      message: 'Da li ste sigurni da želite obrisati "${specialization.name}"?',
+      confirmText: 'Obriši',
+      destructive: true,
+      icon: Icons.delete_outline,
     );
 
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -640,7 +575,7 @@ class _ReferenceDataManagementPageState
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Specialization deleted successfully.')),
+        const SnackBar(content: Text('Specijalizacija je obrisana.')),
       );
     }
   }
@@ -659,9 +594,9 @@ class _ReferenceDataManagementPageState
           if (_viewModel.errorMessage != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                _viewModel.errorMessage!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              child: AppErrorBanner(
+                message: _viewModel.errorMessage!,
+                onDismiss: _viewModel.clearError,
               ),
             ),
           Expanded(child: _buildContent()),
@@ -689,7 +624,7 @@ class _ReferenceDataManagementPageState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Reference data',
+                    'Referentni podaci',
                     style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
@@ -713,10 +648,10 @@ class _ReferenceDataManagementPageState
               icon: const Icon(Icons.add),
               label: Text(
                 isSpecializations
-                    ? 'Add specialization'
+                    ? 'Dodaj specijalizaciju'
                     : isTherapyApproaches
-                    ? 'Add therapy approach'
-                    : 'Add article category',
+                    ? 'Dodaj terapijski pravac'
+                    : 'Dodaj kategoriju članka',
               ),
             ),
             Text(
@@ -736,7 +671,7 @@ class _ReferenceDataManagementPageState
             ButtonSegment<_ReferenceDataSection>(
               value: _ReferenceDataSection.specializations,
               icon: Icon(Icons.psychology_outlined),
-              label: Text('Therapist specializations'),
+              label: Text('Specijalizacije terapeuta'),
             ),
             ButtonSegment<_ReferenceDataSection>(
               value: _ReferenceDataSection.therapyApproaches,
@@ -746,7 +681,7 @@ class _ReferenceDataManagementPageState
             ButtonSegment<_ReferenceDataSection>(
               value: _ReferenceDataSection.articleCategories,
               icon: Icon(Icons.category_outlined),
-              label: Text('Article categories'),
+              label: Text('Kategorije članaka'),
             ),
           ],
           selected: {_selectedSection},
@@ -790,16 +725,16 @@ class _ReferenceDataManagementPageState
             controller: _searchController,
             decoration: InputDecoration(
               labelText: isSpecializations
-                  ? 'Search specializations'
+                  ? 'Pretraži specijalizacije'
                   : isTherapyApproaches
-                  ? 'Search therapy approaches'
-                  : 'Search article categories',
-              hintText: 'Name or description',
+                  ? 'Pretraži terapijske pravce'
+                  : 'Pretraži kategorije članaka',
+              hintText: 'Naziv ili opis',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _searchController.text.isEmpty
                   ? null
                   : IconButton(
-                      tooltip: 'Clear search',
+                      tooltip: 'Očisti pretragu',
                       onPressed: () async {
                         _searchController.clear();
 
@@ -852,9 +787,9 @@ class _ReferenceDataManagementPageState
               border: OutlineInputBorder(),
             ),
             items: const [
-              DropdownMenuItem<bool?>(value: null, child: Text('All statuses')),
-              DropdownMenuItem<bool?>(value: true, child: Text('Active')),
-              DropdownMenuItem<bool?>(value: false, child: Text('Inactive')),
+              DropdownMenuItem<bool?>(value: null, child: Text('Svi statusi')),
+              DropdownMenuItem<bool?>(value: true, child: Text('Aktivno')),
+              DropdownMenuItem<bool?>(value: false, child: Text('Neaktivno')),
             ],
             onChanged: _viewModel.isLoading
                 ? null
@@ -942,7 +877,9 @@ class _ReferenceDataManagementPageState
 
     if (_viewModel.articleCategories.isEmpty) {
       return const Center(
-        child: Text('No article categories match the selected filters.'),
+        child: Text(
+          'Nijedna kategorija članka ne odgovara odabranim filterima.',
+        ),
       );
     }
 
@@ -953,13 +890,13 @@ class _ReferenceDataManagementPageState
         child: SingleChildScrollView(
           child: DataTable(
             columns: const [
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Description')),
-              DataColumn(label: Text('Articles')),
-              DataColumn(label: Text('Used by')),
+              DataColumn(label: Text('Naziv')),
+              DataColumn(label: Text('Opis')),
+              DataColumn(label: Text('Članci')),
+              DataColumn(label: Text('Koristi se')),
               DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Created')),
-              DataColumn(label: Text('Actions')),
+              DataColumn(label: Text('Kreirano')),
+              DataColumn(label: Text('Akcije')),
             ],
             rows: _viewModel.articleCategories
                 .map(_buildArticleCategoryRow)
@@ -1008,7 +945,7 @@ class _ReferenceDataManagementPageState
               category.isActive ? Icons.check_circle : Icons.block,
               size: 18,
             ),
-            label: Text(category.isActive ? 'Active' : 'Inactive'),
+            label: Text(category.isActive ? 'Aktivno' : 'Neaktivno'),
           ),
         ),
         DataCell(Text(formatter.format(category.createdAtUtc.toLocal()))),
@@ -1064,7 +1001,7 @@ class _ReferenceDataManagementPageState
 
     if (_viewModel.specializations.isEmpty) {
       return const Center(
-        child: Text('No specializations match the selected filters.'),
+        child: Text('Nijedna specijalizacija ne odgovara odabranim filterima.'),
       );
     }
 
@@ -1075,12 +1012,12 @@ class _ReferenceDataManagementPageState
         child: SingleChildScrollView(
           child: DataTable(
             columns: const [
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Description')),
-              DataColumn(label: Text('Therapists')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Created')),
-              DataColumn(label: Text('Actions')),
+              DataColumn(label: Text('Naziv')),
+              DataColumn(label: Text('Opis')),
+              DataColumn(label: Text('Terapeuti')),
+              DataColumn(label: Text('Statusi')),
+              DataColumn(label: Text('Kreirano')),
+              DataColumn(label: Text('Akcije')),
             ],
             rows: _viewModel.specializations.map(_buildRow).toList(),
           ),
@@ -1096,7 +1033,9 @@ class _ReferenceDataManagementPageState
 
     if (_viewModel.therapyApproaches.isEmpty) {
       return const Center(
-        child: Text('No therapy approaches match the selected filters.'),
+        child: Text(
+          'Nijedan terapijski pravac ne odgovara odabranim filterima.',
+        ),
       );
     }
 
@@ -1107,14 +1046,14 @@ class _ReferenceDataManagementPageState
         child: SingleChildScrollView(
           child: DataTable(
             columns: const [
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Description')),
-              DataColumn(label: Text('Therapists')),
-              DataColumn(label: Text('Clients')),
-              DataColumn(label: Text('Used by')),
+              DataColumn(label: Text('Naziv')),
+              DataColumn(label: Text('Opis')),
+              DataColumn(label: Text('Terapeuti')),
+              DataColumn(label: Text('Klijenti')),
+              DataColumn(label: Text('Koristi se')),
               DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Created')),
-              DataColumn(label: Text('Actions')),
+              DataColumn(label: Text('Kreirano')),
+              DataColumn(label: Text('Akcije')),
             ],
             rows: _viewModel.therapyApproaches
                 .map(_buildTherapyApproachRow)
@@ -1336,12 +1275,12 @@ class _ReferenceDataManagementPageState
 
     return Row(
       children: [
-        Text('Total: $totalCount'),
+        Text('Ukupno: $totalCount'),
 
         const Spacer(),
 
         IconButton(
-          tooltip: 'Previous page',
+          tooltip: 'Prošla stranica',
           onPressed: !_viewModel.isLoading && pageNumber > 1
               ? () async {
                   if (isSpecializations) {
@@ -1391,8 +1330,12 @@ class _ReferenceDataManagementPageState
 
 class _SpecializationFormDialog extends StatefulWidget {
   final TherapistSpecializationModel? specialization;
+  final List<String> existingNames;
 
-  const _SpecializationFormDialog({this.specialization});
+  const _SpecializationFormDialog({
+    this.specialization,
+    required this.existingNames,
+  });
 
   @override
   State<_SpecializationFormDialog> createState() =>
@@ -1453,11 +1396,14 @@ class _SpecializationFormDialogState extends State<_SpecializationFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(_isEditing ? 'Edit specialization' : 'Add specialization'),
+      title: Text(
+        _isEditing ? 'Uredi specijalizaciju' : 'Dodaj specijalizaciju',
+      ),
       content: SizedBox(
         width: 560,
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1466,21 +1412,27 @@ class _SpecializationFormDialogState extends State<_SpecializationFormDialog> {
                 autofocus: true,
                 maxLength: 150,
                 decoration: const InputDecoration(
-                  labelText: 'Name',
+                  labelText: 'Naziv',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  final normalized = value?.trim() ?? '';
+                  final lengthError = AppValidators.textLength(
+                    value,
+                    fieldName: 'Naziv',
+                    minLength: 2,
+                    maxLength: 150,
+                  );
 
-                  if (normalized.isEmpty) {
-                    return 'Name is required.';
+                  if (lengthError != null) {
+                    return lengthError;
                   }
 
-                  if (normalized.length < 2) {
-                    return 'Name must contain at least 2 characters.';
-                  }
-
-                  return null;
+                  return AppValidators.uniqueText(
+                    value,
+                    fieldName: 'Specijalizacija',
+                    existingValues: widget.existingNames,
+                    currentValue: widget.specialization?.name,
+                  );
                 },
               ),
               const SizedBox(height: 12),
@@ -1490,20 +1442,27 @@ class _SpecializationFormDialogState extends State<_SpecializationFormDialog> {
                 maxLines: 6,
                 maxLength: 500,
                 decoration: const InputDecoration(
-                  labelText: 'Description',
+                  labelText: 'Opis',
                   alignLabelWithHint: true,
                   border: OutlineInputBorder(),
                 ),
+                validator: (value) {
+                  return AppValidators.maxLength(
+                    value,
+                    fieldName: 'Opis',
+                    maximum: 500,
+                  );
+                },
               ),
               if (!_isEditing)
                 SwitchListTile(
                   value: _isActive,
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Active'),
+                  title: const Text('Aktivna'),
                   subtitle: Text(
                     _isActive
-                        ? 'The specialization will immediately be available for selection.'
-                        : 'The specialization will be created as inactive.',
+                        ? 'Specijalizacija će odmah biti dostupna za izbor.'
+                        : 'Specijalizacija će biti kreirana kao neaktivna.',
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -1520,12 +1479,12 @@ class _SpecializationFormDialogState extends State<_SpecializationFormDialog> {
           onPressed: () {
             Navigator.of(context).pop();
           },
-          child: const Text('Cancel'),
+          child: const Text('Odustani'),
         ),
-        ElevatedButton.icon(
+        FilledButton.icon(
           onPressed: _submit,
-          icon: const Icon(Icons.save),
-          label: Text(_isEditing ? 'Save changes' : 'Create'),
+          icon: const Icon(Icons.save_outlined),
+          label: Text(_isEditing ? 'Spremi izmjene' : 'Kreiraj'),
         ),
       ],
     );
@@ -1548,8 +1507,12 @@ class _SpecializationFormResult {
 
 class _TherapyApproachFormDialog extends StatefulWidget {
   final TherapyApproachModel? approach;
+  final List<String> existingNames;
 
-  const _TherapyApproachFormDialog({this.approach});
+  const _TherapyApproachFormDialog({
+    this.approach,
+    required this.existingNames,
+  });
 
   @override
   State<_TherapyApproachFormDialog> createState() =>
@@ -1608,12 +1571,13 @@ class _TherapyApproachFormDialogState
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(
-        _isEditing ? 'Edit therapy approach' : 'Add therapy approach',
+        _isEditing ? 'Uredi terapijski pravac' : 'Dodaj terapijski pravac',
       ),
       content: SizedBox(
         width: 560,
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1622,46 +1586,55 @@ class _TherapyApproachFormDialogState
                 autofocus: true,
                 maxLength: 150,
                 decoration: const InputDecoration(
-                  labelText: 'Name',
+                  labelText: 'Naziv',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  final normalized = value?.trim() ?? '';
+                  final lengthError = AppValidators.textLength(
+                    value,
+                    fieldName: 'Naziv',
+                    minLength: 2,
+                    maxLength: 150,
+                  );
 
-                  if (normalized.isEmpty) {
-                    return 'Name is required.';
+                  if (lengthError != null) {
+                    return lengthError;
                   }
 
-                  if (normalized.length < 2) {
-                    return 'Name must contain at least 2 characters.';
-                  }
-
-                  return null;
+                  return AppValidators.uniqueText(
+                    value,
+                    fieldName: 'Terapijski pravac',
+                    existingValues: widget.existingNames,
+                    currentValue: widget.approach?.name,
+                  );
                 },
               ),
-
               const SizedBox(height: 12),
-
               TextFormField(
                 controller: _descriptionController,
                 minLines: 3,
                 maxLines: 5,
                 maxLength: 1000,
                 decoration: const InputDecoration(
-                  labelText: 'Description',
+                  labelText: 'Opis',
                   border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
+                validator: (value) {
+                  return AppValidators.maxLength(
+                    value,
+                    fieldName: 'Opis',
+                    maximum: 1000,
+                  );
+                },
               ),
-
               if (!_isEditing) ...[
                 const SizedBox(height: 12),
-
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Active'),
+                  title: const Text('Aktivan'),
                   subtitle: const Text(
-                    'Active values can be selected in new forms.',
+                    'Aktivne vrijednosti mogu se birati u novim formama.',
                   ),
                   value: _isActive,
                   onChanged: (value) {
@@ -1680,11 +1653,12 @@ class _TherapyApproachFormDialogState
           onPressed: () {
             Navigator.of(context).pop();
           },
-          child: const Text('Cancel'),
+          child: const Text('Odustani'),
         ),
-        ElevatedButton(
+        FilledButton.icon(
           onPressed: _submit,
-          child: Text(_isEditing ? 'Save changes' : 'Create'),
+          icon: const Icon(Icons.save_outlined),
+          label: Text(_isEditing ? 'Spremi izmjene' : 'Kreiraj'),
         ),
       ],
     );
@@ -1707,8 +1681,12 @@ class _TherapyApproachFormResult {
 
 class _ArticleCategoryFormDialog extends StatefulWidget {
   final ArticleCategoryReferenceModel? category;
+  final List<String> existingNames;
 
-  const _ArticleCategoryFormDialog({this.category});
+  const _ArticleCategoryFormDialog({
+    this.category,
+    required this.existingNames,
+  });
 
   @override
   State<_ArticleCategoryFormDialog> createState() =>
@@ -1767,12 +1745,13 @@ class _ArticleCategoryFormDialogState
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(
-        _isEditing ? 'Edit article category' : 'Add article category',
+        _isEditing ? 'Uredi kategoriju članka' : 'Dodaj kategoriju članka',
       ),
       content: SizedBox(
         width: 560,
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1781,46 +1760,55 @@ class _ArticleCategoryFormDialogState
                 autofocus: true,
                 maxLength: 150,
                 decoration: const InputDecoration(
-                  labelText: 'Name',
+                  labelText: 'Naziv',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  final normalized = value?.trim() ?? '';
+                  final lengthError = AppValidators.textLength(
+                    value,
+                    fieldName: 'Naziv',
+                    minLength: 2,
+                    maxLength: 150,
+                  );
 
-                  if (normalized.isEmpty) {
-                    return 'Name is required.';
+                  if (lengthError != null) {
+                    return lengthError;
                   }
 
-                  if (normalized.length < 2) {
-                    return 'Name must contain at least 2 characters.';
-                  }
-
-                  return null;
+                  return AppValidators.uniqueText(
+                    value,
+                    fieldName: 'Kategorija članka',
+                    existingValues: widget.existingNames,
+                    currentValue: widget.category?.name,
+                  );
                 },
               ),
-
               const SizedBox(height: 12),
-
               TextFormField(
                 controller: _descriptionController,
                 minLines: 3,
                 maxLines: 5,
                 maxLength: 1000,
                 decoration: const InputDecoration(
-                  labelText: 'Description',
+                  labelText: 'Opis',
                   border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
+                validator: (value) {
+                  return AppValidators.maxLength(
+                    value,
+                    fieldName: 'Opis',
+                    maximum: 1000,
+                  );
+                },
               ),
-
               if (!_isEditing) ...[
                 const SizedBox(height: 12),
-
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Active'),
+                  title: const Text('Aktivna'),
                   subtitle: const Text(
-                    'Active categories can be selected when creating new articles.',
+                    'Aktivne kategorije mogu se birati pri kreiranju novih članaka.',
                   ),
                   value: _isActive,
                   onChanged: (value) {
@@ -1839,11 +1827,12 @@ class _ArticleCategoryFormDialogState
           onPressed: () {
             Navigator.of(context).pop();
           },
-          child: const Text('Cancel'),
+          child: const Text('Odustani'),
         ),
-        ElevatedButton(
+        FilledButton.icon(
           onPressed: _submit,
-          child: Text(_isEditing ? 'Save changes' : 'Create'),
+          icon: const Icon(Icons.save_outlined),
+          label: Text(_isEditing ? 'Spremi izmjene' : 'Kreiraj'),
         ),
       ],
     );

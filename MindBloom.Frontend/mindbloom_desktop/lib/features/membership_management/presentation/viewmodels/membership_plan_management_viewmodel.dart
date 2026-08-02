@@ -4,6 +4,7 @@ import '../../data/models/admin_membership_plan_audit_model.dart';
 import '../../data/models/admin_membership_plan_model.dart';
 import '../../data/models/membership_plan_request.dart';
 import '../../data/repositories/membership_management_repository.dart';
+import '../../../../core/error/app_error_helper.dart';
 
 class MembershipPlanManagementViewModel extends ChangeNotifier {
   final MembershipManagementRepository repository;
@@ -182,12 +183,6 @@ class MembershipPlanManagementViewModel extends ChangeNotifier {
   }
 
   String _cleanError(Object exception) {
-    var value = exception.toString();
-
-    if (value.startsWith('Exception: ')) {
-      value = value.substring('Exception: '.length);
-    }
-
-    return value;
+    return AppErrorHelper.message(exception);
   }
 }

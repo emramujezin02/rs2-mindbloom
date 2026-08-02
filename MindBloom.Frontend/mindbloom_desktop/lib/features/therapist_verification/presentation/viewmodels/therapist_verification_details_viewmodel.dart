@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/models/therapist_verification_details_model.dart';
 import '../../data/repositories/therapist_verification_repository.dart';
+import '../../../../core/error/app_error_helper.dart';
 
 class TherapistVerificationDetailsViewModel extends ChangeNotifier {
   final TherapistVerificationRepository repository;
@@ -23,7 +24,7 @@ class TherapistVerificationDetailsViewModel extends ChangeNotifier {
     try {
       therapist = await repository.getDetails(therapistId);
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = AppErrorHelper.message(error);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -62,13 +63,7 @@ class TherapistVerificationDetailsViewModel extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      var message = error.toString();
-
-      if (message.startsWith('Exception: ')) {
-        message = message.substring('Exception: '.length);
-      }
-
-      errorMessage = message;
+      errorMessage = AppErrorHelper.message(error);
 
       return false;
     }

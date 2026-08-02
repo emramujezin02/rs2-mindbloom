@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/models/admin_appointment_details_model.dart';
 import '../../data/repositories/appointment_management_repository.dart';
+import '../../../../core/error/app_error_helper.dart';
 
 class AppointmentManagementDetailsViewModel extends ChangeNotifier {
   final AppointmentManagementRepository repository;
@@ -24,7 +25,7 @@ class AppointmentManagementDetailsViewModel extends ChangeNotifier {
     try {
       appointment = await repository.getDetails(appointmentId);
     } catch (exception) {
-      error = exception.toString();
+      error = AppErrorHelper.message(exception);
     }
 
     isLoading = false;
@@ -35,6 +36,9 @@ class AppointmentManagementDetailsViewModel extends ChangeNotifier {
     required int appointmentId,
     required String reason,
   }) async {
+    if (isCancelling) {
+      return false;
+    }
     isCancelling = true;
     error = null;
     notifyListeners();
@@ -52,7 +56,7 @@ class AppointmentManagementDetailsViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      error = exception.toString();
+      error = AppErrorHelper.message(exception);
       isCancelling = false;
       notifyListeners();
 

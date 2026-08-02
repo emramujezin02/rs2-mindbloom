@@ -3,6 +3,7 @@ import 'package:mindbloom_desktop/features/article_management/data/models/articl
 import '../../data/models/article_category_model.dart';
 import '../../data/models/article_management_model.dart';
 import '../../data/repositories/article_management_repository.dart';
+import '../../../../core/error/app_error_helper.dart';
 
 class ArticleFormViewModel extends ChangeNotifier {
   final ArticleManagementRepository repository;
@@ -29,7 +30,7 @@ class ArticleFormViewModel extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = AppErrorHelper.message(error);
 
       return false;
     } finally {
@@ -50,7 +51,7 @@ class ArticleFormViewModel extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = AppErrorHelper.message(error);
 
       notifyListeners();
 
@@ -71,7 +72,7 @@ class ArticleFormViewModel extends ChangeNotifier {
     try {
       return await repository.uploadArticleImage(filePath);
     } catch (error) {
-      errorMessage = _cleanError(error);
+      errorMessage = AppErrorHelper.message(error);
 
       return null;
     } finally {
@@ -117,7 +118,7 @@ class ArticleFormViewModel extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = AppErrorHelper.message(error);
 
       return false;
     } finally {
@@ -126,13 +127,12 @@ class ArticleFormViewModel extends ChangeNotifier {
     }
   }
 
-  String _cleanError(Object error) {
-    var value = error.toString();
-
-    if (value.startsWith('Exception: ')) {
-      value = value.substring('Exception: '.length);
+  void clearError() {
+    if (errorMessage == null) {
+      return;
     }
 
-    return value;
+    errorMessage = null;
+    notifyListeners();
   }
 }

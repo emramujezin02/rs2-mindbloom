@@ -8,6 +8,7 @@ import '../viewmodels/membership_management_viewmodel.dart';
 import '../../data/models/admin_membership_plan_model.dart';
 import '../../data/models/membership_plan_request.dart';
 import '../viewmodels/membership_plan_management_viewmodel.dart';
+import '../../../../core/validation/app_validators.dart';
 
 class MembershipManagementPage extends StatefulWidget {
   const MembershipManagementPage({super.key});
@@ -57,16 +58,35 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
   }
 
   Future<void> _selectExpirationDate({required bool isFrom}) async {
+    final now = DateTime.now();
+
+    final initialDate = isFrom
+        ? (_expiresFrom ?? _expiresTo ?? now)
+        : (_expiresTo ?? _expiresFrom ?? now);
+
     final selected = await showDatePicker(
       context: context,
-      initialDate: isFrom
-          ? _expiresFrom ?? DateTime.now()
-          : _expiresTo ?? DateTime.now(),
+      initialDate: initialDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
+      helpText: isFrom
+          ? 'Odaberite početni datum isteka'
+          : 'Odaberite završni datum isteka',
+      cancelText: 'Odustani',
+      confirmText: 'Odaberi',
     );
 
     if (selected == null || !mounted) {
+      return;
+    }
+
+    if (isFrom && _expiresTo != null && selected.isAfter(_expiresTo!)) {
+      _showError('Početni datum isteka ne može biti nakon završnog datuma.');
+      return;
+    }
+
+    if (!isFrom && _expiresFrom != null && selected.isBefore(_expiresFrom!)) {
+      _showError('Završni datum isteka ne može biti prije početnog datuma.');
       return;
     }
 
@@ -122,7 +142,6 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
     );
 
     int selectedPlanType = plan?.planType ?? 1;
-
     bool isActive = plan?.isActive ?? true;
 
     final formKey = GlobalKey<FormState>();
@@ -135,34 +154,35 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
           builder: (context, setDialogState) {
             return AlertDialog(
               title: Text(
-                isEditing ? 'Edit membership plan' : 'Create membership plan',
+                isEditing ? 'Uredi plan članarine' : 'Kreiraj plan članarine',
               ),
               content: SizedBox(
                 width: 620,
                 child: SingleChildScrollView(
                   child: Form(
                     key: formKey,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         DropdownButtonFormField<int>(
                           initialValue: selectedPlanType,
                           decoration: const InputDecoration(
-                            labelText: 'Plan type',
+                            labelText: 'Tip plana',
                             border: OutlineInputBorder(),
                           ),
                           items: const [
                             DropdownMenuItem(
                               value: 1,
-                              child: Text('10 sessions'),
+                              child: Text('10 sesija'),
                             ),
                             DropdownMenuItem(
                               value: 2,
-                              child: Text('20 sessions'),
+                              child: Text('20 sesija'),
                             ),
                             DropdownMenuItem(
                               value: 3,
-                              child: Text('30 sessions'),
+                              child: Text('30 sesija'),
                             ),
                           ],
                           onChanged: isEditing
@@ -177,59 +197,45 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
                                   });
                                 },
                         ),
-
                         const SizedBox(height: 12),
-
                         TextFormField(
                           controller: nameController,
+                          maxLength: 150,
+                          textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
-                            labelText: 'Name',
+                            labelText: 'Naziv',
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
-                            final normalized = value?.trim() ?? '';
-
-                            if (normalized.isEmpty) {
-                              return 'Name is required.';
-                            }
-
-                            if (normalized.length > 150) {
-                              return 'Maximum 150 characters.';
-                            }
-
-                            return null;
+                            return AppValidators.textLength(
+                              value,
+                              fieldName: 'Naziv',
+                              maxLength: 150,
+                            );
                           },
                         ),
-
                         const SizedBox(height: 12),
-
                         TextFormField(
                           controller: descriptionController,
                           minLines: 3,
                           maxLines: 5,
+                          maxLength: 1000,
                           decoration: const InputDecoration(
-                            labelText: 'Description',
+                            labelText: 'Opis',
                             border: OutlineInputBorder(),
                             alignLabelWithHint: true,
                           ),
                           validator: (value) {
-                            final normalized = value?.trim() ?? '';
-
-                            if (normalized.isEmpty) {
-                              return 'Description is required.';
-                            }
-
-                            if (normalized.length > 1000) {
-                              return 'Maximum 1000 characters.';
-                            }
-
-                            return null;
+                            return AppValidators.textLength(
+                              value,
+                              fieldName: 'Opis',
+                              maxLength: 1000,
+                            );
                           },
                         ),
-
                         const SizedBox(height: 12),
-
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: TextFormField(
@@ -239,42 +245,39 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
                                       decimal: true,
                                     ),
                                 decoration: const InputDecoration(
-                                  labelText: 'Price',
+                                  labelText: 'Cijena',
+                                  suffixText: 'KM',
                                   border: OutlineInputBorder(),
                                 ),
                                 validator: (value) {
-                                  final parsed = double.tryParse(
-                                    value?.replaceAll(',', '.') ?? '',
+                                  return AppValidators.price(
+                                    value,
+                                    fieldName: 'Cijena',
+                                    allowZero: false,
                                   );
-
-                                  if (parsed == null) {
-                                    return 'Invalid price.';
-                                  }
-
-                                  if (parsed <= 0) {
-                                    return 'Price must be greater than zero.';
-                                  }
-
-                                  return null;
                                 },
                               ),
                             ),
-
                             const SizedBox(width: 12),
-
                             Expanded(
                               child: TextFormField(
                                 controller: durationController,
                                 keyboardType: TextInputType.number,
                                 decoration: const InputDecoration(
-                                  labelText: 'Duration (months)',
+                                  labelText: 'Trajanje (mjeseci)',
                                   border: OutlineInputBorder(),
                                 ),
                                 validator: (value) {
-                                  final parsed = int.tryParse(value ?? '');
+                                  final parsed = AppValidators.parseInteger(
+                                    value,
+                                  );
 
-                                  if (parsed == null || parsed <= 0) {
-                                    return 'Duration must be greater than zero.';
+                                  if (parsed == null) {
+                                    return 'Unesite ispravno trajanje.';
+                                  }
+
+                                  if (parsed <= 0) {
+                                    return 'Trajanje mora biti veće od 0.';
                                   }
 
                                   return null;
@@ -283,33 +286,36 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 12),
-
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: TextFormField(
                                 controller: sessionsController,
                                 keyboardType: TextInputType.number,
                                 decoration: const InputDecoration(
-                                  labelText: 'Included sessions',
+                                  labelText: 'Broj uključenih sesija',
                                   border: OutlineInputBorder(),
                                 ),
                                 validator: (value) {
-                                  final parsed = int.tryParse(value ?? '');
+                                  final parsed = AppValidators.parseInteger(
+                                    value,
+                                  );
 
-                                  if (parsed == null || parsed <= 0) {
-                                    return 'Sessions must be greater than zero.';
+                                  if (parsed == null) {
+                                    return 'Unesite ispravan broj sesija.';
+                                  }
+
+                                  if (parsed <= 0) {
+                                    return 'Broj sesija mora biti veći od 0.';
                                   }
 
                                   return null;
                                 },
                               ),
                             ),
-
                             const SizedBox(width: 12),
-
                             Expanded(
                               child: TextFormField(
                                 controller: discountController,
@@ -318,20 +324,20 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
                                       decimal: true,
                                     ),
                                 decoration: const InputDecoration(
-                                  labelText: 'Discount (%)',
+                                  labelText: 'Popust (%)',
                                   border: OutlineInputBorder(),
                                 ),
                                 validator: (value) {
-                                  final parsed = double.tryParse(
-                                    value?.replaceAll(',', '.') ?? '',
+                                  final parsed = AppValidators.parseDecimal(
+                                    value,
                                   );
 
                                   if (parsed == null) {
-                                    return 'Invalid discount.';
+                                    return 'Unesite ispravan popust.';
                                   }
 
                                   if (parsed < 0 || parsed > 100) {
-                                    return 'Discount must be between 0 and 100.';
+                                    return 'Popust mora biti između 0 i 100%.';
                                   }
 
                                   return null;
@@ -340,26 +346,26 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 12),
-
                         TextFormField(
                           controller: benefitsController,
                           minLines: 4,
                           maxLines: 8,
                           decoration: const InputDecoration(
-                            labelText: 'Benefits',
-                            hintText: 'Enter one benefit per line.',
+                            labelText: 'Pogodnosti',
+                            hintText: 'Unesite jednu pogodnost po redu.',
                             border: OutlineInputBorder(),
                             alignLabelWithHint: true,
                           ),
                         ),
-
                         if (!isEditing) ...[
                           const SizedBox(height: 8),
                           SwitchListTile(
                             contentPadding: EdgeInsets.zero,
-                            title: const Text('Active immediately'),
+                            title: const Text('Odmah aktivan'),
+                            subtitle: const Text(
+                              'Plan će biti dostupan korisnicima odmah nakon kreiranja.',
+                            ),
                             value: isActive,
                             onChanged: (value) {
                               setDialogState(() {
@@ -378,12 +384,36 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
                   onPressed: () {
                     Navigator.of(dialogContext).pop();
                   },
-                  child: const Text('Cancel'),
+                  child: const Text('Odustani'),
                 ),
-
-                FilledButton(
+                FilledButton.icon(
                   onPressed: () {
+                    FocusScope.of(dialogContext).unfocus();
+
                     if (!formKey.currentState!.validate()) {
+                      return;
+                    }
+
+                    final price = AppValidators.parseDecimal(
+                      priceController.text,
+                    );
+
+                    final duration = AppValidators.parseInteger(
+                      durationController.text,
+                    );
+
+                    final sessions = AppValidators.parseInteger(
+                      sessionsController.text,
+                    );
+
+                    final discount = AppValidators.parseDecimal(
+                      discountController.text,
+                    );
+
+                    if (price == null ||
+                        duration == null ||
+                        sessions == null ||
+                        discount == null) {
                       return;
                     }
 
@@ -398,20 +428,17 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
                         planType: selectedPlanType,
                         name: nameController.text.trim(),
                         description: descriptionController.text.trim(),
-                        price: double.parse(
-                          priceController.text.replaceAll(',', '.'),
-                        ),
-                        durationMonths: int.parse(durationController.text),
-                        includedSessions: int.parse(sessionsController.text),
-                        discountPercentage: double.parse(
-                          discountController.text.replaceAll(',', '.'),
-                        ),
+                        price: price,
+                        durationMonths: duration,
+                        includedSessions: sessions,
+                        discountPercentage: discount,
                         benefits: benefits,
                         isActive: isActive,
                       ),
                     );
                   },
-                  child: Text(isEditing ? 'Save changes' : 'Create'),
+                  icon: const Icon(Icons.save_outlined),
+                  label: Text(isEditing ? 'Spremi izmjene' : 'Kreiraj'),
                 ),
               ],
             );
@@ -444,7 +471,9 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isEditing ? 'Membership plan updated.' : 'Membership plan created.',
+            isEditing
+                ? 'Plan članarine je uspješno izmijenjen.'
+                : 'Plan članarine je uspješno kreiran.',
           ),
         ),
       );
@@ -460,7 +489,7 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text(plan.isActive ? 'Deactivate plan' : 'Activate plan'),
+          title: Text(plan.isActive ? 'Deaktiviraj plan' : 'Aktiviraj plan'),
           content: SizedBox(
             width: 480,
             child: Column(
@@ -468,17 +497,16 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
               children: [
                 Text(
                   plan.isActive
-                      ? 'Clients will no longer be able to purchase this plan. Existing memberships will not be changed.'
-                      : 'Clients will be able to purchase this plan again.',
+                      ? 'Klijenti više neće moći kupiti ovaj plan. Postojeće članarine neće biti promijenjene.'
+                      : 'Klijenti će ponovo moći kupiti ovaj plan.',
                 ),
-
                 const SizedBox(height: 16),
-
                 TextField(
                   controller: reasonController,
                   maxLines: 3,
+                  maxLength: 500,
                   decoration: const InputDecoration(
-                    labelText: 'Reason (optional)',
+                    labelText: 'Razlog (opcionalno)',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -490,13 +518,13 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
               onPressed: () {
                 Navigator.of(dialogContext).pop(false);
               },
-              child: const Text('Cancel'),
+              child: const Text('Odustani'),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop(true);
               },
-              child: Text(plan.isActive ? 'Deactivate' : 'Activate'),
+              child: Text(plan.isActive ? 'Deaktiviraj' : 'Aktiviraj'),
             ),
           ],
         );
@@ -531,23 +559,23 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Remove plan'),
+          title: const Text('Ukloni plan'),
           content: const Text(
-            'If this plan has already been used, it will not be deleted. '
-            'It will be deactivated instead so existing memberships remain safe.',
+            'Ako je ovaj plan već korišten, neće biti trajno obrisan. '
+            'Umjesto toga bit će deaktiviran kako bi postojeće članarine ostale sačuvane.',
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop(false);
               },
-              child: const Text('Cancel'),
+              child: const Text('Odustani'),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop(true);
               },
-              child: const Text('Continue'),
+              child: const Text('Nastavi'),
             ),
           ],
         );
@@ -567,7 +595,7 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Membership plan removed or deactivated.'),
+          content: Text('Plan članarine je uklonjen ili deaktiviran.'),
         ),
       );
     } else if (_planViewModel.error != null) {

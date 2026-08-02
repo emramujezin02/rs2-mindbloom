@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/therapist_option_model.dart';
 import '../../data/models/workshop_model.dart';
 import '../../data/repositories/workshop_management_repository.dart';
+import '../../../../core/error/app_error_helper.dart';
 
 class WorkshopFormViewModel extends ChangeNotifier {
   final WorkshopManagementRepository repository;
@@ -38,7 +39,7 @@ class WorkshopFormViewModel extends ChangeNotifier {
         workshop = results[1] as WorkshopModel;
       }
     } catch (exception) {
-      error = exception.toString();
+      error = AppErrorHelper.message(exception);
     }
 
     isLoading = false;
@@ -58,7 +59,7 @@ class WorkshopFormViewModel extends ChangeNotifier {
     try {
       return await repository.uploadWorkshopImage(filePath);
     } catch (exception) {
-      error = exception.toString();
+      error = AppErrorHelper.message(exception);
 
       return null;
     } finally {
@@ -83,6 +84,9 @@ class WorkshopFormViewModel extends ChangeNotifier {
     required String? imageUrl,
     required DateTime registrationDeadlineUtc,
   }) async {
+    if (isSaving) {
+      return false;
+    }
     isSaving = true;
     error = null;
     notifyListeners();
@@ -126,11 +130,20 @@ class WorkshopFormViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      error = exception.toString();
+      error = AppErrorHelper.message(exception);
       isSaving = false;
       notifyListeners();
 
       return false;
     }
+  }
+
+  void clearError() {
+    if (error == null) {
+      return;
+    }
+
+    error = null;
+    notifyListeners();
   }
 }

@@ -1,9 +1,12 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:file_picker/file_picker.dart';
 
-import '../../../../core/constants/api_constants.dart';
 import '../../../../app/di/injection.dart';
+import '../../../../core/constants/api_constants.dart';
+import '../../../../core/validation/app_validators.dart';
+import '../../../../core/validation/file_validation.dart';
+import '../../../../core/widgets/app_error_banner.dart';
 import '../viewmodels/workshop_form_viewmodel.dart';
 
 class WorkshopFormPage extends StatefulWidget {
@@ -23,7 +26,9 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
   final TextEditingController _titleController = TextEditingController();
 
   final TextEditingController _descriptionController = TextEditingController();
+
   final TextEditingController _imageUrlController = TextEditingController();
+
   final TextEditingController _onlineLinkController = TextEditingController();
 
   final TextEditingController _locationController = TextEditingController();
@@ -33,20 +38,20 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
   final TextEditingController _priceController = TextEditingController();
 
   late DateTime _startDateTime;
-
   late DateTime _endDateTime;
 
   int _type = 1;
-
   int? _therapistId;
 
   bool _initialValuesApplied = false;
 
   DateTime? _registrationDeadline;
 
-  bool get _isEditing {
-    return widget.workshopId != null;
-  }
+  String? _dateError;
+
+  bool get _isEditing => widget.workshopId != null;
+
+  bool get _isBusy => _viewModel.isSaving || _viewModel.isUploadingImage;
 
   @override
   void initState() {
@@ -68,26 +73,56 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
 
     _viewModel.addListener(_onViewModelChanged);
 
+    _titleController.addListener(_onFieldChanged);
+
+    _descriptionController.addListener(_onFieldChanged);
+
+    _onlineLinkController.addListener(_onFieldChanged);
+
+    _locationController.addListener(_onFieldChanged);
+
+    _capacityController.addListener(_onFieldChanged);
+
+    _priceController.addListener(_onFieldChanged);
+
     _viewModel.initialize(widget.workshopId);
+  }
+
+  void _onFieldChanged() {
+    _viewModel.clearError();
+
+    if (_dateError != null && mounted) {
+      setState(() {
+        _dateError = null;
+      });
+    }
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
 
+    _titleController.removeListener(_onFieldChanged);
+
+    _descriptionController.removeListener(_onFieldChanged);
+
+    _onlineLinkController.removeListener(_onFieldChanged);
+
+    _locationController.removeListener(_onFieldChanged);
+
+    _capacityController.removeListener(_onFieldChanged);
+
+    _priceController.removeListener(_onFieldChanged);
+
     _titleController.dispose();
-
     _descriptionController.dispose();
-
     _onlineLinkController.dispose();
-
     _locationController.dispose();
-
     _capacityController.dispose();
-
     _priceController.dispose();
-
     _imageUrlController.dispose();
+
+    _viewModel.dispose();
 
     super.dispose();
   }
@@ -139,6 +174,10 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
   }
 
   Future<void> _pickRegistrationDeadline() async {
+    if (_isBusy) {
+      return;
+    }
+
     final current =
         _registrationDeadline ?? DateTime.now().add(const Duration(days: 1));
 
@@ -170,17 +209,23 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
         selectedTime.hour,
         selectedTime.minute,
       );
+
+      _dateError = null;
     });
+
+    _viewModel.clearError();
   }
 
   Future<void> _pickAndUploadImage() async {
-    if (_viewModel.isUploadingImage) {
+    if (_viewModel.isUploadingImage || _viewModel.isSaving) {
       return;
     }
 
+    _viewModel.clearError();
+
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+      allowedExtensions: FileValidation.allowedImageExtensions,
       allowMultiple: false,
       withData: false,
     );
@@ -191,39 +236,27 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
 
     final selectedFile = result.files.single;
 
-    final filePath = selectedFile.path;
+    final validationMessage = FileValidation.validateImage(
+      filePath: selectedFile.path,
+      extension: selectedFile.extension ?? '',
+      sizeInBytes: selectedFile.size,
+    );
 
-    if (filePath == null || filePath.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('The selected image could not be read.')),
-      );
-
-      return;
-    }
-
-    const maximumFileSize = 5 * 1024 * 1024;
-
-    if (selectedFile.size > maximumFileSize) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Workshop image may not exceed 5 MB.')),
-      );
+    if (validationMessage != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(validationMessage)));
 
       return;
     }
 
-    final imageUrl = await _viewModel.uploadImage(filePath);
+    final imageUrl = await _viewModel.uploadImage(selectedFile.path!);
 
     if (!mounted) {
       return;
     }
 
     if (imageUrl == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_viewModel.error ?? 'Workshop image upload failed.'),
-        ),
-      );
-
       return;
     }
 
@@ -232,7 +265,7 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
     setState(() {});
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Workshop image uploaded successfully.')),
+      const SnackBar(content: Text('Slika radionice je uspješno učitana.')),
     );
   }
 
@@ -255,6 +288,10 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
   }
 
   Future<void> _selectStartDate() async {
+    if (_isBusy) {
+      return;
+    }
+
     final date = await showDatePicker(
       context: context,
       initialDate: _startDateTime,
@@ -284,14 +321,21 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
         time.minute,
       );
 
-      if (_endDateTime.isBefore(_startDateTime) ||
-          _endDateTime.isAtSameMomentAs(_startDateTime)) {
+      if (!_endDateTime.isAfter(_startDateTime)) {
         _endDateTime = _startDateTime.add(const Duration(hours: 2));
       }
+
+      _dateError = null;
     });
+
+    _viewModel.clearError();
   }
 
   Future<void> _selectEndDate() async {
+    if (_isBusy) {
+      return;
+    }
+
     final date = await showDatePicker(
       context: context,
       initialDate: _endDateTime,
@@ -320,61 +364,101 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
         time.hour,
         time.minute,
       );
+
+      _dateError = null;
     });
+
+    _viewModel.clearError();
+  }
+
+  String? _validateCapacity(String? value) {
+    final baseError = AppValidators.integerRange(
+      value,
+      fieldName: 'Broj mjesta',
+      minimum: 1,
+      maximum: 10000,
+    );
+
+    if (baseError != null) {
+      return baseError;
+    }
+
+    final capacity = AppValidators.parseInteger(value)!;
+
+    final registered = _viewModel.workshop?.registeredCount ?? 0;
+
+    if (capacity < registered) {
+      return 'Broj mjesta ne može biti manji od broja već prijavljenih učesnika ($registered).';
+    }
+
+    return null;
+  }
+
+  String? _validateDates() {
+    final endError = AppValidators.endAfterStart(
+      start: _startDateTime,
+      end: _endDateTime,
+      startName: 'Početak radionice',
+      endName: 'Završetak radionice',
+    );
+
+    if (endError != null) {
+      return endError;
+    }
+
+    if (!_startDateTime.isAfter(DateTime.now())) {
+      return 'Početak radionice mora biti u budućnosti.';
+    }
+
+    final deadline = _registrationDeadline;
+
+    if (deadline == null) {
+      return 'Rok za prijavu je obavezan.';
+    }
+
+    if (!deadline.isAfter(DateTime.now())) {
+      return 'Rok za prijavu mora biti u budućnosti.';
+    }
+
+    if (deadline.isAfter(_startDateTime)) {
+      return 'Rok za prijavu ne može biti nakon početka radionice.';
+    }
+
+    return null;
   }
 
   Future<void> _save() async {
+    FocusScope.of(context).unfocus();
+
+    if (_viewModel.isSaving) {
+      return;
+    }
+
+    _viewModel.clearError();
+
+    setState(() {
+      _dateError = null;
+    });
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    if (!_endDateTime.isAfter(_startDateTime)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Workshop end time must be after its start time.'),
-        ),
-      );
+    final dateError = _validateDates();
+
+    if (dateError != null) {
+      setState(() {
+        _dateError = dateError;
+      });
 
       return;
     }
 
-    final capacity = int.tryParse(_capacityController.text.trim());
+    final capacity = AppValidators.parseInteger(_capacityController.text);
 
-    final price = double.tryParse(
-      _priceController.text.trim().replaceAll(',', '.'),
-    );
+    final price = AppValidators.parseDecimal(_priceController.text);
 
-    if (capacity == null || price == null) {
-      return;
-    }
-
-    if (_registrationDeadline == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a registration deadline.')),
-      );
-
-      return;
-    }
-
-    if (_registrationDeadline!.isBefore(DateTime.now())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Registration deadline must be in the future.'),
-        ),
-      );
-
-      return;
-    }
-
-    if (_registrationDeadline!.isAfter(_startDateTime)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Registration deadline cannot be after workshop start time.',
-          ),
-        ),
-      );
-
+    if (capacity == null || price == null || _registrationDeadline == null) {
       return;
     }
 
@@ -393,7 +477,6 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
       imageUrl: _imageUrlController.text.trim().isEmpty
           ? null
           : _imageUrlController.text.trim(),
-
       registrationDeadlineUtc: _registrationDeadline!,
     );
 
@@ -406,8 +489,8 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
         SnackBar(
           content: Text(
             _isEditing
-                ? 'Workshop updated successfully.'
-                : 'Workshop created successfully.',
+                ? 'Radionica je uspješno izmijenjena.'
+                : 'Radionica je uspješno kreirana.',
           ),
         ),
       );
@@ -420,418 +503,372 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
   Widget build(BuildContext context) {
     final formatter = DateFormat('dd.MM.yyyy. HH:mm');
 
+    if (_viewModel.isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(_isEditing ? 'Uredi radionicu' : 'Kreiraj radionicu'),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_viewModel.error != null && _viewModel.workshop == null && _isEditing) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Uredi radionicu')),
+        body: _buildInitialError(),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit workshop' : 'Create workshop'),
+        title: Text(_isEditing ? 'Uredi radionicu' : 'Kreiraj radionicu'),
       ),
-      body: _viewModel.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _viewModel.error != null &&
-                _viewModel.workshop == null &&
-                _isEditing
-          ? _buildInitialError()
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 900),
-                  child: Form(
-                    key: _formKey,
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            TextFormField(
-                              controller: _titleController,
-                              maxLength: 150,
-                              decoration: const InputDecoration(
-                                labelText: 'Title',
-                                border: OutlineInputBorder(),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900),
+            child: Form(
+              key: _formKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _titleController,
+                        enabled: !_isBusy,
+                        maxLength: 150,
+                        decoration: const InputDecoration(
+                          labelText: 'Naziv',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) => AppValidators.textLength(
+                          value,
+                          fieldName: 'Naziv',
+                          minLength: 3,
+                          maxLength: 150,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _descriptionController,
+                        enabled: !_isBusy,
+                        minLines: 5,
+                        maxLines: 10,
+                        maxLength: 2000,
+                        decoration: const InputDecoration(
+                          labelText: 'Opis',
+                          border: OutlineInputBorder(),
+                          alignLabelWithHint: true,
+                        ),
+                        validator: (value) => AppValidators.textLength(
+                          value,
+                          fieldName: 'Opis',
+                          minLength: 10,
+                          maxLength: 2000,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _imageUrlController.text.trim().isEmpty
+                                      ? 'Naslovna slika nije učitana.'
+                                      : 'Naslovna slika je učitana.',
+                                ),
                               ),
-                              validator: (value) {
-                                final title = value?.trim() ?? '';
-
-                                if (title.length < 3) {
-                                  return 'Title must contain at least 3 characters.';
-                                }
-
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            TextFormField(
-                              controller: _descriptionController,
-                              minLines: 5,
-                              maxLines: 10,
-                              maxLength: 2000,
-                              decoration: const InputDecoration(
-                                labelText: 'Description',
-                                border: OutlineInputBorder(),
-                                alignLabelWithHint: true,
+                              const SizedBox(width: 12),
+                              OutlinedButton.icon(
+                                onPressed: _isBusy ? null : _pickAndUploadImage,
+                                icon: _viewModel.isUploadingImage
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.upload_file),
+                                label: Text(
+                                  _viewModel.isUploadingImage
+                                      ? 'Učitavanje...'
+                                      : _imageUrlController.text.trim().isEmpty
+                                      ? 'Učitaj sliku'
+                                      : 'Zamijeni sliku',
+                                ),
                               ),
-                              validator: (value) {
-                                final description = value?.trim() ?? '';
-
-                                if (description.length < 10) {
-                                  return 'Description must contain at least 10 characters.';
-                                }
-
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 12),
+                            ],
+                          ),
+                          if (_imageUrlController.text.trim().isNotEmpty) ...[
                             const SizedBox(height: 16),
-
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        _imageUrlController.text.trim().isEmpty
-                                            ? 'No cover image uploaded.'
-                                            : 'Cover image uploaded.',
-                                      ),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                _resolveImageUrl(_imageUrlController.text),
+                                height: 240,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 180,
+                                    alignment: Alignment.center,
+                                    child: const Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.broken_image_outlined,
+                                          size: 48,
+                                        ),
+                                        SizedBox(height: 8),
+                                        Text(
+                                          'Pregled slike nije moguće učitati.',
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 12),
-                                    OutlinedButton.icon(
-                                      onPressed:
-                                          _viewModel.isSaving ||
-                                              _viewModel.isUploadingImage
-                                          ? null
-                                          : _pickAndUploadImage,
-                                      icon: _viewModel.isUploadingImage
-                                          ? const SizedBox(
-                                              width: 18,
-                                              height: 18,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            )
-                                          : const Icon(Icons.upload_file),
-                                      label: Text(
-                                        _viewModel.isUploadingImage
-                                            ? 'Uploading...'
-                                            : _imageUrlController.text
-                                                  .trim()
-                                                  .isEmpty
-                                            ? 'Upload cover image'
-                                            : 'Replace image',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                if (_imageUrlController.text
-                                    .trim()
-                                    .isNotEmpty) ...[
-                                  const SizedBox(height: 16),
-
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Image.network(
-                                      _resolveImageUrl(
-                                        _imageUrlController.text,
-                                      ),
-                                      height: 240,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Container(
-                                          height: 180,
-                                          alignment: Alignment.center,
-                                          child: const Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.broken_image_outlined,
-                                                size: 48,
-                                              ),
-                                              SizedBox(height: 8),
-                                              Text(
-                                                'Image preview could not be loaded.',
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            DropdownButtonFormField<int>(
-                              initialValue: _type,
-                              decoration: const InputDecoration(
-                                labelText: 'Workshop type',
-                                border: OutlineInputBorder(),
+                                  );
+                                },
                               ),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 1,
-                                  child: Text('Online'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 2,
-                                  child: Text('In person'),
-                                ),
-                              ],
-                              onChanged: (value) {
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<int>(
+                        initialValue: _type,
+                        decoration: const InputDecoration(
+                          labelText: 'Tip radionice',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 1, child: Text('Online')),
+                          DropdownMenuItem(value: 2, child: Text('Uživo')),
+                        ],
+                        onChanged: _isBusy
+                            ? null
+                            : (value) {
                                 if (value == null) {
                                   return;
                                 }
 
+                                _viewModel.clearError();
+
                                 setState(() {
                                   _type = value;
                                 });
+
+                                _formKey.currentState?.validate();
                               },
+                      ),
+                      const SizedBox(height: 12),
+                      if (_type == 1)
+                        TextFormField(
+                          controller: _onlineLinkController,
+                          enabled: !_isBusy,
+                          maxLength: 1000,
+                          decoration: const InputDecoration(
+                            labelText: 'Link za online radionicu',
+                            hintText: 'https://...',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.link),
+                          ),
+                          validator: (value) => AppValidators.httpUrl(
+                            value,
+                            fieldName: 'Online link',
+                            required: true,
+                            maxLength: 1000,
+                          ),
+                        ),
+                      if (_type == 2)
+                        TextFormField(
+                          controller: _locationController,
+                          enabled: !_isBusy,
+                          maxLength: 300,
+                          decoration: const InputDecoration(
+                            labelText: 'Lokacija',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.location_on_outlined),
+                          ),
+                          validator: (value) => AppValidators.textLength(
+                            value,
+                            fieldName: 'Lokacija',
+                            maxLength: 300,
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: _isBusy ? null : _selectStartDate,
+                            icon: const Icon(Icons.event_available),
+                            label: Text(
+                              'Početak: ${formatter.format(_startDateTime)}',
                             ),
-                            const SizedBox(height: 12),
-                            if (_type == 1)
-                              TextFormField(
-                                controller: _onlineLinkController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Online link',
-                                  hintText: 'https://...',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.link),
-                                ),
-                                validator: (value) {
-                                  final link = value?.trim() ?? '';
-
-                                  if (link.isEmpty) {
-                                    return 'Online link is required.';
-                                  }
-
-                                  final uri = Uri.tryParse(link);
-
-                                  if (uri == null ||
-                                      !uri.hasScheme ||
-                                      (uri.scheme != 'http' &&
-                                          uri.scheme != 'https')) {
-                                    return 'Enter a valid HTTP or HTTPS URL.';
-                                  }
-
-                                  return null;
-                                },
-                              ),
-                            if (_type == 2)
-                              TextFormField(
-                                controller: _locationController,
-                                maxLength: 300,
-                                decoration: const InputDecoration(
-                                  labelText: 'Location',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.location_on_outlined),
-                                ),
-                                validator: (value) {
-                                  if ((value?.trim() ?? '').isEmpty) {
-                                    return 'Location is required.';
-                                  }
-
-                                  return null;
-                                },
-                              ),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: _selectStartDate,
-                                  icon: const Icon(Icons.event_available),
-                                  label: Text(
-                                    'Start: ${formatter.format(_startDateTime)}',
-                                  ),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: _selectEndDate,
-                                  icon: const Icon(Icons.event_busy),
-                                  label: Text(
-                                    'End: ${formatter.format(_endDateTime)}',
-                                  ),
-                                ),
-
-                                const SizedBox(height: 16),
-
-                                InkWell(
-                                  onTap: _viewModel.isSaving
-                                      ? null
-                                      : _pickRegistrationDeadline,
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: InputDecorator(
-                                    decoration: const InputDecoration(
-                                      labelText: 'Registration deadline',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.event_busy),
-                                    ),
-                                    child: Text(
-                                      _registrationDeadline == null
-                                          ? 'Select registration deadline'
-                                          : '${MaterialLocalizations.of(context).formatFullDate(_registrationDeadline!)}  '
-                                                '${TimeOfDay.fromDateTime(_registrationDeadline!).format(context)}',
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: _isBusy ? null : _selectEndDate,
+                            icon: const Icon(Icons.event_busy),
+                            label: Text(
+                              'Završetak: ${formatter.format(_endDateTime)}',
                             ),
-                            const SizedBox(height: 16),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _capacityController,
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Capacity',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    validator: (value) {
-                                      final capacity = int.tryParse(
-                                        value?.trim() ?? '',
-                                      );
-
-                                      if (capacity == null) {
-                                        return 'Enter a valid capacity.';
-                                      }
-
-                                      if (capacity < 1 || capacity > 10000) {
-                                        return 'Capacity must be between 1 and 10000.';
-                                      }
-
-                                      final currentRegistered =
-                                          _viewModel
-                                              .workshop
-                                              ?.registeredCount ??
-                                          0;
-
-                                      if (capacity < currentRegistered) {
-                                        return 'Capacity cannot be lower than $currentRegistered registered participants.';
-                                      }
-
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _priceController,
-                                    keyboardType:
-                                        const TextInputType.numberWithOptions(
-                                          decimal: true,
-                                        ),
-                                    decoration: const InputDecoration(
-                                      labelText: 'Price',
-                                      suffixText: 'KM',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    validator: (value) {
-                                      final price = double.tryParse(
-                                        (value ?? '').trim().replaceAll(
-                                          ',',
-                                          '.',
-                                        ),
-                                      );
-
-                                      if (price == null) {
-                                        return 'Enter a valid price.';
-                                      }
-
-                                      if (price < 0) {
-                                        return 'Price cannot be negative.';
-                                      }
-
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            DropdownButtonFormField<int?>(
-                              initialValue: _therapistId,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      InkWell(
+                        onTap: _isBusy ? null : _pickRegistrationDeadline,
+                        borderRadius: BorderRadius.circular(8),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Rok za prijavu',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.event_busy),
+                          ),
+                          child: Text(
+                            _registrationDeadline == null
+                                ? 'Odaberite rok za prijavu'
+                                : formatter.format(_registrationDeadline!),
+                          ),
+                        ),
+                      ),
+                      if (_dateError != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          _dateError!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _capacityController,
+                              enabled: !_isBusy,
+                              keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
-                                labelText: 'Therapist',
-                                helperText:
-                                    'Optional. Leave empty when the workshop is organized directly by the administrator.',
+                                labelText: 'Broj mjesta',
                                 border: OutlineInputBorder(),
                               ),
-                              items: [
-                                const DropdownMenuItem<int?>(
-                                  value: null,
-                                  child: Text('No assigned therapist'),
-                                ),
-                                ..._viewModel.therapists.map((therapist) {
-                                  return DropdownMenuItem<int?>(
-                                    value: therapist.id,
-                                    child: Text(
-                                      '${therapist.fullName} — ${therapist.specialization}',
-                                    ),
-                                  );
-                                }),
-                              ],
-                              onChanged: (value) {
+                              validator: _validateCapacity,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _priceController,
+                              enabled: !_isBusy,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              decoration: const InputDecoration(
+                                labelText: 'Cijena',
+                                suffixText: 'KM',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (value) => AppValidators.price(
+                                value,
+                                fieldName: 'Cijena',
+                                allowZero: true,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<int?>(
+                        initialValue: _therapistId,
+                        decoration: const InputDecoration(
+                          labelText: 'Terapeut',
+                          helperText:
+                              'Opcionalno. Ostavite prazno ako radionicu organizuje administrator.',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          const DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('Bez dodijeljenog terapeuta'),
+                          ),
+                          ..._viewModel.therapists.map((therapist) {
+                            return DropdownMenuItem<int?>(
+                              value: therapist.id,
+                              child: Text(
+                                '${therapist.fullName} — ${therapist.specialization}',
+                              ),
+                            );
+                          }),
+                        ],
+                        onChanged: _isBusy
+                            ? null
+                            : (value) {
+                                _viewModel.clearError();
+
                                 setState(() {
                                   _therapistId = value;
                                 });
                               },
-                            ),
-                            if (_viewModel.error != null) ...[
-                              const SizedBox(height: 16),
-                              Text(
-                                _viewModel.error!,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 24),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                TextButton(
-                                  onPressed: _viewModel.isSaving
-                                      ? null
-                                      : () {
-                                          Navigator.of(context).pop(false);
-                                        },
-                                  child: const Text('Cancel'),
-                                ),
-                                const SizedBox(width: 12),
-                                FilledButton.icon(
-                                  onPressed: _viewModel.isSaving ? null : _save,
-                                  icon: _viewModel.isSaving
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : const Icon(Icons.save_outlined),
-                                  label: Text(
-                                    _viewModel.isSaving
-                                        ? 'Saving...'
-                                        : _isEditing
-                                        ? 'Save changes'
-                                        : 'Create workshop',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
                       ),
-                    ),
+                      if (_viewModel.error != null) ...[
+                        const SizedBox(height: 16),
+                        AppErrorBanner(
+                          message: _viewModel.error!,
+                          onDismiss: _viewModel.clearError,
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: _isBusy
+                                ? null
+                                : () {
+                                    Navigator.of(context).pop(false);
+                                  },
+                            child: const Text('Odustani'),
+                          ),
+                          const SizedBox(width: 12),
+                          FilledButton.icon(
+                            onPressed: _viewModel.isSaving ? null : _save,
+                            icon: _viewModel.isSaving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.save_outlined),
+                            label: Text(
+                              _viewModel.isSaving
+                                  ? 'Spremanje...'
+                                  : _isEditing
+                                  ? 'Spremi izmjene'
+                                  : 'Kreiraj radionicu',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -839,22 +876,22 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _viewModel.error!,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () {
-                _viewModel.initialize(widget.workshopId);
-              },
-              child: const Text('Try again'),
-            ),
-          ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 650),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppErrorBanner(message: _viewModel.error!),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () {
+                  _viewModel.initialize(widget.workshopId);
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Pokušaj ponovo'),
+              ),
+            ],
+          ),
         ),
       ),
     );

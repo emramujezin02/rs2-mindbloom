@@ -4,6 +4,7 @@ import 'package:mindbloom_desktop/features/users/data/models/update_admin_user_r
 import '../../data/models/admin_user_model.dart';
 import '../../data/repositories/admin_users_repository.dart';
 import '../../data/models/admin_user_details_model.dart';
+import '../../../../core/error/app_error_helper.dart';
 
 class AdminUsersViewModel extends ChangeNotifier {
   final AdminUsersRepository repository;
@@ -226,13 +227,7 @@ class AdminUsersViewModel extends ChangeNotifier {
   }
 
   String _cleanError(Object error) {
-    final value = error.toString();
-
-    if (value.startsWith('Exception: ')) {
-      return value.substring('Exception: '.length);
-    }
-
-    return value;
+    return AppErrorHelper.message(error);
   }
 
   Future<bool> loadUserDetails(int userId) async {

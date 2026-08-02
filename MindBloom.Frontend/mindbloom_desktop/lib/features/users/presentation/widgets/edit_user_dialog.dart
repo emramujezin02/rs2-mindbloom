@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/validation/app_validators.dart';
+import '../../../../core/widgets/app_error_banner.dart';
 import '../../data/models/admin_user_details_model.dart';
 import '../../data/models/update_admin_user_request.dart';
 
 class EditUserDialog extends StatefulWidget {
   final AdminUserDetailsModel user;
+
   final bool isSaving;
+
   final Future<bool> Function(UpdateAdminUserRequest request) onSave;
 
   const EditUserDialog({
@@ -24,16 +28,22 @@ class _EditUserDialogState extends State<EditUserDialog> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _firstNameController;
+
   late final TextEditingController _lastNameController;
+
   late final TextEditingController _phoneController;
 
   DateTime? _dateOfBirth;
+
   String? _selectedGender;
 
   bool _isSubmitting = false;
+
   String? _errorMessage;
 
   static const List<String> _genders = ['Male', 'Female', 'Other'];
+
+  bool get _isBusy => _isSubmitting || widget.isSaving;
 
   @override
   void initState() {
@@ -47,6 +57,12 @@ class _EditUserDialogState extends State<EditUserDialog> {
       text: widget.user.phoneNumber ?? '',
     );
 
+    _firstNameController.addListener(_clearError);
+
+    _lastNameController.addListener(_clearError);
+
+    _phoneController.addListener(_clearError);
+
     _dateOfBirth = widget.user.dateOfBirth.toLocal();
 
     final currentGender = widget.user.gender.trim();
@@ -54,8 +70,24 @@ class _EditUserDialogState extends State<EditUserDialog> {
     _selectedGender = _genders.contains(currentGender) ? currentGender : null;
   }
 
+  void _clearError() {
+    if (_errorMessage == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _errorMessage = null;
+    });
+  }
+
   @override
   void dispose() {
+    _firstNameController.removeListener(_clearError);
+
+    _lastNameController.removeListener(_clearError);
+
+    _phoneController.removeListener(_clearError);
+
     _firstNameController.dispose();
     _lastNameController.dispose();
     _phoneController.dispose();
@@ -64,6 +96,10 @@ class _EditUserDialogState extends State<EditUserDialog> {
   }
 
   Future<void> _selectDateOfBirth() async {
+    if (_isBusy) {
+      return;
+    }
+
     final now = DateTime.now();
 
     final initialDate = _dateOfBirth ?? DateTime(now.year - 18);
@@ -75,6 +111,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
           : initialDate,
       firstDate: DateTime(1900),
       lastDate: now,
+      helpText: 'Odaberite datum rođenja',
+      cancelText: 'Odustani',
+      confirmText: 'Odaberi',
     );
 
     if (picked == null || !mounted) {
@@ -83,11 +122,33 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
     setState(() {
       _dateOfBirth = picked;
+      _errorMessage = null;
     });
+  }
+
+  String _genderLabel(String value) {
+    switch (value) {
+      case 'Male':
+        return 'Muško';
+      case 'Female':
+        return 'Žensko';
+      case 'Other':
+        return 'Drugo';
+      default:
+        return value;
+    }
   }
 
   Future<void> _save() async {
     FocusScope.of(context).unfocus();
+
+    if (_isBusy) {
+      return;
+    }
+
+    setState(() {
+      _errorMessage = null;
+    });
 
     if (!_formKey.currentState!.validate()) {
       return;
@@ -95,7 +156,15 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
     if (_dateOfBirth == null) {
       setState(() {
-        _errorMessage = 'Date of birth is required.';
+        _errorMessage = 'Datum rođenja je obavezan.';
+      });
+
+      return;
+    }
+
+    if (_dateOfBirth!.isAfter(DateTime.now())) {
+      setState(() {
+        _errorMessage = 'Datum rođenja ne može biti u budućnosti.';
       });
 
       return;
@@ -103,7 +172,6 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
     setState(() {
       _isSubmitting = true;
-      _errorMessage = null;
     });
 
     final request = UpdateAdminUserRequest(
@@ -128,146 +196,123 @@ class _EditUserDialogState extends State<EditUserDialog> {
 
     if (success) {
       Navigator.of(context).pop(true);
+
       return;
     }
 
     setState(() {
       _isSubmitting = false;
-      _errorMessage = 'User could not be updated.';
+
+      _errorMessage =
+          'Podatke korisnika nije moguće spremiti. Provjerite unesene podatke i pokušajte ponovo.';
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final isBusy = _isSubmitting || widget.isSaving;
-
     return AlertDialog(
-      title: const Text('Edit user'),
+      title: const Text('Uredi korisnika'),
       content: SizedBox(
         width: 520,
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextFormField(
                   controller: _firstNameController,
-                  enabled: !isBusy,
+                  enabled: !_isBusy,
                   textInputAction: TextInputAction.next,
+                  maxLength: 100,
                   decoration: const InputDecoration(
-                    labelText: 'First name',
+                    labelText: 'Ime',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) {
-                    final normalized = value?.trim() ?? '';
-
-                    if (normalized.isEmpty) {
-                      return 'First name is required.';
-                    }
-
-                    if (normalized.length > 100) {
-                      return 'First name may contain at most 100 characters.';
-                    }
-
-                    return null;
-                  },
+                  validator: (value) => AppValidators.textLength(
+                    value,
+                    fieldName: 'Ime',
+                    maxLength: 100,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _lastNameController,
-                  enabled: !isBusy,
+                  enabled: !_isBusy,
                   textInputAction: TextInputAction.next,
+                  maxLength: 100,
                   decoration: const InputDecoration(
-                    labelText: 'Last name',
+                    labelText: 'Prezime',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) {
-                    final normalized = value?.trim() ?? '';
-
-                    if (normalized.isEmpty) {
-                      return 'Last name is required.';
-                    }
-
-                    if (normalized.length > 100) {
-                      return 'Last name may contain at most 100 characters.';
-                    }
-
-                    return null;
-                  },
+                  validator: (value) => AppValidators.textLength(
+                    value,
+                    fieldName: 'Prezime',
+                    maxLength: 100,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _phoneController,
-                  enabled: !isBusy,
+                  enabled: !_isBusy,
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
+                  maxLength: 30,
                   decoration: const InputDecoration(
-                    labelText: 'Phone number',
+                    labelText: 'Broj telefona',
+                    hintText: 'npr. +387 61 123 456',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) {
-                    final normalized = value?.trim() ?? '';
-
-                    if (normalized.isEmpty) {
-                      return null;
-                    }
-
-                    if (normalized.length > 30) {
-                      return 'Phone number is too long.';
-                    }
-
-                    return null;
-                  },
+                  validator: (value) =>
+                      AppValidators.phone(value, required: false),
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
                   initialValue: _selectedGender,
                   decoration: const InputDecoration(
-                    labelText: 'Gender',
+                    labelText: 'Spol',
                     border: OutlineInputBorder(),
                   ),
-                  items: _genders
-                      .map(
-                        (gender) => DropdownMenuItem<String>(
-                          value: gender,
-                          child: Text(gender),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: isBusy
+                  items: _genders.map((gender) {
+                    return DropdownMenuItem<String>(
+                      value: gender,
+                      child: Text(_genderLabel(gender)),
+                    );
+                  }).toList(),
+                  onChanged: _isBusy
                       ? null
                       : (value) {
                           setState(() {
                             _selectedGender = value;
+
+                            _errorMessage = null;
                           });
                         },
                 ),
                 const SizedBox(height: 14),
                 InkWell(
-                  onTap: isBusy ? null : _selectDateOfBirth,
+                  onTap: _isBusy ? null : _selectDateOfBirth,
                   borderRadius: BorderRadius.circular(4),
                   child: InputDecorator(
                     decoration: const InputDecoration(
-                      labelText: 'Date of birth',
+                      labelText: 'Datum rođenja',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.calendar_today_outlined),
                     ),
                     child: Text(
                       _dateOfBirth == null
-                          ? 'Select date'
+                          ? 'Odaberite datum'
                           : DateFormat('dd.MM.yyyy.').format(_dateOfBirth!),
                     ),
                   ),
                 ),
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 14),
-                  Text(
-                    _errorMessage!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
+                  AppErrorBanner(
+                    message: _errorMessage!,
+                    onDismiss: _clearError,
                   ),
                 ],
               ],
@@ -277,23 +322,23 @@ class _EditUserDialogState extends State<EditUserDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: isBusy
+          onPressed: _isBusy
               ? null
               : () {
                   Navigator.of(context).pop(false);
                 },
-          child: const Text('Cancel'),
+          child: const Text('Odustani'),
         ),
-        ElevatedButton.icon(
-          onPressed: isBusy ? null : _save,
-          icon: isBusy
+        FilledButton.icon(
+          onPressed: _isBusy ? null : _save,
+          icon: _isBusy
               ? const SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.save_outlined),
-          label: Text(isBusy ? 'Saving...' : 'Save'),
+          label: Text(_isBusy ? 'Spremanje...' : 'Spremi'),
         ),
       ],
     );

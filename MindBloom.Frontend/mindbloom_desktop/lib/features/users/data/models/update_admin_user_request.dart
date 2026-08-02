@@ -14,12 +14,20 @@ class UpdateAdminUserRequest {
   });
 
   Map<String, dynamic> toJson() {
+    final normalizedPhone = phoneNumber?.trim();
+
+    final normalizedGender = gender?.trim();
+
     return {
-      'firstName': firstName,
-      'lastName': lastName,
-      'phoneNumber': phoneNumber,
+      'firstName': firstName.trim(),
+      'lastName': lastName.trim(),
+      'phoneNumber': normalizedPhone == null || normalizedPhone.isEmpty
+          ? null
+          : normalizedPhone,
       'dateOfBirth': dateOfBirth.toIso8601String(),
-      'gender': gender,
+      'gender': normalizedGender == null || normalizedGender.isEmpty
+          ? null
+          : normalizedGender,
     };
   }
 }

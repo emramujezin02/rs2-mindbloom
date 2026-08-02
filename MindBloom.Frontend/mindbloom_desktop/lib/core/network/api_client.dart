@@ -127,8 +127,9 @@ class ApiClient {
       await sessionStorage.clearSession();
 
       throw AppException(
-        message: 'Your session has expired. Please log in again.',
+        message: 'Vaša sesija je istekla. Prijavite se ponovo.',
         statusCode: 401,
+        title: 'Sesija je istekla',
       );
     }
 
@@ -189,7 +190,9 @@ class ApiClient {
       }
 
       final accessToken = decoded['token'];
+
       final newRefreshToken = decoded['refreshToken'];
+
       final role = decoded['role'];
 
       if (accessToken is! String || accessToken.trim().isEmpty) {
@@ -201,8 +204,8 @@ class ApiClient {
       }
 
       /*
-       * Desktop aplikacija mora ostati dostupna
-       * isključivo administratoru.
+       * Desktop aplikacija mora ostati
+       * dostupna isključivo administratoru.
        */
       if (role is! String || role.toLowerCase() != 'admin') {
         await sessionStorage.clearSession();
@@ -271,61 +274,172 @@ class ApiClient {
       }
     }
 
-    throw AppException(
-      message: _extractErrorMessage(response),
-      statusCode: response.statusCode,
-    );
+    throw _createAppException(response);
   }
 
-  String _extractErrorMessage(http.Response response) {
+  AppException _createAppException(http.Response response) {
     if (response.body.trim().isEmpty) {
-      return response.statusCode == 401
-          ? 'Your session has expired. Please log in again.'
-          : 'Request failed with status ${response.statusCode}.';
+      final message = response.statusCode == 401
+          ? 'Vaša sesija je istekla. Prijavite se ponovo.'
+          : _defaultMessageForStatus(response.statusCode);
+
+      return AppException(message: message, statusCode: response.statusCode);
     }
 
     try {
       final decoded = jsonDecode(response.body);
 
-      if (decoded is Map<String, dynamic>) {
-        final message = decoded['message'];
+      if (decoded is Map) {
+        final data = Map<String, dynamic>.from(decoded);
 
-        if (message is String && message.trim().isNotEmpty) {
-          return message;
-        }
+        final title = _readString(data['title']);
 
-        final title = decoded['title'];
+        final detail = _readString(data['detail']);
 
-        if (title is String && title.trim().isNotEmpty) {
-          return title;
-        }
+        final message = _readString(data['message']);
 
-        final errors = decoded['errors'];
+        final validationErrors = _extractValidationErrors(
+          data['validationErrors'] ?? data['errors'],
+        );
 
-        if (errors is Map) {
-          final messages = <String>[];
+        final resolvedMessage = _resolveErrorMessage(
+          statusCode: response.statusCode,
+          message: message,
+          title: title,
+          detail: detail,
+          validationErrors: validationErrors,
+        );
 
-          for (final value in errors.values) {
-            if (value is List) {
-              messages.addAll(value.map((item) => item.toString()));
-            } else if (value != null) {
-              messages.add(value.toString());
-            }
-          }
-
-          if (messages.isNotEmpty) {
-            return messages.join('\n');
-          }
-        }
+        return AppException(
+          message: resolvedMessage,
+          statusCode: response.statusCode,
+          title: title,
+          detail: detail,
+          validationErrors: validationErrors,
+        );
       }
 
       if (decoded is String && decoded.trim().isNotEmpty) {
-        return decoded;
+        return AppException(
+          message: decoded.trim(),
+          statusCode: response.statusCode,
+        );
       }
     } on FormatException {
-      return response.body;
+      return AppException(
+        message: response.body.trim(),
+        statusCode: response.statusCode,
+      );
     }
 
-    return response.body;
+    return AppException(
+      message: _defaultMessageForStatus(response.statusCode),
+      statusCode: response.statusCode,
+    );
+  }
+
+  Map<String, List<String>> _extractValidationErrors(dynamic rawErrors) {
+    if (rawErrors is! Map) {
+      return const {};
+    }
+
+    final result = <String, List<String>>{};
+
+    for (final entry in rawErrors.entries) {
+      final key = entry.key.toString();
+
+      final value = entry.value;
+
+      final messages = <String>[];
+
+      if (value is List) {
+        for (final item in value) {
+          final text = item?.toString().trim();
+
+          if (text != null && text.isNotEmpty) {
+            messages.add(text);
+          }
+        }
+      } else {
+        final text = value?.toString().trim();
+
+        if (text != null && text.isNotEmpty) {
+          messages.add(text);
+        }
+      }
+
+      if (messages.isNotEmpty) {
+        result[key] = messages;
+      }
+    }
+
+    return result;
+  }
+
+  String _resolveErrorMessage({
+    required int statusCode,
+    required String? message,
+    required String? title,
+    required String? detail,
+    required Map<String, List<String>> validationErrors,
+  }) {
+    if (validationErrors.isNotEmpty) {
+      final messages = validationErrors.values
+          .expand((values) => values)
+          .where((value) => value.trim().isNotEmpty)
+          .toSet()
+          .toList();
+
+      if (messages.isNotEmpty) {
+        return messages.join('\n');
+      }
+    }
+
+    if (detail != null &&
+        detail.isNotEmpty &&
+        detail.toLowerCase() != 'one or more validation errors occurred.') {
+      return detail;
+    }
+
+    if (message != null && message.isNotEmpty) {
+      return message;
+    }
+
+    if (title != null &&
+        title.isNotEmpty &&
+        title.toLowerCase() != 'validation failed') {
+      return title;
+    }
+
+    return _defaultMessageForStatus(statusCode);
+  }
+
+  String _defaultMessageForStatus(int statusCode) {
+    switch (statusCode) {
+      case 400:
+        return 'Podaci zahtjeva nisu ispravni.';
+      case 401:
+        return 'Vaša sesija je istekla. Prijavite se ponovo.';
+      case 403:
+        return 'Nemate dozvolu za ovu akciju.';
+      case 404:
+        return 'Traženi podatak nije pronađen.';
+      case 409:
+        return 'Akcija nije moguća zbog postojećih podataka ili poslovnog pravila.';
+      case 500:
+        return 'Došlo je do greške na serveru.';
+      default:
+        return 'Zahtjev nije mogao biti izvršen.';
+    }
+  }
+
+  String? _readString(dynamic value) {
+    if (value is! String) {
+      return null;
+    }
+
+    final normalized = value.trim();
+
+    return normalized.isEmpty ? null : normalized;
   }
 }

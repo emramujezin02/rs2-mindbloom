@@ -1,18 +1,20 @@
-import 'package:flutter/material.dart';
-import 'article_preview_page.dart';
-import '../../../../app/di/injection.dart';
-import '../viewmodels/article_form_viewmodel.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+
+import '../../../../app/di/injection.dart';
 import '../../../../core/constants/api_constants.dart';
+import '../../../../core/validation/app_validators.dart';
+import '../../../../core/validation/file_validation.dart';
+import '../../../../core/widgets/app_error_banner.dart';
+import '../viewmodels/article_form_viewmodel.dart';
+import 'article_preview_page.dart';
 
 class ArticleFormPage extends StatefulWidget {
   final int? articleId;
 
   const ArticleFormPage({super.key, this.articleId});
 
-  bool get isEditing {
-    return articleId != null;
-  }
+  bool get isEditing => articleId != null;
 
   @override
   State<ArticleFormPage> createState() => _ArticleFormPageState();
@@ -43,9 +45,19 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
 
     _viewModel.addListener(_onViewModelChanged);
 
+    _titleController.addListener(_onFormFieldChanged);
+
+    _descriptionController.addListener(_onFormFieldChanged);
+
+    _contentController.addListener(_onFormFieldChanged);
+
     _imageUrlController.addListener(_onImageUrlChanged);
 
     _initialize();
+  }
+
+  void _onFormFieldChanged() {
+    _viewModel.clearError();
   }
 
   void _openPreview() {
@@ -108,7 +120,9 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
     _contentController.text = article.content;
 
     _imageUrlController.text = article.imageUrl;
+
     _selectedCategoryId = article.articleCategoryId;
+
     _isPublished = article.isPublished;
 
     _formInitialized = true;
@@ -123,6 +137,8 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
   }
 
   void _onImageUrlChanged() {
+    _viewModel.clearError();
+
     if (mounted) {
       setState(() {});
     }
@@ -131,6 +147,14 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
+
+    _titleController.removeListener(_onFormFieldChanged);
+
+    _descriptionController.removeListener(_onFormFieldChanged);
+
+    _contentController.removeListener(_onFormFieldChanged);
+
+    _imageUrlController.removeListener(_onImageUrlChanged);
 
     _viewModel.dispose();
 
@@ -143,13 +167,15 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
   }
 
   Future<void> _pickAndUploadImage() async {
-    if (_viewModel.isUploadingImage) {
+    if (_viewModel.isUploadingImage || _viewModel.isSaving) {
       return;
     }
 
+    _viewModel.clearError();
+
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+      allowedExtensions: FileValidation.allowedImageExtensions,
       allowMultiple: false,
       withData: false,
     );
@@ -162,59 +188,51 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
 
     final filePath = selectedFile.path;
 
-    if (filePath == null || filePath.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('The selected file could not be read.')),
-      );
+    final validationMessage = FileValidation.validateImage(
+      filePath: filePath,
+      extension: selectedFile.extension ?? '',
+      sizeInBytes: selectedFile.size,
+    );
+
+    if (validationMessage != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(validationMessage)));
 
       return;
     }
 
-    const maximumFileSize = 5 * 1024 * 1024;
-
-    if (selectedFile.size > maximumFileSize) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Article image may not exceed 5 MB.')),
-      );
-
-      return;
-    }
-
-    final imageUrl = await _viewModel.uploadImage(filePath);
+    final imageUrl = await _viewModel.uploadImage(filePath!);
 
     if (!mounted) {
       return;
     }
 
     if (imageUrl == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_viewModel.errorMessage ?? 'Image upload failed.'),
-        ),
-      );
-
       return;
     }
 
     _imageUrlController.text = imageUrl;
 
-    setState(() {});
-
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Article image uploaded successfully.')),
+      const SnackBar(content: Text('Slika članka je uspješno učitana.')),
     );
   }
 
   Future<void> _save() async {
+    FocusScope.of(context).unfocus();
+
+    if (_viewModel.isSaving) {
+      return;
+    }
+
+    _viewModel.clearError();
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an article category.')),
-      );
-
       return;
     }
 
@@ -237,8 +255,8 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
         SnackBar(
           content: Text(
             widget.isEditing
-                ? 'Article updated successfully.'
-                : 'Article created successfully.',
+                ? 'Članak je uspješno izmijenjen.'
+                : 'Članak je uspješno kreiran.',
           ),
         ),
       );
@@ -248,64 +266,37 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
   }
 
   String? _validateTitle(String? value) {
-    final normalized = value?.trim() ?? '';
-
-    if (normalized.isEmpty) {
-      return 'Title is required.';
-    }
-
-    if (normalized.length < 3) {
-      return 'Title must contain at least 3 characters.';
-    }
-
-    if (normalized.length > 200) {
-      return 'Title may contain at most 200 characters.';
-    }
-
-    return null;
+    return AppValidators.textLength(
+      value,
+      fieldName: 'Naslov',
+      minLength: 3,
+      maxLength: 200,
+    );
   }
 
   String? _validateDescription(String? value) {
-    final normalized = value?.trim() ?? '';
-
-    if (normalized.isEmpty) {
-      return 'Description is required.';
-    }
-
-    if (normalized.length < 10) {
-      return 'Description must contain at least 10 characters.';
-    }
-
-    if (normalized.length > 500) {
-      return 'Description may contain at most 500 characters.';
-    }
-
-    return null;
+    return AppValidators.textLength(
+      value,
+      fieldName: 'Opis',
+      minLength: 10,
+      maxLength: 500,
+    );
   }
 
   String? _validateContent(String? value) {
-    final normalized = value?.trim() ?? '';
-
-    if (normalized.isEmpty) {
-      return 'Content is required.';
-    }
-
-    if (normalized.length < 20) {
-      return 'Content must contain at least 20 characters.';
-    }
-
-    if (normalized.length > 20000) {
-      return 'Content may contain at most 20000 characters.';
-    }
-
-    return null;
+    return AppValidators.textLength(
+      value,
+      fieldName: 'Sadržaj članka',
+      minLength: 20,
+      maxLength: 20000,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? 'Edit article' : 'Create article'),
+        title: Text(widget.isEditing ? 'Uredi članak' : 'Kreiraj članak'),
       ),
       body: _buildBody(),
     );
@@ -322,20 +313,20 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _viewModel.errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadArticle,
-                child: const Text('Try again'),
-              ),
-            ],
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 650),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppErrorBanner(message: _viewModel.errorMessage!),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _loadArticle,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Pokušaj ponovo'),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -348,82 +339,80 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
           constraints: const BoxConstraints(maxWidth: 900),
           child: Form(
             key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextFormField(
                   controller: _titleController,
+                  enabled: !_viewModel.isSaving,
                   maxLength: 200,
+                  textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
-                    labelText: 'Title',
+                    labelText: 'Naslov',
                     border: OutlineInputBorder(),
                   ),
                   validator: _validateTitle,
                 ),
-
                 const SizedBox(height: 16),
-
                 TextFormField(
                   controller: _descriptionController,
+                  enabled: !_viewModel.isSaving,
                   minLines: 3,
                   maxLines: 5,
                   maxLength: 500,
                   decoration: const InputDecoration(
-                    labelText: 'Description',
+                    labelText: 'Opis',
                     alignLabelWithHint: true,
                     border: OutlineInputBorder(),
                   ),
                   validator: _validateDescription,
                 ),
-
                 const SizedBox(height: 16),
-
                 DropdownButtonFormField<int>(
                   initialValue: _selectedCategoryId,
                   decoration: const InputDecoration(
-                    labelText: 'Article category',
+                    labelText: 'Kategorija članka',
                     border: OutlineInputBorder(),
                   ),
-                  items: _viewModel.categories
-                      .map(
-                        (category) => DropdownMenuItem<int>(
-                          value: category.id,
-                          child: Text(category.name),
-                        ),
-                      )
-                      .toList(),
+                  items: _viewModel.categories.map((category) {
+                    return DropdownMenuItem<int>(
+                      value: category.id,
+                      child: Text(category.name),
+                    );
+                  }).toList(),
                   onChanged: _viewModel.isSaving
                       ? null
                       : (value) {
+                          _viewModel.clearError();
+
                           setState(() {
                             _selectedCategoryId = value;
                           });
                         },
                   validator: (value) {
                     if (value == null) {
-                      return 'Article category is required.';
+                      return 'Kategorija članka je obavezna.';
                     }
 
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _contentController,
+                  enabled: !_viewModel.isSaving,
                   minLines: 12,
                   maxLines: 20,
                   maxLength: 20000,
                   decoration: const InputDecoration(
-                    labelText: 'Article content',
+                    labelText: 'Sadržaj članka',
                     alignLabelWithHint: true,
                     border: OutlineInputBorder(),
                   ),
                   validator: _validateContent,
                 ),
-
                 const SizedBox(height: 16),
-
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -432,13 +421,11 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
                         Expanded(
                           child: Text(
                             _imageUrlController.text.trim().isEmpty
-                                ? 'No cover image uploaded.'
-                                : 'Cover image uploaded.',
+                                ? 'Naslovna slika nije učitana.'
+                                : 'Naslovna slika je učitana.',
                           ),
                         ),
-
                         const SizedBox(width: 12),
-
                         OutlinedButton.icon(
                           onPressed:
                               _viewModel.isSaving || _viewModel.isUploadingImage
@@ -455,22 +442,18 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
                               : const Icon(Icons.upload_file),
                           label: Text(
                             _viewModel.isUploadingImage
-                                ? 'Uploading...'
+                                ? 'Učitavanje...'
                                 : _imageUrlController.text.trim().isEmpty
-                                ? 'Upload cover image'
-                                : 'Replace image',
+                                ? 'Učitaj sliku'
+                                : 'Zamijeni sliku',
                           ),
                         ),
                       ],
                     ),
-
                     if (_imageUrlController.text.trim().isNotEmpty) ...[
                       const SizedBox(height: 16),
-
                       _ImagePreview(imageUrl: _imageUrlController.text.trim()),
-
                       const SizedBox(height: 8),
-
                       Text(
                         _imageUrlController.text,
                         style: Theme.of(context).textTheme.bodySmall,
@@ -482,30 +465,31 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
                 ),
                 SwitchListTile(
                   value: _isPublished,
-                  onChanged: (value) {
-                    setState(() {
-                      _isPublished = value;
-                    });
-                  },
-                  title: const Text('Published'),
+                  onChanged: _viewModel.isSaving
+                      ? null
+                      : (value) {
+                          _viewModel.clearError();
+
+                          setState(() {
+                            _isPublished = value;
+                          });
+                        },
+                  title: const Text('Objavljen'),
                   subtitle: Text(
                     _isPublished
-                        ? 'The article will be visible to users.'
-                        : 'The article will remain an unpublished draft.',
+                        ? 'Članak će biti vidljiv korisnicima.'
+                        : 'Članak će ostati neobjavljena skica.',
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
-
                 if (_viewModel.errorMessage != null) ...[
                   const SizedBox(height: 12),
-                  Text(
-                    _viewModel.errorMessage!,
-                    style: const TextStyle(color: Colors.red),
+                  AppErrorBanner(
+                    message: _viewModel.errorMessage!,
+                    onDismiss: _viewModel.clearError,
                   ),
                 ],
-
                 const SizedBox(height: 20),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -515,30 +499,31 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
                           : () {
                               Navigator.of(context).pop();
                             },
-                      child: const Text('Cancel'),
+                      child: const Text('Odustani'),
                     ),
                     const SizedBox(width: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: _viewModel.isSaving ? null : _openPreview,
-                          icon: const Icon(Icons.visibility_outlined),
-                          label: const Text('Preview'),
-                        ),
-
-                        const SizedBox(width: 12),
-
-                        ElevatedButton.icon(
-                          onPressed: _viewModel.isSaving ? null : _save,
-                          icon: const Icon(Icons.save),
-                          label: Text(
-                            widget.articleId == null
-                                ? 'Create article'
-                                : 'Save changes',
-                          ),
-                        ),
-                      ],
+                    OutlinedButton.icon(
+                      onPressed: _viewModel.isSaving ? null : _openPreview,
+                      icon: const Icon(Icons.visibility_outlined),
+                      label: const Text('Pregled'),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: _viewModel.isSaving ? null : _save,
+                      icon: _viewModel.isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save),
+                      label: Text(
+                        _viewModel.isSaving
+                            ? 'Spremanje...'
+                            : widget.articleId == null
+                            ? 'Kreiraj članak'
+                            : 'Spremi izmjene',
+                      ),
                     ),
                   ],
                 ),
@@ -599,7 +584,7 @@ class _ImagePreview extends StatelessWidget {
               children: [
                 Icon(Icons.broken_image_outlined, size: 48),
                 SizedBox(height: 8),
-                Text('Image preview could not be loaded.'),
+                Text('Pregled slike nije moguće učitati.'),
               ],
             ),
           );
