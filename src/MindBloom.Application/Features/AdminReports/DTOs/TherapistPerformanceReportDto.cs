@@ -6,9 +6,23 @@ public class TherapistPerformanceReportDto
 
     public DateTime ToUtc { get; set; }
 
+    public DateTime GeneratedAtUtc { get; set; }
+
+    public int? TherapistIdFilter { get; set; }
+
+    public string? TherapistNameFilter { get; set; }
+
+    public int MinimumAppointmentsFilter { get; set; }
+
+    public string? TherapistStatusFilter { get; set; }
+
     public int TherapistCount { get; set; }
 
+    public int TotalAppointments { get; set; }
+
     public int TotalCompletedAppointments { get; set; }
+
+    public int TotalCancelledAppointments { get; set; }
 
     public int TotalUniqueClients { get; set; }
 

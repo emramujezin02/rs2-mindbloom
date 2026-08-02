@@ -81,7 +81,7 @@ public class AdminReportsController : ControllerBase
         TherapistPerformanceReportDto>>
         GetTherapistPerformanceReport(
             [FromQuery]
-            AdminReportPeriodQueryDto query,
+        TherapistPerformanceReportQueryDto query,
             CancellationToken cancellationToken)
     {
         var result =

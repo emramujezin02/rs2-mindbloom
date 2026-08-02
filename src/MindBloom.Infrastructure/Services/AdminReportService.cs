@@ -951,98 +951,217 @@ public class AdminReportService : IAdminReportService
     }
 
     public async Task<TherapistPerformanceReportDto>
-        GetTherapistPerformanceReportAsync(
-            AdminReportPeriodQueryDto query,
-            CancellationToken cancellationToken = default)
+      GetTherapistPerformanceReportAsync(
+          TherapistPerformanceReportQueryDto query,
+          CancellationToken cancellationToken = default)
     {
-        ValidatePeriod(query);
+        ValidateTherapistPerformancePeriod(query);
 
-        var therapists = await _context.Therapists
-            .AsNoTracking()
-            .Where(x =>
-                !x.IsDeleted)
-            .Select(x => new TherapistReportRecord
+        var therapistsQuery =
+            _context.Therapists
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted);
+
+        if (query.TherapistId.HasValue)
+        {
+            var therapistExists =
+                await _context.Therapists
+                    .AsNoTracking()
+                    .AnyAsync(
+                        x =>
+                            x.Id ==
+                                query.TherapistId.Value &&
+                            !x.IsDeleted,
+                        cancellationToken);
+
+            if (!therapistExists)
             {
-                TherapistId = x.Id,
-                UserId = x.UserId,
-                FirstName = x.User.FirstName,
-                LastName = x.User.LastName,
-                Specialization = x.Specialization
-            })
-            .ToListAsync(cancellationToken);
+                throw new ArgumentException(
+                    "Selected therapist was not found.");
+            }
 
-        var appointments = await _context.Appointments
-            .AsNoTracking()
-            .Where(x =>
-                !x.IsDeleted &&
-                !x.Therapist.IsDeleted &&
-                x.StartUtc >= query.FromUtc &&
-                x.StartUtc <= query.ToUtc)
-            .Select(x => new TherapistAppointmentReportRecord
-            {
-                AppointmentId = x.Id,
-                TherapistId = x.TherapistId,
-                ClientId = x.ClientId,
-                Status = x.Status,
+            therapistsQuery =
+                therapistsQuery.Where(x =>
+                    x.Id ==
+                    query.TherapistId.Value);
+        }
 
-                PaymentId =
-                    x.Payment != null &&
-                    !x.Payment.IsDeleted
-                        ? x.Payment.Id
-                        : null,
+        if (query.TherapistStatus.HasValue)
+        {
+            therapistsQuery =
+                therapistsQuery.Where(x =>
+                    x.VerificationStatus ==
+                        query.TherapistStatus.Value);
+        }
 
-                PaymentAmount =
-                    x.Payment != null &&
-                    !x.Payment.IsDeleted
-                        ? x.Payment.Amount
-                        : 0,
+        var therapists =
+            await therapistsQuery
+                .Select(x =>
+                    new TherapistReportRecord
+                    {
+                        TherapistId =
+                            x.Id,
 
-                PaidAtUtc =
-                    x.Payment != null &&
-                    !x.Payment.IsDeleted
-                        ? x.Payment.PaidAtUtc
-                        : null,
+                        UserId =
+                            x.UserId,
 
-                RefundedAtUtc =
-                    x.Payment != null &&
-                    !x.Payment.IsDeleted
-                        ? x.Payment.RefundedAtUtc
-                        : null
-            })
-            .ToListAsync(cancellationToken);
+                        FirstName =
+                            x.User.FirstName,
 
-        var reviews = await _context.Reviews
-            .AsNoTracking()
-            .Where(x =>
-                !x.IsDeleted &&
-                !x.Appointment.IsDeleted &&
-                !x.Therapist.IsDeleted &&
-                x.Appointment.StartUtc >= query.FromUtc &&
-                x.Appointment.StartUtc <= query.ToUtc)
-            .Select(x => new TherapistReviewReportRecord
-            {
-                TherapistId = x.TherapistId,
-                AppointmentId = x.AppointmentId,
-                Rating = x.Rating
-            })
-            .ToListAsync(cancellationToken);
+                        LastName =
+                            x.User.LastName,
+
+                        Specialization =
+                            x.Specialization,
+
+                        VerificationStatus =
+                            x.VerificationStatus,
+
+                        TherapyApproaches =
+                            x.TherapyApproaches
+                                .Where(approach =>
+                                    !approach.IsDeleted &&
+                                    !approach
+                                        .TherapyApproach
+                                        .IsDeleted &&
+                                    approach
+                                        .TherapyApproach
+                                        .IsActive)
+                                .OrderBy(approach =>
+                                    approach
+                                        .TherapyApproach
+                                        .Name)
+                                .Select(approach =>
+                                    approach
+                                        .TherapyApproach
+                                        .Name)
+                                .ToList()
+                    })
+                .ToListAsync(
+                    cancellationToken);
+
+        var therapistIds =
+            therapists
+                .Select(x =>
+                    x.TherapistId)
+                .ToList();
+
+        var appointments =
+            await _context.Appointments
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted &&
+                    !x.Therapist.IsDeleted &&
+                    therapistIds.Contains(
+                        x.TherapistId) &&
+                    x.StartUtc >=
+                        query.FromUtc &&
+                    x.StartUtc <=
+                        query.ToUtc)
+                .Select(x =>
+                    new TherapistAppointmentReportRecord
+                    {
+                        AppointmentId =
+                            x.Id,
+
+                        TherapistId =
+                            x.TherapistId,
+
+                        ClientId =
+                            x.ClientId,
+
+                        Status =
+                            x.Status,
+
+                        PaymentId =
+                            x.Payment != null &&
+                            !x.Payment.IsDeleted
+                                ? x.Payment.Id
+                                : null,
+
+                        PaymentAmount =
+                            x.Payment != null &&
+                            !x.Payment.IsDeleted
+                                ? x.Payment.Amount
+                                : 0,
+
+                        PaidAtUtc =
+                            x.Payment != null &&
+                            !x.Payment.IsDeleted
+                                ? x.Payment.PaidAtUtc
+                                : null,
+
+                        RefundedAtUtc =
+                            x.Payment != null &&
+                            !x.Payment.IsDeleted
+                                ? x.Payment.RefundedAtUtc
+                                : null
+                    })
+                .ToListAsync(
+                    cancellationToken);
+
+        var reviews =
+            await _context.Reviews
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.IsApproved &&
+                    !x.Appointment.IsDeleted &&
+                    !x.Therapist.IsDeleted &&
+                    therapistIds.Contains(
+                        x.TherapistId) &&
+                    x.Appointment.StartUtc >=
+                        query.FromUtc &&
+                    x.Appointment.StartUtc <=
+                        query.ToUtc)
+                .Select(x =>
+                    new TherapistReviewReportRecord
+                    {
+                        TherapistId =
+                            x.TherapistId,
+
+                        AppointmentId =
+                            x.AppointmentId,
+
+                        Rating =
+                            x.Rating
+                    })
+                .ToListAsync(
+                    cancellationToken);
 
         var reportItems =
             new List<TherapistPerformanceReportItemDto>();
 
         foreach (var therapist in therapists)
         {
-            var therapistAppointments = appointments
-                .Where(x =>
-                    x.TherapistId ==
-                    therapist.TherapistId)
-                .ToList();
+            var therapistAppointments =
+                appointments
+                    .Where(x =>
+                        x.TherapistId ==
+                            therapist.TherapistId)
+                    .ToList();
+
+            if (therapistAppointments.Count <
+                query.MinimumAppointments)
+            {
+                continue;
+            }
 
             var completedAppointments =
                 therapistAppointments
                     .Where(x =>
                         x.Status ==
-                        AppointmentStatus.Completed)
+                            AppointmentStatus.Completed)
+                    .ToList();
+
+            var cancelledAppointments =
+                therapistAppointments
+                    .Where(x =>
+                        x.Status ==
+                            AppointmentStatus.Cancelled ||
+                        x.Status ==
+                            AppointmentStatus.Rejected)
                     .ToList();
 
             var paidAppointments =
@@ -1058,24 +1177,50 @@ public class AdminReportService : IAdminReportService
                         x.RefundedAtUtc.HasValue)
                     .ToList();
 
-            var therapistReviews = reviews
-                .Where(x =>
-                    x.TherapistId ==
-                    therapist.TherapistId)
-                .ToList();
+            var therapistReviews =
+                reviews
+                    .Where(x =>
+                        x.TherapistId ==
+                            therapist.TherapistId)
+                    .ToList();
 
             var grossRevenue =
-                paidAppointments.Sum(
-                    x => x.PaymentAmount);
+                paidAppointments.Sum(x =>
+                    x.PaymentAmount);
 
             var refundedAmount =
-                refundedAppointments.Sum(
-                    x => x.PaymentAmount);
+                refundedAppointments.Sum(x =>
+                    x.PaymentAmount);
 
-            var therapistName = BuildFullName(
-                therapist.FirstName,
-                therapist.LastName,
-                therapist.TherapistId);
+            var netRevenue =
+                grossRevenue -
+                refundedAmount;
+
+            var totalAppointments =
+                therapistAppointments.Count;
+
+            var completionRate =
+                totalAppointments == 0
+                    ? 0
+                    : Math.Round(
+                        (double)completedAppointments.Count /
+                        totalAppointments *
+                        100,
+                        2);
+
+            var averageRevenuePerAppointment =
+                totalAppointments == 0
+                    ? 0
+                    : Math.Round(
+                        netRevenue /
+                        totalAppointments,
+                        2);
+
+            var therapistName =
+                BuildFullName(
+                    therapist.FirstName,
+                    therapist.LastName,
+                    therapist.TherapistId);
 
             reportItems.Add(
                 new TherapistPerformanceReportItemDto
@@ -1092,27 +1237,27 @@ public class AdminReportService : IAdminReportService
                     Specialization =
                         therapist.Specialization,
 
+                    TherapyApproaches =
+                        therapist.TherapyApproaches,
+
                     TotalAppointments =
-                        therapistAppointments.Count,
+                        totalAppointments,
 
                     CompletedAppointments =
                         completedAppointments.Count,
 
+                    CancelledAppointments =
+                        cancelledAppointments.Count,
+
+                    CompletionRate =
+                        completionRate,
+
                     UniqueClientsCount =
-                        completedAppointments
-                            .Select(x => x.ClientId)
+                        therapistAppointments
+                            .Select(x =>
+                                x.ClientId)
                             .Distinct()
                             .Count(),
-
-                    GrossRevenue =
-                        grossRevenue,
-
-                    RefundedAmount =
-                        refundedAmount,
-
-                    NetRevenue =
-                        grossRevenue -
-                        refundedAmount,
 
                     AverageRating =
                         therapistReviews.Count == 0
@@ -1123,59 +1268,192 @@ public class AdminReportService : IAdminReportService
                                 2),
 
                     ReviewCount =
-                        therapistReviews.Count
+                        therapistReviews.Count,
+
+                    GrossRevenue =
+                        grossRevenue,
+
+                    RefundedAmount =
+                        refundedAmount,
+
+                    NetRevenue =
+                        netRevenue,
+
+                    AverageRevenuePerAppointment =
+                        averageRevenuePerAppointment
                 });
         }
 
-        reportItems = reportItems
-            .OrderByDescending(x =>
-                x.NetRevenue)
-            .ThenByDescending(x =>
-                x.CompletedAppointments)
-            .ThenBy(x =>
-                x.TherapistName)
-            .ToList();
+        reportItems =
+            reportItems
+                .OrderByDescending(x =>
+                    x.NetRevenue)
+                .ThenByDescending(x =>
+                    x.CompletedAppointments)
+                .ThenByDescending(x =>
+                    x.AverageRating ?? 0)
+                .ThenBy(x =>
+                    x.TherapistName)
+                .ToList();
 
-        var completedAppointmentsForPeriod =
+        for (var index = 0;
+             index < reportItems.Count;
+             index++)
+        {
+            reportItems[index].Rank =
+                index + 1;
+        }
+
+        string? therapistNameFilter =
+            null;
+
+        if (query.TherapistId.HasValue)
+        {
+            var selectedTherapist =
+                therapists
+                    .FirstOrDefault(x =>
+                        x.TherapistId ==
+                            query.TherapistId.Value);
+
+            if (selectedTherapist != null)
+            {
+                therapistNameFilter =
+                    BuildFullName(
+                        selectedTherapist.FirstName,
+                        selectedTherapist.LastName,
+                        selectedTherapist.TherapistId);
+            }
+        }
+
+        var includedTherapistIds =
+            reportItems
+                .Select(x =>
+                    x.TherapistId)
+                .ToHashSet();
+
+        var includedAppointments =
             appointments
                 .Where(x =>
-                    x.Status ==
-                    AppointmentStatus.Completed)
+                    includedTherapistIds.Contains(
+                        x.TherapistId))
                 .ToList();
 
         return new TherapistPerformanceReportDto
         {
-            FromUtc = query.FromUtc,
-            ToUtc = query.ToUtc,
+            FromUtc =
+                query.FromUtc,
+
+            ToUtc =
+                query.ToUtc,
+
+            GeneratedAtUtc =
+                DateTime.UtcNow,
+
+            TherapistIdFilter =
+                query.TherapistId,
+
+            TherapistNameFilter =
+                therapistNameFilter,
+
+            MinimumAppointmentsFilter =
+                query.MinimumAppointments,
+
+            TherapistStatusFilter =
+                query.TherapistStatus?
+                    .ToString(),
 
             TherapistCount =
                 reportItems.Count,
 
+            TotalAppointments =
+                includedAppointments.Count,
+
             TotalCompletedAppointments =
-                completedAppointmentsForPeriod.Count,
+                includedAppointments.Count(x =>
+                    x.Status ==
+                        AppointmentStatus.Completed),
+
+            TotalCancelledAppointments =
+                includedAppointments.Count(x =>
+                    x.Status ==
+                        AppointmentStatus.Cancelled ||
+                    x.Status ==
+                        AppointmentStatus.Rejected),
 
             TotalUniqueClients =
-                completedAppointmentsForPeriod
-                    .Select(x => x.ClientId)
+                includedAppointments
+                    .Select(x =>
+                        x.ClientId)
                     .Distinct()
                     .Count(),
 
             TotalGrossRevenue =
-                reportItems.Sum(
-                    x => x.GrossRevenue),
+                reportItems.Sum(x =>
+                    x.GrossRevenue),
 
             TotalRefundedAmount =
-                reportItems.Sum(
-                    x => x.RefundedAmount),
+                reportItems.Sum(x =>
+                    x.RefundedAmount),
 
             TotalNetRevenue =
-                reportItems.Sum(
-                    x => x.NetRevenue),
+                reportItems.Sum(x =>
+                    x.NetRevenue),
 
             Therapists =
                 reportItems
         };
     }
+
+    private static void
+    ValidateTherapistPerformancePeriod(
+        TherapistPerformanceReportQueryDto query)
+    {
+        if (query.FromUtc == default)
+        {
+            throw new ArgumentException(
+                "Report start date is required.");
+        }
+
+        if (query.ToUtc == default)
+        {
+            throw new ArgumentException(
+                "Report end date is required.");
+        }
+
+        if (query.FromUtc >
+            query.ToUtc)
+        {
+            throw new ArgumentException(
+                "Report start date cannot be later than the end date.");
+        }
+
+        var maximumPeriod =
+            TimeSpan.FromDays(
+                366 * 5);
+
+        if (query.ToUtc -
+            query.FromUtc >
+            maximumPeriod)
+        {
+            throw new ArgumentException(
+                "Report period cannot be longer than five years.");
+        }
+
+        if (query.TherapistId.HasValue &&
+            query.TherapistId.Value <= 0)
+        {
+            throw new ArgumentException(
+                "Therapist ID must be greater than zero.");
+        }
+
+        if (query.MinimumAppointments < 0)
+        {
+            throw new ArgumentException(
+                "Minimum number of appointments cannot be negative.");
+        }
+    }
+
+
 
     private static void
     ValidateAppointmentRevenuePeriod(
@@ -1309,6 +1587,12 @@ public class AdminReportService : IAdminReportService
 
         public string Specialization { get; set; } =
             string.Empty;
+
+        public TherapistVerificationStatus VerificationStatus
+        { get; set; }
+
+        public List<string> TherapyApproaches { get; set; } =
+            new();
     }
 
     private sealed class TherapistAppointmentReportRecord

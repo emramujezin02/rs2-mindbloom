@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import '../../data/models/therapist_performance_report_item_model.dart';
+import '../../data/models/report_therapist_option_model.dart';
 import '../../data/models/therapist_performance_report_model.dart';
 import '../../data/repositories/admin_report_repository.dart';
 import '../../data/services/therapist_performance_pdf_service.dart';
@@ -21,9 +21,15 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
 
   TherapistPerformanceReportModel? _report;
   Uint8List? _pdfBytes;
+
+  List<ReportTherapistOptionModel> _therapistOptions = const [];
+
   int? _selectedTherapistId;
+  int _minimumAppointments = 0;
+  String? _selectedTherapistStatus;
 
   bool _isLoading = false;
+  bool _isLoadingTherapists = false;
   bool _isGeneratingPdf = false;
   bool _isSavingPdf = false;
   bool _isPrintingPdf = false;
@@ -38,9 +44,17 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
 
   Uint8List? get pdfBytes => _pdfBytes;
 
+  List<ReportTherapistOptionModel> get therapistOptions => _therapistOptions;
+
   int? get selectedTherapistId => _selectedTherapistId;
 
+  int get minimumAppointments => _minimumAppointments;
+
+  String? get selectedTherapistStatus => _selectedTherapistStatus;
+
   bool get isLoading => _isLoading;
+
+  bool get isLoadingTherapists => _isLoadingTherapists;
 
   bool get isGeneratingPdf => _isGeneratingPdf;
 
@@ -53,87 +67,24 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
 
   String? get errorMessage => _errorMessage;
 
-  List<TherapistPerformanceReportItemModel> get therapists {
-    final items = [...?_report?.therapists];
+  bool get hasReportData => _report != null && _report!.therapists.isNotEmpty;
 
-    items.sort(
-      (first, second) => first.therapistName.toLowerCase().compareTo(
-        second.therapistName.toLowerCase(),
-      ),
-    );
-
-    return items;
-  }
-
-  List<TherapistPerformanceReportItemModel> get visibleTherapists {
-    final currentReport = _report;
-
-    if (currentReport == null) {
-      return const [];
+  Future<void> loadTherapistOptions() async {
+    if (_isLoadingTherapists) {
+      return;
     }
 
-    if (_selectedTherapistId == null) {
-      return currentReport.therapists;
+    _isLoadingTherapists = true;
+    notifyListeners();
+
+    try {
+      _therapistOptions = await _repository.getTherapists();
+    } catch (error) {
+      _errorMessage = _readableError(error);
+    } finally {
+      _isLoadingTherapists = false;
+      notifyListeners();
     }
-
-    final therapist = currentReport.therapistById(_selectedTherapistId!);
-
-    return therapist == null ? const [] : [therapist];
-  }
-
-  TherapistPerformanceReportItemModel? get selectedTherapist {
-    final currentReport = _report;
-    final therapistId = _selectedTherapistId;
-
-    if (currentReport == null || therapistId == null) {
-      return null;
-    }
-
-    return currentReport.therapistById(therapistId);
-  }
-
-  int get displayedCompletedAppointments {
-    final therapist = selectedTherapist;
-
-    if (therapist != null) {
-      return therapist.completedAppointments;
-    }
-
-    return visibleTherapists.fold<int>(
-      0,
-      (sum, item) => sum + item.completedAppointments,
-    );
-  }
-
-  int get displayedUniqueClients {
-    final therapist = selectedTherapist;
-
-    if (therapist != null) {
-      return therapist.uniqueClientsCount;
-    }
-
-    return _report?.totalUniqueClients ?? 0;
-  }
-
-  double get displayedGrossRevenue {
-    return visibleTherapists.fold<double>(
-      0,
-      (sum, item) => sum + item.grossRevenue,
-    );
-  }
-
-  double get displayedRefundedAmount {
-    return visibleTherapists.fold<double>(
-      0,
-      (sum, item) => sum + item.refundedAmount,
-    );
-  }
-
-  double get displayedNetRevenue {
-    return visibleTherapists.fold<double>(
-      0,
-      (sum, item) => sum + item.netRevenue,
-    );
   }
 
   void setFromDate(DateTime value) {
@@ -144,7 +95,7 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
     }
 
     _fromDate = normalized;
-    _clearReport();
+    _clearGeneratedResult();
 
     notifyListeners();
   }
@@ -157,33 +108,59 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
     }
 
     _toDate = normalized;
-    _clearReport();
+    _clearGeneratedResult();
 
     notifyListeners();
   }
 
-  Future<void> setSelectedTherapistId(int? therapistId) async {
+  void setSelectedTherapistId(int? therapistId) {
     if (_selectedTherapistId == therapistId) {
       return;
     }
 
     _selectedTherapistId = therapistId;
-    _errorMessage = null;
+
+    _clearGeneratedResult();
 
     notifyListeners();
+  }
 
-    final currentReport = _report;
-
-    if (currentReport != null) {
-      await _generatePdf(currentReport);
+  void setMinimumAppointments(int value) {
+    if (_minimumAppointments == value) {
+      return;
     }
+
+    _minimumAppointments = value;
+
+    _clearGeneratedResult();
+
+    notifyListeners();
+  }
+
+  void setTherapistStatus(String? value) {
+    final normalized = value?.trim();
+
+    final newValue = normalized == null || normalized.isEmpty
+        ? null
+        : normalized;
+
+    if (_selectedTherapistStatus == newValue) {
+      return;
+    }
+
+    _selectedTherapistStatus = newValue;
+
+    _clearGeneratedResult();
+
+    notifyListeners();
   }
 
   Future<bool> loadReport() async {
-    final validationMessage = _validatePeriod();
+    final validationMessage = _validateFilters();
 
     if (validationMessage != null) {
       _errorMessage = validationMessage;
+
       notifyListeners();
 
       return false;
@@ -193,7 +170,6 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
     _errorMessage = null;
     _report = null;
     _pdfBytes = null;
-    _selectedTherapistId = null;
 
     notifyListeners();
 
@@ -217,6 +193,9 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
       final loadedReport = await _repository.getTherapistPerformanceReport(
         fromUtc: fromUtc,
         toUtc: toUtc,
+        therapistId: _selectedTherapistId,
+        minimumAppointments: _minimumAppointments,
+        therapistStatus: _selectedTherapistStatus,
       );
 
       _report = loadedReport;
@@ -240,6 +219,7 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
 
     if (currentReport == null || currentPdfBytes == null) {
       _errorMessage = 'Generate the report before saving the PDF.';
+
       notifyListeners();
 
       return false;
@@ -254,7 +234,6 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
       return await _pdfService.savePdf(
         bytes: currentPdfBytes,
         report: currentReport,
-        therapistId: _selectedTherapistId,
       );
     } catch (error) {
       _errorMessage = _readableError(error);
@@ -272,6 +251,7 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
 
     if (currentReport == null || currentPdfBytes == null) {
       _errorMessage = 'Generate the report before printing.';
+
       notifyListeners();
 
       return false;
@@ -286,7 +266,6 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
       return await _pdfService.printPdf(
         bytes: currentPdfBytes,
         report: currentReport,
-        therapistId: _selectedTherapistId,
       );
     } catch (error) {
       _errorMessage = _readableError(error);
@@ -305,10 +284,7 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _pdfBytes = await _pdfService.generatePdf(
-        report: report,
-        therapistId: _selectedTherapistId,
-      );
+      _pdfBytes = await _pdfService.generatePdf(report: report);
     } catch (error) {
       _pdfBytes = null;
       _errorMessage = _readableError(error);
@@ -318,7 +294,7 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
     }
   }
 
-  String? _validatePeriod() {
+  String? _validateFilters() {
     if (_fromDate.isAfter(_toDate)) {
       return 'Start date cannot be later than end date.';
     }
@@ -329,13 +305,16 @@ class TherapistPerformanceReportViewModel extends ChangeNotifier {
       return 'Report period cannot be longer than five years.';
     }
 
+    if (_minimumAppointments < 0) {
+      return 'Minimum appointments cannot be negative.';
+    }
+
     return null;
   }
 
-  void _clearReport() {
+  void _clearGeneratedResult() {
     _report = null;
     _pdfBytes = null;
-    _selectedTherapistId = null;
     _errorMessage = null;
   }
 

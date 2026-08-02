@@ -19,6 +19,8 @@ class _TherapistPerformanceReportPageState
     extends State<TherapistPerformanceReportPage> {
   late final TherapistPerformanceReportViewModel _viewModel;
 
+  late final TextEditingController _minimumAppointmentsController;
+
   final DateFormat _dateFormatter = DateFormat('dd.MM.yyyy');
 
   final NumberFormat _currencyFormatter = NumberFormat.currency(
@@ -27,17 +29,34 @@ class _TherapistPerformanceReportPageState
     decimalDigits: 2,
   );
 
+  static const List<String> _therapistStatuses = [
+    'Pending',
+    'Approved',
+    'Rejected',
+    'RequiresChanges',
+  ];
+
   @override
   void initState() {
     super.initState();
 
     _viewModel = AppInjection.createTherapistPerformanceReportViewModel();
+
+    _minimumAppointmentsController = TextEditingController(
+      text: _viewModel.minimumAppointments.toString(),
+    );
+
     _viewModel.addListener(_onViewModelChanged);
+
+    _viewModel.loadTherapistOptions();
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
+
+    _minimumAppointmentsController.dispose();
+
     _viewModel.dispose();
 
     super.dispose();
@@ -78,9 +97,29 @@ class _TherapistPerformanceReportPageState
   }
 
   Future<void> _loadReport() async {
+    FocusScope.of(context).unfocus();
+
     final success = await _viewModel.loadReport();
 
     if (!mounted || !success) {
+      return;
+    }
+
+    final report = _viewModel.report;
+
+    if (report == null) {
+      return;
+    }
+
+    if (report.therapists.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No therapist performance data matches the selected filters.',
+          ),
+        ),
+      );
+
       return;
     }
 
@@ -138,11 +177,17 @@ class _TherapistPerformanceReportPageState
             const SizedBox(height: 28),
             const Center(child: CircularProgressIndicator()),
           ],
-          if (_viewModel.report != null) ...[
+          if (_viewModel.report != null && !_viewModel.isLoading) ...[
             const SizedBox(height: 28),
-            _buildSummary(),
-            const SizedBox(height: 18),
-            _buildPerformanceTable(),
+            if (_viewModel.report!.therapists.isEmpty)
+              _buildEmptyState()
+            else ...[
+              _buildAppliedFilters(),
+              const SizedBox(height: 18),
+              _buildSummary(),
+              const SizedBox(height: 18),
+              _buildPerformanceTable(),
+            ],
           ],
           if (_viewModel.pdfBytes != null) ...[
             const SizedBox(height: 28),
@@ -167,7 +212,7 @@ class _TherapistPerformanceReportPageState
             ),
             const SizedBox(height: 6),
             Text(
-              'Review therapist activity, ratings, clients and revenue.',
+              'Review therapist activity, completion rates, ratings, clients and revenue.',
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ],
@@ -233,82 +278,91 @@ class _TherapistPerformanceReportPageState
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxWidth < 900;
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Report filters',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 18),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 1000;
 
-            final fromField = _buildDateField(
-              label: 'From date',
-              value: _viewModel.fromDate,
-              onPressed: _selectFromDate,
-            );
-
-            final toField = _buildDateField(
-              label: 'To date',
-              value: _viewModel.toDate,
-              onPressed: _selectToDate,
-            );
-
-            final therapistField = _buildTherapistDropdown();
-
-            final generateButton = ElevatedButton.icon(
-              onPressed: _viewModel.isBusy ? null : _loadReport,
-              icon: _viewModel.isLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.picture_as_pdf),
-              label: Text(
-                _viewModel.isLoading ? 'Generating...' : 'Generate report',
-              ),
-            );
-
-            if (compact) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'Report filters',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                final fields = [
+                  _buildDateField(
+                    label: 'From date',
+                    value: _viewModel.fromDate,
+                    onPressed: _selectFromDate,
                   ),
-                  const SizedBox(height: 18),
-                  fromField,
-                  const SizedBox(height: 14),
-                  toField,
-                  const SizedBox(height: 14),
-                  therapistField,
-                  const SizedBox(height: 18),
-                  generateButton,
-                ],
-              );
-            }
+                  _buildDateField(
+                    label: 'To date',
+                    value: _viewModel.toDate,
+                    onPressed: _selectToDate,
+                  ),
+                  _buildTherapistDropdown(),
+                  _buildMinimumAppointmentsField(),
+                  _buildTherapistStatusDropdown(),
+                ];
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Report filters',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 18),
-                Row(
+                if (compact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var index = 0; index < fields.length; index++) ...[
+                        fields[index],
+                        if (index != fields.length - 1)
+                          const SizedBox(height: 14),
+                      ],
+                      const SizedBox(height: 18),
+                      _buildGenerateButton(),
+                    ],
+                  );
+                }
+
+                return Column(
                   children: [
-                    Expanded(child: fromField),
-                    const SizedBox(width: 16),
-                    Expanded(child: toField),
-                    const SizedBox(width: 16),
-                    Expanded(child: therapistField),
-                    const SizedBox(width: 20),
-                    generateButton,
+                    Row(
+                      children: [
+                        Expanded(child: fields[0]),
+                        const SizedBox(width: 16),
+                        Expanded(child: fields[1]),
+                        const SizedBox(width: 16),
+                        Expanded(child: fields[2]),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: fields[3]),
+                        const SizedBox(width: 16),
+                        Expanded(child: fields[4]),
+                        const SizedBox(width: 20),
+                        _buildGenerateButton(),
+                      ],
+                    ),
                   ],
-                ),
-              ],
-            );
-          },
+                );
+              },
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildGenerateButton() {
+    return ElevatedButton.icon(
+      onPressed: _viewModel.isBusy ? null : _loadReport,
+      icon: _viewModel.isLoading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.picture_as_pdf),
+      label: Text(_viewModel.isLoading ? 'Generating...' : 'Generate report'),
     );
   }
 
@@ -332,40 +386,134 @@ class _TherapistPerformanceReportPageState
   }
 
   Widget _buildTherapistDropdown() {
-    final therapists = _viewModel.therapists;
-
     return DropdownButtonFormField<int?>(
       initialValue: _viewModel.selectedTherapistId,
       isExpanded: true,
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'Therapist',
-        border: OutlineInputBorder(),
-        prefixIcon: Icon(Icons.psychology),
+        border: const OutlineInputBorder(),
+        prefixIcon: const Icon(Icons.psychology),
+        suffixIcon: _viewModel.isLoadingTherapists
+            ? const Padding(
+                padding: EdgeInsets.all(12),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : null,
       ),
       items: [
         const DropdownMenuItem<int?>(
           value: null,
           child: Text('All therapists'),
         ),
-        ...therapists.map(
+        ..._viewModel.therapistOptions.map(
           (therapist) => DropdownMenuItem<int?>(
-            value: therapist.therapistId,
-            child: Text(
-              therapist.therapistName,
-              overflow: TextOverflow.ellipsis,
-            ),
+            value: therapist.id,
+            child: Text(therapist.fullName, overflow: TextOverflow.ellipsis),
           ),
         ),
       ],
-      onChanged: _viewModel.report == null || _viewModel.isBusy
+      onChanged: _viewModel.isBusy || _viewModel.isLoadingTherapists
           ? null
-          : (value) {
-              _viewModel.setSelectedTherapistId(value);
-            },
+          : _viewModel.setSelectedTherapistId,
+    );
+  }
+
+  Widget _buildMinimumAppointmentsField() {
+    return TextFormField(
+      controller: _minimumAppointmentsController,
+      enabled: !_viewModel.isBusy,
+      keyboardType: TextInputType.number,
+      decoration: const InputDecoration(
+        labelText: 'Minimum appointments',
+        helperText: 'Use 0 to include therapists without appointments.',
+        border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.numbers),
+      ),
+      onChanged: (value) {
+        final parsed = int.tryParse(value.trim());
+
+        if (parsed != null) {
+          _viewModel.setMinimumAppointments(parsed);
+        }
+      },
+    );
+  }
+
+  Widget _buildTherapistStatusDropdown() {
+    return DropdownButtonFormField<String?>(
+      initialValue: _viewModel.selectedTherapistStatus,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Therapist status',
+        border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.verified_user),
+      ),
+      items: [
+        const DropdownMenuItem<String?>(
+          value: null,
+          child: Text('All statuses'),
+        ),
+        ..._therapistStatuses.map(
+          (status) =>
+              DropdownMenuItem<String?>(value: status, child: Text(status)),
+        ),
+      ],
+      onChanged: _viewModel.isBusy ? null : _viewModel.setTherapistStatus,
+    );
+  }
+
+  Widget _buildAppliedFilters() {
+    final report = _viewModel.report!;
+
+    final therapist = report.therapistNameFilter ?? 'All therapists';
+
+    final status = report.therapistStatusFilter ?? 'All statuses';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Applied filters',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                Chip(
+                  label: Text(
+                    'Period: '
+                    '${_dateFormatter.format(report.fromUtc)} - '
+                    '${_dateFormatter.format(report.toUtc)}',
+                  ),
+                ),
+                Chip(label: Text('Therapist: $therapist')),
+                Chip(
+                  label: Text(
+                    'Minimum appointments: '
+                    '${report.minimumAppointmentsFilter}',
+                  ),
+                ),
+                Chip(label: Text('Status: $status')),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildSummary() {
+    final report = _viewModel.report!;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -395,43 +543,34 @@ class _TherapistPerformanceReportPageState
                 _SummaryCard(
                   width: itemWidth,
                   icon: Icons.psychology,
-                  title: _viewModel.selectedTherapist == null
-                      ? 'Therapists'
-                      : 'Selected therapist',
-                  value:
-                      _viewModel.selectedTherapist?.therapistName ??
-                      _viewModel.visibleTherapists.length.toString(),
-                  description:
-                      _viewModel.selectedTherapist?.specialization ??
-                      'Therapists included in report',
+                  title: 'Therapists',
+                  value: report.therapistCount.toString(),
+                  description: 'Therapists matching filters',
                 ),
                 _SummaryCard(
                   width: itemWidth,
-                  icon: Icons.check_circle,
-                  title: 'Completed appointments',
-                  value: _viewModel.displayedCompletedAppointments.toString(),
+                  icon: Icons.event_note,
+                  title: 'Appointments',
+                  value: report.totalAppointments.toString(),
                   description:
-                      '${_viewModel.displayedUniqueClients} unique clients',
+                      '${report.totalCompletedAppointments} completed, '
+                      '${report.totalCancelledAppointments} cancelled',
                 ),
                 _SummaryCard(
                   width: itemWidth,
-                  icon: Icons.payments,
-                  title: 'Gross revenue',
-                  value: _currencyFormatter.format(
-                    _viewModel.displayedGrossRevenue,
-                  ),
-                  description: _viewModel.displayedRefundedAmount == 0
-                      ? 'No completed refunds'
-                      : '${_currencyFormatter.format(_viewModel.displayedRefundedAmount)} refunded',
+                  icon: Icons.people,
+                  title: 'Unique clients',
+                  value: report.totalUniqueClients.toString(),
+                  description: 'Clients in selected results',
                 ),
                 _SummaryCard(
                   width: itemWidth,
                   icon: Icons.account_balance_wallet,
                   title: 'Net revenue',
-                  value: _currencyFormatter.format(
-                    _viewModel.displayedNetRevenue,
-                  ),
-                  description: 'Revenue after completed refunds',
+                  value: _currencyFormatter.format(report.totalNetRevenue),
+                  description:
+                      '${_currencyFormatter.format(report.totalGrossRevenue)} gross, '
+                      '${_currencyFormatter.format(report.totalRefundedAmount)} refunded',
                 ),
               ],
             );
@@ -442,8 +581,7 @@ class _TherapistPerformanceReportPageState
   }
 
   Widget _buildPerformanceTable() {
-    final therapists = [..._viewModel.visibleTherapists]
-      ..sort((first, second) => second.netRevenue.compareTo(first.netRevenue));
+    final therapists = _viewModel.report!.therapists;
 
     return Card(
       child: Padding(
@@ -456,34 +594,29 @@ class _TherapistPerformanceReportPageState
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 18),
-            if (therapists.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'No therapist performance data for the selected period.',
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columns: const [
+                  DataColumn(numeric: true, label: Text('Rank')),
+                  DataColumn(label: Text('Therapist')),
+                  DataColumn(label: Text('Therapy approaches')),
+                  DataColumn(numeric: true, label: Text('Appointments')),
+                  DataColumn(numeric: true, label: Text('Completed')),
+                  DataColumn(numeric: true, label: Text('Cancelled')),
+                  DataColumn(numeric: true, label: Text('Completion rate')),
+                  DataColumn(numeric: true, label: Text('Clients')),
+                  DataColumn(numeric: true, label: Text('Rating')),
+                  DataColumn(numeric: true, label: Text('Reviews')),
+                  DataColumn(numeric: true, label: Text('Net revenue')),
+                  DataColumn(
+                    numeric: true,
+                    label: Text('Avg. revenue / appointment'),
                   ),
-                ),
-              )
-            else
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  columns: const [
-                    DataColumn(label: Text('Therapist')),
-                    DataColumn(label: Text('Specialization')),
-                    DataColumn(numeric: true, label: Text('Appointments')),
-                    DataColumn(numeric: true, label: Text('Completed')),
-                    DataColumn(numeric: true, label: Text('Clients')),
-                    DataColumn(numeric: true, label: Text('Rating')),
-                    DataColumn(numeric: true, label: Text('Reviews')),
-                    DataColumn(numeric: true, label: Text('Net revenue')),
-                  ],
-                  rows: therapists
-                      .map((therapist) => _buildTherapistRow(therapist))
-                      .toList(),
-                ),
+                ],
+                rows: therapists.map(_buildTherapistRow).toList(),
               ),
+            ),
           ],
         ),
       ),
@@ -493,21 +626,56 @@ class _TherapistPerformanceReportPageState
   DataRow _buildTherapistRow(TherapistPerformanceReportItemModel therapist) {
     return DataRow(
       cells: [
+        DataCell(Text('#${therapist.rank}')),
         DataCell(Text(therapist.therapistName)),
         DataCell(
-          Text(
-            therapist.specialization.isEmpty
-                ? 'Not specified'
-                : therapist.specialization,
-          ),
+          SizedBox(width: 240, child: Text(therapist.therapyApproachesLabel)),
         ),
         DataCell(Text(therapist.totalAppointments.toString())),
         DataCell(Text(therapist.completedAppointments.toString())),
+        DataCell(Text(therapist.cancelledAppointments.toString())),
+        DataCell(Text('${therapist.completionRate.toStringAsFixed(1)}%')),
         DataCell(Text(therapist.uniqueClientsCount.toString())),
         DataCell(Text(therapist.averageRating?.toStringAsFixed(2) ?? '—')),
         DataCell(Text(therapist.reviewCount.toString())),
         DataCell(Text(_currencyFormatter.format(therapist.netRevenue))),
+        DataCell(
+          Text(
+            _currencyFormatter.format(therapist.averageRevenuePerAppointment),
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(36),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.insert_chart_outlined,
+                size: 54,
+                color: Theme.of(context).colorScheme.outline,
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'No therapist performance data',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'No therapists match the selected period and filters. '
+                'Try changing the therapist, verification status or minimum number of appointments.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

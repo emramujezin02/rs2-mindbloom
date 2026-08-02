@@ -2,8 +2,8 @@
 
 import '../../../../core/network/api_client.dart';
 import '../models/appointment_revenue_report_model.dart';
-import '../models/therapist_performance_report_model.dart';
 import '../models/report_therapist_option_model.dart';
+import '../models/therapist_performance_report_model.dart';
 
 class AdminReportApiService {
   final ApiClient _apiClient;
@@ -21,7 +21,6 @@ class AdminReportApiService {
   }) async {
     final queryParameters = <String, String>{
       'fromUtc': fromUtc.toUtc().toIso8601String(),
-
       'toUtc': toUtc.toUtc().toIso8601String(),
     };
 
@@ -62,16 +61,30 @@ class AdminReportApiService {
   Future<TherapistPerformanceReportModel> getTherapistPerformanceReport({
     required DateTime fromUtc,
     required DateTime toUtc,
+    int? therapistId,
+    int minimumAppointments = 0,
+    String? therapistStatus,
   }) async {
-    final uri = Uri(
-      path: '/api/admin/reports/therapist-performance',
-      queryParameters: {
-        'fromUtc': fromUtc.toUtc().toIso8601String(),
-        'toUtc': toUtc.toUtc().toIso8601String(),
-      },
-    );
+    final queryParameters = <String, String>{
+      'fromUtc': fromUtc.toUtc().toIso8601String(),
+      'toUtc': toUtc.toUtc().toIso8601String(),
+      'minimumAppointments': minimumAppointments.toString(),
+    };
 
-    final response = await _apiClient.get(uri.toString());
+    if (therapistId != null) {
+      queryParameters['therapistId'] = therapistId.toString();
+    }
+
+    if (therapistStatus != null && therapistStatus.trim().isNotEmpty) {
+      queryParameters['therapistStatus'] = therapistStatus.trim();
+    }
+
+    final queryString = Uri(queryParameters: queryParameters).query;
+
+    final response = await _apiClient.get(
+      '/api/admin/reports/therapist-performance'
+      '?$queryString',
+    );
 
     if (response is! Map) {
       throw const FormatException(
@@ -93,7 +106,7 @@ class AdminReportApiService {
       );
     }
 
-    return response
+    final therapists = response
         .whereType<Map>()
         .map(
           (item) => ReportTherapistOptionModel.fromJson(
@@ -105,5 +118,12 @@ class AdminReportApiService {
               therapist.id > 0 && therapist.fullName.trim().isNotEmpty,
         )
         .toList();
+
+    therapists.sort(
+      (first, second) =>
+          first.fullName.toLowerCase().compareTo(second.fullName.toLowerCase()),
+    );
+
+    return therapists;
   }
 }

@@ -2,6 +2,8 @@
 
 public class TherapistPerformanceReportItemDto
 {
+    public int Rank { get; set; }
+
     public int TherapistId { get; set; }
 
     public int UserId { get; set; }
@@ -10,11 +12,22 @@ public class TherapistPerformanceReportItemDto
 
     public string Specialization { get; set; } = string.Empty;
 
+    public IReadOnlyList<string> TherapyApproaches { get; set; } =
+        Array.Empty<string>();
+
     public int TotalAppointments { get; set; }
 
     public int CompletedAppointments { get; set; }
 
+    public int CancelledAppointments { get; set; }
+
+    public double CompletionRate { get; set; }
+
     public int UniqueClientsCount { get; set; }
+
+    public double? AverageRating { get; set; }
+
+    public int ReviewCount { get; set; }
 
     public decimal GrossRevenue { get; set; }
 
@@ -22,7 +35,5 @@ public class TherapistPerformanceReportItemDto
 
     public decimal NetRevenue { get; set; }
 
-    public double? AverageRating { get; set; }
-
-    public int ReviewCount { get; set; }
+    public decimal AverageRevenuePerAppointment { get; set; }
 }

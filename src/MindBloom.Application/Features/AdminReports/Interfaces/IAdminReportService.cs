@@ -17,6 +17,6 @@ public interface IAdminReportService
 
     Task<TherapistPerformanceReportDto>
         GetTherapistPerformanceReportAsync(
-            AdminReportPeriodQueryDto query,
+            TherapistPerformanceReportQueryDto query,
             CancellationToken cancellationToken = default);
 }

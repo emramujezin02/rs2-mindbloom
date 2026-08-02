@@ -22,19 +22,9 @@ class TherapistPerformancePdfService {
 
   Future<Uint8List> generatePdf({
     required TherapistPerformanceReportModel report,
-    int? therapistId,
   }) async {
-    final selectedTherapist = therapistId == null
-        ? null
-        : report.therapistById(therapistId);
-
-    final therapists = selectedTherapist == null
-        ? [...report.therapists]
-        : [selectedTherapist];
-
-    therapists.sort(
-      (first, second) => second.netRevenue.compareTo(first.netRevenue),
-    );
+    final therapists = [...report.therapists]
+      ..sort((first, second) => first.rank.compareTo(second.rank));
 
     final document = pw.Document(
       title: 'Therapist Performance Report',
@@ -46,61 +36,19 @@ class TherapistPerformancePdfService {
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4.landscape,
-        margin: const pw.EdgeInsets.all(30),
-        header: (context) {
-          return _buildHeader(
-            report: report,
-            selectedTherapist: selectedTherapist,
-          );
-        },
-        footer: (context) {
-          return pw.Container(
-            margin: const pw.EdgeInsets.only(top: 12),
-            padding: const pw.EdgeInsets.only(top: 8),
-            decoration: const pw.BoxDecoration(
-              border: pw.Border(
-                top: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-              ),
-            ),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'MindBloom administration',
-                  style: const pw.TextStyle(
-                    fontSize: 8,
-                    color: PdfColors.grey700,
-                  ),
-                ),
-                pw.Text(
-                  'Page ${context.pageNumber} of ${context.pagesCount}',
-                  style: const pw.TextStyle(
-                    fontSize: 8,
-                    color: PdfColors.grey700,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-        build: (context) {
-          return [
-            pw.SizedBox(height: 18),
-            _buildOverviewSection(
-              report: report,
-              therapists: therapists,
-              selectedTherapist: selectedTherapist,
-            ),
-            pw.SizedBox(height: 20),
-            _buildPerformanceTable(therapists),
-            if (selectedTherapist != null) ...[
-              pw.SizedBox(height: 20),
-              _buildSelectedTherapistDetails(selectedTherapist),
-            ],
-            pw.SizedBox(height: 20),
-            _buildReportNote(),
-          ];
-        },
+        margin: const pw.EdgeInsets.all(28),
+        header: (context) => _buildHeader(report),
+        footer: (context) => _buildFooter(context),
+        build: (context) => [
+          pw.SizedBox(height: 16),
+          _buildAppliedFilters(report),
+          pw.SizedBox(height: 18),
+          _buildOverviewSection(report),
+          pw.SizedBox(height: 20),
+          _buildPerformanceTable(therapists),
+          pw.SizedBox(height: 18),
+          _buildReportNote(),
+        ],
       ),
     );
 
@@ -110,12 +58,8 @@ class TherapistPerformancePdfService {
   Future<bool> savePdf({
     required Uint8List bytes,
     required TherapistPerformanceReportModel report,
-    int? therapistId,
   }) async {
-    final suggestedName = _createFileName(
-      report: report,
-      therapistId: therapistId,
-    );
+    final suggestedName = _createFileName(report);
 
     final location = await getSaveLocation(
       suggestedName: suggestedName,
@@ -143,32 +87,26 @@ class TherapistPerformancePdfService {
   Future<bool> printPdf({
     required Uint8List bytes,
     required TherapistPerformanceReportModel report,
-    int? therapistId,
   }) {
     return Printing.layoutPdf(
-      name: _createFileName(report: report, therapistId: therapistId),
+      name: _createFileName(report),
       onLayout: (_) async => bytes,
     );
   }
 
-  String _createFileName({
-    required TherapistPerformanceReportModel report,
-    int? therapistId,
-  }) {
+  String _createFileName(TherapistPerformanceReportModel report) {
     final from = DateFormat('yyyy-MM-dd').format(report.fromUtc);
+
     final to = DateFormat('yyyy-MM-dd').format(report.toUtc);
 
-    if (therapistId == null) {
-      return 'mindbloom-therapist-performance-$from-$to.pdf';
+    if (report.therapistIdFilter != null) {
+      return 'mindbloom-therapist-${report.therapistIdFilter}-performance-$from-$to.pdf';
     }
 
-    return 'mindbloom-therapist-$therapistId-performance-$from-$to.pdf';
+    return 'mindbloom-therapist-performance-$from-$to.pdf';
   }
 
-  pw.Widget _buildHeader({
-    required TherapistPerformanceReportModel report,
-    required TherapistPerformanceReportItemModel? selectedTherapist,
-  }) {
+  pw.Widget _buildHeader(TherapistPerformanceReportModel report) {
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 14),
       decoration: const pw.BoxDecoration(
@@ -218,16 +156,6 @@ class TherapistPerformancePdfService {
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
-                if (selectedTherapist != null) ...[
-                  pw.SizedBox(height: 3),
-                  pw.Text(
-                    selectedTherapist.therapistName,
-                    style: const pw.TextStyle(
-                      fontSize: 10,
-                      color: PdfColors.grey700,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -252,7 +180,8 @@ class TherapistPerformancePdfService {
               ),
               pw.SizedBox(height: 3),
               pw.Text(
-                'Generated: ${_dateTimeFormatter.format(DateTime.now())}',
+                'Generated: '
+                '${_dateTimeFormatter.format(report.generatedAtUtc.toLocal())}',
                 style: const pw.TextStyle(
                   fontSize: 8,
                   color: PdfColors.grey700,
@@ -265,35 +194,85 @@ class TherapistPerformancePdfService {
     );
   }
 
-  pw.Widget _buildOverviewSection({
-    required TherapistPerformanceReportModel report,
-    required List<TherapistPerformanceReportItemModel> therapists,
-    required TherapistPerformanceReportItemModel? selectedTherapist,
-  }) {
-    final completedAppointments =
-        selectedTherapist?.completedAppointments ??
-        therapists.fold<int>(
-          0,
-          (sum, therapist) => sum + therapist.completedAppointments,
-        );
+  pw.Widget _buildFooter(pw.Context context) {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 12),
+      padding: const pw.EdgeInsets.only(top: 8),
+      decoration: const pw.BoxDecoration(
+        border: pw.Border(
+          top: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+        ),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'MindBloom administration',
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+          ),
+          pw.Text(
+            'Page ${context.pageNumber} of ${context.pagesCount}',
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+          ),
+        ],
+      ),
+    );
+  }
 
-    final uniqueClients =
-        selectedTherapist?.uniqueClientsCount ?? report.totalUniqueClients;
+  pw.Widget _buildAppliedFilters(TherapistPerformanceReportModel report) {
+    final therapist = report.therapistNameFilter ?? 'All therapists';
 
-    final grossRevenue =
-        selectedTherapist?.grossRevenue ??
-        therapists.fold<double>(
-          0,
-          (sum, therapist) => sum + therapist.grossRevenue,
-        );
+    final status = report.therapistStatusFilter ?? 'All statuses';
 
-    final netRevenue =
-        selectedTherapist?.netRevenue ??
-        therapists.fold<double>(
-          0,
-          (sum, therapist) => sum + therapist.netRevenue,
-        );
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Applied filters'),
+        pw.SizedBox(height: 8),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+            borderRadius: pw.BorderRadius.circular(6),
+            border: pw.Border.all(color: PdfColors.grey300),
+          ),
+          child: pw.Wrap(
+            spacing: 18,
+            runSpacing: 6,
+            children: [
+              _buildFilterValue(
+                'Period',
+                '${_dateFormatter.format(report.fromUtc)} - '
+                    '${_dateFormatter.format(report.toUtc)}',
+              ),
+              _buildFilterValue('Therapist', therapist),
+              _buildFilterValue(
+                'Minimum appointments',
+                report.minimumAppointmentsFilter.toString(),
+              ),
+              _buildFilterValue('Therapist status', status),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
+  pw.Widget _buildFilterValue(String label, String value) {
+    return pw.Row(
+      mainAxisSize: pw.MainAxisSize.min,
+      children: [
+        pw.Text(
+          '$label: ',
+          style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+        ),
+        pw.Text(value, style: const pw.TextStyle(fontSize: 8)),
+      ],
+    );
+  }
+
+  pw.Widget _buildOverviewSection(TherapistPerformanceReportModel report) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -303,40 +282,61 @@ class TherapistPerformancePdfService {
           children: [
             pw.Expanded(
               child: _buildMetricCard(
-                title: selectedTherapist == null
-                    ? 'Therapists'
-                    : 'Selected therapist',
-                value: selectedTherapist == null
-                    ? therapists.length.toString()
-                    : selectedTherapist.therapistName,
+                title: 'Therapists',
+                value: report.therapistCount.toString(),
               ),
             ),
-            pw.SizedBox(width: 8),
+            pw.SizedBox(width: 7),
             pw.Expanded(
               child: _buildMetricCard(
-                title: 'Completed appointments',
-                value: completedAppointments.toString(),
+                title: 'Appointments',
+                value: report.totalAppointments.toString(),
               ),
             ),
-            pw.SizedBox(width: 8),
+            pw.SizedBox(width: 7),
+            pw.Expanded(
+              child: _buildMetricCard(
+                title: 'Completed',
+                value: report.totalCompletedAppointments.toString(),
+              ),
+            ),
+            pw.SizedBox(width: 7),
+            pw.Expanded(
+              child: _buildMetricCard(
+                title: 'Cancelled',
+                value: report.totalCancelledAppointments.toString(),
+              ),
+            ),
+            pw.SizedBox(width: 7),
             pw.Expanded(
               child: _buildMetricCard(
                 title: 'Unique clients',
-                value: uniqueClients.toString(),
+                value: report.totalUniqueClients.toString(),
               ),
             ),
-            pw.SizedBox(width: 8),
+          ],
+        ),
+        pw.SizedBox(height: 8),
+        pw.Row(
+          children: [
             pw.Expanded(
               child: _buildMetricCard(
                 title: 'Gross revenue',
-                value: _currencyFormatter.format(grossRevenue),
+                value: _currencyFormatter.format(report.totalGrossRevenue),
               ),
             ),
-            pw.SizedBox(width: 8),
+            pw.SizedBox(width: 7),
+            pw.Expanded(
+              child: _buildMetricCard(
+                title: 'Refunded amount',
+                value: _currencyFormatter.format(report.totalRefundedAmount),
+              ),
+            ),
+            pw.SizedBox(width: 7),
             pw.Expanded(
               child: _buildMetricCard(
                 title: 'Net revenue',
-                value: _currencyFormatter.format(netRevenue),
+                value: _currencyFormatter.format(report.totalNetRevenue),
                 highlighted: true,
               ),
             ),
@@ -352,110 +352,73 @@ class TherapistPerformancePdfService {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Therapist performance'),
+        _buildSectionTitle('Therapist performance ranking'),
         pw.SizedBox(height: 10),
         if (therapists.isEmpty)
-          _buildEmptyMessage('No therapist performance data is available.')
+          _buildEmptyMessage(
+            'No therapist performance data matches the selected filters.',
+          )
         else
           pw.TableHelper.fromTextArray(
             headers: const [
+              '#',
               'Therapist',
-              'Specialization',
-              'Appointments',
+              'Therapy approaches',
+              'Appts.',
               'Completed',
+              'Cancelled',
+              'Completion',
               'Clients',
               'Rating',
               'Reviews',
-              'Gross revenue',
-              'Refunded',
               'Net revenue',
+              'Avg./appt.',
             ],
             data: therapists.map((therapist) {
               return [
+                therapist.rank.toString(),
                 therapist.therapistName,
-                therapist.specialization.isEmpty
-                    ? 'Not specified'
-                    : therapist.specialization,
+                therapist.therapyApproachesLabel,
                 therapist.totalAppointments.toString(),
                 therapist.completedAppointments.toString(),
+                therapist.cancelledAppointments.toString(),
+                '${therapist.completionRate.toStringAsFixed(1)}%',
                 therapist.uniqueClientsCount.toString(),
                 therapist.averageRating?.toStringAsFixed(2) ?? 'No rating',
                 therapist.reviewCount.toString(),
-                _currencyFormatter.format(therapist.grossRevenue),
-                _currencyFormatter.format(therapist.refundedAmount),
                 _currencyFormatter.format(therapist.netRevenue),
+                _currencyFormatter.format(
+                  therapist.averageRevenuePerAppointment,
+                ),
               ];
             }).toList(),
             headerStyle: pw.TextStyle(
               fontWeight: pw.FontWeight.bold,
               color: PdfColors.white,
-              fontSize: 7.5,
+              fontSize: 6.5,
             ),
             headerDecoration: const pw.BoxDecoration(color: PdfColors.green700),
-            cellStyle: const pw.TextStyle(fontSize: 7.3),
+            cellStyle: const pw.TextStyle(fontSize: 6.2),
             cellPadding: const pw.EdgeInsets.symmetric(
-              horizontal: 5,
-              vertical: 6,
+              horizontal: 3,
+              vertical: 5,
             ),
             border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
             columnWidths: const {
-              0: pw.FlexColumnWidth(1.7),
-              1: pw.FlexColumnWidth(1.5),
-              2: pw.FlexColumnWidth(1),
-              3: pw.FlexColumnWidth(1),
+              0: pw.FlexColumnWidth(0.45),
+              1: pw.FlexColumnWidth(1.4),
+              2: pw.FlexColumnWidth(2),
+              3: pw.FlexColumnWidth(0.7),
               4: pw.FlexColumnWidth(0.8),
               5: pw.FlexColumnWidth(0.8),
-              6: pw.FlexColumnWidth(0.8),
-              7: pw.FlexColumnWidth(1.3),
-              8: pw.FlexColumnWidth(1.2),
-              9: pw.FlexColumnWidth(1.3),
+              6: pw.FlexColumnWidth(0.9),
+              7: pw.FlexColumnWidth(0.7),
+              8: pw.FlexColumnWidth(0.7),
+              9: pw.FlexColumnWidth(0.7),
+              10: pw.FlexColumnWidth(1.1),
+              11: pw.FlexColumnWidth(1.1),
             },
           ),
-      ],
-    );
-  }
-
-  pw.Widget _buildSelectedTherapistDetails(
-    TherapistPerformanceReportItemModel therapist,
-  ) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Selected therapist details'),
-        pw.SizedBox(height: 10),
-        pw.Row(
-          children: [
-            pw.Expanded(
-              child: _buildMetricCard(
-                title: 'Completion rate',
-                value:
-                    '${(therapist.completionRate * 100).toStringAsFixed(1)}%',
-              ),
-            ),
-            pw.SizedBox(width: 8),
-            pw.Expanded(
-              child: _buildMetricCard(
-                title: 'Average rating',
-                value:
-                    therapist.averageRating?.toStringAsFixed(2) ?? 'No rating',
-              ),
-            ),
-            pw.SizedBox(width: 8),
-            pw.Expanded(
-              child: _buildMetricCard(
-                title: 'Reviews',
-                value: therapist.reviewCount.toString(),
-              ),
-            ),
-            pw.SizedBox(width: 8),
-            pw.Expanded(
-              child: _buildMetricCard(
-                title: 'Refunded amount',
-                value: _currencyFormatter.format(therapist.refundedAmount),
-              ),
-            ),
-          ],
-        ),
       ],
     );
   }
@@ -466,7 +429,7 @@ class TherapistPerformancePdfService {
     bool highlighted = false,
   }) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(11),
+      padding: const pw.EdgeInsets.all(10),
       decoration: pw.BoxDecoration(
         color: highlighted ? PdfColors.green50 : PdfColors.grey100,
         borderRadius: pw.BorderRadius.circular(6),
@@ -481,12 +444,12 @@ class TherapistPerformancePdfService {
             title,
             style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700),
           ),
-          pw.SizedBox(height: 6),
+          pw.SizedBox(height: 5),
           pw.Text(
             value,
             maxLines: 2,
             style: pw.TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: pw.FontWeight.bold,
               color: highlighted ? PdfColors.green800 : PdfColors.black,
             ),
@@ -531,9 +494,13 @@ class TherapistPerformancePdfService {
         borderRadius: pw.BorderRadius.circular(6),
       ),
       child: pw.Text(
-        'Revenue is calculated from successful appointment payments. '
-        'Completed refunds are treated as full refunds because the current '
-        'payment model does not store a separate partial refund amount.',
+        'Ranking is calculated from net revenue, followed by completed '
+        'appointments and average rating. Completion rate and average revenue '
+        'per appointment are calculated on the backend. Therapists with zero '
+        'appointments are displayed with zero values when the minimum '
+        'appointments filter allows them. Completed refunds are treated as '
+        'full refunds because the current payment model does not contain a '
+        'separate partial refund amount.',
         style: const pw.TextStyle(fontSize: 8, color: PdfColors.blueGrey800),
       ),
     );

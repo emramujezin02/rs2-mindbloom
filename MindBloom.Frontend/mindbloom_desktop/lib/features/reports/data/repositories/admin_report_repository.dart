@@ -1,9 +1,9 @@
 // ignore_for_file: prefer_initializing_formals
 
 import '../models/appointment_revenue_report_model.dart';
+import '../models/report_therapist_option_model.dart';
 import '../models/therapist_performance_report_model.dart';
 import '../services/admin_report_api_service.dart';
-import '../models/report_therapist_option_model.dart';
 
 class AdminReportRepository {
   final AdminReportApiService _apiService;
@@ -32,10 +32,16 @@ class AdminReportRepository {
   Future<TherapistPerformanceReportModel> getTherapistPerformanceReport({
     required DateTime fromUtc,
     required DateTime toUtc,
+    int? therapistId,
+    int minimumAppointments = 0,
+    String? therapistStatus,
   }) {
     return _apiService.getTherapistPerformanceReport(
       fromUtc: fromUtc,
       toUtc: toUtc,
+      therapistId: therapistId,
+      minimumAppointments: minimumAppointments,
+      therapistStatus: therapistStatus,
     );
   }
 
