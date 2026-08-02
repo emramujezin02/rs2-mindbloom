@@ -1016,7 +1016,7 @@
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\WorkshopService.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\WorkshopService.cs",
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\WorkshopService.cs",
-              "ViewState": "AgIAAF4EAAAAAAAAAAAwwHMEAAAfAAAAAAAAAA==",
+              "ViewState": "AgIAAGcEAAAAAAAAAAAAAHUEAAAyAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-08-01T14:24:56.894Z",
               "EditorCaption": ""
@@ -1031,8 +1031,7 @@
               "RelativeToolTip": "src\\MindBloom.Application\\Features\\Workshops\\DTOs\\WorkshopResponseDto.cs",
               "ViewState": "AgIAACMAAAAAAAAAAAAAADUAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-01T14:26:38.831Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-01T14:26:38.831Z"
             },
             {
               "$type": "Document",
@@ -1140,8 +1139,7 @@
               "RelativeToolTip": "src\\MindBloom.Application\\Features\\Workshops\\DTOs\\UpdateWorkshopDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAB0AAAA5AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-01T14:25:28.106Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-01T14:25:28.106Z"
             },
             {
               "$type": "Document",
@@ -1285,7 +1283,8 @@
               "RelativeToolTip": "src\\MindBloom.API\\Controllers\\AdminController.cs",
               "ViewState": "AgIAAEUCAAAAAAAAAAAowHECAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-30T16:52:49.699Z"
+              "WhenOpened": "2026-07-30T16:52:49.699Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -1309,8 +1308,7 @@
               "RelativeToolTip": "src\\MindBloom.Application\\Features\\Workshops\\DTOs\\WorkshopQueryDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-01T14:26:03.241Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-01T14:26:03.241Z"
             },
             {
               "$type": "Document",
@@ -2522,8 +2520,7 @@
               "RelativeToolTip": "src\\MindBloom.Domain\\Entities\\Therapist.cs",
               "ViewState": "AgIAAD8AAAAAAAAAAAAAAE0AAAA5AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-29T11:14:42.16Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-29T11:14:42.16Z"
             },
             {
               "$type": "Document",
