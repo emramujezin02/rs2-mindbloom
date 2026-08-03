@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../data/models/workshop_model.dart';
 import '../viewmodels/workshop_management_viewmodel.dart';
-import '../../../../core/constants/api_constants.dart';
+import '../../../../core/widgets/admin_table_action_menu.dart';
+import '../../../../core/widgets/admin_table_container.dart';
+import '../../../../core/widgets/admin_table_state.dart';
+import '../../../../core/widgets/app_confirmation_dialog.dart';
+import '../../../../core/widgets/app_error_banner.dart';
 
 class WorkshopManagementPage extends StatefulWidget {
   const WorkshopManagementPage({super.key});
@@ -47,15 +52,17 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
   Future<void> _applyFilters() async {
     _viewModel.search = _searchController.text.trim();
 
-    await _viewModel.loadWorkshops(resetPage: true);
+    await _viewModel.applyFilters();
   }
 
   Future<void> _clearFilters() async {
     _searchController.clear();
 
-    _viewModel.clearFilters();
+    await _viewModel.clearFilters();
 
-    await _viewModel.loadWorkshops(resetPage: true);
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _selectFromDate() async {
@@ -110,6 +117,67 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
 
     if (changed == true) {
       await _viewModel.loadWorkshops();
+    }
+  }
+
+  bool get _hasActiveFilters {
+    return _searchController.text.trim().isNotEmpty ||
+        _viewModel.selectedType != null ||
+        _viewModel.selectedStatus != null ||
+        _viewModel.fromUtc != null ||
+        _viewModel.toUtc != null;
+  }
+
+  Widget _buildActiveFilters() {
+    if (!_hasActiveFilters) {
+      return const SizedBox.shrink();
+    }
+
+    final formatter = DateFormat('dd.MM.yyyy.');
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (_searchController.text.trim().isNotEmpty)
+          Chip(label: Text('Pretraga: ${_searchController.text.trim()}')),
+        if (_viewModel.selectedType != null)
+          Chip(
+            label: Text(
+              _viewModel.selectedType == 1 ? 'Tip: Online' : 'Tip: Uživo',
+            ),
+          ),
+        if (_viewModel.selectedStatus != null)
+          Chip(
+            label: Text(
+              'Status: ${_workshopStatusLabel(_viewModel.selectedStatus!)}',
+            ),
+          ),
+        if (_viewModel.fromUtc != null)
+          Chip(label: Text('Od: ${formatter.format(_viewModel.fromUtc!)}')),
+        if (_viewModel.toUtc != null)
+          Chip(label: Text('Do: ${formatter.format(_viewModel.toUtc!)}')),
+        ActionChip(
+          avatar: const Icon(Icons.filter_alt_off, size: 18),
+          label: const Text('Resetuj filtere'),
+          onPressed: _viewModel.isLoading ? null : _clearFilters,
+        ),
+      ],
+    );
+  }
+
+  String _workshopStatusLabel(int value) {
+    switch (value) {
+      case 1:
+        return 'Zakazana';
+      case 2:
+        return 'Otkazana';
+      case 3:
+        return 'Završena';
+      case 4:
+        return 'Neaktivna';
+      default:
+        return value.toString();
     }
   }
 
@@ -221,36 +289,19 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
   }
 
   Future<void> _showDeleteDialog(WorkshopModel workshop) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Delete workshop'),
-          content: Text(
-            'Are you sure you want to delete "${workshop.title}"?\n\n'
-            'A workshop with active registrations cannot be deleted. '
-            'Such a workshop must be cancelled instead.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Back'),
-            ),
-            FilledButton.icon(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Delete'),
-            ),
-          ],
-        );
-      },
+    final confirmed = await AppConfirmationDialog.show(
+      context,
+      title: 'Obriši radionicu',
+      message:
+          'Da li ste sigurni da želite obrisati "${workshop.title}"?\n\n'
+          'Radionica sa aktivnim prijavama ne može biti obrisana. '
+          'Takvu radionicu je potrebno otkazati.',
+      confirmText: 'Obriši',
+      destructive: true,
+      icon: Icons.delete_outline,
     );
 
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -261,9 +312,9 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
     }
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Workshop deleted successfully.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Radionica je obrisana.')));
     }
   }
 
@@ -315,15 +366,16 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
                     width: 280,
                     child: TextField(
                       controller: _searchController,
-                      decoration: const InputDecoration(
-                        labelText: 'Search',
-                        hintText: 'Title, description or organizer',
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(),
-                      ),
+                      onChanged: _viewModel.updateSearch,
                       onSubmitted: (_) {
                         _applyFilters();
                       },
+                      decoration: const InputDecoration(
+                        labelText: 'Pretraga',
+                        hintText: 'Naziv, opis ili organizator',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ),
                   SizedBox(
@@ -417,16 +469,15 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
               ),
             ),
           ),
+          if (_hasActiveFilters) ...[
+            const SizedBox(height: 12),
+            _buildActiveFilters(),
+          ],
           if (_viewModel.error != null) ...[
             const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  _viewModel.error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
+            AppErrorBanner(
+              message: _viewModel.error!,
+              onDismiss: _viewModel.clearError,
             ),
           ],
           const SizedBox(height: 16),
@@ -440,290 +491,179 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
 
   Widget _buildContent() {
     if (_viewModel.isLoading && _viewModel.workshops.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AdminTableLoadingState(message: 'Učitavanje radionica...');
     }
 
-    if (_viewModel.workshops.isEmpty) {
-      return const Card(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.all(40),
-            child: Text('No workshops match the selected filters.'),
-          ),
-        ),
+    if (_viewModel.workshops.isEmpty && _viewModel.error != null) {
+      return AdminTableErrorState(
+        message: _viewModel.error!,
+        onRetry: () {
+          _viewModel.loadWorkshops();
+        },
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _viewModel.loadWorkshops,
-      child: ListView.separated(
-        itemCount: _viewModel.workshops.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (context, index) {
-          return _WorkshopCard(
-            workshop: _viewModel.workshops[index],
-            onDetails: _openDetails,
-            onEdit: _openEditPage,
-            onCancel: _showCancelDialog,
-            onDelete: _showDeleteDialog,
-          );
-        },
-      ),
+    if (_viewModel.workshops.isEmpty) {
+      return const AdminTableEmptyState(
+        icon: Icons.event_available_outlined,
+        title: 'Nema radionica',
+        message: 'Nijedna radionica ne odgovara odabranim filterima.',
+      );
+    }
+
+    return AdminTableContainer(
+      minimumWidth: 1450,
+      child: _buildWorkshopTable(),
     );
+  }
+
+  Widget _buildWorkshopTable() {
+    final formatter = DateFormat('dd.MM.yyyy. HH:mm');
+
+    return DataTable(
+      columnSpacing: 24,
+      columns: const [
+        DataColumn(label: Text('Radionica')),
+        DataColumn(label: Text('Tip')),
+        DataColumn(label: Text('Status')),
+        DataColumn(label: Text('Početak')),
+        DataColumn(label: Text('Trajanje')),
+        DataColumn(label: Text('Predavač')),
+        DataColumn(label: Text('Prijave')),
+        DataColumn(label: Text('Cijena')),
+        DataColumn(label: Text('Akcije')),
+      ],
+      rows: _viewModel.workshops.map((workshop) {
+        return DataRow(
+          cells: [
+            DataCell(
+              SizedBox(
+                width: 300,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      workshop.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      workshop.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            DataCell(Text(workshop.isOnline ? 'Online' : 'Uživo')),
+            DataCell(
+              Chip(
+                label: Text(workshop.status),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            DataCell(Text(formatter.format(workshop.startUtc.toLocal()))),
+            DataCell(Text(_formatWorkshopDuration(workshop.duration))),
+            DataCell(
+              SizedBox(
+                width: 180,
+                child: Text(
+                  workshop.presenterName,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            DataCell(Text('${workshop.registeredCount}/${workshop.capacity}')),
+            DataCell(Text('${workshop.price.toStringAsFixed(2)} KM')),
+            DataCell(
+              AdminTableActionMenu<String>(
+                enabled: !_viewModel.isActionLoading,
+                actions: [
+                  const AdminTableAction<String>(
+                    value: 'details',
+                    label: 'Detalji',
+                    icon: Icons.visibility_outlined,
+                  ),
+                  AdminTableAction<String>(
+                    value: 'edit',
+                    label: 'Uredi',
+                    icon: Icons.edit_outlined,
+                    enabled: workshop.isScheduled,
+                  ),
+                  AdminTableAction<String>(
+                    value: 'cancel',
+                    label: 'Otkaži radionicu',
+                    icon: Icons.cancel_outlined,
+                    destructive: true,
+                    enabled: workshop.isScheduled,
+                  ),
+                  AdminTableAction<String>(
+                    value: 'delete',
+                    label: 'Obriši',
+                    icon: Icons.delete_outline,
+                    destructive: true,
+                    enabled: workshop.registeredCount == 0,
+                  ),
+                ],
+                onSelected: (action) {
+                  switch (action) {
+                    case 'details':
+                      _openDetails(workshop);
+                      break;
+
+                    case 'edit':
+                      _openEditPage(workshop);
+                      break;
+
+                    case 'cancel':
+                      _showCancelDialog(workshop);
+                      break;
+
+                    case 'delete':
+                      _showDeleteDialog(workshop);
+                      break;
+                  }
+                },
+              ),
+            ),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  String _formatWorkshopDuration(Duration duration) {
+    final hours = duration.inHours;
+
+    final minutes = duration.inMinutes.remainder(60);
+
+    if (hours > 0 && minutes > 0) {
+      return '$hours h $minutes min';
+    }
+
+    if (hours > 0) {
+      return '$hours h';
+    }
+
+    return '$minutes min';
   }
 
   Widget _buildPagination() {
-    final displayedTotalPages = _viewModel.totalPages < 1
-        ? 1
-        : _viewModel.totalPages;
-
-    return Row(
-      children: [
-        Text('${_viewModel.totalCount} workshops'),
-        const Spacer(),
-        IconButton(
-          tooltip: 'Previous page',
-          onPressed: _viewModel.isLoading || _viewModel.pageNumber <= 1
-              ? null
-              : _viewModel.previousPage,
-          icon: const Icon(Icons.chevron_left),
-        ),
-        Text('Page ${_viewModel.pageNumber} of $displayedTotalPages'),
-        IconButton(
-          tooltip: 'Next page',
-          onPressed:
-              _viewModel.isLoading ||
-                  _viewModel.pageNumber >= _viewModel.totalPages
-              ? null
-              : _viewModel.nextPage,
-          icon: const Icon(Icons.chevron_right),
-        ),
-      ],
-    );
-  }
-}
-
-class _WorkshopCard extends StatelessWidget {
-  final WorkshopModel workshop;
-
-  final ValueChanged<WorkshopModel> onDetails;
-
-  final ValueChanged<WorkshopModel> onEdit;
-
-  final ValueChanged<WorkshopModel> onCancel;
-
-  final ValueChanged<WorkshopModel> onDelete;
-
-  const _WorkshopCard({
-    required this.workshop,
-    required this.onDetails,
-    required this.onEdit,
-    required this.onCancel,
-    required this.onDelete,
-  });
-
-  String _resolveImageUrl(String imageUrl) {
-    final normalized = imageUrl.trim();
-
-    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
-      return normalized;
-    }
-
-    final apiUri = Uri.parse(ApiConstants.apiBaseUrl);
-
-    return apiUri
-        .replace(
-          path: normalized.startsWith('/') ? normalized : '/$normalized',
-          query: null,
-          fragment: null,
-        )
-        .toString();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final formatter = DateFormat('dd.MM.yyyy. HH:mm');
-
-    String formatDuration(Duration duration) {
-      final hours = duration.inHours;
-      final minutes = duration.inMinutes.remainder(60);
-
-      if (hours > 0 && minutes > 0) {
-        return '$hours h $minutes min';
-      }
-
-      if (hours > 0) {
-        return '$hours h';
-      }
-
-      return '$minutes min';
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: 90,
-                height: 90,
-                child:
-                    workshop.imageUrl == null ||
-                        workshop.imageUrl!.trim().isEmpty
-                    ? Container(
-                        alignment: Alignment.center,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHighest,
-                        child: Icon(
-                          workshop.isOnline
-                              ? Icons.video_camera_front_outlined
-                              : Icons.location_on_outlined,
-                          size: 34,
-                        ),
-                      )
-                    : Image.network(
-                        _resolveImageUrl(workshop.imageUrl!),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.broken_image_outlined,
-                              size: 34,
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        workshop.title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Chip(label: Text(workshop.status)),
-                      Chip(label: Text(workshop.type)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    workshop.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 20,
-                    runSpacing: 8,
-                    children: [
-                      Text(
-                        'Start: ${formatter.format(workshop.startUtc.toLocal())}',
-                      ),
-
-                      Text('Duration: ${formatDuration(workshop.duration)}'),
-
-                      Text(
-                        'Deadline: ${formatter.format(workshop.registrationDeadlineUtc.toLocal())}',
-                      ),
-
-                      Text('Presenter: ${workshop.presenterName}'),
-
-                      Text(
-                        'Registrations: '
-                        '${workshop.registeredCount}/'
-                        '${workshop.capacity}',
-                      ),
-
-                      Text(
-                        'Available: '
-                        '${workshop.availableSeats}',
-                      ),
-
-                      Text(
-                        'Price: '
-                        '${workshop.price.toStringAsFixed(2)} KM',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                switch (value) {
-                  case 'details':
-                    onDetails(workshop);
-                    break;
-
-                  case 'edit':
-                    onEdit(workshop);
-                    break;
-
-                  case 'cancel':
-                    onCancel(workshop);
-                    break;
-
-                  case 'delete':
-                    onDelete(workshop);
-                    break;
-                }
-              },
-              itemBuilder: (context) {
-                return [
-                  const PopupMenuItem(
-                    value: 'details',
-                    child: ListTile(
-                      leading: Icon(Icons.visibility_outlined),
-                      title: Text('Details'),
-                    ),
-                  ),
-                  if (workshop.isScheduled)
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: ListTile(
-                        leading: Icon(Icons.edit_outlined),
-                        title: Text('Edit'),
-                      ),
-                    ),
-                  if (workshop.isScheduled)
-                    const PopupMenuItem(
-                      value: 'cancel',
-                      child: ListTile(
-                        leading: Icon(Icons.cancel_outlined),
-                        title: Text('Cancel'),
-                      ),
-                    ),
-                  if (workshop.registeredCount == 0)
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: ListTile(
-                        leading: Icon(Icons.delete_outline),
-                        title: Text('Delete'),
-                      ),
-                    ),
-                ];
-              },
-            ),
-          ],
-        ),
-      ),
+    return AdminTablePagination(
+      pageNumber: _viewModel.pageNumber,
+      pageSize: _viewModel.pageSize,
+      totalCount: _viewModel.totalCount,
+      totalPages: _viewModel.totalPages,
+      isLoading: _viewModel.isLoading,
+      onPreviousPage: _viewModel.hasPreviousPage
+          ? _viewModel.previousPage
+          : null,
+      onNextPage: _viewModel.hasNextPage ? _viewModel.nextPage : null,
+      onPageSizeChanged: _viewModel.changePageSize,
     );
   }
 }

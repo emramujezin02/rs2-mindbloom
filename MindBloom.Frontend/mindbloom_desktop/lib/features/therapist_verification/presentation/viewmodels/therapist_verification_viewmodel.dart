@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/error/app_error_helper.dart';
 import '../../data/models/therapist_verification_list_model.dart';
 import '../../data/repositories/therapist_verification_repository.dart';
 
@@ -8,17 +11,24 @@ class TherapistVerificationViewModel extends ChangeNotifier {
 
   TherapistVerificationViewModel({required this.repository});
 
+  Timer? _searchDebounce;
+
   bool isLoading = false;
+
   String? errorMessage;
 
   List<TherapistVerificationListModel> therapists = [];
 
   int pageNumber = 1;
+
   int pageSize = 10;
+
   int totalCount = 0;
+
   int totalPages = 0;
 
   String search = '';
+
   String? status = 'Pending';
 
   bool get hasPreviousPage => pageNumber > 1;
@@ -30,21 +40,24 @@ class TherapistVerificationViewModel extends ChangeNotifier {
     String? searchValue,
     String? statusValue,
     bool changeStatus = false,
+    bool clearCurrentResults = false,
   }) async {
     if (isLoading) {
       return;
     }
 
-    if (searchValue != null) {
-      search = searchValue.trim();
-    }
-
-    if (changeStatus) {
-      status = statusValue?.trim().isEmpty == true ? null : statusValue;
-    }
-
     isLoading = true;
+
     errorMessage = null;
+
+    if (clearCurrentResults) {
+      therapists = [];
+
+      totalCount = 0;
+
+      totalPages = 0;
+    }
+
     notifyListeners();
 
     try {
@@ -56,32 +69,87 @@ class TherapistVerificationViewModel extends ChangeNotifier {
       );
 
       therapists = result.items;
-      pageNumber = result.pageNumber;
-      pageSize = result.pageSize;
+
+      pageNumber = result.pageNumber == 0 ? 1 : result.pageNumber;
+
+      pageSize = result.pageSize == 0 ? pageSize : result.pageSize;
+
       totalCount = result.totalCount;
+
       totalPages = result.totalPages;
     } catch (error) {
-      errorMessage = error.toString();
+      therapists = [];
+
+      totalCount = 0;
+
+      totalPages = 0;
+
+      errorMessage = AppErrorHelper.message(error);
     } finally {
       isLoading = false;
+
       notifyListeners();
     }
   }
 
+  void updateSearch(String value) {
+    search = value.trim();
+
+    _searchDebounce?.cancel();
+
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      load(page: 1, searchValue: search, clearCurrentResults: true);
+    });
+  }
+
   Future<void> filterByStatus(String? value) {
-    return load(page: 1, statusValue: value, changeStatus: true);
+    return load(
+      page: 1,
+      statusValue: value,
+      changeStatus: true,
+      clearCurrentResults: true,
+    );
   }
 
   Future<void> searchTherapists(String value) {
-    return load(page: 1, searchValue: value);
+    _searchDebounce?.cancel();
+
+    return load(page: 1, searchValue: value, clearCurrentResults: true);
   }
 
   Future<void> clearSearch() {
-    return load(page: 1, searchValue: '');
+    _searchDebounce?.cancel();
+
+    return load(page: 1, searchValue: '', clearCurrentResults: true);
+  }
+
+  Future<void> clearFilters() {
+    _searchDebounce?.cancel();
+
+    search = '';
+    status = 'Pending';
+
+    return load(
+      page: 1,
+      searchValue: '',
+      statusValue: 'Pending',
+      changeStatus: true,
+      clearCurrentResults: true,
+    );
+  }
+
+  Future<void> changePageSize(int value) {
+    if (pageSize == value) {
+      return Future.value();
+    }
+
+    pageSize = value;
+
+    return load(page: 1, clearCurrentResults: true);
   }
 
   Future<void> previousPage() {
-    if (!hasPreviousPage) {
+    if (!hasPreviousPage || isLoading) {
       return Future.value();
     }
 
@@ -89,10 +157,27 @@ class TherapistVerificationViewModel extends ChangeNotifier {
   }
 
   Future<void> nextPage() {
-    if (!hasNextPage) {
+    if (!hasNextPage || isLoading) {
       return Future.value();
     }
 
     return load(page: pageNumber + 1);
+  }
+
+  void clearError() {
+    if (errorMessage == null) {
+      return;
+    }
+
+    errorMessage = null;
+
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+
+    super.dispose();
   }
 }

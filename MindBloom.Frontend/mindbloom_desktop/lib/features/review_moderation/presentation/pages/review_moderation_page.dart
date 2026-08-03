@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 import 'package:mindbloom_desktop/features/review_moderation/presentation/viewmodels/review_moderation_viewmodel.dart';
-
+import '../../../../core/widgets/admin_table_action_menu.dart';
+import '../../../../core/widgets/admin_table_container.dart';
+import '../../../../core/widgets/admin_table_state.dart';
+import '../../../../core/widgets/app_error_banner.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 
@@ -125,13 +129,86 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
     }
   }
 
+  bool get _hasActiveFilters {
+    return _searchController.text.trim().isNotEmpty ||
+        _therapistIdController.text.trim().isNotEmpty ||
+        _selectedRating != null ||
+        _selectedStatus != null ||
+        _selectedReply != 'all';
+  }
+
+  String _reviewStatusLabel(int value) {
+    switch (value) {
+      case 1:
+        return 'Na čekanju';
+      case 2:
+        return 'Odobrena';
+      case 3:
+        return 'Odbijena';
+      case 4:
+        return 'Sakrivena';
+      default:
+        return value.toString();
+    }
+  }
+
+  Widget _buildActiveFilters() {
+    if (!_hasActiveFilters) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          if (_searchController.text.trim().isNotEmpty)
+            Chip(label: Text('Pretraga: ${_searchController.text.trim()}')),
+          if (_therapistIdController.text.trim().isNotEmpty)
+            Chip(
+              label: Text('Terapeut ID: ${_therapistIdController.text.trim()}'),
+            ),
+          if (_selectedRating != null)
+            Chip(label: Text('Ocjena: $_selectedRating')),
+          if (_selectedStatus != null)
+            Chip(
+              label: Text('Status: ${_reviewStatusLabel(_selectedStatus!)}'),
+            ),
+          if (_selectedReply != 'all')
+            Chip(
+              label: Text(
+                _selectedReply == 'replied'
+                    ? 'Odgovor terapeuta: Da'
+                    : 'Odgovor terapeuta: Ne',
+              ),
+            ),
+          ActionChip(
+            avatar: const Icon(Icons.filter_alt_off, size: 18),
+            label: const Text('Resetuj filtere'),
+            onPressed: _viewModel.isLoading ? null : _clearFilters,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         _buildFilters(),
 
-        if (_viewModel.errorMessage != null) _buildError(),
+        _buildActiveFilters(),
+
+        if (_viewModel.errorMessage != null && _viewModel.reviews.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            child: AppErrorBanner(
+              message: _viewModel.errorMessage!,
+              onDismiss: _viewModel.clearError,
+            ),
+          ),
 
         Expanded(child: _buildBody()),
 
@@ -151,6 +228,7 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
 
             final search = TextField(
               controller: _searchController,
+              onChanged: _viewModel.updateSearch,
               enabled: !_viewModel.isLoading,
               onSubmitted: (_) {
                 _applyFilters();
@@ -305,182 +383,130 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
 
   Widget _buildBody() {
     if (_viewModel.isLoading && _viewModel.reviews.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AdminTableLoadingState(message: 'Učitavanje recenzija...');
+    }
+
+    if (_viewModel.errorMessage != null && _viewModel.reviews.isEmpty) {
+      return AdminTableErrorState(
+        message: _viewModel.errorMessage!,
+        onRetry: () {
+          _viewModel.load();
+        },
+      );
     }
 
     if (_viewModel.reviews.isEmpty) {
-      return const Center(
-        child: Text('No reviews match the selected filters.'),
+      return const AdminTableEmptyState(
+        icon: Icons.reviews_outlined,
+        title: 'Nema recenzija',
+        message: 'Nijedna recenzija ne odgovara odabranim filterima.',
       );
     }
 
     final formatter = DateFormat('dd.MM.yyyy. HH:mm');
 
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      itemCount: _viewModel.reviews.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final review = _viewModel.reviews[index];
-
-        return Card(
-          child: InkWell(
-            onTap: () {
-              _openDetails(review.id);
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(child: Text(review.rating.toString())),
-
-                  const SizedBox(width: 16),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${review.clientName} → '
-                                '${review.therapistName}',
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-
-                            _RatingStars(rating: review.rating),
-                          ],
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Text(
-                          review.comment,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              formatter.format(review.createdAtUtc.toLocal()),
-                            ),
-
-                            Chip(
-                              avatar: const Icon(Icons.person, size: 17),
-                              label: Text('Therapist #${review.therapistId}'),
-                              visualDensity: VisualDensity.compact,
-                            ),
-
-                            _ModerationStatusChip(
-                              status: review.moderationStatus,
-                            ),
-
-                            Chip(
-                              label: Text(
-                                review.hasTherapistReply
-                                    ? 'Therapist replied'
-                                    : 'No therapist reply',
-                              ),
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          ],
-                        ),
-                      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: AdminTableContainer(
+        minimumWidth: 1450,
+        child: DataTable(
+          columns: const [
+            DataColumn(label: Text('ID')),
+            DataColumn(label: Text('Klijent')),
+            DataColumn(label: Text('Terapeut')),
+            DataColumn(label: Text('Ocjena')),
+            DataColumn(label: Text('Komentar')),
+            DataColumn(label: Text('Status')),
+            DataColumn(label: Text('Odgovor')),
+            DataColumn(label: Text('Kreirano')),
+            DataColumn(label: Text('Akcije')),
+          ],
+          rows: _viewModel.reviews.map((review) {
+            return DataRow(
+              cells: [
+                DataCell(Text('#${review.id}')),
+                DataCell(
+                  SizedBox(
+                    width: 170,
+                    child: Text(
+                      review.clientName,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-
-                  const SizedBox(width: 12),
-
-                  const Icon(Icons.chevron_right),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+                ),
+                DataCell(
+                  SizedBox(
+                    width: 170,
+                    child: Text(
+                      review.therapistName,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                DataCell(_RatingStars(rating: review.rating)),
+                DataCell(
+                  SizedBox(
+                    width: 280,
+                    child: Tooltip(
+                      message: review.comment,
+                      child: Text(
+                        review.comment,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+                DataCell(
+                  _ModerationStatusChip(status: review.moderationStatus),
+                ),
+                DataCell(
+                  Icon(
+                    review.hasTherapistReply
+                        ? Icons.check_circle_outline
+                        : Icons.remove_circle_outline,
+                  ),
+                ),
+                DataCell(Text(formatter.format(review.createdAtUtc.toLocal()))),
+                DataCell(
+                  AdminTableActionMenu<String>(
+                    enabled: !_viewModel.isLoading,
+                    actions: const [
+                      AdminTableAction<String>(
+                        value: 'details',
+                        label: 'Detalji',
+                        icon: Icons.visibility_outlined,
+                      ),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'details') {
+                        _openDetails(review.id);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
 
   Widget _buildPagination() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      child: Row(
-        children: [
-          Text('${_viewModel.totalCount} reviews'),
-
-          const Spacer(),
-
-          const Text('Rows per page:'),
-
-          const SizedBox(width: 8),
-
-          DropdownButton<int>(
-            value: _viewModel.pageSize,
-            items: const [
-              DropdownMenuItem(value: 10, child: Text('10')),
-              DropdownMenuItem(value: 20, child: Text('20')),
-              DropdownMenuItem(value: 50, child: Text('50')),
-            ],
-            onChanged: _viewModel.isLoading
-                ? null
-                : (value) {
-                    if (value != null) {
-                      _viewModel.changePageSize(value);
-                    }
-                  },
-          ),
-
-          const SizedBox(width: 18),
-
-          Text(
-            _viewModel.totalPages == 0
-                ? 'Page 0 of 0'
-                : 'Page ${_viewModel.pageNumber} '
-                      'of ${_viewModel.totalPages}',
-          ),
-
-          IconButton(
-            onPressed: _viewModel.hasPreviousPage && !_viewModel.isLoading
-                ? _viewModel.previousPage
-                : null,
-            icon: const Icon(Icons.chevron_left),
-          ),
-
-          IconButton(
-            onPressed: _viewModel.hasNextPage && !_viewModel.isLoading
-                ? _viewModel.nextPage
-                : null,
-            icon: const Icon(Icons.chevron_right),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildError() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        _viewModel.errorMessage!,
-        style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+      child: AdminTablePagination(
+        pageNumber: _viewModel.pageNumber,
+        pageSize: _viewModel.pageSize,
+        totalCount: _viewModel.totalCount,
+        totalPages: _viewModel.totalPages,
+        isLoading: _viewModel.isLoading,
+        onPreviousPage: _viewModel.hasPreviousPage
+            ? _viewModel.previousPage
+            : null,
+        onNextPage: _viewModel.hasNextPage ? _viewModel.nextPage : null,
+        onPageSizeChanged: _viewModel.changePageSize,
       ),
     );
   }

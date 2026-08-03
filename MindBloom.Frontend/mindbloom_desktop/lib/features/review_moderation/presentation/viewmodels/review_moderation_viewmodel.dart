@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/error/app_error_helper.dart';
 import '../../data/models/admin_review_model.dart';
 import '../../data/repositories/review_moderation_repository.dart';
 
@@ -7,6 +10,8 @@ class ReviewModerationViewModel extends ChangeNotifier {
   final ReviewModerationRepository repository;
 
   ReviewModerationViewModel({required this.repository});
+
+  Timer? _searchDebounce;
 
   bool isLoading = false;
 
@@ -36,13 +41,22 @@ class ReviewModerationViewModel extends ChangeNotifier {
 
   bool get hasNextPage => pageNumber < totalPages;
 
-  Future<void> load({int? page}) async {
+  Future<void> load({int? page, bool clearCurrentResults = false}) async {
     if (isLoading) {
       return;
     }
 
     isLoading = true;
+
     errorMessage = null;
+
+    if (clearCurrentResults) {
+      reviews = [];
+
+      totalCount = 0;
+
+      totalPages = 0;
+    }
 
     notifyListeners();
 
@@ -67,12 +81,28 @@ class ReviewModerationViewModel extends ChangeNotifier {
 
       totalPages = result.totalPages;
     } catch (error) {
-      errorMessage = _cleanError(error);
+      reviews = [];
+
+      totalCount = 0;
+
+      totalPages = 0;
+
+      errorMessage = AppErrorHelper.message(error);
     } finally {
       isLoading = false;
 
       notifyListeners();
     }
+  }
+
+  void updateSearch(String value) {
+    currentSearch = value.trim();
+
+    _searchDebounce?.cancel();
+
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      load(page: 1, clearCurrentResults: true);
+    });
   }
 
   Future<void> applyFilters({
@@ -82,6 +112,8 @@ class ReviewModerationViewModel extends ChangeNotifier {
     int? status,
     bool? hasReply,
   }) {
+    _searchDebounce?.cancel();
+
     currentSearch = search.trim();
 
     currentRating = rating;
@@ -92,25 +124,23 @@ class ReviewModerationViewModel extends ChangeNotifier {
 
     currentHasReply = hasReply;
 
-    return load(page: 1);
+    return load(page: 1, clearCurrentResults: true);
   }
 
   Future<void> clearFilters() {
+    _searchDebounce?.cancel();
+
     currentSearch = '';
-
     currentRating = null;
-
     currentTherapistId = null;
-
     currentStatus = null;
-
     currentHasReply = null;
 
-    return load(page: 1);
+    return load(page: 1, clearCurrentResults: true);
   }
 
   Future<void> previousPage() {
-    if (!hasPreviousPage) {
+    if (!hasPreviousPage || isLoading) {
       return Future.value();
     }
 
@@ -118,7 +148,7 @@ class ReviewModerationViewModel extends ChangeNotifier {
   }
 
   Future<void> nextPage() {
-    if (!hasNextPage) {
+    if (!hasNextPage || isLoading) {
       return Future.value();
     }
 
@@ -126,18 +156,29 @@ class ReviewModerationViewModel extends ChangeNotifier {
   }
 
   Future<void> changePageSize(int value) {
-    pageSize = value;
-
-    return load(page: 1);
-  }
-
-  String _cleanError(Object error) {
-    final value = error.toString();
-
-    if (value.startsWith('Exception: ')) {
-      return value.substring('Exception: '.length);
+    if (pageSize == value) {
+      return Future.value();
     }
 
-    return value;
+    pageSize = value;
+
+    return load(page: 1, clearCurrentResults: true);
+  }
+
+  void clearError() {
+    if (errorMessage == null) {
+      return;
+    }
+
+    errorMessage = null;
+
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+
+    super.dispose();
   }
 }

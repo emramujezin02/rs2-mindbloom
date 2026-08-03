@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:mindbloom_desktop/features/users/data/models/update_admin_user_request.dart';
-
+import 'dart:async';
 import '../../data/models/admin_user_model.dart';
 import '../../data/repositories/admin_users_repository.dart';
 import '../../data/models/admin_user_details_model.dart';
@@ -8,7 +8,7 @@ import '../../../../core/error/app_error_helper.dart';
 
 class AdminUsersViewModel extends ChangeNotifier {
   final AdminUsersRepository repository;
-
+  Timer? _searchDebounce;
   AdminUsersViewModel({required this.repository});
 
   bool isLoading = false;
@@ -61,6 +61,7 @@ class AdminUsersViewModel extends ChangeNotifier {
     DateTime? registeredFrom,
     DateTime? registeredTo,
     bool preserveFilters = true,
+    bool clearCurrentResults = false,
   }) async {
     if (isLoading) {
       return;
@@ -95,6 +96,11 @@ class AdminUsersViewModel extends ChangeNotifier {
 
     isLoading = true;
     errorMessage = null;
+    if (clearCurrentResults) {
+      users = [];
+      totalCount = 0;
+      totalPages = 0;
+    }
     notifyListeners();
 
     try {
@@ -118,11 +124,24 @@ class AdminUsersViewModel extends ChangeNotifier {
 
       totalPages = result.totalPages;
     } catch (error) {
+      users = [];
+      totalCount = 0;
+      totalPages = 0;
       errorMessage = _cleanError(error);
     } finally {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  void updateSearch(String value) {
+    currentSearch = value.trim();
+
+    _searchDebounce?.cancel();
+
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      loadUsers(page: 1, clearCurrentResults: true);
+    });
   }
 
   Future<void> applyFilters({
@@ -142,10 +161,12 @@ class AdminUsersViewModel extends ChangeNotifier {
 
     currentRegisteredTo = registeredTo;
 
-    return loadUsers(page: 1);
+    return loadUsers(page: 1, clearCurrentResults: true);
   }
 
   Future<void> clearFilters() {
+    _searchDebounce?.cancel();
+
     currentSearch = '';
 
     currentRole = null;
@@ -156,7 +177,22 @@ class AdminUsersViewModel extends ChangeNotifier {
 
     currentRegisteredTo = null;
 
-    return loadUsers(page: 1);
+    return loadUsers(page: 1, clearCurrentResults: true);
+  }
+
+  Future<void> clearSearch() {
+    _searchDebounce?.cancel();
+
+    currentSearch = '';
+
+    return loadUsers(page: 1, clearCurrentResults: true);
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+
+    super.dispose();
   }
 
   Future<void> goToPreviousPage() {
@@ -176,9 +212,13 @@ class AdminUsersViewModel extends ChangeNotifier {
   }
 
   Future<void> changePageSize(int newPageSize) {
+    if (newPageSize == pageSize) {
+      return Future.value();
+    }
+
     pageSize = newPageSize;
 
-    return loadUsers(page: 1);
+    return loadUsers(page: 1, clearCurrentResults: true);
   }
 
   Future<bool> updateUserStatus({

@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../data/models/admin_user_model.dart';
 import '../viewmodels/admin_users_viewmodel.dart';
 import '../widgets/user_details_dialog.dart';
 import '../widgets/edit_user_dialog.dart';
+import '../../../../core/widgets/admin_table_action_menu.dart';
+import '../../../../core/widgets/admin_table_container.dart';
+import '../../../../core/widgets/admin_table_state.dart';
+import '../../../../core/widgets/app_confirmation_dialog.dart';
+import '../../../../core/widgets/app_error_banner.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({super.key});
@@ -179,39 +185,19 @@ class _UsersPageState extends State<UsersPage> {
   Future<void> _confirmStatusChange(AdminUserModel user) async {
     final shouldBlock = user.isActive;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(shouldBlock ? 'Deactivate user' : 'Activate user'),
-          content: Text(
-            shouldBlock
-                ? 'Are you sure you want to deactivate '
-                      '${user.fullName}? The user will no longer '
-                      'be able to access the application.'
-                : 'Are you sure you want to activate '
-                      '${user.fullName}? The user will regain '
-                      'access to the application.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: Text(shouldBlock ? 'Deactivate' : 'Activate'),
-            ),
-          ],
-        );
-      },
+    final confirmed = await AppConfirmationDialog.show(
+      context,
+      title: shouldBlock ? 'Deaktiviraj korisnika' : 'Aktiviraj korisnika',
+      message: shouldBlock
+          ? 'Da li ste sigurni da želite deaktivirati korisnika '
+                '${user.fullName}? Korisnik više neće moći pristupiti aplikaciji.'
+          : 'Da li ste sigurni da želite aktivirati korisnika '
+                '${user.fullName}? Korisniku će ponovo biti omogućen pristup aplikaciji.',
+      confirmText: shouldBlock ? 'Deaktiviraj' : 'Aktiviraj',
+      destructive: shouldBlock,
     );
 
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -228,16 +214,10 @@ class _UsersPageState extends State<UsersPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            shouldBlock
-                ? 'User deactivated successfully.'
-                : 'User activated successfully.',
+            shouldBlock ? 'Korisnik je deaktiviran.' : 'Korisnik je aktiviran.',
           ),
         ),
       );
-    } else if (_viewModel.errorMessage != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_viewModel.errorMessage!)));
     }
   }
 
@@ -356,11 +336,67 @@ class _UsersPageState extends State<UsersPage> {
     ).showSnackBar(const SnackBar(content: Text('User updated successfully.')));
   }
 
+  bool get _hasActiveFilters {
+    return _searchController.text.trim().isNotEmpty ||
+        _selectedRole != null ||
+        _selectedStatus != 'all' ||
+        _registeredFrom != null ||
+        _registeredTo != null;
+  }
+
+  Widget _buildActiveFilters() {
+    if (!_hasActiveFilters) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          if (_searchController.text.trim().isNotEmpty)
+            Chip(
+              avatar: const Icon(Icons.search, size: 18),
+              label: Text('Pretraga: ${_searchController.text.trim()}'),
+            ),
+          if (_selectedRole != null) Chip(label: Text('Uloga: $_selectedRole')),
+          if (_selectedStatus != 'all')
+            Chip(
+              label: Text(
+                _selectedStatus == 'active'
+                    ? 'Status: Aktivan'
+                    : 'Status: Deaktiviran',
+              ),
+            ),
+          if (_registeredFrom != null)
+            Chip(
+              label: Text(
+                'Registrovan od: ${_formatFilterDate(_registeredFrom)}',
+              ),
+            ),
+          if (_registeredTo != null)
+            Chip(
+              label: Text(
+                'Registrovan do: ${_formatFilterDate(_registeredTo)}',
+              ),
+            ),
+          ActionChip(
+            avatar: const Icon(Icons.filter_alt_off, size: 18),
+            label: const Text('Resetuj filtere'),
+            onPressed: _viewModel.isLoading ? null : _clearFilters,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         _buildFilters(),
+        _buildActiveFilters(),
         if (_viewModel.errorMessage != null) _buildInlineError(),
         Expanded(child: _buildContent()),
       ],
@@ -378,12 +414,13 @@ class _UsersPageState extends State<UsersPage> {
 
             final searchField = TextField(
               controller: _searchController,
+              onChanged: _viewModel.updateSearch,
               onSubmitted: (_) {
                 _applyFilters();
               },
               decoration: const InputDecoration(
-                labelText: 'Search users',
-                hintText: 'Name or email',
+                labelText: 'Pretraži korisnike',
+                hintText: 'Ime ili email',
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(),
               ),
@@ -518,42 +555,32 @@ class _UsersPageState extends State<UsersPage> {
   }
 
   Widget _buildInlineError() {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: colorScheme.onErrorContainer),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              _viewModel.errorMessage!,
-              style: TextStyle(color: colorScheme.onErrorContainer),
-            ),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: AppErrorBanner(message: _viewModel.errorMessage!),
     );
   }
 
   Widget _buildContent() {
     if (_viewModel.isLoading && _viewModel.users.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AdminTableLoadingState(message: 'Učitavanje korisnika...');
     }
 
     if (_viewModel.users.isEmpty && _viewModel.errorMessage != null) {
-      return _buildErrorState();
+      return AdminTableErrorState(
+        message: _viewModel.errorMessage!,
+        onRetry: () {
+          _viewModel.loadUsers();
+        },
+      );
     }
 
     if (_viewModel.users.isEmpty) {
-      return const Center(child: Text('No users match the selected filters.'));
+      return const AdminTableEmptyState(
+        icon: Icons.people_outline,
+        title: 'Nema korisnika',
+        message: 'Nijedan korisnik ne odgovara odabranim filterima.',
+      );
     }
 
     return Column(
@@ -561,28 +588,16 @@ class _UsersPageState extends State<UsersPage> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Card(
-              clipBehavior: Clip.antiAlias,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Scrollbar(
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SizedBox(
-                        width: constraints.maxWidth < 1100
-                            ? 1100
-                            : constraints.maxWidth,
-                        child: _buildDataTable(),
-                      ),
-                    ),
-                  );
-                },
-              ),
+            child: AdminTableContainer(
+              minimumWidth: 1100,
+              child: _buildDataTable(),
             ),
           ),
         ),
-        _buildPagination(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+          child: _buildPagination(),
+        ),
       ],
     );
   }
@@ -605,9 +620,6 @@ class _UsersPageState extends State<UsersPage> {
         DataColumn(label: Text('Actions')),
       ],
       rows: _viewModel.users.map((user) {
-        final isUpdating =
-            _viewModel.isUpdatingStatus && _viewModel.updatingUserId == user.id;
-
         return DataRow(
           cells: [
             DataCell(
@@ -641,108 +653,91 @@ class _UsersPageState extends State<UsersPage> {
             DataCell(_StatusBadge(isActive: user.isActive)),
             DataCell(Text(formatter.format(user.createdAtUtc.toLocal()))),
             DataCell(
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Tooltip(
-                    message: 'View details',
-                    child: IconButton(
-                      onPressed: () async {
-                        final success = await _viewModel.loadUserDetails(
-                          user.id,
-                        );
-
-                        if (!mounted) {
-                          return;
-                        }
-
-                        if (!success || _viewModel.selectedUser == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                _viewModel.errorMessage ??
-                                    'Unable to load user details.',
-                              ),
-                            ),
-                          );
-
-                          return;
-                        }
-
-                        await showDialog(
-                          context: context,
-                          builder: (_) =>
-                              UserDetailsDialog(user: _viewModel.selectedUser!),
-                        );
-                      },
-                      icon: const Icon(Icons.visibility_outlined),
-                    ),
+              AdminTableActionMenu<String>(
+                enabled:
+                    !_viewModel.isUpdatingStatus &&
+                    !_viewModel.isUpdatingUser &&
+                    !_viewModel.isSendingPasswordReset,
+                actions: [
+                  const AdminTableAction<String>(
+                    value: 'details',
+                    label: 'Detalji',
+                    icon: Icons.visibility_outlined,
                   ),
-                  Tooltip(
-                    message: 'Edit user',
-                    child: IconButton(
-                      onPressed: _viewModel.isUpdatingUser
-                          ? null
-                          : () {
-                              _editUser(user);
-                            },
-                      icon: const Icon(Icons.edit_outlined),
-                    ),
+                  const AdminTableAction<String>(
+                    value: 'edit',
+                    label: 'Uredi',
+                    icon: Icons.edit_outlined,
                   ),
-                  Tooltip(
-                    message: 'Send password reset',
-                    child: IconButton(
-                      onPressed:
-                          _viewModel.isSendingPasswordReset &&
-                              _viewModel.passwordResetUserId == user.id
-                          ? null
-                          : () {
-                              _sendPasswordReset(user);
-                            },
-                      icon:
-                          _viewModel.isSendingPasswordReset &&
-                              _viewModel.passwordResetUserId == user.id
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.lock_reset),
-                    ),
+                  const AdminTableAction<String>(
+                    value: 'password',
+                    label: 'Pošalji reset lozinke',
+                    icon: Icons.lock_reset,
                   ),
-                  Tooltip(
-                    message: user.isActive
-                        ? 'Deactivate user'
-                        : 'Activate user',
-                    child: IconButton(
-                      onPressed: isUpdating
-                          ? null
-                          : () {
-                              _confirmStatusChange(user);
-                            },
-                      icon: isUpdating
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Icon(
-                              user.isActive
-                                  ? Icons.person_off
-                                  : Icons.person_add_alt_1,
-                            ),
-                    ),
+                  AdminTableAction<String>(
+                    value: 'status',
+                    label: user.isActive ? 'Deaktiviraj' : 'Aktiviraj',
+                    icon: user.isActive
+                        ? Icons.person_off
+                        : Icons.person_add_alt_1,
+                    destructive: user.isActive,
                   ),
-                  Tooltip(
-                    message: 'Permanent deletion is not allowed',
-                    child: IconButton(
-                      onPressed: () {
-                        _showDeleteNotAllowed(user);
-                      },
-                      icon: const Icon(Icons.delete_outline),
-                    ),
+                  const AdminTableAction<String>(
+                    value: 'deleteInfo',
+                    label: 'Brisanje nije dozvoljeno',
+                    icon: Icons.delete_outline,
                   ),
                 ],
+                onSelected: (action) async {
+                  switch (action) {
+                    case 'details':
+                      final success = await _viewModel.loadUserDetails(user.id);
+
+                      if (!mounted) {
+                        return;
+                      }
+
+                      if (!success || _viewModel.selectedUser == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              _viewModel.errorMessage ??
+                                  'Detalje korisnika nije moguće učitati.',
+                            ),
+                          ),
+                        );
+
+                        return;
+                      }
+
+                      await showDialog<void>(
+                        context: context,
+                        builder: (_) {
+                          return UserDetailsDialog(
+                            user: _viewModel.selectedUser!,
+                          );
+                        },
+                      );
+
+                      break;
+
+                    case 'edit':
+                      await _editUser(user);
+                      break;
+
+                    case 'password':
+                      await _sendPasswordReset(user);
+                      break;
+
+                    case 'status':
+                      await _confirmStatusChange(user);
+                      break;
+
+                    case 'deleteInfo':
+                      await _showDeleteNotAllowed(user);
+                      break;
+                  }
+                },
               ),
             ),
           ],
@@ -752,100 +747,17 @@ class _UsersPageState extends State<UsersPage> {
   }
 
   Widget _buildPagination() {
-    final firstItem = _viewModel.totalCount == 0
-        ? 0
-        : (_viewModel.pageNumber - 1) * _viewModel.pageSize + 1;
-
-    final possibleLastItem = _viewModel.pageNumber * _viewModel.pageSize;
-
-    final lastItem = possibleLastItem > _viewModel.totalCount
-        ? _viewModel.totalCount
-        : possibleLastItem;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          child: Row(
-            children: [
-              Text(
-                '$firstItem–$lastItem of '
-                '${_viewModel.totalCount}',
-              ),
-              const Spacer(),
-              const Text('Rows per page:'),
-              const SizedBox(width: 8),
-              DropdownButton<int>(
-                value: _viewModel.pageSize,
-                items: const [
-                  DropdownMenuItem(value: 10, child: Text('10')),
-                  DropdownMenuItem(value: 20, child: Text('20')),
-                  DropdownMenuItem(value: 50, child: Text('50')),
-                ],
-                onChanged: _viewModel.isLoading
-                    ? null
-                    : (value) {
-                        if (value != null) {
-                          _viewModel.changePageSize(value);
-                        }
-                      },
-              ),
-              const SizedBox(width: 18),
-              Text(
-                _viewModel.totalPages == 0
-                    ? 'Page 0 of 0'
-                    : 'Page '
-                          '${_viewModel.pageNumber} '
-                          'of '
-                          '${_viewModel.totalPages}',
-              ),
-              const SizedBox(width: 12),
-              IconButton(
-                tooltip: 'Previous page',
-                onPressed: _viewModel.hasPreviousPage && !_viewModel.isLoading
-                    ? _viewModel.goToPreviousPage
-                    : null,
-                icon: const Icon(Icons.chevron_left),
-              ),
-              IconButton(
-                tooltip: 'Next page',
-                onPressed: _viewModel.hasNextPage && !_viewModel.isLoading
-                    ? _viewModel.goToNextPage
-                    : null,
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.people_outline, size: 64),
-            const SizedBox(height: 16),
-            Text(
-              _viewModel.errorMessage ?? 'Users could not be loaded.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 18),
-            ElevatedButton.icon(
-              onPressed: () {
-                _viewModel.loadUsers();
-              },
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
-            ),
-          ],
-        ),
-      ),
+    return AdminTablePagination(
+      pageNumber: _viewModel.pageNumber,
+      pageSize: _viewModel.pageSize,
+      totalCount: _viewModel.totalCount,
+      totalPages: _viewModel.totalPages,
+      isLoading: _viewModel.isLoading,
+      onPreviousPage: _viewModel.hasPreviousPage
+          ? _viewModel.goToPreviousPage
+          : null,
+      onNextPage: _viewModel.hasNextPage ? _viewModel.goToNextPage : null,
+      onPageSizeChanged: _viewModel.changePageSize,
     );
   }
 }

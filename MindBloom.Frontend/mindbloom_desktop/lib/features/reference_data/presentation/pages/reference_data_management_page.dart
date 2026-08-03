@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 import '../../data/models/therapy_approach_model.dart';
 import '../../../../app/di/injection.dart';
 import '../../data/models/therapist_specialization_model.dart';
@@ -8,6 +9,8 @@ import '../../data/models/article_category_reference_model.dart';
 import '../../../../core/validation/app_validators.dart';
 import '../../../../core/widgets/app_error_banner.dart';
 import '../../../../core/widgets/app_confirmation_dialog.dart';
+import '../../../../core/widgets/admin_table_container.dart';
+import '../../../../core/widgets/admin_table_state.dart';
 
 enum _ReferenceDataSection {
   specializations,
@@ -872,37 +875,44 @@ class _ReferenceDataManagementPageState
 
   Widget _buildArticleCategoriesContent() {
     if (_viewModel.isLoading && _viewModel.articleCategories.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_viewModel.articleCategories.isEmpty) {
-      return const Center(
-        child: Text(
-          'Nijedna kategorija članka ne odgovara odabranim filterima.',
-        ),
+      return const AdminTableLoadingState(
+        message: 'Učitavanje kategorija članaka...',
       );
     }
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SingleChildScrollView(
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Naziv')),
-              DataColumn(label: Text('Opis')),
-              DataColumn(label: Text('Članci')),
-              DataColumn(label: Text('Koristi se')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Kreirano')),
-              DataColumn(label: Text('Akcije')),
-            ],
-            rows: _viewModel.articleCategories
-                .map(_buildArticleCategoryRow)
-                .toList(),
-          ),
-        ),
+    if (_viewModel.articleCategories.isEmpty &&
+        _viewModel.errorMessage != null) {
+      return AdminTableErrorState(
+        message: _viewModel.errorMessage!,
+        onRetry: () {
+          _viewModel.loadArticleCategories();
+        },
+      );
+    }
+
+    if (_viewModel.articleCategories.isEmpty) {
+      return const AdminTableEmptyState(
+        icon: Icons.category_outlined,
+        title: 'Nema kategorija članaka',
+        message: 'Nijedna kategorija članka ne odgovara odabranim filterima.',
+      );
+    }
+
+    return AdminTableContainer(
+      minimumWidth: 1150,
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('Naziv')),
+          DataColumn(label: Text('Opis')),
+          DataColumn(label: Text('Članci')),
+          DataColumn(label: Text('Koristi se')),
+          DataColumn(label: Text('Status')),
+          DataColumn(label: Text('Kreirano')),
+          DataColumn(label: Text('Akcije')),
+        ],
+        rows: _viewModel.articleCategories
+            .map(_buildArticleCategoryRow)
+            .toList(),
       ),
     );
   }
@@ -996,70 +1006,85 @@ class _ReferenceDataManagementPageState
 
   Widget _buildSpecializationsContent() {
     if (_viewModel.isLoading && _viewModel.specializations.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_viewModel.specializations.isEmpty) {
-      return const Center(
-        child: Text('Nijedna specijalizacija ne odgovara odabranim filterima.'),
+      return const AdminTableLoadingState(
+        message: 'Učitavanje specijalizacija...',
       );
     }
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SingleChildScrollView(
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Naziv')),
-              DataColumn(label: Text('Opis')),
-              DataColumn(label: Text('Terapeuti')),
-              DataColumn(label: Text('Statusi')),
-              DataColumn(label: Text('Kreirano')),
-              DataColumn(label: Text('Akcije')),
-            ],
-            rows: _viewModel.specializations.map(_buildRow).toList(),
-          ),
-        ),
+    if (_viewModel.specializations.isEmpty && _viewModel.errorMessage != null) {
+      return AdminTableErrorState(
+        message: _viewModel.errorMessage!,
+        onRetry: () {
+          _viewModel.loadSpecializations();
+        },
+      );
+    }
+
+    if (_viewModel.specializations.isEmpty) {
+      return const AdminTableEmptyState(
+        icon: Icons.psychology_outlined,
+        title: 'Nema specijalizacija',
+        message: 'Nijedna specijalizacija ne odgovara odabranim filterima.',
+      );
+    }
+
+    return AdminTableContainer(
+      minimumWidth: 1100,
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('Naziv')),
+          DataColumn(label: Text('Opis')),
+          DataColumn(label: Text('Terapeuti')),
+          DataColumn(label: Text('Status')),
+          DataColumn(label: Text('Kreirano')),
+          DataColumn(label: Text('Akcije')),
+        ],
+        rows: _viewModel.specializations.map(_buildRow).toList(),
       ),
     );
   }
 
   Widget _buildTherapyApproachesContent() {
     if (_viewModel.isLoading && _viewModel.therapyApproaches.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_viewModel.therapyApproaches.isEmpty) {
-      return const Center(
-        child: Text(
-          'Nijedan terapijski pravac ne odgovara odabranim filterima.',
-        ),
+      return const AdminTableLoadingState(
+        message: 'Učitavanje terapijskih pravaca...',
       );
     }
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SingleChildScrollView(
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Naziv')),
-              DataColumn(label: Text('Opis')),
-              DataColumn(label: Text('Terapeuti')),
-              DataColumn(label: Text('Klijenti')),
-              DataColumn(label: Text('Koristi se')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Kreirano')),
-              DataColumn(label: Text('Akcije')),
-            ],
-            rows: _viewModel.therapyApproaches
-                .map(_buildTherapyApproachRow)
-                .toList(),
-          ),
-        ),
+    if (_viewModel.therapyApproaches.isEmpty &&
+        _viewModel.errorMessage != null) {
+      return AdminTableErrorState(
+        message: _viewModel.errorMessage!,
+        onRetry: () {
+          _viewModel.loadTherapyApproaches();
+        },
+      );
+    }
+
+    if (_viewModel.therapyApproaches.isEmpty) {
+      return const AdminTableEmptyState(
+        icon: Icons.route_outlined,
+        title: 'Nema terapijskih pravaca',
+        message: 'Nijedan terapijski pravac ne odgovara odabranim filterima.',
+      );
+    }
+
+    return AdminTableContainer(
+      minimumWidth: 1250,
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('Naziv')),
+          DataColumn(label: Text('Opis')),
+          DataColumn(label: Text('Terapeuti')),
+          DataColumn(label: Text('Klijenti')),
+          DataColumn(label: Text('Koristi se')),
+          DataColumn(label: Text('Status')),
+          DataColumn(label: Text('Kreirano')),
+          DataColumn(label: Text('Akcije')),
+        ],
+        rows: _viewModel.therapyApproaches
+            .map(_buildTherapyApproachRow)
+            .toList(),
       ),
     );
   }
@@ -1259,6 +1284,12 @@ class _ReferenceDataManagementPageState
         ? _viewModel.therapyApproachPageNumber
         : _viewModel.articleCategoryPageNumber;
 
+    final pageSize = isSpecializations
+        ? _viewModel.pageSize
+        : isTherapyApproaches
+        ? _viewModel.therapyApproachPageSize
+        : _viewModel.articleCategoryPageSize;
+
     final totalPages = isSpecializations
         ? _viewModel.totalPages
         : isTherapyApproaches
@@ -1271,59 +1302,46 @@ class _ReferenceDataManagementPageState
         ? _viewModel.therapyApproachTotalCount
         : _viewModel.articleCategoryTotalCount;
 
-    final displayedTotalPages = totalPages == 0 ? 1 : totalPages;
+    return AdminTablePagination(
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+      totalCount: totalCount,
+      totalPages: totalPages,
+      isLoading: _viewModel.isLoading,
 
-    return Row(
-      children: [
-        Text('Ukupno: $totalCount'),
+      onPreviousPage: pageNumber > 1
+          ? () {
+              if (isSpecializations) {
+                _viewModel.previousPage();
+              } else if (isTherapyApproaches) {
+                _viewModel.loadTherapyApproaches(requestedPage: pageNumber - 1);
+              } else {
+                _viewModel.loadArticleCategories(requestedPage: pageNumber - 1);
+              }
+            }
+          : null,
 
-        const Spacer(),
+      onNextPage: pageNumber < totalPages
+          ? () {
+              if (isSpecializations) {
+                _viewModel.nextPage();
+              } else if (isTherapyApproaches) {
+                _viewModel.loadTherapyApproaches(requestedPage: pageNumber + 1);
+              } else {
+                _viewModel.loadArticleCategories(requestedPage: pageNumber + 1);
+              }
+            }
+          : null,
 
-        IconButton(
-          tooltip: 'Prošla stranica',
-          onPressed: !_viewModel.isLoading && pageNumber > 1
-              ? () async {
-                  if (isSpecializations) {
-                    await _viewModel.previousPage();
-                  } else if (isTherapyApproaches) {
-                    await _viewModel.loadTherapyApproaches(
-                      requestedPage: pageNumber - 1,
-                    );
-                  } else {
-                    await _viewModel.loadArticleCategories(
-                      requestedPage: pageNumber - 1,
-                    );
-                  }
-                }
-              : null,
-          icon: const Icon(Icons.chevron_left),
-        ),
-
-        Text(
-          'Page $pageNumber of '
-          '$displayedTotalPages',
-        ),
-
-        IconButton(
-          tooltip: 'Next page',
-          onPressed: !_viewModel.isLoading && pageNumber < totalPages
-              ? () async {
-                  if (isSpecializations) {
-                    await _viewModel.nextPage();
-                  } else if (isTherapyApproaches) {
-                    await _viewModel.loadTherapyApproaches(
-                      requestedPage: pageNumber + 1,
-                    );
-                  } else {
-                    await _viewModel.loadArticleCategories(
-                      requestedPage: pageNumber + 1,
-                    );
-                  }
-                }
-              : null,
-          icon: const Icon(Icons.chevron_right),
-        ),
-      ],
+      onPageSizeChanged: (value) {
+        if (isSpecializations) {
+          _viewModel.changeSpecializationPageSize(value);
+        } else if (isTherapyApproaches) {
+          _viewModel.changeTherapyApproachPageSize(value);
+        } else {
+          _viewModel.changeArticleCategoryPageSize(value);
+        }
+      },
     );
   }
 }

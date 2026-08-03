@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../../core/error/app_error_helper.dart';
 import '../../data/models/workshop_model.dart';
 import '../../data/repositories/workshop_management_repository.dart';
 
@@ -8,7 +11,11 @@ class WorkshopManagementViewModel extends ChangeNotifier {
 
   WorkshopManagementViewModel({required this.repository});
 
+  Timer? _searchDebounce;
+
   bool isLoading = false;
+
+  bool isActionLoading = false;
 
   String? error;
 
@@ -32,13 +39,33 @@ class WorkshopManagementViewModel extends ChangeNotifier {
 
   DateTime? toUtc;
 
-  Future<void> loadWorkshops({bool resetPage = false}) async {
+  bool get hasPreviousPage => pageNumber > 1;
+
+  bool get hasNextPage => pageNumber < totalPages;
+
+  Future<void> loadWorkshops({
+    bool resetPage = false,
+    bool clearCurrentResults = false,
+  }) async {
+    if (isLoading) {
+      return;
+    }
+
     if (resetPage) {
       pageNumber = 1;
     }
 
     isLoading = true;
+
     error = null;
+
+    if (clearCurrentResults) {
+      workshops = [];
+
+      totalCount = 0;
+      totalPages = 0;
+    }
+
     notifyListeners();
 
     try {
@@ -53,20 +80,56 @@ class WorkshopManagementViewModel extends ChangeNotifier {
       );
 
       workshops = response.items;
-      pageNumber = response.pageNumber;
-      pageSize = response.pageSize;
+
+      pageNumber = response.pageNumber == 0 ? 1 : response.pageNumber;
+
+      pageSize = response.pageSize == 0 ? pageSize : response.pageSize;
+
       totalCount = response.totalCount;
+
       totalPages = response.totalPages;
     } catch (exception) {
-      error = exception.toString();
+      workshops = [];
+
+      totalCount = 0;
+      totalPages = 0;
+
+      error = AppErrorHelper.message(exception);
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
+    }
+  }
+
+  void updateSearch(String value) {
+    search = value.trim();
+
+    _searchDebounce?.cancel();
+
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      loadWorkshops(resetPage: true, clearCurrentResults: true);
+    });
+  }
+
+  Future<void> applyFilters() {
+    _searchDebounce?.cancel();
+
+    return loadWorkshops(resetPage: true, clearCurrentResults: true);
+  }
+
+  Future<void> changePageSize(int value) {
+    if (value == pageSize) {
+      return Future.value();
     }
 
-    isLoading = false;
-    notifyListeners();
+    pageSize = value;
+
+    return loadWorkshops(resetPage: true, clearCurrentResults: true);
   }
 
   Future<void> nextPage() async {
-    if (pageNumber >= totalPages) {
+    if (!hasNextPage || isLoading) {
       return;
     }
 
@@ -76,7 +139,7 @@ class WorkshopManagementViewModel extends ChangeNotifier {
   }
 
   Future<void> previousPage() async {
-    if (pageNumber <= 1) {
+    if (!hasPreviousPage || isLoading) {
       return;
     }
 
@@ -86,19 +149,36 @@ class WorkshopManagementViewModel extends ChangeNotifier {
   }
 
   Future<bool> deleteWorkshop(int workshopId) async {
+    if (isActionLoading) {
+      return false;
+    }
+
+    isActionLoading = true;
+
     error = null;
+
+    notifyListeners();
 
     try {
       await repository.deleteWorkshop(workshopId);
+
+      final requestedPage = workshops.length == 1 && pageNumber > 1
+          ? pageNumber - 1
+          : pageNumber;
+
+      pageNumber = requestedPage;
 
       await loadWorkshops();
 
       return true;
     } catch (exception) {
-      error = exception.toString();
-      notifyListeners();
+      error = AppErrorHelper.message(exception);
 
       return false;
+    } finally {
+      isActionLoading = false;
+
+      notifyListeners();
     }
   }
 
@@ -106,32 +186,62 @@ class WorkshopManagementViewModel extends ChangeNotifier {
     required int workshopId,
     required String reason,
   }) async {
+    if (isActionLoading) {
+      return false;
+    }
+
+    isActionLoading = true;
+
     error = null;
 
+    notifyListeners();
+
     try {
-      await repository.cancelWorkshop(workshopId: workshopId, reason: reason);
+      await repository.cancelWorkshop(
+        workshopId: workshopId,
+        reason: reason.trim(),
+      );
 
       await loadWorkshops();
 
       return true;
     } catch (exception) {
-      error = exception.toString();
-      notifyListeners();
+      error = AppErrorHelper.message(exception);
 
       return false;
+    } finally {
+      isActionLoading = false;
+
+      notifyListeners();
     }
   }
 
-  void clearFilters() {
+  Future<void> clearFilters() async {
+    _searchDebounce?.cancel();
+
     search = '';
+
     selectedType = null;
+
     selectedStatus = null;
+
     fromUtc = null;
+
     toUtc = null;
+
+    await loadWorkshops(resetPage: true, clearCurrentResults: true);
   }
 
   Future<bool> deactivateWorkshop(int workshopId) async {
+    if (isActionLoading) {
+      return false;
+    }
+
+    isActionLoading = true;
+
     error = null;
+
+    notifyListeners();
 
     try {
       await repository.deactivateWorkshop(workshopId);
@@ -140,16 +250,26 @@ class WorkshopManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      error = exception.toString();
-
-      notifyListeners();
+      error = AppErrorHelper.message(exception);
 
       return false;
+    } finally {
+      isActionLoading = false;
+
+      notifyListeners();
     }
   }
 
   Future<bool> activateWorkshop(int workshopId) async {
+    if (isActionLoading) {
+      return false;
+    }
+
+    isActionLoading = true;
+
     error = null;
+
+    notifyListeners();
 
     try {
       await repository.activateWorkshop(workshopId);
@@ -158,11 +278,30 @@ class WorkshopManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (exception) {
-      error = exception.toString();
-
-      notifyListeners();
+      error = AppErrorHelper.message(exception);
 
       return false;
+    } finally {
+      isActionLoading = false;
+
+      notifyListeners();
     }
+  }
+
+  void clearError() {
+    if (error == null) {
+      return;
+    }
+
+    error = null;
+
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+
+    super.dispose();
   }
 }

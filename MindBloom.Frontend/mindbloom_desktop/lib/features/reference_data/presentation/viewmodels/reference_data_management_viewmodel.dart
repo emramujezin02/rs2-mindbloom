@@ -601,6 +601,36 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> changeSpecializationPageSize(int value) async {
+    if (pageSize == value) {
+      return;
+    }
+
+    pageSize = value;
+
+    await loadSpecializations(requestedPage: 1);
+  }
+
+  Future<void> changeTherapyApproachPageSize(int value) async {
+    if (therapyApproachPageSize == value) {
+      return;
+    }
+
+    therapyApproachPageSize = value;
+
+    await loadTherapyApproaches(requestedPage: 1);
+  }
+
+  Future<void> changeArticleCategoryPageSize(int value) async {
+    if (articleCategoryPageSize == value) {
+      return;
+    }
+
+    articleCategoryPageSize = value;
+
+    await loadArticleCategories(requestedPage: 1);
+  }
+
   void clearError() {
     if (errorMessage == null) {
       return;

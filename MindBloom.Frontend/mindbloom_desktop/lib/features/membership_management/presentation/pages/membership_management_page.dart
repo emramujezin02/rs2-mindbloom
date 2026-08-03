@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
@@ -9,6 +10,10 @@ import '../../data/models/admin_membership_plan_model.dart';
 import '../../data/models/membership_plan_request.dart';
 import '../viewmodels/membership_plan_management_viewmodel.dart';
 import '../../../../core/validation/app_validators.dart';
+import '../../../../core/widgets/admin_table_action_menu.dart';
+import '../../../../core/widgets/admin_table_container.dart';
+import '../../../../core/widgets/admin_table_state.dart';
+import '../../../../core/widgets/app_error_banner.dart';
 
 class MembershipManagementPage extends StatefulWidget {
   const MembershipManagementPage({super.key});
@@ -675,6 +680,106 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  bool get _hasActiveMembershipFilters {
+    return _searchController.text.trim().isNotEmpty ||
+        _viewModel.planType != null ||
+        _viewModel.membershipStatus != null ||
+        _viewModel.paymentStatus != null ||
+        _expiresFrom != null ||
+        _expiresTo != null;
+  }
+
+  String _membershipPlanLabel(int value) {
+    switch (value) {
+      case 1:
+        return '10 sesija';
+      case 2:
+        return '20 sesija';
+      case 3:
+        return '30 sesija';
+      default:
+        return value.toString();
+    }
+  }
+
+  String _membershipStatusLabel(String value) {
+    switch (value) {
+      case 'Active':
+        return 'Aktivna';
+      case 'Inactive':
+        return 'Neaktivna';
+      case 'PendingPayment':
+        return 'Čeka plaćanje';
+      case 'Expired':
+        return 'Istekla';
+      case 'Depleted':
+        return 'Iskorištena';
+      default:
+        return value;
+    }
+  }
+
+  String _membershipPaymentStatusLabel(int value) {
+    switch (value) {
+      case 1:
+        return 'Na čekanju';
+      case 2:
+        return 'Plaćeno';
+      case 3:
+        return 'Neuspjelo';
+      case 4:
+        return 'Refundirano';
+      case 5:
+        return 'Refundacija na čekanju';
+      case 6:
+        return 'Refundacija neuspjela';
+      default:
+        return value.toString();
+    }
+  }
+
+  Widget _buildActiveMembershipFilters() {
+    if (!_hasActiveMembershipFilters) {
+      return const SizedBox.shrink();
+    }
+
+    final formatter = DateFormat('dd.MM.yyyy.');
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (_searchController.text.trim().isNotEmpty)
+          Chip(label: Text('Pretraga: ${_searchController.text.trim()}')),
+        if (_viewModel.planType != null)
+          Chip(
+            label: Text('Plan: ${_membershipPlanLabel(_viewModel.planType!)}'),
+          ),
+        if (_viewModel.membershipStatus != null)
+          Chip(
+            label: Text(
+              'Status: ${_membershipStatusLabel(_viewModel.membershipStatus!)}',
+            ),
+          ),
+        if (_viewModel.paymentStatus != null)
+          Chip(
+            label: Text(
+              'Plaćanje: ${_membershipPaymentStatusLabel(_viewModel.paymentStatus!)}',
+            ),
+          ),
+        if (_expiresFrom != null)
+          Chip(label: Text('Ističe od: ${formatter.format(_expiresFrom!)}')),
+        if (_expiresTo != null)
+          Chip(label: Text('Ističe do: ${formatter.format(_expiresTo!)}')),
+        ActionChip(
+          avatar: const Icon(Icons.filter_alt_off, size: 18),
+          label: const Text('Resetuj filtere'),
+          onPressed: _viewModel.isLoading ? null : _clearFilters,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -703,9 +808,27 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
 
           _buildFilters(),
 
+          if (_hasActiveMembershipFilters) ...[
+            const SizedBox(height: 12),
+            _buildActiveMembershipFilters(),
+          ],
+
+          if (_viewModel.error != null &&
+              _viewModel.memberships.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            AppErrorBanner(
+              message: _viewModel.error!,
+              onDismiss: _viewModel.clearError,
+            ),
+          ],
+
           const SizedBox(height: 16),
 
           Expanded(child: _buildContent()),
+
+          const SizedBox(height: 12),
+
+          _buildPagination(),
 
           const SizedBox(height: 12),
 
@@ -796,30 +919,21 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
                 child: Center(child: Text('No membership plans found.')),
               )
             else
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minWidth: constraints.maxWidth,
-                      ),
-                      child: DataTable(
-                        columns: const [
-                          DataColumn(label: Text('Name')),
-                          DataColumn(label: Text('Type')),
-                          DataColumn(label: Text('Price')),
-                          DataColumn(label: Text('Duration')),
-                          DataColumn(label: Text('Sessions')),
-                          DataColumn(label: Text('Discount')),
-                          DataColumn(label: Text('Status')),
-                          DataColumn(label: Text('Actions')),
-                        ],
-                        rows: _planViewModel.plans.map(_buildPlanRow).toList(),
-                      ),
-                    ),
-                  );
-                },
+              AdminTableContainer(
+                minimumWidth: 1100,
+                child: DataTable(
+                  columns: const [
+                    DataColumn(label: Text('Naziv')),
+                    DataColumn(label: Text('Tip')),
+                    DataColumn(label: Text('Cijena')),
+                    DataColumn(label: Text('Trajanje')),
+                    DataColumn(label: Text('Sesije')),
+                    DataColumn(label: Text('Popust')),
+                    DataColumn(label: Text('Status')),
+                    DataColumn(label: Text('Akcije')),
+                  ],
+                  rows: _planViewModel.plans.map(_buildPlanRow).toList(),
+                ),
               ),
           ],
         ),
@@ -874,49 +988,53 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
         ),
 
         DataCell(
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                tooltip: 'Edit',
-                onPressed: _planViewModel.isSaving
-                    ? null
-                    : () {
-                        _showPlanDialog(plan: plan);
-                      },
-                icon: const Icon(Icons.edit),
+          AdminTableActionMenu<String>(
+            enabled: !_planViewModel.isSaving,
+            actions: [
+              const AdminTableAction<String>(
+                value: 'edit',
+                label: 'Uredi',
+                icon: Icons.edit_outlined,
               ),
-
-              IconButton(
-                tooltip: plan.isActive ? 'Deactivate' : 'Activate',
-                onPressed: _planViewModel.isSaving
-                    ? null
-                    : () {
-                        _changePlanStatus(plan);
-                      },
-                icon: Icon(
-                  plan.isActive ? Icons.pause_circle : Icons.play_circle,
-                ),
+              AdminTableAction<String>(
+                value: 'status',
+                label: plan.isActive ? 'Deaktiviraj' : 'Aktiviraj',
+                icon: plan.isActive
+                    ? Icons.pause_circle_outline
+                    : Icons.play_circle_outline,
+                destructive: plan.isActive,
               ),
-
-              IconButton(
-                tooltip: 'History',
-                onPressed: () {
-                  _showPlanHistory(plan);
-                },
-                icon: const Icon(Icons.history),
+              const AdminTableAction<String>(
+                value: 'history',
+                label: 'Historija',
+                icon: Icons.history,
               ),
-
-              IconButton(
-                tooltip: 'Delete',
-                onPressed: _planViewModel.isSaving
-                    ? null
-                    : () {
-                        _deletePlan(plan);
-                      },
-                icon: const Icon(Icons.delete_outline),
+              const AdminTableAction<String>(
+                value: 'delete',
+                label: 'Ukloni',
+                icon: Icons.delete_outline,
+                destructive: true,
               ),
             ],
+            onSelected: (value) {
+              switch (value) {
+                case 'edit':
+                  _showPlanDialog(plan: plan);
+                  break;
+
+                case 'status':
+                  _changePlanStatus(plan);
+                  break;
+
+                case 'history':
+                  _showPlanHistory(plan);
+                  break;
+
+                case 'delete':
+                  _deletePlan(plan);
+                  break;
+              }
+            },
           ),
         ),
       ],
@@ -936,9 +1054,10 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
               width: 300,
               child: TextField(
                 controller: _searchController,
+                onChanged: _viewModel.updateSearch,
                 decoration: const InputDecoration(
-                  labelText: 'Search',
-                  hintText: 'ID, client or therapist',
+                  labelText: 'Pretraga',
+                  hintText: 'ID, klijent ili terapeut',
                   prefixIcon: Icon(Icons.search),
                   border: OutlineInputBorder(),
                 ),
@@ -1091,62 +1210,43 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
 
   Widget _buildContent() {
     if (_viewModel.isLoading && _viewModel.memberships.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AdminTableLoadingState(message: 'Učitavanje članarina...');
     }
 
     if (_viewModel.error != null && _viewModel.memberships.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 56),
-            const SizedBox(height: 12),
-            Text(_viewModel.error!, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: () {
-                _viewModel.loadMemberships();
-              },
-              child: const Text('Try again'),
-            ),
-          ],
-        ),
+      return AdminTableErrorState(
+        message: _viewModel.error!,
+        onRetry: () {
+          _viewModel.loadMemberships();
+        },
       );
     }
 
     if (_viewModel.memberships.isEmpty) {
-      return const Center(
-        child: Text('No memberships match the selected filters.'),
+      return const AdminTableEmptyState(
+        icon: Icons.card_membership_outlined,
+        title: 'Nema članarina',
+        message: 'Nijedna članarina ne odgovara odabranim filterima.',
       );
     }
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: constraints.maxWidth),
-              child: DataTable(
-                showCheckboxColumn: false,
-                columns: const [
-                  DataColumn(label: Text('ID')),
-                  DataColumn(label: Text('Client')),
-                  DataColumn(label: Text('Therapist')),
-                  DataColumn(label: Text('Plan')),
-                  DataColumn(label: Text('Sessions')),
-                  DataColumn(label: Text('Membership status')),
-                  DataColumn(label: Text('Payment status')),
-                  DataColumn(label: Text('Price')),
-                  DataColumn(label: Text('Expires')),
-                  DataColumn(label: Text('Actions')),
-                ],
-                rows: _viewModel.memberships.map(_buildRow).toList(),
-              ),
-            ),
-          );
-        },
+    return AdminTableContainer(
+      minimumWidth: 1450,
+      child: DataTable(
+        showCheckboxColumn: false,
+        columns: const [
+          DataColumn(label: Text('ID')),
+          DataColumn(label: Text('Klijent')),
+          DataColumn(label: Text('Terapeut')),
+          DataColumn(label: Text('Plan')),
+          DataColumn(label: Text('Sesije')),
+          DataColumn(label: Text('Status članarine')),
+          DataColumn(label: Text('Status plaćanja')),
+          DataColumn(label: Text('Cijena')),
+          DataColumn(label: Text('Ističe')),
+          DataColumn(label: Text('Akcije')),
+        ],
+        rows: _viewModel.memberships.map(_buildRow).toList(),
       ),
     );
   }
@@ -1207,12 +1307,20 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
           ),
         ),
         DataCell(
-          IconButton(
-            tooltip: 'Open details',
-            onPressed: () {
-              _openDetails(membership.id);
+          AdminTableActionMenu<String>(
+            enabled: !_viewModel.isLoading,
+            actions: const [
+              AdminTableAction<String>(
+                value: 'details',
+                label: 'Detalji',
+                icon: Icons.visibility_outlined,
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'details') {
+                _openDetails(membership.id);
+              }
             },
-            icon: const Icon(Icons.visibility),
           ),
         ),
       ],
@@ -1226,34 +1334,17 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
   }
 
   Widget _buildPagination() {
-    final displayedPage = _viewModel.totalPages == 0
-        ? 0
-        : _viewModel.pageNumber;
-
-    return Row(
-      children: [
-        Text(
-          'Page $displayedPage '
-          'of ${_viewModel.totalPages}',
-        ),
-        const Spacer(),
-        Text('${_viewModel.totalCount} total'),
-        const SizedBox(width: 16),
-        IconButton(
-          tooltip: 'Previous page',
-          onPressed: _viewModel.hasPreviousPage && !_viewModel.isLoading
-              ? _viewModel.previousPage
-              : null,
-          icon: const Icon(Icons.chevron_left),
-        ),
-        IconButton(
-          tooltip: 'Next page',
-          onPressed: _viewModel.hasNextPage && !_viewModel.isLoading
-              ? _viewModel.nextPage
-              : null,
-          icon: const Icon(Icons.chevron_right),
-        ),
-      ],
+    return AdminTablePagination(
+      pageNumber: _viewModel.pageNumber,
+      pageSize: _viewModel.pageSize,
+      totalCount: _viewModel.totalCount,
+      totalPages: _viewModel.totalPages,
+      isLoading: _viewModel.isLoading,
+      onPreviousPage: _viewModel.hasPreviousPage
+          ? _viewModel.previousPage
+          : null,
+      onNextPage: _viewModel.hasNextPage ? _viewModel.nextPage : null,
+      onPageSizeChanged: _viewModel.changePageSize,
     );
   }
 

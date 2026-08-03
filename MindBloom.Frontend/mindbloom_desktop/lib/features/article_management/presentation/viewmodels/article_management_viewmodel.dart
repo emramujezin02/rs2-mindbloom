@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../../../core/error/app_error_helper.dart';
 import '../../data/models/article_category_model.dart';
 import '../../data/models/article_management_model.dart';
 import '../../data/repositories/article_management_repository.dart';
@@ -11,31 +13,34 @@ class ArticleManagementViewModel extends ChangeNotifier {
   ArticleManagementViewModel({required this.repository});
 
   final List<ArticleManagementModel> articles = [];
+
   final List<ArticleCategoryModel> categories = [];
 
   Timer? _searchDebounce;
 
   bool isLoading = false;
+
   bool isActionLoading = false;
 
   String? errorMessage;
 
   String search = '';
+
   bool? publishedFilter;
+
   int? categoryFilter;
 
   int pageNumber = 1;
+
   int pageSize = 10;
+
   int totalCount = 0;
+
   int totalPages = 0;
 
-  bool get canGoPrevious {
-    return pageNumber > 1;
-  }
+  bool get canGoPrevious => pageNumber > 1;
 
-  bool get canGoNext {
-    return pageNumber < totalPages;
-  }
+  bool get canGoNext => pageNumber < totalPages;
 
   Future<void> loadCategories() async {
     try {
@@ -45,19 +50,30 @@ class ArticleManagementViewModel extends ChangeNotifier {
         ..clear()
         ..addAll(result);
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = AppErrorHelper.message(error);
     }
 
     notifyListeners();
   }
 
-  Future<void> loadArticles({int? requestedPage}) async {
+  Future<void> loadArticles({
+    int? requestedPage,
+    bool clearCurrentResults = false,
+  }) async {
     if (isLoading) {
       return;
     }
 
     isLoading = true;
+
     errorMessage = null;
+
+    if (clearCurrentResults) {
+      articles.clear();
+
+      totalCount = 0;
+      totalPages = 0;
+    }
 
     notifyListeners();
 
@@ -74,17 +90,23 @@ class ArticleManagementViewModel extends ChangeNotifier {
         ..clear()
         ..addAll(response.items);
 
-      pageNumber = response.pageNumber;
+      pageNumber = response.pageNumber == 0 ? 1 : response.pageNumber;
 
-      pageSize = response.pageSize;
+      pageSize = response.pageSize == 0 ? pageSize : response.pageSize;
 
       totalCount = response.totalCount;
 
       totalPages = response.totalPages;
     } catch (error) {
-      errorMessage = error.toString();
+      articles.clear();
+
+      totalCount = 0;
+      totalPages = 0;
+
+      errorMessage = AppErrorHelper.message(error);
     } finally {
       isLoading = false;
+
       notifyListeners();
     }
   }
@@ -95,7 +117,7 @@ class ArticleManagementViewModel extends ChangeNotifier {
     _searchDebounce?.cancel();
 
     _searchDebounce = Timer(const Duration(milliseconds: 400), () {
-      loadArticles(requestedPage: 1);
+      loadArticles(requestedPage: 1, clearCurrentResults: true);
     });
   }
 
@@ -104,29 +126,45 @@ class ArticleManagementViewModel extends ChangeNotifier {
 
     search = '';
 
-    await loadArticles(requestedPage: 1);
+    await loadArticles(requestedPage: 1, clearCurrentResults: true);
   }
 
   Future<void> updateCategoryFilter(int? value) async {
     categoryFilter = value;
 
-    await loadArticles(requestedPage: 1);
+    await loadArticles(requestedPage: 1, clearCurrentResults: true);
   }
 
   Future<void> updatePublishedFilter(bool? value) async {
     publishedFilter = value;
 
-    await loadArticles(requestedPage: 1);
+    await loadArticles(requestedPage: 1, clearCurrentResults: true);
+  }
+
+  Future<void> clearFilters() async {
+    _searchDebounce?.cancel();
+
+    search = '';
+
+    publishedFilter = null;
+
+    categoryFilter = null;
+
+    await loadArticles(requestedPage: 1, clearCurrentResults: true);
   }
 
   Future<void> changePageSize(int value) async {
+    if (value == pageSize) {
+      return;
+    }
+
     pageSize = value;
 
-    await loadArticles(requestedPage: 1);
+    await loadArticles(requestedPage: 1, clearCurrentResults: true);
   }
 
   Future<void> previousPage() async {
-    if (!canGoPrevious) {
+    if (!canGoPrevious || isLoading) {
       return;
     }
 
@@ -134,7 +172,7 @@ class ArticleManagementViewModel extends ChangeNotifier {
   }
 
   Future<void> nextPage() async {
-    if (!canGoNext) {
+    if (!canGoNext || isLoading) {
       return;
     }
 
@@ -150,6 +188,7 @@ class ArticleManagementViewModel extends ChangeNotifier {
     }
 
     isActionLoading = true;
+
     errorMessage = null;
 
     notifyListeners();
@@ -164,11 +203,12 @@ class ArticleManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = AppErrorHelper.message(error);
 
       return false;
     } finally {
       isActionLoading = false;
+
       notifyListeners();
     }
   }
@@ -179,6 +219,7 @@ class ArticleManagementViewModel extends ChangeNotifier {
     }
 
     isActionLoading = true;
+
     errorMessage = null;
 
     notifyListeners();
@@ -194,13 +235,24 @@ class ArticleManagementViewModel extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = AppErrorHelper.message(error);
 
       return false;
     } finally {
       isActionLoading = false;
+
       notifyListeners();
     }
+  }
+
+  void clearError() {
+    if (errorMessage == null) {
+      return;
+    }
+
+    errorMessage = null;
+
+    notifyListeners();
   }
 
   @override
