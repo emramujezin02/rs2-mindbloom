@@ -11,6 +11,7 @@ enum AdminSection {
   articles,
   workshops,
   referenceData,
+  auditLogs,
   appointmentRevenueReport,
   therapistPerformanceReport,
   settings,
@@ -48,6 +49,9 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.referenceData:
         return 'Reference Data';
+
+      case AdminSection.auditLogs:
+        return 'Audit Log';
 
       case AdminSection.appointmentRevenueReport:
         return 'Appointment Revenue Report';
@@ -92,6 +96,9 @@ extension AdminSectionExtension on AdminSection {
       case AdminSection.referenceData:
         return Icons.list_alt_outlined;
 
+      case AdminSection.auditLogs:
+        return Icons.manage_search_outlined;
+
       case AdminSection.appointmentRevenueReport:
         return Icons.picture_as_pdf_outlined;
 
@@ -134,6 +141,9 @@ extension AdminSectionExtension on AdminSection {
 
       case AdminSection.referenceData:
         return Icons.list_alt;
+
+      case AdminSection.auditLogs:
+        return Icons.manage_search;
 
       case AdminSection.appointmentRevenueReport:
         return Icons.picture_as_pdf;

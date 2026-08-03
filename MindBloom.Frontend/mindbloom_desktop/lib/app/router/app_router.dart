@@ -47,6 +47,8 @@ class AppRouter {
   static const String therapistPerformanceReport =
       '/reports/therapist-performance';
 
+  static const String auditLogs = '/audit-logs';
+
   static const String settings = '/settings';
 
   static const String therapistVerificationDetails =
@@ -114,6 +116,9 @@ class AppRouter {
 
       case referenceData:
         return _adminShellRoute(settings, AdminSection.referenceData);
+
+      case auditLogs:
+        return _adminShellRoute(settings, AdminSection.auditLogs);
 
       case appointmentRevenueReport:
         return _adminShellRoute(

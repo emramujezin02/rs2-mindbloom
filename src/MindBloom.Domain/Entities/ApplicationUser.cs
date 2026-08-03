@@ -27,4 +27,8 @@ public class ApplicationUser : IdentityUser<int>
 
     public ICollection<UserAudit> PerformedUserAudits { get; set; }
         = new List<UserAudit>();
+
+    public ICollection<AdminAuditLog>
+    AdminAuditLogs
+    { get; set; } = new List<AdminAuditLog>();
 }

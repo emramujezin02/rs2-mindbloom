@@ -202,6 +202,10 @@ public static class DependencyInjection
 
         services.AddScoped<IAdminReportService, AdminReportService>();
 
+        services.AddScoped<
+    IAdminAuditService,
+    AdminAuditService>();
+
         return services;
     }
 }

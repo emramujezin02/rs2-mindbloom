@@ -206,6 +206,9 @@ app.UseMiddleware<
     RequestTimingMiddleware>();
 
 app.UseMiddleware<
+    AdminAuditMiddleware>();
+
+app.UseMiddleware<
     GlobalExceptionMiddleware>();
 
 app.UseStatusCodePages(

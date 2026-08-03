@@ -24,6 +24,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<AdminAuditLog> AdminAuditLogs =>
+    Set<AdminAuditLog>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<TherapistDocument>TherapistDocuments { get; set; }
@@ -195,6 +197,98 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany()
             .HasForeignKey(x => x.ClientId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<AdminAuditLog>(
+    entity =>
+    {
+        entity.Property(x =>
+                x.AdminName)
+            .IsRequired()
+            .HasMaxLength(200);
+
+        entity.Property(x =>
+                x.AdminEmail)
+            .IsRequired()
+            .HasMaxLength(256);
+
+        entity.Property(x =>
+                x.Action)
+            .IsRequired()
+            .HasMaxLength(150);
+
+        entity.Property(x =>
+                x.EntityType)
+            .IsRequired()
+            .HasMaxLength(150);
+
+        entity.Property(x =>
+                x.EntityId)
+            .HasMaxLength(100);
+
+        entity.Property(x =>
+                x.HttpMethod)
+            .IsRequired()
+            .HasMaxLength(20);
+
+        entity.Property(x =>
+                x.RequestPath)
+            .IsRequired()
+            .HasMaxLength(1000);
+
+        entity.Property(x =>
+                x.PreviousValues)
+            .HasMaxLength(4000);
+
+        entity.Property(x =>
+                x.NewValues)
+            .HasMaxLength(4000);
+
+        entity.Property(x =>
+                x.IpAddress)
+            .HasMaxLength(100);
+
+        entity.Property(x =>
+                x.CorrelationId)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        entity.Property(x =>
+                x.ResultMessage)
+            .HasMaxLength(1000);
+
+        entity.HasOne(x =>
+                x.AdminUser)
+            .WithMany(x =>
+                x.AdminAuditLogs)
+            .HasForeignKey(x =>
+                x.AdminUserId)
+            .OnDelete(
+                DeleteBehavior.SetNull);
+
+        entity.HasIndex(x =>
+            x.AdminUserId);
+
+        entity.HasIndex(x =>
+            x.Action);
+
+        entity.HasIndex(x =>
+            x.EntityType);
+
+        entity.HasIndex(x =>
+            x.OccurredAtUtc);
+
+        entity.HasIndex(x =>
+            x.IsSuccessful);
+
+        entity.HasIndex(x =>
+            x.CorrelationId);
+
+        entity.HasIndex(x => new
+        {
+            x.EntityType,
+            x.EntityId
+        });
+    });
 
         builder.Entity<ArticleCategory>(entity =>
         {

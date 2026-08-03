@@ -4,7 +4,7 @@ import 'package:mindbloom_desktop/features/reports/presentation/pages/appointmen
 import 'package:mindbloom_desktop/features/reports/presentation/pages/therapist_performance_report_page.dart';
 import 'package:mindbloom_desktop/features/therapist_verification/presentation/pages/therapist_verification_page.dart';
 import 'package:mindbloom_desktop/features/users/presentation/pages/users_page.dart';
-
+import '../../../admin_audit/presentation/pages/admin_audit_page.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../article_management/presentation/pages/article_management_page.dart';
 import '../../../dashboard/presentation/pages/dashboard_page.dart';
@@ -93,6 +93,9 @@ class _AdminShellPageState extends State<AdminShellPage> {
 
       case AdminSection.referenceData:
         return AppRouter.referenceData;
+
+      case AdminSection.auditLogs:
+        return AppRouter.auditLogs;
 
       case AdminSection.appointmentRevenueReport:
         return AppRouter.appointmentRevenueReport;
@@ -295,6 +298,9 @@ class _AdminShellPageState extends State<AdminShellPage> {
           key: ValueKey(AdminSection.referenceData),
         );
 
+      case AdminSection.auditLogs:
+        return const AdminAuditPage();
+
       case AdminSection.appointmentRevenueReport:
         return const AppointmentRevenueReportPage(
           key: ValueKey(AdminSection.appointmentRevenueReport),
@@ -335,6 +341,7 @@ class _AdminSidebar extends StatelessWidget {
     AdminSection.articles,
     AdminSection.workshops,
     AdminSection.referenceData,
+    AdminSection.auditLogs,
   ];
 
   static const List<AdminSection> _reportSections = [
