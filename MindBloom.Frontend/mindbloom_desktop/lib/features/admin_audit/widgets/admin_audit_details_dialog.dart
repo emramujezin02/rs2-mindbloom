@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-import '../../data/models/admin_audit_log_model.dart';
+import 'package:mindbloom_desktop/features/admin_audit/data/models/admin_audit_log_model.dart';
 
 class AdminAuditDetailsDialog extends StatelessWidget {
   final AdminAuditLogModel audit;

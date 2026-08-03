@@ -77,9 +77,9 @@ public class UserProfileService : IUserProfileService
     }
 
     public async Task<UserProfileDto>
-    UpdateCurrentUserProfileAsync(
-        int userId,
-        UpdateUserProfileDto request)
+     UpdateCurrentUserProfileAsync(
+         int userId,
+         UpdateUserProfileDto request)
     {
         ValidateProfileRequest(request);
 
@@ -99,12 +99,6 @@ public class UserProfileService : IUserProfileService
                     x.UserId == userId &&
                     !x.IsDeleted);
 
-        if (client == null)
-        {
-            throw new NotFoundException(
-                "Client profile not found.");
-        }
-
         user.FirstName =
             request.FirstName.Trim();
 
@@ -120,27 +114,39 @@ public class UserProfileService : IUserProfileService
         user.DateOfBirth =
             request.DateOfBirth.Date;
 
-        client.Location =
-            NormalizeNullableText(
-                request.Location);
+        /*
+         * Client-specific preferences are updated
+         * only when the authenticated user actually
+         * has a Client profile.
+         *
+         * Administrator and therapist accounts can
+         * still update their basic ApplicationUser
+         * profile without requiring a Client entity.
+         */
+        if (client != null)
+        {
+            client.Location =
+                NormalizeNullableText(
+                    request.Location);
 
-        client.PreferredTherapistGender =
-            NormalizeNullableText(
-                request.PreferredTherapistGender);
+            client.PreferredTherapistGender =
+                NormalizeNullableText(
+                    request.PreferredTherapistGender);
 
-        client.PreferredSessionType =
-            NormalizeNullableText(
-                request.PreferredSessionType);
+            client.PreferredSessionType =
+                NormalizeNullableText(
+                    request.PreferredSessionType);
 
-        client.MinimumPricePerSession =
-            request.MinimumPricePerSession;
+            client.MinimumPricePerSession =
+                request.MinimumPricePerSession;
 
-        client.MaximumPricePerSession =
-            request.MaximumPricePerSession;
+            client.MaximumPricePerSession =
+                request.MaximumPricePerSession;
 
-        client.PreferredLanguages =
-            NormalizeLanguages(
-                request.PreferredLanguages);
+            client.PreferredLanguages =
+                NormalizeLanguages(
+                    request.PreferredLanguages);
+        }
 
         var updateResult =
             await _userManager.UpdateAsync(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
+import 'package:mindbloom_desktop/features/admin_audit/widgets/admin_audit_details_dialog.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../core/widgets/admin_table_action_menu.dart';
@@ -9,7 +10,6 @@ import '../../../../core/widgets/admin_table_state.dart';
 import '../../../../core/widgets/app_error_banner.dart';
 import '../../data/models/admin_audit_log_model.dart';
 import '../viewmodels/admin_audit_viewmodel.dart';
-import '../widgets/admin_audit_details_dialog.dart';
 
 class AdminAuditPage extends StatefulWidget {
   const AdminAuditPage({super.key});

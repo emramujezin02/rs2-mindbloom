@@ -376,29 +376,80 @@ public class AuthService : IAuthService
     }
 
     public async Task ChangePasswordAsync(
-    int userId,
-    ChangePasswordDto request)
+     int userId,
+     ChangePasswordDto request)
     {
         var user =
             await _userManager
-                .FindByIdAsync(userId.ToString());
+                .FindByIdAsync(
+                    userId.ToString());
 
         if (user == null)
         {
-            throw new NotFoundException("User not found.");
+            throw new NotFoundException(
+                "User not found.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                request.CurrentPassword))
+        {
+            throw new BadRequestException(
+                "Current password is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                request.NewPassword))
+        {
+            throw new BadRequestException(
+                "New password is required.");
+        }
+
+        if (request.CurrentPassword ==
+            request.NewPassword)
+        {
+            throw new BadRequestException(
+                "New password must be different from the current password.");
         }
 
         var result =
-            await _userManager.ChangePasswordAsync(
-                user,
-                request.CurrentPassword,
-                request.NewPassword);
+            await _userManager
+                .ChangePasswordAsync(
+                    user,
+                    request.CurrentPassword,
+                    request.NewPassword);
 
         if (!result.Succeeded)
         {
-            throw new Exception(
-                result.Errors.First().Description);
+            var errorMessage =
+                result.Errors
+                    .Select(x =>
+                        x.Description)
+                    .FirstOrDefault();
+
+            throw new BadRequestException(
+                string.IsNullOrWhiteSpace(
+                    errorMessage)
+                    ? "Password could not be changed."
+                    : errorMessage);
         }
+
+        var activeRefreshTokens =
+            await _context.RefreshTokens
+                .Where(x =>
+                    x.UserId == userId &&
+                    !x.IsRevoked)
+                .ToListAsync();
+
+        foreach (var refreshToken
+                 in activeRefreshTokens)
+        {
+            refreshToken.IsRevoked = true;
+
+            refreshToken.UpdatedAtUtc =
+                DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync();
     }
 
     public async Task SendVerificationEmailAsync(

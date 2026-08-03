@@ -206,6 +206,8 @@ public static class DependencyInjection
     IAdminAuditService,
     AdminAuditService>();
 
+        services.AddScoped<IUserSettingsService, UserSettingsService>();
+
         return services;
     }
 }

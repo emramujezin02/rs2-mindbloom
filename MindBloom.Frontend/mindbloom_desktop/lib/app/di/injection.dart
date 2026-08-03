@@ -13,6 +13,10 @@ import '../../features/membership_management/data/services/membership_management
 import '../../features/membership_management/presentation/viewmodels/membership_management_details_viewmodel.dart';
 import '../../features/membership_management/presentation/viewmodels/membership_management_viewmodel.dart';
 
+import '../../features/settings/data/repositories/admin_settings_repository.dart';
+import '../../features/settings/data/services/admin_settings_api_service.dart';
+import '../../features/settings/presentation/viewmodels/admin_settings_viewmodel.dart';
+
 import '../../features/appointment_management/data/repositories/appointment_management_repository.dart';
 import '../../features/appointment_management/data/services/appointment_management_api_service.dart';
 import '../../features/appointment_management/presentation/viewmodels/appointment_management_details_viewmodel.dart';
@@ -307,5 +311,13 @@ class AppInjection {
     final repository = AdminAuditRepository(apiService: apiService);
 
     return AdminAuditViewModel(repository: repository);
+  }
+
+  static AdminSettingsViewModel createAdminSettingsViewModel() {
+    final apiService = AdminSettingsApiService(apiClient: apiClient);
+
+    final repository = AdminSettingsRepository(apiService: apiService);
+
+    return AdminSettingsViewModel(repository: repository);
   }
 }

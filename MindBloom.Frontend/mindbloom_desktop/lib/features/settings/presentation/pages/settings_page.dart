@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/di/injection.dart';
+import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_error_banner.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
+import '../viewmodels/admin_settings_viewmodel.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -10,7 +14,17 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  late final AdminSettingsViewModel _viewModel;
+
+  final GlobalKey<FormState> _profileFormKey = GlobalKey<FormState>();
+
   final GlobalKey<FormState> _passwordFormKey = GlobalKey<FormState>();
+
+  final TextEditingController _firstNameController = TextEditingController();
+
+  final TextEditingController _lastNameController = TextEditingController();
+
+  final TextEditingController _phoneController = TextEditingController();
 
   final TextEditingController _currentPasswordController =
       TextEditingController();
@@ -20,7 +34,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  bool _isSaving = false;
+  bool _profileInitialized = false;
 
   bool _obscureCurrentPassword = true;
 
@@ -28,15 +42,90 @@ class _SettingsPageState extends State<SettingsPage> {
 
   bool _obscureConfirmPassword = true;
 
-  String? _errorMessage;
+  @override
+  void initState() {
+    super.initState();
+
+    _viewModel = AppInjection.createAdminSettingsViewModel();
+
+    _viewModel.addListener(_onViewModelChanged);
+
+    _viewModel.initialize();
+  }
 
   @override
   void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
+
+    _viewModel.dispose();
+
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _phoneController.dispose();
+
     _currentPasswordController.dispose();
+
     _newPasswordController.dispose();
+
     _confirmPasswordController.dispose();
 
     super.dispose();
+  }
+
+  void _onViewModelChanged() {
+    if (!mounted) {
+      return;
+    }
+
+    final profile = _viewModel.profile;
+
+    if (!_profileInitialized && profile != null) {
+      _profileInitialized = true;
+
+      _firstNameController.text = profile.firstName;
+
+      _lastNameController.text = profile.lastName;
+
+      _phoneController.text = profile.phoneNumber;
+    }
+
+    setState(() {});
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_profileFormKey.currentState!.validate()) {
+      return;
+    }
+
+    final success = await _viewModel.updateProfile(
+      firstName: _firstNameController.text,
+      lastName: _lastNameController.text,
+      phoneNumber: _phoneController.text,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (!success) {
+      return;
+    }
+
+    final profile = _viewModel.profile;
+
+    if (profile != null) {
+      _firstNameController.text = profile.firstName;
+
+      _lastNameController.text = profile.lastName;
+
+      _phoneController.text = profile.phoneNumber;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Profil administratora je uspješno ažuriran.'),
+      ),
+    );
   }
 
   Future<void> _changePassword() async {
@@ -44,179 +133,548 @@ class _SettingsPageState extends State<SettingsPage> {
       return;
     }
 
-    setState(() {
-      _isSaving = true;
-      _errorMessage = null;
-    });
+    final success = await _viewModel.changePassword(
+      currentPassword: _currentPasswordController.text,
+      newPassword: _newPasswordController.text,
+    );
 
-    try {
-      final session = SessionScope.of(context);
+    if (!mounted) {
+      return;
+    }
 
-      await session.authRepository.changePassword(
-        currentPassword: _currentPasswordController.text,
-        newPassword: _newPasswordController.text,
-      );
+    if (!success) {
+      return;
+    }
 
-      if (!mounted) {
-        return;
-      }
+    _currentPasswordController.clear();
 
-      _currentPasswordController.clear();
-      _newPasswordController.clear();
-      _confirmPasswordController.clear();
+    _newPasswordController.clear();
 
+    _confirmPasswordController.clear();
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Lozinka je promijenjena'),
+          content: const Text(
+            'Lozinka je uspješno promijenjena. '
+            'Radi sigurnosti ćete biti odjavljeni '
+            'i potrebno je ponovo se prijaviti.',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('U redu'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    /*
+     * Backend je nakon promjene lozinke
+     * opozvao refresh tokene.
+     *
+     * Ovdje uklanjamo i trenutnu lokalnu
+     * desktop sesiju.
+     */
+    final session = SessionScope.of(context);
+
+    await session.logout();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(AppRouter.login, (route) => false);
+  }
+
+  Future<void> _changeNotifications(bool value) async {
+    final previousValue = _viewModel.accountSettings?.notificationsEnabled;
+
+    final success = await _viewModel.setNotificationsEnabled(value);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password changed successfully.')),
+        SnackBar(
+          content: Text(
+            value
+                ? 'Notifikacije su uključene.'
+                : 'Notifikacije su isključene.',
+          ),
+        ),
       );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
 
-      setState(() {
-        _errorMessage = _normalizeError(error);
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
+      return;
+    }
+
+    if (previousValue != null) {
+      setState(() {});
     }
   }
 
-  String _normalizeError(Object error) {
-    final message = error.toString().replaceFirst('Exception: ', '').trim();
+  Future<void> _logout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Odjava'),
+          content: const Text(
+            'Da li ste sigurni da se želite '
+            'odjaviti iz MindBloom '
+            'administratorske aplikacije?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Odustani'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text('Odjavi se'),
+            ),
+          ],
+        );
+      },
+    );
 
-    if (message.isEmpty) {
-      return 'Password could not be changed.';
+    if (confirmed != true || !mounted) {
+      return;
     }
 
-    return message;
+    final session = SessionScope.of(context);
+
+    await session.logout();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(AppRouter.login, (route) => false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final session = SessionScope.of(context);
+    if (_viewModel.isLoading && _viewModel.profile == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-    final currentUser = session.currentUser;
+    if (_viewModel.profile == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 60,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _viewModel.errorMessage ??
+                    'Postavke administratora nije moguće učitati.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: _viewModel.isLoading
+                    ? null
+                    : () {
+                        _profileInitialized = false;
 
-    final email = currentUser?.email.trim() ?? '';
-
-    final username = currentUser?.username.trim() ?? '';
-
-    final role = currentUser?.role.trim() ?? 'Admin';
+                        _viewModel.initialize();
+                      },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Pokušaj ponovo'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return SingleChildScrollView(
       key: const PageStorageKey<String>('admin-settings'),
       padding: const EdgeInsets.all(28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Settings',
-            style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Review your administrator account and update security settings.',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 24),
-          _buildAccountCard(
-            context: context,
-            email: email,
-            username: username,
-            role: role,
-          ),
-          const SizedBox(height: 24),
-          _buildPasswordCard(context),
-        ],
-      ),
-    );
-  }
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeader(),
 
-  Widget _buildAccountCard({
-    required BuildContext context,
-    required String email,
-    required String username,
-    required String role,
-  }) {
-    final displayName = username.isEmpty ? email : username;
-
-    final initial = displayName.isEmpty
-        ? 'A'
-        : displayName.substring(0, 1).toUpperCase();
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxWidth < 650;
-
-            final avatar = CircleAvatar(
-              radius: 38,
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            );
-
-            final details = Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Administrator account',
-                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                _AccountDetail(
-                  icon: Icons.person_outline,
-                  label: 'Username',
-                  value: username.isEmpty ? 'Not provided' : username,
-                ),
-                const SizedBox(height: 12),
-                _AccountDetail(
-                  icon: Icons.email_outlined,
-                  label: 'Email',
-                  value: email.isEmpty ? 'Not provided' : email,
-                ),
-                const SizedBox(height: 12),
-                _AccountDetail(
-                  icon: Icons.admin_panel_settings_outlined,
-                  label: 'Role',
-                  value: role.isEmpty ? 'Admin' : role,
+              if (_viewModel.errorMessage != null) ...[
+                const SizedBox(height: 18),
+                AppErrorBanner(
+                  message: _viewModel.errorMessage!,
+                  onDismiss: _viewModel.clearError,
                 ),
               ],
-            );
 
-            if (compact) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [avatar, const SizedBox(height: 20), details],
-              );
-            }
+              const SizedBox(height: 24),
 
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                avatar,
-                const SizedBox(width: 24),
-                Expanded(child: details),
-              ],
-            );
-          },
+              _buildProfileCard(),
+
+              const SizedBox(height: 20),
+
+              _buildNotificationCard(),
+
+              const SizedBox(height: 20),
+
+              _buildPasswordCard(),
+
+              const SizedBox(height: 20),
+
+              _buildApplicationCard(),
+
+              const SizedBox(height: 20),
+
+              _buildLogoutCard(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildPasswordCard(BuildContext context) {
+  Widget _buildHeader() {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Postavke',
+          style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 6),
+        Text(
+          'Upravljajte administratorskim profilom, '
+          'sigurnošću naloga i osnovnim postavkama aplikacije.',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileCard() {
+    final profile = _viewModel.profile!;
+
+    final session = SessionScope.of(context);
+
+    final role = session.currentUser?.role.trim().isNotEmpty == true
+        ? session.currentUser!.role
+        : 'Admin';
+
+    final initial = profile.fullName.trim().isEmpty
+        ? 'A'
+        : profile.fullName.trim()[0].toUpperCase();
+
     return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _profileFormKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 38,
+                    child: Text(
+                      initial,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 18),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Administratorski profil',
+                          style: TextStyle(
+                            fontSize: 21,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          profile.email,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Chip(
+                          avatar: const Icon(
+                            Icons.admin_panel_settings_outlined,
+                            size: 18,
+                          ),
+                          label: Text(role),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 26),
+
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 700;
+
+                  final firstName = TextFormField(
+                    controller: _firstNameController,
+                    enabled: !_viewModel.isSavingProfile,
+                    maxLength: 50,
+                    decoration: const InputDecoration(
+                      labelText: 'Ime',
+                      prefixIcon: Icon(Icons.person_outline),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      final normalized = value?.trim() ?? '';
+
+                      if (normalized.isEmpty) {
+                        return 'Ime je obavezno.';
+                      }
+
+                      if (normalized.length < 2) {
+                        return 'Ime mora imati najmanje 2 karaktera.';
+                      }
+
+                      return null;
+                    },
+                  );
+
+                  final lastName = TextFormField(
+                    controller: _lastNameController,
+                    enabled: !_viewModel.isSavingProfile,
+                    maxLength: 50,
+                    decoration: const InputDecoration(
+                      labelText: 'Prezime',
+                      prefixIcon: Icon(Icons.badge_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      final normalized = value?.trim() ?? '';
+
+                      if (normalized.isEmpty) {
+                        return 'Prezime je obavezno.';
+                      }
+
+                      if (normalized.length < 2) {
+                        return 'Prezime mora imati najmanje 2 karaktera.';
+                      }
+
+                      return null;
+                    },
+                  );
+
+                  if (compact) {
+                    return Column(
+                      children: [
+                        firstName,
+                        const SizedBox(height: 12),
+                        lastName,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: firstName),
+                      const SizedBox(width: 16),
+                      Expanded(child: lastName),
+                    ],
+                  );
+                },
+              ),
+
+              const SizedBox(height: 12),
+
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: TextFormField(
+                  controller: _phoneController,
+                  enabled: !_viewModel.isSavingProfile,
+                  maxLength: 20,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Broj telefona',
+                    hintText: '+387 61 123 456',
+                    prefixIcon: Icon(Icons.phone_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final phone = value?.trim() ?? '';
+
+                    if (phone.isEmpty) {
+                      return null;
+                    }
+
+                    if (phone.length < 7 || phone.length > 20) {
+                      return 'Broj telefona mora imati između 7 i 20 karaktera.';
+                    }
+
+                    final valid = RegExp(r'^\+?[0-9 \-]+$').hasMatch(phone);
+
+                    if (!valid) {
+                      return 'Broj telefona sadrži nedozvoljene karaktere.';
+                    }
+
+                    return null;
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              _ReadOnlyInfoRow(
+                icon: Icons.email_outlined,
+                label: 'Email',
+                value: profile.email,
+              ),
+
+              const SizedBox(height: 12),
+
+              _ReadOnlyInfoRow(
+                icon: Icons.admin_panel_settings_outlined,
+                label: 'Uloga',
+                value: role,
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                'Uloga administratora se ne može mijenjati kroz postavke naloga.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+
+              const SizedBox(height: 22),
+
+              FilledButton.icon(
+                onPressed: _viewModel.isSavingProfile ? null : _saveProfile,
+                icon: _viewModel.isSavingProfile
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined),
+                label: Text(
+                  _viewModel.isSavingProfile
+                      ? 'Spremanje...'
+                      : 'Sačuvaj profil',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationCard() {
+    final settings = _viewModel.accountSettings;
+
+    if (settings == null) {
+      return Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Row(
+            children: [
+              const Icon(Icons.notifications_outlined),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Text('Postavke notifikacija trenutno nisu dostupne.'),
+              ),
+              IconButton(
+                tooltip: 'Osvježi',
+                onPressed: _viewModel.isLoading ? null : _viewModel.initialize,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Notifikacije',
+              style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Odaberite da li želite primati '
+              'notifikacije povezane sa administratorskim nalogom.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: const Icon(Icons.notifications_active_outlined),
+              title: const Text('Omogući notifikacije'),
+              subtitle: Text(
+                settings.notificationsEnabled
+                    ? 'Notifikacije su trenutno uključene.'
+                    : 'Notifikacije su trenutno isključene.',
+              ),
+              value: settings.notificationsEnabled,
+              onChanged: _viewModel.isSavingNotifications
+                  ? null
+                  : _changeNotifications,
+            ),
+            if (_viewModel.isSavingNotifications)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: LinearProgressIndicator(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordCard() {
+    return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -225,12 +683,13 @@ class _SettingsPageState extends State<SettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Change password',
+                'Promjena lozinke',
                 style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               Text(
-                'Use a strong password that you do not use for other accounts.',
+                'Za promjenu lozinke morate unijeti '
+                'trenutnu lozinku i potvrditi novu.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 22),
@@ -242,12 +701,15 @@ class _SettingsPageState extends State<SettingsPage> {
                     TextFormField(
                       controller: _currentPasswordController,
                       obscureText: _obscureCurrentPassword,
-                      enabled: !_isSaving,
+                      enabled: !_viewModel.isChangingPassword,
                       decoration: InputDecoration(
-                        labelText: 'Current password',
+                        labelText: 'Trenutna lozinka',
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
+                          tooltip: _obscureCurrentPassword
+                              ? 'Prikaži lozinku'
+                              : 'Sakrij lozinku',
                           onPressed: () {
                             setState(() {
                               _obscureCurrentPassword =
@@ -256,29 +718,34 @@ class _SettingsPageState extends State<SettingsPage> {
                           },
                           icon: Icon(
                             _obscureCurrentPassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                           ),
                         ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Current password is required.';
+                          return 'Trenutna lozinka je obavezna.';
                         }
 
                         return null;
                       },
                     ),
+
                     const SizedBox(height: 16),
+
                     TextFormField(
                       controller: _newPasswordController,
                       obscureText: _obscureNewPassword,
-                      enabled: !_isSaving,
+                      enabled: !_viewModel.isChangingPassword,
                       decoration: InputDecoration(
-                        labelText: 'New password',
-                        prefixIcon: const Icon(Icons.password),
+                        labelText: 'Nova lozinka',
+                        prefixIcon: const Icon(Icons.password_outlined),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
+                          tooltip: _obscureNewPassword
+                              ? 'Prikaži lozinku'
+                              : 'Sakrij lozinku',
                           onPressed: () {
                             setState(() {
                               _obscureNewPassword = !_obscureNewPassword;
@@ -286,37 +753,42 @@ class _SettingsPageState extends State<SettingsPage> {
                           },
                           icon: Icon(
                             _obscureNewPassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                           ),
                         ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'New password is required.';
+                          return 'Nova lozinka je obavezna.';
                         }
 
-                        if (value.length < 8) {
-                          return 'New password must contain at least 8 characters.';
+                        if (value.length < 6) {
+                          return 'Nova lozinka mora imati najmanje 6 karaktera.';
                         }
 
                         if (value == _currentPasswordController.text) {
-                          return 'New password must differ from the current password.';
+                          return 'Nova lozinka mora biti različita od trenutne.';
                         }
 
                         return null;
                       },
                     ),
+
                     const SizedBox(height: 16),
+
                     TextFormField(
                       controller: _confirmPasswordController,
                       obscureText: _obscureConfirmPassword,
-                      enabled: !_isSaving,
+                      enabled: !_viewModel.isChangingPassword,
                       decoration: InputDecoration(
-                        labelText: 'Confirm new password',
-                        prefixIcon: const Icon(Icons.password),
+                        labelText: 'Potvrdi novu lozinku',
+                        prefixIcon: const Icon(Icons.password_outlined),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
+                          tooltip: _obscureConfirmPassword
+                              ? 'Prikaži lozinku'
+                              : 'Sakrij lozinku',
                           onPressed: () {
                             setState(() {
                               _obscureConfirmPassword =
@@ -325,65 +797,38 @@ class _SettingsPageState extends State<SettingsPage> {
                           },
                           icon: Icon(
                             _obscureConfirmPassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                           ),
                         ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Password confirmation is required.';
+                          return 'Potvrda nove lozinke je obavezna.';
                         }
 
                         if (value != _newPasswordController.text) {
-                          return 'Passwords do not match.';
+                          return 'Lozinke se ne podudaraju.';
                         }
 
                         return null;
                       },
                       onFieldSubmitted: (_) {
-                        if (!_isSaving) {
+                        if (!_viewModel.isChangingPassword) {
                           _changePassword();
                         }
                       },
                     ),
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.errorContainer,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onErrorContainer,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                _errorMessage!,
-                                style: TextStyle(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onErrorContainer,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+
                     const SizedBox(height: 20),
+
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: ElevatedButton.icon(
-                        onPressed: _isSaving ? null : _changePassword,
-                        icon: _isSaving
+                      child: FilledButton.icon(
+                        onPressed: _viewModel.isChangingPassword
+                            ? null
+                            : _changePassword,
+                        icon: _viewModel.isChangingPassword
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
@@ -391,9 +836,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Icon(Icons.save),
+                            : const Icon(Icons.lock_reset),
                         label: Text(
-                          _isSaving ? 'Saving...' : 'Change password',
+                          _viewModel.isChangingPassword
+                              ? 'Promjena...'
+                              : 'Promijeni lozinku',
                         ),
                       ),
                     ),
@@ -406,16 +853,87 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
   }
+
+  Widget _buildApplicationCard() {
+    final info = _viewModel.applicationInfo;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Informacije o aplikaciji',
+              style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 18),
+            _ReadOnlyInfoRow(
+              icon: Icons.info_outline,
+              label: 'Verzija aplikacije',
+              value: info?.displayVersion ?? '—',
+            ),
+            if (info?.environment != null) ...[
+              const SizedBox(height: 14),
+              _ReadOnlyInfoRow(
+                icon: Icons.code_outlined,
+                label: 'Okruženje',
+                value: info!.environment!,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Informacija o okruženju prikazuje se samo u development/debug modu.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoutCard() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Odjava',
+                    style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 6),
+                  Text('Završite trenutnu administratorsku sesiju.'),
+                ],
+              ),
+            ),
+            const SizedBox(width: 20),
+            OutlinedButton.icon(
+              onPressed: _viewModel.isBusy ? null : _logout,
+              icon: const Icon(Icons.logout),
+              label: const Text('Odjavi se'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _AccountDetail extends StatelessWidget {
+class _ReadOnlyInfoRow extends StatelessWidget {
   final IconData icon;
 
   final String label;
 
   final String value;
 
-  const _AccountDetail({
+  const _ReadOnlyInfoRow({
     required this.icon,
     required this.label,
     required this.value,
@@ -433,9 +951,9 @@ class _AccountDetail extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: Theme.of(context).textTheme.bodySmall),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               SelectableText(
-                value,
+                value.trim().isEmpty ? '—' : value,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ],
