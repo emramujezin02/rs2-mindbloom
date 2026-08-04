@@ -1,30 +1,48 @@
 ﻿using Microsoft.Extensions.Options;
-using MindBloom.API.Messaging.Configuration;
+using MindBloom.Infrastructure.Messaging.RabbitMq;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace MindBloom.API.Messaging.RabbitMq;
 
-public sealed class RabbitMqConnectionManager : IAsyncDisposable
+public sealed class RabbitMqConnectionManager
+    : IAsyncDisposable
 {
-    private readonly RabbitMqOptions _options;
-    private readonly ILogger<RabbitMqConnectionManager> _logger;
+    private readonly RabbitMqOptions
+        _options;
 
-    private readonly SemaphoreSlim _connectionLock = new(1, 1);
+    private readonly RabbitMqConnectionFactory
+        _connectionFactory;
+
+    private readonly ILogger<RabbitMqConnectionManager>
+        _logger;
+
+    private readonly SemaphoreSlim
+        _connectionLock =
+            new(1, 1);
 
     private IConnection? _connection;
+
     private bool _disposed;
 
     public RabbitMqConnectionManager(
         IOptions<RabbitMqOptions> options,
+        RabbitMqConnectionFactory connectionFactory,
         ILogger<RabbitMqConnectionManager> logger)
     {
-        _options = options.Value;
-        _logger = logger;
+        _options =
+            options.Value;
+
+        _connectionFactory =
+            connectionFactory;
+
+        _logger =
+            logger;
     }
 
-    public async Task<IConnection> GetConnectionAsync(
-        CancellationToken cancellationToken = default)
+    public async Task<IConnection>
+        GetConnectionAsync(
+            CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(
             _disposed,
@@ -35,7 +53,8 @@ public sealed class RabbitMqConnectionManager : IAsyncDisposable
             return _connection;
         }
 
-        await _connectionLock.WaitAsync(cancellationToken);
+        await _connectionLock.WaitAsync(
+            cancellationToken);
 
         try
         {
@@ -46,68 +65,112 @@ public sealed class RabbitMqConnectionManager : IAsyncDisposable
 
             if (_connection is not null)
             {
-                await DisposeConnectionAsync(_connection);
+                await DisposeConnectionAsync(
+                    _connection);
+
                 _connection = null;
             }
 
-            var factory = new ConnectionFactory
-            {
-                HostName = _options.HostName,
-                Port = _options.Port,
-                UserName = _options.UserName,
-                Password = _options.Password,
-                VirtualHost = _options.VirtualHost,
+            _connection =
+                await CreateConnectionWithRetryAsync(
+                    cancellationToken);
 
-                AutomaticRecoveryEnabled =
-                    _options.AutomaticRecoveryEnabled,
-
-                TopologyRecoveryEnabled = true,
-
-                NetworkRecoveryInterval = TimeSpan.FromSeconds(
-                    _options.NetworkRecoveryIntervalSeconds),
-
-                RequestedHeartbeat = TimeSpan.FromSeconds(
-                    _options.RequestedHeartbeatSeconds),
-
-                ClientProvidedName =
-                    _options.ClientProvidedName
-            };
-
-            _logger.LogInformation(
-                "Connecting to RabbitMQ at {HostName}:{Port}, virtual host {VirtualHost}.",
-                _options.HostName,
-                _options.Port,
-                _options.VirtualHost);
-
-            _connection = await factory.CreateConnectionAsync(
-                _options.ClientProvidedName,
-                cancellationToken);
-
-            _connection.ConnectionShutdownAsync += OnConnectionShutdownAsync;
-
-            _connection.ConnectionRecoveryErrorAsync +=
-                OnConnectionRecoveryErrorAsync;
-
-            _connection.RecoverySucceededAsync +=
-                OnRecoverySucceededAsync;
-
-            _logger.LogInformation(
-                "RabbitMQ connection established successfully.");
+            SubscribeToConnectionEvents(
+                _connection);
 
             return _connection;
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(
-                exception,
-                "RabbitMQ connection could not be established.");
-
-            throw;
         }
         finally
         {
             _connectionLock.Release();
         }
+    }
+
+    private async Task<IConnection>
+        CreateConnectionWithRetryAsync(
+            CancellationToken cancellationToken)
+    {
+        var factory =
+            _connectionFactory.Create(
+                _options.PublisherClientName);
+
+        Exception? lastException = null;
+
+        for (var attempt = 1;
+             attempt <=
+             _options.ConnectionRetryCount;
+             attempt++)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            try
+            {
+                _logger.LogInformation(
+                    "Connecting API publisher to RabbitMQ at {HostName}:{Port}. Attempt {Attempt}/{MaximumAttempts}.",
+                    _options.HostName,
+                    _options.Port,
+                    attempt,
+                    _options.ConnectionRetryCount);
+
+                var connection =
+                    await factory.CreateConnectionAsync(
+                        _options
+                            .PublisherClientName,
+                        cancellationToken);
+
+                _logger.LogInformation(
+                    "RabbitMQ API publisher connection established successfully.");
+
+                return connection;
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken
+                    .IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                lastException =
+                    exception;
+
+                _logger.LogWarning(
+                    exception,
+                    "RabbitMQ connection attempt {Attempt}/{MaximumAttempts} failed.",
+                    attempt,
+                    _options.ConnectionRetryCount);
+
+                if (attempt >=
+                    _options.ConnectionRetryCount)
+                {
+                    break;
+                }
+
+                await Task.Delay(
+                    TimeSpan.FromSeconds(
+                        _options
+                            .ConnectionRetryDelaySeconds),
+                    cancellationToken);
+            }
+        }
+
+        throw new InvalidOperationException(
+            "RabbitMQ connection could not be established after all configured retry attempts.",
+            lastException);
+    }
+
+    private void SubscribeToConnectionEvents(
+        IConnection connection)
+    {
+        connection.ConnectionShutdownAsync +=
+            OnConnectionShutdownAsync;
+
+        connection.ConnectionRecoveryErrorAsync +=
+            OnConnectionRecoveryErrorAsync;
+
+        connection.RecoverySucceededAsync +=
+            OnRecoverySucceededAsync;
     }
 
     private Task OnConnectionShutdownAsync(
@@ -143,20 +206,22 @@ public sealed class RabbitMqConnectionManager : IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    private static async Task DisposeConnectionAsync(
-        IConnection connection)
+    private static async Task
+        DisposeConnectionAsync(
+            IConnection connection)
     {
         try
         {
             if (connection.IsOpen)
             {
                 await connection.CloseAsync(
-                    cancellationToken: CancellationToken.None);
+                    cancellationToken:
+                        CancellationToken.None);
             }
         }
         catch
         {
-            // Dispose still needs to be attempted.
+            // Dispose must still be attempted.
         }
 
         await connection.DisposeAsync();
@@ -177,13 +242,16 @@ public sealed class RabbitMqConnectionManager : IAsyncDisposable
         {
             if (_connection is not null)
             {
-                await DisposeConnectionAsync(_connection);
+                await DisposeConnectionAsync(
+                    _connection);
+
                 _connection = null;
             }
         }
         finally
         {
             _connectionLock.Release();
+
             _connectionLock.Dispose();
         }
     }

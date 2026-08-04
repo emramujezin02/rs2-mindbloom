@@ -2,8 +2,8 @@
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using MindBloom.Application.Common.Interfaces;
+using MindBloom.Infrastructure.Messaging.RabbitMq;
 using MindBloom.Messaging.Contracts.Notifications;
-using MindBloom.NotificationsWorker.Configuration;
 using MindBloom.NotificationsWorker.Messaging;
 using MindBloom.NotificationsWorker.Services;
 using RabbitMQ.Client;
@@ -15,37 +15,63 @@ public sealed class EmailNotificationConsumer :
     BackgroundService,
     IAsyncDisposable
 {
-    private static readonly JsonSerializerOptions JsonOptions =
-        new(JsonSerializerDefaults.Web)
-        {
-            PropertyNameCaseInsensitive = true
-        };
+    private static readonly JsonSerializerOptions
+        JsonOptions =
+            new(JsonSerializerDefaults.Web)
+            {
+                PropertyNameCaseInsensitive =
+                    true
+            };
 
-    private readonly RabbitMqConsumerOptions _options;
-    private readonly IEmailService _emailService;
-    private readonly EmailMessageBodyBuilder _bodyBuilder;
-    private readonly ILogger<EmailNotificationConsumer> _logger;
+    private readonly RabbitMqOptions
+        _options;
+
+    private readonly RabbitMqConnectionFactory
+        _connectionFactory;
+
+    private readonly RabbitMqTopology
+        _topology;
+
+    private readonly IEmailService
+        _emailService;
+
+    private readonly EmailMessageBodyBuilder
+        _bodyBuilder;
+
+    private readonly ILogger<EmailNotificationConsumer>
+        _logger;
 
     private IConnection? _connection;
+
     private IChannel? _channel;
-    private RabbitMqTopology? _topology;
+
     private bool _disposed;
 
     public EmailNotificationConsumer(
-        IOptions<RabbitMqConsumerOptions> options,
+        IOptions<RabbitMqOptions> options,
+        RabbitMqConnectionFactory connectionFactory,
+        RabbitMqTopology topology,
         IEmailService emailService,
         EmailMessageBodyBuilder bodyBuilder,
-        ILogger<EmailNotificationConsumer> logger,
-        ILogger<RabbitMqTopology> topologyLogger)
+        ILogger<EmailNotificationConsumer> logger)
     {
-        _options = options.Value;
-        _emailService = emailService;
-        _bodyBuilder = bodyBuilder;
-        _logger = logger;
+        _options =
+            options.Value;
 
-        _topology = new RabbitMqTopology(
-            _options,
-            topologyLogger);
+        _connectionFactory =
+            connectionFactory;
+
+        _topology =
+            topology;
+
+        _emailService =
+            emailService;
+
+        _bodyBuilder =
+            bodyBuilder;
+
+        _logger =
+            logger;
     }
 
     protected override async Task ExecuteAsync(
@@ -53,19 +79,27 @@ public sealed class EmailNotificationConsumer :
     {
         try
         {
-            await InitializeRabbitMqAsync(stoppingToken);
+            await InitializeRabbitMqAsync(
+                stoppingToken);
 
             var consumer =
-                new AsyncEventingBasicConsumer(_channel!);
+                new AsyncEventingBasicConsumer(
+                    _channel!);
 
-            consumer.ReceivedAsync += HandleMessageAsync;
+            consumer.ReceivedAsync +=
+                HandleMessageAsync;
 
             var consumerTag =
-                await _channel!.BasicConsumeAsync(
-                    queue: _options.EmailQueue,
-                    autoAck: false,
-                    consumer: consumer,
-                    cancellationToken: stoppingToken);
+                await _channel!
+                    .BasicConsumeAsync(
+                        queue:
+                            _options.EmailQueue,
+                        autoAck:
+                            false,
+                        consumer:
+                            consumer,
+                        cancellationToken:
+                            stoppingToken);
 
             _logger.LogInformation(
                 "Notifications worker started consuming queue {Queue}. Consumer tag: {ConsumerTag}. Maximum retries: {MaximumRetryCount}.",
@@ -78,7 +112,8 @@ public sealed class EmailNotificationConsumer :
                 stoppingToken);
         }
         catch (OperationCanceledException)
-            when (stoppingToken.IsCancellationRequested)
+            when (stoppingToken
+                .IsCancellationRequested)
         {
             _logger.LogInformation(
                 "Notifications worker is stopping.");
@@ -96,75 +131,134 @@ public sealed class EmailNotificationConsumer :
     private async Task InitializeRabbitMqAsync(
         CancellationToken cancellationToken)
     {
-        var factory = new ConnectionFactory
-        {
-            HostName = _options.HostName,
-            Port = _options.Port,
-            UserName = _options.UserName,
-            Password = _options.Password,
-            VirtualHost = _options.VirtualHost,
-
-            ClientProvidedName =
-                _options.ClientProvidedName,
-
-            AutomaticRecoveryEnabled =
-                _options.AutomaticRecoveryEnabled,
-
-            TopologyRecoveryEnabled = true,
-
-            NetworkRecoveryInterval =
-                TimeSpan.FromSeconds(
-                    _options.NetworkRecoveryIntervalSeconds),
-
-            RequestedHeartbeat =
-                TimeSpan.FromSeconds(
-                    _options.RequestedHeartbeatSeconds),
-
-            ConsumerDispatchConcurrency = 1
-        };
-
-        _logger.LogInformation(
-            "Connecting notifications worker to RabbitMQ at {HostName}:{Port}.",
-            _options.HostName,
-            _options.Port);
-
         _connection =
-            await factory.CreateConnectionAsync(
-                _options.ClientProvidedName,
+            await CreateConnectionWithRetryAsync(
                 cancellationToken);
 
-        _connection.ConnectionShutdownAsync +=
-            OnConnectionShutdownAsync;
-
-        _connection.ConnectionRecoveryErrorAsync +=
-            OnConnectionRecoveryErrorAsync;
-
-        _connection.RecoverySucceededAsync +=
-            OnRecoverySucceededAsync;
+        SubscribeToConnectionEvents(
+            _connection);
 
         _channel =
             await _connection.CreateChannelAsync(
-                cancellationToken: cancellationToken);
+                cancellationToken:
+                    cancellationToken);
 
-        await _topology!.DeclareAsync(
+        await _topology.DeclareAsync(
             _channel,
             cancellationToken);
 
         await _channel.BasicQosAsync(
-            prefetchSize: 0,
-            prefetchCount: _options.PrefetchCount,
-            global: false,
-            cancellationToken: cancellationToken);
+            prefetchSize:
+                0,
+            prefetchCount:
+                _options.PrefetchCount,
+            global:
+                false,
+            cancellationToken:
+                cancellationToken);
 
         _logger.LogInformation(
-            "Notifications worker connected to RabbitMQ successfully.");
+            "Notifications worker connected to RabbitMQ successfully. Queue: {Queue}, prefetch count: {PrefetchCount}.",
+            _options.EmailQueue,
+            _options.PrefetchCount);
+    }
+
+    private async Task<IConnection>
+        CreateConnectionWithRetryAsync(
+            CancellationToken cancellationToken)
+    {
+        var factory =
+            _connectionFactory.Create(
+                _options.ConsumerClientName,
+                consumerDispatchConcurrency: 1);
+
+        Exception? lastException =
+            null;
+
+        for (var attempt = 1;
+             attempt <=
+             _options.ConnectionRetryCount;
+             attempt++)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            try
+            {
+                _logger.LogInformation(
+                    "Connecting notifications worker to RabbitMQ at {HostName}:{Port}. Attempt {Attempt}/{MaximumAttempts}.",
+                    _options.HostName,
+                    _options.Port,
+                    attempt,
+                    _options.ConnectionRetryCount);
+
+                var connection =
+                    await factory
+                        .CreateConnectionAsync(
+                            _options
+                                .ConsumerClientName,
+                            cancellationToken);
+
+                _logger.LogInformation(
+                    "Notifications worker RabbitMQ connection established successfully.");
+
+                return connection;
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken
+                    .IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                lastException =
+                    exception;
+
+                _logger.LogWarning(
+                    exception,
+                    "Notifications worker RabbitMQ connection attempt {Attempt}/{MaximumAttempts} failed.",
+                    attempt,
+                    _options.ConnectionRetryCount);
+
+                if (attempt >=
+                    _options.ConnectionRetryCount)
+                {
+                    break;
+                }
+
+                await Task.Delay(
+                    TimeSpan.FromSeconds(
+                        _options
+                            .ConnectionRetryDelaySeconds),
+                    cancellationToken);
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Notifications worker could not establish a RabbitMQ connection after all configured retry attempts.",
+            lastException);
+    }
+
+    private void SubscribeToConnectionEvents(
+        IConnection connection)
+    {
+        connection.ConnectionShutdownAsync +=
+            OnConnectionShutdownAsync;
+
+        connection.ConnectionRecoveryErrorAsync +=
+            OnConnectionRecoveryErrorAsync;
+
+        connection.RecoverySucceededAsync +=
+            OnRecoverySucceededAsync;
     }
 
     private async Task HandleMessageAsync(
         object sender,
         BasicDeliverEventArgs eventArgs)
     {
-        if (_channel is null || !_channel.IsOpen)
+        if (_channel is null ||
+            !_channel.IsOpen)
         {
             _logger.LogError(
                 "RabbitMQ channel is unavailable for delivery {DeliveryTag}.",
@@ -173,17 +267,23 @@ public sealed class EmailNotificationConsumer :
             return;
         }
 
-        EmailNotificationMessage? message = null;
+        EmailNotificationMessage? message =
+            null;
 
         var retryCount =
-            GetRetryCount(eventArgs.BasicProperties.Headers);
+            GetRetryCount(
+                eventArgs
+                    .BasicProperties
+                    .Headers);
 
         try
         {
             message =
-                JsonSerializer.Deserialize<EmailNotificationMessage>(
-                    eventArgs.Body.Span,
-                    JsonOptions);
+                JsonSerializer
+                    .Deserialize<
+                        EmailNotificationMessage>(
+                        eventArgs.Body.Span,
+                        JsonOptions);
 
             if (message is null)
             {
@@ -191,9 +291,12 @@ public sealed class EmailNotificationConsumer :
                     "Email notification message could not be deserialized.");
             }
 
-            ValidateMessage(message);
+            ValidateMessage(
+                message);
 
-            var currentAttempt = retryCount + 1;
+            var currentAttempt =
+                retryCount + 1;
+
             var maximumAttempts =
                 _options.MaximumRetryCount + 1;
 
@@ -205,7 +308,8 @@ public sealed class EmailNotificationConsumer :
                 message.CorrelationId);
 
             var emailBody =
-                _bodyBuilder.Build(message);
+                _bodyBuilder.Build(
+                    message);
 
             await _emailService.SendAsync(
                 message.RecipientEmail,
@@ -281,7 +385,8 @@ public sealed class EmailNotificationConsumer :
         Exception exception,
         Guid? messageId)
     {
-        if (retryCount >= _options.MaximumRetryCount)
+        if (retryCount >=
+            _options.MaximumRetryCount)
         {
             _logger.LogError(
                 "Email notification {MessageId} exhausted all {MaximumAttempts} attempts and will be moved to DLQ.",
@@ -298,14 +403,17 @@ public sealed class EmailNotificationConsumer :
         }
 
         var delayMilliseconds =
-            _topology!.RetryDelays[retryCount];
+            _topology
+                .RetryDelays[
+                    retryCount];
 
         var nextRetryCount =
             retryCount + 1;
 
         var retryRoutingKey =
-            _topology.GetRetryRoutingKey(
-                delayMilliseconds);
+            _topology
+                .GetRetryRoutingKey(
+                    delayMilliseconds);
 
         try
         {
@@ -315,13 +423,20 @@ public sealed class EmailNotificationConsumer :
                     nextRetryCount,
                     exception.Message);
 
-            await _channel!.BasicPublishAsync(
-                exchange: _options.RetryExchange,
-                routingKey: retryRoutingKey,
-                mandatory: true,
-                basicProperties: properties,
-                body: eventArgs.Body,
-                cancellationToken: CancellationToken.None);
+            await _channel!
+                .BasicPublishAsync(
+                    exchange:
+                        _options.RetryExchange,
+                    routingKey:
+                        retryRoutingKey,
+                    mandatory:
+                        true,
+                    basicProperties:
+                        properties,
+                    body:
+                        eventArgs.Body,
+                    cancellationToken:
+                        CancellationToken.None);
 
             /*
              * Originalna poruka dobija ACK tek nakon što je kopija
@@ -345,8 +460,8 @@ public sealed class EmailNotificationConsumer :
                 messageId);
 
             /*
-             * Nismo uspjeli sigurno proslijediti poruku u retry queue.
-             * Zato originalnu poruku vraćamo u glavni queue.
+             * Ako retry publish ne uspije, originalna poruka se ne smije
+             * izgubiti. Zato se vraća u glavni queue.
              */
             await NegativeAcknowledgeAsync(
                 eventArgs.DeliveryTag,
@@ -368,16 +483,26 @@ public sealed class EmailNotificationConsumer :
                     retryCount,
                     failureReason);
 
-            await _channel!.BasicPublishAsync(
-                exchange: _options.DeadLetterExchange,
-                routingKey: _options.DeadLetterRoutingKey,
-                mandatory: true,
-                basicProperties: properties,
-                body: eventArgs.Body,
-                cancellationToken: CancellationToken.None);
+            await _channel!
+                .BasicPublishAsync(
+                    exchange:
+                        _options
+                            .DeadLetterExchange,
+                    routingKey:
+                        _options
+                            .DeadLetterRoutingKey,
+                    mandatory:
+                        true,
+                    basicProperties:
+                        properties,
+                    body:
+                        eventArgs.Body,
+                    cancellationToken:
+                        CancellationToken.None);
 
             /*
-             * ACK originala šaljemo tek kada je poruka objavljena u DLQ.
+             * Originalna poruka se potvrđuje tek nakon uspješnog
+             * objavljivanja u dead-letter exchange.
              */
             await AcknowledgeAsync(
                 eventArgs.DeliveryTag);
@@ -407,23 +532,32 @@ public sealed class EmailNotificationConsumer :
         string failureReason)
     {
         var headers =
-            CloneHeaders(originalProperties.Headers);
+            CloneHeaders(
+                originalProperties.Headers);
 
-        headers[RabbitMqHeaders.RetryCount] =
-            retryCount;
+        headers[
+            RabbitMqHeaders.RetryCount] =
+                retryCount;
 
-        headers[RabbitMqHeaders.LastFailureReason] =
-            Truncate(failureReason, 500);
+        headers[
+            RabbitMqHeaders.LastFailureReason] =
+                Truncate(
+                    failureReason,
+                    500);
 
-        headers[RabbitMqHeaders.LastFailureAtUtc] =
-            DateTime.UtcNow.ToString("O");
+        headers[
+            RabbitMqHeaders.LastFailureAtUtc] =
+                DateTime.UtcNow
+                    .ToString("O");
 
-        headers[RabbitMqHeaders.OriginalQueue] =
-            _options.EmailQueue;
+        headers[
+            RabbitMqHeaders.OriginalQueue] =
+                _options.EmailQueue;
 
         return new BasicProperties
         {
-            Persistent = true,
+            Persistent =
+                true,
 
             ContentType =
                 originalProperties.ContentType
@@ -446,21 +580,27 @@ public sealed class EmailNotificationConsumer :
                 originalProperties.AppId
                 ?? "MindBloom.NotificationsWorker",
 
-            Headers = headers
+            Headers =
+                headers
         };
     }
 
-    private static Dictionary<string, object?> CloneHeaders(
-        IDictionary<string, object?>? originalHeaders)
+    private static Dictionary<string, object?>
+        CloneHeaders(
+            IDictionary<string, object?>?
+                originalHeaders)
     {
         if (originalHeaders is null)
         {
-            return new Dictionary<string, object?>();
+            return new Dictionary<
+                string,
+                object?>();
         }
 
-        return originalHeaders.ToDictionary(
-            item => item.Key,
-            item => item.Value);
+        return originalHeaders
+            .ToDictionary(
+                item => item.Key,
+                item => item.Value);
     }
 
     private static int GetRetryCount(
@@ -486,18 +626,20 @@ public sealed class EmailNotificationConsumer :
             int intValue =>
                 intValue,
 
-            long longValue when
-                longValue <= int.MaxValue =>
+            long longValue
+                when longValue <=
+                     int.MaxValue =>
                 (int)longValue,
 
-            byte[] bytes when
-                int.TryParse(
-                    Encoding.UTF8.GetString(bytes),
+            byte[] bytes
+                when int.TryParse(
+                    Encoding.UTF8
+                        .GetString(bytes),
                     out var parsedValue) =>
                 parsedValue,
 
-            string stringValue when
-                int.TryParse(
+            string stringValue
+                when int.TryParse(
                     stringValue,
                     out var parsedValue) =>
                 parsedValue,
@@ -509,23 +651,28 @@ public sealed class EmailNotificationConsumer :
     private async Task AcknowledgeAsync(
         ulong deliveryTag)
     {
-        if (_channel is null || !_channel.IsOpen)
+        if (_channel is null ||
+            !_channel.IsOpen)
         {
             throw new InvalidOperationException(
                 "RabbitMQ channel is not available for acknowledgment.");
         }
 
         await _channel.BasicAckAsync(
-            deliveryTag: deliveryTag,
-            multiple: false,
-            cancellationToken: CancellationToken.None);
+            deliveryTag:
+                deliveryTag,
+            multiple:
+                false,
+            cancellationToken:
+                CancellationToken.None);
     }
 
     private async Task NegativeAcknowledgeAsync(
         ulong deliveryTag,
         bool requeue)
     {
-        if (_channel is null || !_channel.IsOpen)
+        if (_channel is null ||
+            !_channel.IsOpen)
         {
             _logger.LogError(
                 "RabbitMQ channel is closed. Delivery {DeliveryTag} could not be negatively acknowledged.",
@@ -537,10 +684,14 @@ public sealed class EmailNotificationConsumer :
         try
         {
             await _channel.BasicNackAsync(
-                deliveryTag: deliveryTag,
-                multiple: false,
-                requeue: requeue,
-                cancellationToken: CancellationToken.None);
+                deliveryTag:
+                    deliveryTag,
+                multiple:
+                    false,
+                requeue:
+                    requeue,
+                cancellationToken:
+                    CancellationToken.None);
         }
         catch (Exception exception)
         {
@@ -554,13 +705,15 @@ public sealed class EmailNotificationConsumer :
     private static void ValidateMessage(
         EmailNotificationMessage message)
     {
-        if (message.MessageId == Guid.Empty)
+        if (message.MessageId ==
+            Guid.Empty)
         {
             throw new ArgumentException(
                 "Email notification MessageId cannot be empty.");
         }
 
-        if (message.CorrelationId == Guid.Empty)
+        if (message.CorrelationId ==
+            Guid.Empty)
         {
             throw new ArgumentException(
                 "Email notification CorrelationId cannot be empty.");
@@ -588,13 +741,15 @@ public sealed class EmailNotificationConsumer :
         }
 
         var hasBody =
-            !string.IsNullOrWhiteSpace(message.Body);
+            !string.IsNullOrWhiteSpace(
+                message.Body);
 
         var hasTemplate =
             !string.IsNullOrWhiteSpace(
                 message.TemplateName);
 
-        if (!hasBody && !hasTemplate)
+        if (!hasBody &&
+            !hasTemplate)
         {
             throw new ArgumentException(
                 "Email notification must contain either Body or TemplateName.");
@@ -605,12 +760,14 @@ public sealed class EmailNotificationConsumer :
         string value,
         int maximumLength)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (string.IsNullOrWhiteSpace(
+                value))
         {
             return "Unknown failure.";
         }
 
-        return value.Length <= maximumLength
+        return value.Length <=
+               maximumLength
             ? value
             : value[..maximumLength];
     }
@@ -654,12 +811,14 @@ public sealed class EmailNotificationConsumer :
         _logger.LogInformation(
             "Stopping notifications worker.");
 
-        await base.StopAsync(cancellationToken);
+        await base.StopAsync(
+            cancellationToken);
 
         await DisposeRabbitMqResourcesAsync();
     }
 
-    private async Task DisposeRabbitMqResourcesAsync()
+    private async Task
+        DisposeRabbitMqResourcesAsync()
     {
         if (_channel is not null)
         {
@@ -680,6 +839,7 @@ public sealed class EmailNotificationConsumer :
             }
 
             await _channel.DisposeAsync();
+
             _channel = null;
         }
 
@@ -702,6 +862,7 @@ public sealed class EmailNotificationConsumer :
             }
 
             await _connection.DisposeAsync();
+
             _connection = null;
         }
     }
@@ -713,7 +874,8 @@ public sealed class EmailNotificationConsumer :
             return;
         }
 
-        _disposed = true;
+        _disposed =
+            true;
 
         await DisposeRabbitMqResourcesAsync();
 

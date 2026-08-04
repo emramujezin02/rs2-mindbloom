@@ -30,4 +30,8 @@
     <ProjectReference Include="..\MindBloom.Infrastructure\MindBloom.Infrastructure.csproj" />
     <ProjectReference Include="..\MindBloom.Shared\MindBloom.Shared.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Configuration\" />
+  </ItemGroup>
 </Project>
