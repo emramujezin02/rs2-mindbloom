@@ -10,6 +10,8 @@ using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Features.Memberships.Interfaces;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.BusinessRules;
+using MindBloom.Messaging.Contracts.Appointments;
+using MindBloom.Messaging.Contracts.Common;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -22,6 +24,9 @@ public class AppointmentService : IAppointmentService
     private readonly IPaymentService _paymentService;
 
     private readonly IMembershipService _membershipService;
+
+    private readonly IIntegrationEventPublisher
+    _integrationEventPublisher;
 
     private static bool IsValidStatusTransition(
     AppointmentStatus currentStatus,
@@ -55,17 +60,27 @@ public class AppointmentService : IAppointmentService
 
     public AppointmentService(
         ApplicationDbContext context,
-        IBusinessNotificationService businessNotificationService,
+        IBusinessNotificationService
+            businessNotificationService,
         IPaymentService paymentService,
-        IMembershipService membershipService)
+        IMembershipService membershipService,
+        IIntegrationEventPublisher
+            integrationEventPublisher)
     {
-        _context = context;
+        _context =
+            context;
 
-        _businessNotificationService = businessNotificationService;
+        _businessNotificationService =
+            businessNotificationService;
 
-        _paymentService = paymentService;
+        _paymentService =
+            paymentService;
 
-        _membershipService = membershipService;
+        _membershipService =
+            membershipService;
+
+        _integrationEventPublisher =
+            integrationEventPublisher;
     }
 
     public async Task<AppointmentResponseDto>
@@ -222,12 +237,63 @@ public class AppointmentService : IAppointmentService
 
         await _context.SaveChangesAsync();
 
+        var correlationId =
+            Guid.NewGuid();
+
+        var appointmentCreatedEvent =
+            new AppointmentCreatedEvent
+            {
+                CorrelationId =
+                    correlationId,
+
+                TimestampUtc =
+                    DateTime.UtcNow,
+
+                AppointmentId =
+                    appointment.Id,
+
+                ClientId =
+                    appointment.ClientId,
+
+                ClientUserId =
+                    clientUserId,
+
+                TherapistId =
+                    appointment.TherapistId,
+
+                TherapistUserId =
+                    therapist.UserId,
+
+                StartUtc =
+                    appointment.StartUtc,
+
+                EndUtc =
+                    appointment.EndUtc,
+
+                AppointmentType =
+                    appointment.Type.ToString(),
+
+                Status =
+                    appointment.Status.ToString(),
+
+                Price =
+                    appointment.Price
+            };
+
+        await _integrationEventPublisher
+            .PublishAsync(
+                appointmentCreatedEvent,
+                IntegrationEventRoutingKeys
+                    .AppointmentCreated);
+
         await _businessNotificationService
             .PublishAsync(
                 therapist.UserId,
                 "New appointment request",
                 "You have received a new appointment request.",
-                appointment.Id);
+                appointment.Id,
+                correlationId:
+                    correlationId);
 
         return new AppointmentResponseDto
         {
@@ -243,10 +309,18 @@ public class AppointmentService : IAppointmentService
     }
 
     private async Task
-        AutoCompleteAppointmentsAsync()
+    AutoCompleteAppointmentsAsync()
     {
         var appointments =
             await _context.Appointments
+                .Include(x =>
+                    x.Client)
+                    .ThenInclude(x =>
+                        x.User)
+                .Include(x =>
+                    x.Therapist)
+                    .ThenInclude(x =>
+                        x.User)
                 .Where(x =>
                     x.EndUtc <
                         DateTime.UtcNow &&
@@ -279,6 +353,64 @@ public class AppointmentService : IAppointmentService
                 .FinalizeAppointmentUsageAsync(
                     appointment.Id,
                     "Membership session consumed after automatic appointment completion.");
+
+            var correlationId =
+                Guid.NewGuid();
+
+            var appointmentCompletedEvent =
+                new AppointmentCompletedEvent
+                {
+                    CorrelationId =
+                        correlationId,
+
+                    TimestampUtc =
+                        DateTime.UtcNow,
+
+                    AppointmentId =
+                        appointment.Id,
+
+                    ClientId =
+                        appointment.ClientId,
+
+                    ClientUserId =
+                        appointment.Client.UserId,
+
+                    TherapistId =
+                        appointment.TherapistId,
+
+                    TherapistUserId =
+                        appointment.Therapist.UserId,
+
+                    StartUtc =
+                        appointment.StartUtc,
+
+                    EndUtc =
+                        appointment.EndUtc,
+
+                    CompletedByUserId =
+                        null,
+
+                    AppointmentType =
+                        appointment.Type.ToString(),
+
+                    Price =
+                        appointment.Price
+                };
+
+            await _integrationEventPublisher
+                .PublishAsync(
+                    appointmentCompletedEvent,
+                    IntegrationEventRoutingKeys
+                        .AppointmentCompleted);
+
+            await _businessNotificationService
+                .PublishAsync(
+                    appointment.Client.UserId,
+                    "Appointment completed",
+                    "Your appointment has been completed automatically.",
+                    appointment.Id,
+                    correlationId:
+                        correlationId);
         }
     }
 
@@ -521,6 +653,59 @@ public class AppointmentService : IAppointmentService
 
         await _context.SaveChangesAsync();
 
+        var correlationId =
+    Guid.NewGuid();
+
+        if (request.Status ==
+            AppointmentStatus.Completed)
+        {
+            var appointmentCompletedEvent =
+                new AppointmentCompletedEvent
+                {
+                    CorrelationId =
+                        correlationId,
+
+                    TimestampUtc =
+                        DateTime.UtcNow,
+
+                    AppointmentId =
+                        appointment.Id,
+
+                    ClientId =
+                        appointment.ClientId,
+
+                    ClientUserId =
+                        appointment.Client.UserId,
+
+                    TherapistId =
+                        appointment.TherapistId,
+
+                    TherapistUserId =
+                        therapistUserId,
+
+                    StartUtc =
+                        appointment.StartUtc,
+
+                    EndUtc =
+                        appointment.EndUtc,
+
+                    CompletedByUserId =
+                        therapistUserId,
+
+                    AppointmentType =
+                        appointment.Type.ToString(),
+
+                    Price =
+                        appointment.Price
+                };
+
+            await _integrationEventPublisher
+                .PublishAsync(
+                    appointmentCompletedEvent,
+                    IntegrationEventRoutingKeys
+                        .AppointmentCompleted);
+        }
+
         var notificationTitle =
             request.Status switch
             {
@@ -558,7 +743,9 @@ public class AppointmentService : IAppointmentService
                 appointment.Client.UserId,
                 notificationTitle,
                 notificationMessage,
-                appointment.Id);
+                appointment.Id,
+                correlationId:
+                    correlationId);
     }
 
     public async Task CancelAppointmentAsync(
@@ -703,13 +890,64 @@ public class AppointmentService : IAppointmentService
 
         await _context.SaveChangesAsync();
 
+        var correlationId =
+            Guid.NewGuid();
+
+        var appointmentCancelledEvent =
+            new AppointmentCancelledEvent
+            {
+                CorrelationId =
+                    correlationId,
+
+                TimestampUtc =
+                    DateTime.UtcNow,
+
+                AppointmentId =
+                    appointment.Id,
+
+                ClientId =
+                    appointment.ClientId,
+
+                ClientUserId =
+                    clientUserId,
+
+                TherapistId =
+                    appointment.TherapistId,
+
+                TherapistUserId =
+                    appointment.Therapist.UserId,
+
+                CancelledByUserId =
+                    clientUserId,
+
+                PreviousStatus =
+                    previousStatus.ToString(),
+
+                Reason =
+                    reason,
+
+                StartUtc =
+                    appointment.StartUtc,
+
+                EndUtc =
+                    appointment.EndUtc
+            };
+
+        await _integrationEventPublisher
+            .PublishAsync(
+                appointmentCancelledEvent,
+                IntegrationEventRoutingKeys
+                    .AppointmentCancelled);
+
         await _businessNotificationService
             .PublishAsync(
                 appointment.Therapist.UserId,
                 "Appointment cancelled",
                 "A client cancelled the appointment. "
                 + $"Reason: {reason}",
-                appointment.Id);
+                appointment.Id,
+                correlationId:
+                    correlationId);
     }
 
     public async Task<TherapistStatsDto>

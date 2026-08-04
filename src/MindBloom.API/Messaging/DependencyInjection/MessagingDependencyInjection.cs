@@ -1,6 +1,7 @@
-﻿using MindBloom.Application.Common.Interfaces;
-using MindBloom.API.Messaging.RabbitMq;
+﻿using MindBloom.API.Messaging.RabbitMq;
+using MindBloom.Application.Common.Interfaces;
 using MindBloom.Infrastructure.Messaging.RabbitMq;
+using MindBloom.Infrastructure.Services;
 
 namespace MindBloom.API.Messaging.DependencyInjection;
 
@@ -17,6 +18,14 @@ public static class MessagingDependencyInjection
 
         services.AddSingleton<
             RabbitMqConnectionManager>();
+
+        services.AddSingleton<
+            IIntegrationEventPublisher,
+            RabbitMqIntegrationEventPublisher>();
+
+        services.AddScoped<
+    IBusinessNotificationService,
+    BusinessNotificationService>();
 
         services.AddSingleton<
             INotificationPublisher,

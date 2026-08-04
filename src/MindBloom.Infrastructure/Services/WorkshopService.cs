@@ -12,24 +12,32 @@ using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Common.Pagination;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
+using MindBloom.Messaging.Contracts.Common;
+using MindBloom.Messaging.Contracts.Workshops;
 
 namespace MindBloom.Infrastructure.Services;
 
 public class WorkshopService : IWorkshopService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly ApplicationDbContext
+        _context;
 
     private readonly IBusinessNotificationService
-    _businessNotificationService;
+        _businessNotificationService;
 
     private readonly IWebHostEnvironment
-    _environment;
+        _environment;
+
+    private readonly IIntegrationEventPublisher
+        _integrationEventPublisher;
 
     public WorkshopService(
         ApplicationDbContext context,
         IBusinessNotificationService
             businessNotificationService,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        IIntegrationEventPublisher
+            integrationEventPublisher)
     {
         _context =
             context;
@@ -39,6 +47,9 @@ public class WorkshopService : IWorkshopService
 
         _environment =
             environment;
+
+        _integrationEventPublisher =
+            integrationEventPublisher;
     }
 
     public async Task<PagedResponse<WorkshopResponseDto>>
@@ -535,9 +546,55 @@ public class WorkshopService : IWorkshopService
             };
 
         _context.Workshops.Add(
-            workshop);
+    workshop);
 
         await _context.SaveChangesAsync();
+
+        var correlationId =
+            Guid.NewGuid();
+
+        var workshopCreatedEvent =
+            new WorkshopCreatedEvent
+            {
+                CorrelationId =
+                    correlationId,
+
+                TimestampUtc =
+                    DateTime.UtcNow,
+
+                WorkshopId =
+                    workshop.Id,
+
+                OrganizerUserId =
+                    workshop.OrganizerUserId,
+
+                TherapistId =
+                    workshop.TherapistId,
+
+                Title =
+                    workshop.Title,
+
+                StartUtc =
+                    workshop.StartUtc,
+
+                EndUtc =
+                    workshop.EndUtc,
+
+                WorkshopType =
+                    workshop.Type.ToString(),
+
+                Capacity =
+                    workshop.Capacity,
+
+                Price =
+                    workshop.Price
+            };
+
+        await _integrationEventPublisher
+            .PublishAsync(
+                workshopCreatedEvent,
+                IntegrationEventRoutingKeys
+                    .WorkshopCreated);
 
         return await GetByIdAsync(
             workshop.Id,
@@ -751,8 +808,48 @@ public class WorkshopService : IWorkshopService
         await _context.SaveChangesAsync();
 
         if (request.Status ==
-    WorkshopStatus.Cancelled)
+            WorkshopStatus.Cancelled)
         {
+            var correlationId =
+                Guid.NewGuid();
+
+            var workshopCancelledEvent =
+                new WorkshopCancelledEvent
+                {
+                    CorrelationId =
+                        correlationId,
+
+                    TimestampUtc =
+                        workshop.StatusChangedAtUtc
+                        ?? DateTime.UtcNow,
+
+                    WorkshopId =
+                        workshop.Id,
+
+                    CancelledByUserId =
+                        userId,
+
+                    Title =
+                        workshop.Title,
+
+                    Reason =
+                        workshop.StatusChangeReason
+                        ?? request.Reason?.Trim()
+                        ?? string.Empty,
+
+                    StartUtc =
+                        workshop.StartUtc,
+
+                    EndUtc =
+                        workshop.EndUtc
+                };
+
+            await _integrationEventPublisher
+                .PublishAsync(
+                    workshopCancelledEvent,
+                    IntegrationEventRoutingKeys
+                        .WorkshopCancelled);
+
             await NotifyRegisteredParticipantsAsync(
                 workshop.Id,
                 "Workshop cancelled",

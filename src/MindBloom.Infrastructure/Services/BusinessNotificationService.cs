@@ -2,6 +2,8 @@
 using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Messaging.Contracts.Common;
+using MindBloom.Messaging.Contracts.Notifications;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -14,14 +16,23 @@ public sealed class BusinessNotificationService
     private readonly INotificationSender
         _notificationSender;
 
+    private readonly IIntegrationEventPublisher
+        _integrationEventPublisher;
+
     public BusinessNotificationService(
         ApplicationDbContext context,
-        INotificationSender notificationSender)
+        INotificationSender notificationSender,
+        IIntegrationEventPublisher
+            integrationEventPublisher)
     {
-        _context = context;
+        _context =
+            context;
 
         _notificationSender =
             notificationSender;
+
+        _integrationEventPublisher =
+            integrationEventPublisher;
     }
 
     public async Task PublishAsync(
@@ -31,7 +42,10 @@ public sealed class BusinessNotificationService
         int? appointmentId = null,
         NotificationActionType actionType =
             NotificationActionType.None,
-        int? resourceId = null)
+        int? resourceId = null,
+        Guid? correlationId = null,
+        CancellationToken cancellationToken =
+            default)
     {
         if (userId <= 0)
         {
@@ -72,6 +86,15 @@ public sealed class BusinessNotificationService
                 NotificationActionType.Appointment;
         }
 
+        var occurredAtUtc =
+            DateTime.UtcNow;
+
+        var resolvedCorrelationId =
+            correlationId.HasValue &&
+            correlationId.Value != Guid.Empty
+                ? correlationId.Value
+                : Guid.NewGuid();
+
         var notification =
             new Notification
             {
@@ -97,18 +120,57 @@ public sealed class BusinessNotificationService
                     false,
 
                 SentAtUtc =
-                    DateTime.UtcNow
+                    occurredAtUtc
             };
 
         _context.Notifications.Add(
             notification);
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(
+            cancellationToken);
 
         await _notificationSender
             .SendToUserAsync(
                 userId,
                 normalizedTitle,
                 normalizedMessage);
+
+        var notificationRequestedEvent =
+            new NotificationRequestedEvent
+            {
+                CorrelationId =
+                    resolvedCorrelationId,
+
+                TimestampUtc =
+                    occurredAtUtc,
+
+                UserId =
+                    userId,
+
+                NotificationId =
+                    notification.Id,
+
+                Title =
+                    normalizedTitle,
+
+                Message =
+                    normalizedMessage,
+
+                AppointmentId =
+                    appointmentId,
+
+                ActionType =
+                    actionType.ToString(),
+
+                ResourceId =
+                    resourceId
+            };
+
+        await _integrationEventPublisher
+            .PublishAsync(
+                notificationRequestedEvent,
+                IntegrationEventRoutingKeys
+                    .NotificationRequested,
+                cancellationToken);
     }
 }

@@ -10,6 +10,9 @@ using System.Data;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.BusinessRules;
+using MindBloom.Messaging.Contracts.Common;
+using MindBloom.Messaging.Contracts.Memberships;
+using MindBloom.Messaging.Contracts.Payments;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -21,21 +24,30 @@ public class MembershipService : IMembershipService
     private readonly ApplicationDbContext _context;
 
     private readonly StripeVerificationService _stripeVerificationService;
-
+    private readonly IIntegrationEventPublisher
+    _integrationEventPublisher;
     private readonly IBusinessNotificationService _businessNotificationService;
 
     public MembershipService(
-    ApplicationDbContext context,
-    StripeVerificationService
-        stripeVerificationService,
-    IBusinessNotificationService
-        businessNotificationService)
+        ApplicationDbContext context,
+        StripeVerificationService
+            stripeVerificationService,
+        IBusinessNotificationService
+            businessNotificationService,
+        IIntegrationEventPublisher
+            integrationEventPublisher)
     {
-        _context = context;
+        _context =
+            context;
 
-        _stripeVerificationService = stripeVerificationService;
+        _stripeVerificationService =
+            stripeVerificationService;
 
-        _businessNotificationService = businessNotificationService;
+        _businessNotificationService =
+            businessNotificationService;
+
+        _integrationEventPublisher =
+            integrationEventPublisher;
     }
 
     public async Task<List<MembershipPlanDto>>
@@ -631,6 +643,95 @@ public class MembershipService : IMembershipService
                 membership.DurationMonths);
 
         await _context.SaveChangesAsync();
+
+        var correlationId =
+    Guid.NewGuid();
+
+        var purchasedAtUtc =
+            membership.PurchasedAtUtc
+            ?? DateTime.UtcNow;
+
+        var paidAtUtc =
+            membershipPayment.PaidAtUtc
+            ?? purchasedAtUtc;
+
+        await _integrationEventPublisher
+            .PublishAsync(
+                new MembershipPurchasedEvent
+                {
+                    CorrelationId =
+                        correlationId,
+
+                    MembershipId =
+                        membership.Id,
+
+                    ClientId =
+                        membership.ClientId,
+
+                    ClientUserId =
+                        clientUserId,
+
+                    TherapistId =
+                        membership.TherapistId,
+
+                    TherapistUserId =
+                        membership.Therapist.UserId,
+
+                    PlanType =
+                        membership.PlanType
+                            .ToString(),
+
+                    TotalSessions =
+                        membership.TotalSessions,
+
+                    Price =
+                        membership.Price,
+
+                    Currency =
+                        membershipPayment.Currency,
+
+                    PurchasedAtUtc =
+                        purchasedAtUtc,
+
+                    ExpiresAtUtc =
+                        membership.ExpiresAtUtc
+                },
+                IntegrationEventRoutingKeys
+                    .MembershipPurchased);
+
+        await _integrationEventPublisher
+            .PublishAsync(
+                new PaymentSucceededEvent
+                {
+                    CorrelationId =
+                        correlationId,
+
+                    PaymentId =
+                        membershipPayment.Id,
+
+                    PaymentType =
+                        "Membership",
+
+                    AppointmentId =
+                        null,
+
+                    MembershipId =
+                        membership.Id,
+
+                    ClientUserId =
+                        clientUserId,
+
+                    Amount =
+                        membershipPayment.Amount,
+
+                    Currency =
+                        membershipPayment.Currency,
+
+                    PaidAtUtc =
+                        paidAtUtc
+                },
+                IntegrationEventRoutingKeys
+                    .PaymentSucceeded);
 
         await _businessNotificationService
             .PublishAsync(

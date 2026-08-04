@@ -9,6 +9,8 @@ using MindBloom.Infrastructure.Persistence.Context;
 using Stripe;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.BusinessRules;
+using MindBloom.Messaging.Contracts.Common;
+using MindBloom.Messaging.Contracts.Payments;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -21,13 +23,16 @@ public class PaymentService : IPaymentService
     private readonly StripeVerificationService _stripeVerificationService;
 
     private readonly IBusinessNotificationService _businessNotificationService;
-
+    private readonly IIntegrationEventPublisher
+    _integrationEventPublisher;
     public PaymentService(
-    ApplicationDbContext context,
-    StripeVerificationService
-        stripeVerificationService,
-    IBusinessNotificationService
-        businessNotificationService)
+      ApplicationDbContext context,
+      StripeVerificationService
+          stripeVerificationService,
+      IBusinessNotificationService
+          businessNotificationService,
+      IIntegrationEventPublisher
+          integrationEventPublisher)
     {
         _context =
             context;
@@ -37,6 +42,9 @@ public class PaymentService : IPaymentService
 
         _businessNotificationService =
             businessNotificationService;
+
+        _integrationEventPublisher =
+            integrationEventPublisher;
     }
 
     public async Task<PaymentIntentResponseDto>
@@ -530,6 +538,44 @@ public class PaymentService : IPaymentService
                 exception);
         }
 
+        var paymentCorrelationId =
+    Guid.NewGuid();
+
+        await _integrationEventPublisher
+            .PublishAsync(
+                new PaymentSucceededEvent
+                {
+                    CorrelationId =
+                        paymentCorrelationId,
+
+                    PaymentId =
+                        payment.Id,
+
+                    PaymentType =
+                        "Appointment",
+
+                    AppointmentId =
+                        payment.AppointmentId,
+
+                    MembershipId =
+                        null,
+
+                    ClientUserId =
+                        clientUserId,
+
+                    Amount =
+                        payment.Amount,
+
+                    Currency =
+                        PaymentCurrency,
+
+                    PaidAtUtc =
+                        payment.PaidAtUtc
+                        ?? DateTime.UtcNow
+                },
+                IntegrationEventRoutingKeys
+                    .PaymentSucceeded);
+
         await _businessNotificationService
             .PublishAsync(
                 clientUserId,
@@ -937,6 +983,12 @@ public class PaymentService : IPaymentService
 
                     await _context.SaveChangesAsync();
 
+                    await PublishPaymentRefundedEventAsync(
+    payment,
+    clientUserId,
+    cancellationReason:
+        payment.RefundReason);
+
                     await _businessNotificationService
                         .PublishAsync(
                             clientUserId,
@@ -1197,6 +1249,12 @@ public class PaymentService : IPaymentService
 
         if (refundCompleted)
         {
+            await PublishPaymentRefundedEventAsync(
+    payment,
+    clientUserId,
+    cancellationReason:
+        normalizedReason);
+
             await _businessNotificationService
                 .PublishAsync(
                     clientUserId,
@@ -1208,6 +1266,60 @@ public class PaymentService : IPaymentService
                     payment.AppointmentId,
                     NotificationActionType.Payment);
         }
+    }
+
+    private Task PublishPaymentRefundedEventAsync(
+    Payment payment,
+    int clientUserId,
+    string? cancellationReason)
+    {
+        if (payment.Status !=
+            PaymentStatus.Refunded)
+        {
+            throw new InvalidOperationException(
+                "PaymentRefundedEvent can only be published for a refunded payment.");
+        }
+
+        return _integrationEventPublisher
+            .PublishAsync(
+                new PaymentRefundedEvent
+                {
+                    CorrelationId =
+                        Guid.NewGuid(),
+
+                    PaymentId =
+                        payment.Id,
+
+                    PaymentType =
+                        "Appointment",
+
+                    AppointmentId =
+                        payment.AppointmentId,
+
+                    MembershipId =
+                        null,
+
+                    ClientUserId =
+                        clientUserId,
+
+                    Amount =
+                        payment.Amount,
+
+                    Currency =
+                        PaymentCurrency,
+
+                    Reason =
+                        string.IsNullOrWhiteSpace(
+                            cancellationReason)
+                            ? payment.RefundReason
+                            : cancellationReason.Trim(),
+
+                    RefundedAtUtc =
+                        payment.RefundedAtUtc
+                        ?? DateTime.UtcNow
+                },
+                IntegrationEventRoutingKeys
+                    .PaymentRefunded);
     }
 
     private static void ValidateMetadata(

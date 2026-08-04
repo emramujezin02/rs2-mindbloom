@@ -11,5 +11,8 @@ public interface IBusinessNotificationService
         int? appointmentId = null,
         NotificationActionType actionType =
             NotificationActionType.None,
-        int? resourceId = null);
+        int? resourceId = null,
+        Guid? correlationId = null,
+        CancellationToken cancellationToken =
+            default);
 }

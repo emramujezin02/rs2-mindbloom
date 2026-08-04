@@ -1,23 +1,34 @@
-﻿namespace MindBloom.Messaging.Contracts.Notifications;
+﻿using MindBloom.Messaging.Contracts.Common;
+
+namespace MindBloom.Messaging.Contracts.Notifications;
 
 public abstract record NotificationMessage
+    : IntegrationEvent
 {
-    public const int CurrentVersion = 1;
+    public Guid MessageId
+    {
+        get => EventId;
 
-    public Guid MessageId { get; init; } =
-        Guid.NewGuid();
+        init => EventId = value;
+    }
 
-    public Guid CorrelationId { get; init; }
+    public int MessageVersion
+    {
+        get => EventVersion;
+
+        init => EventVersion = value;
+    }
+
+    public DateTime CreatedAtUtc
+    {
+        get => TimestampUtc;
+
+        init => TimestampUtc = value;
+    }
 
     public required NotificationEventType
         EventType
     { get; init; }
-
-    public int MessageVersion { get; init; } =
-        CurrentVersion;
-
-    public DateTime CreatedAtUtc { get; init; } =
-        DateTime.UtcNow;
 
     public int RetryCount { get; init; }
 
