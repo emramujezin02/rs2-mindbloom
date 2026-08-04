@@ -8,7 +8,7 @@ using MindBloom.Infrastructure.Persistence.Context;
 using System.Security.Cryptography;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.BusinessRules;
-
+using MindBloom.Messaging.Contracts.Notifications;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -20,17 +20,25 @@ public class AuthService : IAuthService
 
     private readonly ApplicationDbContext _context;
 
-    private readonly IEmailService _emailService;
+    private readonly INotificationPublisher
+        _notificationPublisher;
     public AuthService(
         UserManager<ApplicationUser> userManager,
         IJwtTokenService jwtTokenService,
         ApplicationDbContext context,
-        IEmailService emailService)
+        INotificationPublisher notificationPublisher)
     {
-        _userManager = userManager;
-        _jwtTokenService = jwtTokenService;
-        _context = context;
-        _emailService = emailService;
+        _userManager =
+            userManager;
+
+        _jwtTokenService =
+            jwtTokenService;
+
+        _context =
+            context;
+
+        _notificationPublisher =
+            notificationPublisher;
     }
 
     private bool IsDemoAccount(string email)
@@ -316,10 +324,36 @@ public class AuthService : IAuthService
 
         if (!IsDemoAccount(user.Email!))
         {
-            await _emailService.SendAsync(
-                user.Email!,
-                "Reset Password Code",
-                $"Your reset code is: {code}");
+            await _notificationPublisher
+                .PublishEmailAsync(
+                    new EmailNotificationMessage
+                    {
+                        CorrelationId =
+                            Guid.NewGuid(),
+
+                        EventType =
+                            NotificationEventType
+                                .PasswordResetRequested,
+
+                        RecipientEmail =
+                            user.Email!,
+
+                        RecipientName =
+                            $"{user.FirstName} {user.LastName}"
+                                .Trim(),
+
+                        Subject =
+                            "Reset Password Code",
+
+                        Body =
+                            $"Your reset code is: {code}",
+
+                        IsHtml =
+                            false,
+
+                        Source =
+                            "MindBloom.API"
+                    });
         }
     }
 
@@ -480,10 +514,36 @@ public class AuthService : IAuthService
 
 {verificationLink}";
 
-        await _emailService.SendAsync(
-            user.Email!,
-            "MindBloom Email Verification",
-            body);
+        await _notificationPublisher
+            .PublishEmailAsync(
+                new EmailNotificationMessage
+                {
+                    CorrelationId =
+                        Guid.NewGuid(),
+
+                    EventType =
+                        NotificationEventType
+                            .EmailVerificationRequested,
+
+                    RecipientEmail =
+                        user.Email!,
+
+                    RecipientName =
+                        $"{user.FirstName} {user.LastName}"
+                            .Trim(),
+
+                    Subject =
+                        "MindBloom Email Verification",
+
+                    Body =
+                        body,
+
+                    IsHtml =
+                        false,
+
+                    Source =
+                        "MindBloom.API"
+                });
     }
 
     public async Task VerifyEmailAsync(
@@ -720,10 +780,36 @@ public class AuthService : IAuthService
 
         await _userManager.UpdateAsync(user);
 
-        await _emailService.SendAsync(
-            user.Email!,
-            "MindBloom 2FA Code",
-            $"Your verification code is: {code}");
+        await _notificationPublisher
+            .PublishEmailAsync(
+                new EmailNotificationMessage
+                {
+                    CorrelationId =
+                        Guid.NewGuid(),
+
+                    EventType =
+                        NotificationEventType
+                            .TwoFactorCodeRequested,
+
+                    RecipientEmail =
+                        user.Email!,
+
+                    RecipientName =
+                        $"{user.FirstName} {user.LastName}"
+                            .Trim(),
+
+                    Subject =
+                        "MindBloom 2FA Code",
+
+                    Body =
+                        $"Your verification code is: {code}",
+
+                    IsHtml =
+                        false,
+
+                    Source =
+                        "MindBloom.API"
+                });
 
         return new Login2FAResponseDto
         {
@@ -991,11 +1077,37 @@ public class AuthService : IAuthService
 
         if (!IsDemoAccount(user.Email!))
         {
-            await _emailService.SendAsync(
-                user.Email!,
-                "MindBloom Email Verification",
-                $"Your email verification code is: {code}. "
-                + "The code expires in 10 minutes.");
+            await _notificationPublisher
+                .PublishEmailAsync(
+                    new EmailNotificationMessage
+                    {
+                        CorrelationId =
+                            Guid.NewGuid(),
+
+                        EventType =
+                            NotificationEventType
+                                .EmailVerificationRequested,
+
+                        RecipientEmail =
+                            user.Email!,
+
+                        RecipientName =
+                            $"{user.FirstName} {user.LastName}"
+                                .Trim(),
+
+                        Subject =
+                            "MindBloom Email Verification",
+
+                        Body =
+                            $"Your email verification code is: {code}. "
+                            + "The code expires in 10 minutes.",
+
+                        IsHtml =
+                            false,
+
+                        Source =
+                            "MindBloom.API"
+                    });
         }
     }
 

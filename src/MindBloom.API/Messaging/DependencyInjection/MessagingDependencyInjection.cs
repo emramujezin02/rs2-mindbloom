@@ -1,4 +1,4 @@
-﻿using MindBloom.API.Messaging.Abstractions;
+﻿using MindBloom.Application.Common.Interfaces;
 using MindBloom.API.Messaging.RabbitMq;
 using MindBloom.Infrastructure.Messaging.RabbitMq;
 

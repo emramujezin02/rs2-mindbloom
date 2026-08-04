@@ -3,12 +3,112 @@
   "WorkspaceRootPath": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\middlewares\\globalexceptionmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\middlewares\\globalexceptionmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\.env||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\.env||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\workers\\emailnotificationconsumer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\workers\\emailnotificationconsumer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\messaging\\rabbitmq\\rabbitmqnotificationpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\messaging\\rabbitmq\\rabbitmqnotificationpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\messaging\\rabbitmq\\rabbitmqconnectionmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\messaging\\rabbitmq\\rabbitmqconnectionmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\messaging\\dependencyinjection\\messagingdependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\messaging\\dependencyinjection\\messagingdependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\messaging\\rabbitmq\\rabbitmqtopology.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\messaging\\rabbitmq\\rabbitmqtopology.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\messaging\\rabbitmq\\rabbitmqconnectionfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\messaging\\rabbitmq\\rabbitmqconnectionfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\messaging\\rabbitmq\\rabbitmqconfigurationextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\messaging\\rabbitmq\\rabbitmqconfigurationextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\messaging\\rabbitmq\\rabbitmqoptions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\messaging\\rabbitmq\\rabbitmqoptions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}|MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.messaging.contracts\\notifications\\notificationmessage.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}|MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj|solutionrelative:mindbloom.messaging.contracts\\notifications\\notificationmessage.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}|MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.messaging.contracts\\notifications\\notificationeventtype.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}|MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj|solutionrelative:mindbloom.messaging.contracts\\notifications\\notificationeventtype.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}|MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.messaging.contracts\\notifications\\emailnotificationmessage.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}|MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj|solutionrelative:mindbloom.messaging.contracts\\notifications\\emailnotificationmessage.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\messaging\\configuration\\requesttimingoptions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\messaging\\configuration\\requesttimingoptions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\messaging\\abstractions\\inotificationpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\messaging\\abstractions\\inotificationpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\dependencyinjection\\dependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\dependencyinjection\\dependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\mindbloom.worker.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\mindbloom.worker.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\mindbloom.api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\mindbloom.api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\mindbloom.infrastructure.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\mindbloom.infrastructure.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\services\\emailmessagebodybuilder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\services\\emailmessagebodybuilder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\messaging\\rabbitmqheaders.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\messaging\\rabbitmqheaders.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\middlewares\\globalexceptionmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\middlewares\\globalexceptionmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -123,10 +223,6 @@
       "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\controllers\\adminauditcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\admin\\dtos\\adminauditwritedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\admin\\dtos\\adminauditwritedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -211,6 +307,344 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": ".env",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\.env",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\.env",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\.env",
+              "RelativeToolTip": "src\\MindBloom.API\\.env",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAApAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-08-04T10:41:56.883Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "EmailNotificationConsumer.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Workers\\EmailNotificationConsumer.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Workers\\EmailNotificationConsumer.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Workers\\EmailNotificationConsumer.cs",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Workers\\EmailNotificationConsumer.cs",
+              "ViewState": "AgIAAEMDAAAAAAAAAAAAAHMDAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:43:08.987Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Program.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Program.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Program.cs",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAQwCAAAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:42:15.889Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "RabbitMqNotificationPublisher.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqNotificationPublisher.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqNotificationPublisher.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqNotificationPublisher.cs",
+              "RelativeToolTip": "src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqNotificationPublisher.cs",
+              "ViewState": "AgIAACkBAAAAAAAAAAAgwFkBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:48:59.609Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "RabbitMqConnectionManager.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqConnectionManager.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqConnectionManager.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqConnectionManager.cs",
+              "RelativeToolTip": "src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqConnectionManager.cs",
+              "ViewState": "AgIAANEAAAAAAAAAAAA3wAEBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:48:50.866Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "MessagingDependencyInjection.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\DependencyInjection\\MessagingDependencyInjection.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\Messaging\\DependencyInjection\\MessagingDependencyInjection.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\DependencyInjection\\MessagingDependencyInjection.cs",
+              "RelativeToolTip": "src\\MindBloom.API\\Messaging\\DependencyInjection\\MessagingDependencyInjection.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAQwBoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:48:41.347Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "RabbitMqTopology.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqTopology.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqTopology.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqTopology.cs",
+              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqTopology.cs",
+              "ViewState": "AgIAANUAAAAAAAAAAAAgwAUBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:58:07.661Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "RabbitMqConnectionFactory.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqConnectionFactory.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqConnectionFactory.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqConnectionFactory.cs",
+              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqConnectionFactory.cs",
+              "ViewState": "AgIAABQAAAAAAAAAAAAAAEQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:57:45.485Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "RabbitMqConfigurationExtensions.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqConfigurationExtensions.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqConfigurationExtensions.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqConfigurationExtensions.cs",
+              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqConfigurationExtensions.cs",
+              "ViewState": "AgIAAAEAAAAAAAAAAAAAAD4BAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:57:06.485Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "RabbitMqOptions.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqOptions.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqOptions.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqOptions.cs",
+              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqOptions.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:56:29.305Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "NotificationMessage.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.Messaging.Contracts\\Notifications\\NotificationMessage.cs",
+              "RelativeDocumentMoniker": "MindBloom.Messaging.Contracts\\Notifications\\NotificationMessage.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.Messaging.Contracts\\Notifications\\NotificationMessage.cs",
+              "RelativeToolTip": "MindBloom.Messaging.Contracts\\Notifications\\NotificationMessage.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:51:03.299Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "NotificationEventType.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.Messaging.Contracts\\Notifications\\NotificationEventType.cs",
+              "RelativeDocumentMoniker": "MindBloom.Messaging.Contracts\\Notifications\\NotificationEventType.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.Messaging.Contracts\\Notifications\\NotificationEventType.cs",
+              "RelativeToolTip": "MindBloom.Messaging.Contracts\\Notifications\\NotificationEventType.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:50:41.031Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "EmailNotificationMessage.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.Messaging.Contracts\\Notifications\\EmailNotificationMessage.cs",
+              "RelativeDocumentMoniker": "MindBloom.Messaging.Contracts\\Notifications\\EmailNotificationMessage.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.Messaging.Contracts\\Notifications\\EmailNotificationMessage.cs",
+              "RelativeToolTip": "MindBloom.Messaging.Contracts\\Notifications\\EmailNotificationMessage.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:50:47.478Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "RequestTimingOptions.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\Configuration\\RequestTimingOptions.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\Messaging\\Configuration\\RequestTimingOptions.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\Configuration\\RequestTimingOptions.cs",
+              "RelativeToolTip": "src\\MindBloom.API\\Messaging\\Configuration\\RequestTimingOptions.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:48:32.547Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "INotificationPublisher.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\Abstractions\\INotificationPublisher.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\Messaging\\Abstractions\\INotificationPublisher.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\Abstractions\\INotificationPublisher.cs",
+              "RelativeToolTip": "src\\MindBloom.API\\Messaging\\Abstractions\\INotificationPublisher.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:48:14.633Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "DependencyInjection.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
+              "RelativeToolTip": "src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
+              "ViewState": "AgIAAKQAAAAAAAAAAAAgwNQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-03T13:59:19.941Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "MindBloom.Worker",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACUAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-08-04T10:44:14.617Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "MindBloom.API",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\MindBloom.API.csproj",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\MindBloom.API.csproj",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\MindBloom.API.csproj",
+              "RelativeToolTip": "src\\MindBloom.API\\MindBloom.API.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADAAAAAKAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-08-04T10:44:00.437Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "MindBloom.Infrastructure",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj",
+              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj",
+              "RelativeToolTip": "src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACcAAAAKAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-08-04T10:43:49.083Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "appsettings.Development.json",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\appsettings.Development.json",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\appsettings.Development.json",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\appsettings.Development.json",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\appsettings.Development.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-04T10:43:27.747Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\appsettings.json",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\appsettings.json",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\appsettings.json",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-04T10:43:18.807Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "EmailMessageBodyBuilder.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Services\\EmailMessageBodyBuilder.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Services\\EmailMessageBodyBuilder.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Services\\EmailMessageBodyBuilder.cs",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Services\\EmailMessageBodyBuilder.cs",
+              "ViewState": "AgIAAGoAAAAAAAAAAAAYwJkAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:42:59.082Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "RabbitMqHeaders.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Messaging\\RabbitMqHeaders.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Messaging\\RabbitMqHeaders.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Messaging\\RabbitMqHeaders.cs",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Messaging\\RabbitMqHeaders.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T10:42:40.218Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "appsettings.Development.json",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\appsettings.Development.json",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\appsettings.Development.json",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\appsettings.Development.json",
+              "RelativeToolTip": "src\\MindBloom.API\\appsettings.Development.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-04T10:41:45.932Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\appsettings.json",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\appsettings.json",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\appsettings.json",
+              "RelativeToolTip": "src\\MindBloom.API\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-04T10:41:29.692Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 25,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Program.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\Program.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Program.cs",
+              "RelativeToolTip": "src\\MindBloom.API\\Program.cs",
+              "ViewState": "AgIAAGIBAAAAAAAAAAAgwJABAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-03T13:59:48.139Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 26,
               "Title": "GlobalExceptionMiddleware.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Middlewares\\GlobalExceptionMiddleware.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Middlewares\\GlobalExceptionMiddleware.cs",
@@ -223,7 +657,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 27,
               "Title": "AuthService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\AuthService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\AuthService.cs",
@@ -235,20 +669,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "DependencyInjection.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
-              "RelativeToolTip": "src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
-              "ViewState": "AgIAALEAAAAAAAAAAAAAANQAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-03T13:59:19.941Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 28,
               "Title": "UserProfileService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\UserProfileService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\UserProfileService.cs",
@@ -260,7 +681,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 29,
               "Title": "NotificationResponseDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Notifications\\DTOs\\NotificationResponseDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Notifications\\DTOs\\NotificationResponseDto.cs",
@@ -272,7 +693,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 30,
               "Title": "NotificationQueryDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Notifications\\DTOs\\NotificationQueryDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Notifications\\DTOs\\NotificationQueryDto.cs",
@@ -284,7 +705,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 31,
               "Title": "NotificationPageResponseDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Notifications\\DTOs\\NotificationPageResponseDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Notifications\\DTOs\\NotificationPageResponseDto.cs",
@@ -296,7 +717,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 32,
               "Title": "MarkNotificationReadDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Notifications\\DTOs\\MarkNotificationReadDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Notifications\\DTOs\\MarkNotificationReadDto.cs",
@@ -308,7 +729,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 33,
               "Title": "NotificationService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\NotificationService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\NotificationService.cs",
@@ -320,7 +741,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 34,
               "Title": "UserSettingsService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\UserSettingsService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\UserSettingsService.cs",
@@ -332,7 +753,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 35,
               "Title": "UserSettingsController.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\UserSettingsController.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\UserSettingsController.cs",
@@ -344,7 +765,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 36,
               "Title": "UserSettingsDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Users\\DTOs\\UserSettingsDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Users\\DTOs\\UserSettingsDto.cs",
@@ -356,7 +777,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 37,
               "Title": "UploadProfileImageDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Users\\DTOs\\UploadProfileImageDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Users\\DTOs\\UploadProfileImageDto.cs",
@@ -368,7 +789,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 38,
               "Title": "UpdateUserSettingsDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Users\\DTOs\\UpdateUserSettingsDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Users\\DTOs\\UpdateUserSettingsDto.cs",
@@ -380,7 +801,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 39,
               "Title": "ResetPasswordDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\DTOs\\ResetPasswordDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Auth\\DTOs\\ResetPasswordDto.cs",
@@ -392,7 +813,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 40,
               "Title": "ForgetPasswordDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\DTOs\\ForgetPasswordDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Auth\\DTOs\\ForgetPasswordDto.cs",
@@ -404,7 +825,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 41,
               "Title": "AdminAuditDataSanitizer.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Security\\AdminAuditDataSanitizer.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Security\\AdminAuditDataSanitizer.cs",
@@ -416,7 +837,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 42,
               "Title": "AdminAuditMiddleware.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Middlewares\\AdminAuditMiddleware.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Middlewares\\AdminAuditMiddleware.cs",
@@ -428,7 +849,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 43,
               "Title": "AdminAuditSnapshotReader.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Security\\AdminAuditSnapshotReader.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Security\\AdminAuditSnapshotReader.cs",
@@ -440,7 +861,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 44,
               "Title": "AdminAuditRequestResolver.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Security\\AdminAuditRequestResolver.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Security\\AdminAuditRequestResolver.cs",
@@ -452,7 +873,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 45,
               "Title": "AdminAuditService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\AdminAuditService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\AdminAuditService.cs",
@@ -464,7 +885,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 46,
               "Title": "AdminAuditLog.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\AdminAuditLog.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\AdminAuditLog.cs",
@@ -476,7 +897,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 47,
               "Title": "Payment.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\Payment.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\Payment.cs",
@@ -488,7 +909,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 48,
               "Title": "MembershipUsage.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\MembershipUsage.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\MembershipUsage.cs",
@@ -500,7 +921,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 49,
               "Title": "MembershipPlanAudit.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\MembershipPlanAudit.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\MembershipPlanAudit.cs",
@@ -512,7 +933,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 50,
               "Title": "MembershipPlan.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\MembershipPlan.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\MembershipPlan.cs",
@@ -524,7 +945,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 51,
               "Title": "MembershipPayment.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\MembershipPayment.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\MembershipPayment.cs",
@@ -536,7 +957,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 52,
               "Title": "ClientMembership.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\ClientMembership.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\ClientMembership.cs",
@@ -548,7 +969,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 28,
+              "DocumentIndex": 53,
               "Title": "AdminService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\AdminService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\AdminService.cs",
@@ -560,7 +981,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 48,
+              "DocumentIndex": 72,
               "Title": "20260803140229_AddAdminAuditLogs.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260803140229_AddAdminAuditLogs.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260803140229_AddAdminAuditLogs.cs",
@@ -572,7 +993,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 29,
+              "DocumentIndex": 54,
               "Title": "AdminAuditController.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\AdminAuditController.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\AdminAuditController.cs",
@@ -584,19 +1005,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 30,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Program.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.API\\Program.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Program.cs",
-              "RelativeToolTip": "src\\MindBloom.API\\Program.cs",
-              "ViewState": "AgIAAK8AAAAAAAAAAAAAANAAAAAcAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-03T13:59:48.139Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 31,
+              "DocumentIndex": 55,
               "Title": "AdminAuditWriteDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminAuditWriteDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminAuditWriteDto.cs",
@@ -608,7 +1017,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 32,
+              "DocumentIndex": 56,
               "Title": "IAdminAuditService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\Interfaces\\IAdminAuditService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\Interfaces\\IAdminAuditService.cs",
@@ -616,11 +1025,12 @@
               "RelativeToolTip": "src\\MindBloom.Application\\Features\\Admin\\Interfaces\\IAdminAuditService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-03T13:55:42.269Z"
+              "WhenOpened": "2026-08-03T13:55:42.269Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 33,
+              "DocumentIndex": 57,
               "Title": "IAdminService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\Interfaces\\IAdminService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\Interfaces\\IAdminService.cs",
@@ -632,7 +1042,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 34,
+              "DocumentIndex": 58,
               "Title": "AdminAuditFilterOptionsDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminAuditFilterOptionsDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminAuditFilterOptionsDto.cs",
@@ -640,11 +1050,12 @@
               "RelativeToolTip": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminAuditFilterOptionsDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAB0AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-03T13:55:15.835Z"
+              "WhenOpened": "2026-08-03T13:55:15.835Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 35,
+              "DocumentIndex": 59,
               "Title": "AdminAuditLogDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminAuditLogDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\AdminAuditLogDto.cs",
@@ -656,7 +1067,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 36,
+              "DocumentIndex": 60,
               "Title": "SearchAdminAuditLogsDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchAdminAuditLogsDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchAdminAuditLogsDto.cs",
@@ -668,7 +1079,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 38,
+              "DocumentIndex": 62,
               "Title": "ApplicationUser.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\ApplicationUser.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\ApplicationUser.cs",
@@ -680,7 +1091,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 37,
+              "DocumentIndex": 61,
               "Title": "ApplicationDbContext.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
@@ -692,7 +1103,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 39,
+              "DocumentIndex": 63,
               "Title": "20260801160423_CompleteWorkshopManagement.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260801160423_CompleteWorkshopManagement.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260801160423_CompleteWorkshopManagement.cs",
@@ -704,7 +1115,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 40,
+              "DocumentIndex": 64,
               "Title": "SearchAdminReviewsDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchAdminReviewsDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchAdminReviewsDto.cs",
@@ -716,7 +1127,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 41,
+              "DocumentIndex": 65,
               "Title": "SearchTherapistVerificationDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchTherapistVerificationDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchTherapistVerificationDto.cs",
@@ -728,7 +1139,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 42,
+              "DocumentIndex": 66,
               "Title": "SearchAdminMembershipsDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchAdminMembershipsDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchAdminMembershipsDto.cs",
@@ -740,7 +1151,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 43,
+              "DocumentIndex": 67,
               "Title": "SearchAdminPaymentsDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchAdminPaymentsDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchAdminPaymentsDto.cs",
@@ -752,7 +1163,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 44,
+              "DocumentIndex": 68,
               "Title": "SearchAdminAppointmentDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchAdminAppointmentDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchAdminAppointmentDto.cs",
@@ -764,7 +1175,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 45,
+              "DocumentIndex": 69,
               "Title": "WorkshopQueryDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Workshops\\DTOs\\WorkshopQueryDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Workshops\\DTOs\\WorkshopQueryDto.cs",
@@ -776,7 +1187,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 46,
+              "DocumentIndex": 70,
               "Title": "ArticleManagementQueryDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Articles\\DTOs\\ArticleManagementQueryDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Articles\\DTOs\\ArticleManagementQueryDto.cs",
@@ -788,7 +1199,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 47,
+              "DocumentIndex": 71,
               "Title": "SearchAdminUsersDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchAdminUsersDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Admin\\DTOs\\SearchAdminUsersDto.cs",

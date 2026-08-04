@@ -43,6 +43,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Folder Include="Messaging\Abstractions\" />
 		<Folder Include="wwroot\" />
 	</ItemGroup>
 

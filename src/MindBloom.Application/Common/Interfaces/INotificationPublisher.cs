@@ -1,6 +1,6 @@
 ﻿using MindBloom.Messaging.Contracts.Notifications;
 
-namespace MindBloom.API.Messaging.Abstractions;
+namespace MindBloom.Application.Common.Interfaces;
 
 public interface INotificationPublisher
 {
