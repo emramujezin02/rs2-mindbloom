@@ -401,10 +401,13 @@ class _ArticleManagementPageState extends State<ArticleManagementPage> {
     }
 
     if (_viewModel.articles.isEmpty) {
-      return const AdminTableEmptyState(
+      return AdminTableEmptyState(
         icon: Icons.article_outlined,
-        title: 'Nema članaka',
-        message: 'Nijedan članak ne odgovara odabranim filterima.',
+        title: _hasActiveFilters ? 'Nema rezultata' : 'Nema članaka',
+        message: _hasActiveFilters
+            ? 'Nijedan članak ne odgovara odabranim filterima.'
+            : 'Trenutno nema kreiranih članaka.',
+        onResetFilters: _hasActiveFilters ? _clearFilters : null,
       );
     }
 

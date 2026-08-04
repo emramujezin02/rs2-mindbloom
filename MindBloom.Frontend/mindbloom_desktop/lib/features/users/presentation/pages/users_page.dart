@@ -576,10 +576,13 @@ class _UsersPageState extends State<UsersPage> {
     }
 
     if (_viewModel.users.isEmpty) {
-      return const AdminTableEmptyState(
+      return AdminTableEmptyState(
         icon: Icons.people_outline,
-        title: 'Nema korisnika',
-        message: 'Nijedan korisnik ne odgovara odabranim filterima.',
+        title: _hasActiveFilters ? 'Nema rezultata' : 'Nema korisnika',
+        message: _hasActiveFilters
+            ? 'Nijedan korisnik ne odgovara odabranim filterima.'
+            : 'Trenutno nema korisnika za prikaz.',
+        onResetFilters: _hasActiveFilters ? _clearFilters : null,
       );
     }
 

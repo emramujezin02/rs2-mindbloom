@@ -504,10 +504,13 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
     }
 
     if (_viewModel.workshops.isEmpty) {
-      return const AdminTableEmptyState(
+      return AdminTableEmptyState(
         icon: Icons.event_available_outlined,
-        title: 'Nema radionica',
-        message: 'Nijedna radionica ne odgovara odabranim filterima.',
+        title: _hasActiveFilters ? 'Nema rezultata' : 'Nema radionica',
+        message: _hasActiveFilters
+            ? 'Nijedna radionica ne odgovara odabranim filterima.'
+            : 'Trenutno nema kreiranih radionica.',
+        onResetFilters: _hasActiveFilters ? _clearFilters : null,
       );
     }
 

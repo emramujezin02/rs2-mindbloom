@@ -18,6 +18,14 @@ class AppErrorHelper {
       return value.substring('FormatException: '.length);
     }
 
+    /*
+     * Ne prikazujemo raw stack trace
+     * ili tehnički exception dump u UI.
+     */
+    if (_looksLikeStackTrace(value)) {
+      return 'Došlo je do neočekivane greške. Pokušajte ponovo.';
+    }
+
     if (value.isEmpty) {
       return 'Došlo je do neočekivane greške.';
     }
@@ -57,7 +65,32 @@ class AppErrorHelper {
     return result;
   }
 
+  static bool isSessionExpired(Object error) {
+    return error is AppException &&
+        (error.isSessionExpired || error.statusCode == 401);
+  }
+
+  static bool isNetworkError(Object error) {
+    return error is AppException && error.isNetworkError;
+  }
+
+  static bool isTimeout(Object error) {
+    return error is AppException && error.isTimeout;
+  }
+
   static String _messageFromAppException(AppException exception) {
+    if (exception.isSessionExpired || exception.statusCode == 401) {
+      return 'Vaša sesija je istekla. Prijavite se ponovo.';
+    }
+
+    if (exception.isTimeout) {
+      return 'Zahtjev je trajao predugo. Provjerite internet vezu i pokušajte ponovo.';
+    }
+
+    if (exception.isNetworkError) {
+      return 'Nije moguće povezati se sa serverom. Provjerite internet vezu i pokušajte ponovo.';
+    }
+
     if (exception.hasValidationErrors) {
       final messages = exception.allValidationMessages
           .map(_translateCommonMessage)
@@ -71,13 +104,16 @@ class AppErrorHelper {
 
     final detail = exception.detail?.trim();
 
-    if (detail != null && detail.isNotEmpty && !_isGenericDetail(detail)) {
+    if (detail != null &&
+        detail.isNotEmpty &&
+        !_isGenericDetail(detail) &&
+        !_looksLikeStackTrace(detail)) {
       return _translateCommonMessage(detail);
     }
 
     final message = exception.message.trim();
 
-    if (message.isNotEmpty) {
+    if (message.isNotEmpty && !_looksLikeStackTrace(message)) {
       return _translateCommonMessage(message);
     }
 
@@ -91,20 +127,40 @@ class AppErrorHelper {
         normalized == 'an unexpected server error occurred.';
   }
 
+  static bool _looksLikeStackTrace(String value) {
+    final normalized = value.toLowerCase();
+
+    return normalized.contains(' at ') &&
+        (normalized.contains('.cs:line') ||
+            normalized.contains('stack trace') ||
+            normalized.contains('system.'));
+  }
+
   static String _fallbackForStatusCode(int? statusCode) {
     switch (statusCode) {
       case 400:
         return 'Podaci zahtjeva nisu ispravni. Provjerite unesene vrijednosti.';
+
       case 401:
         return 'Vaša sesija je istekla. Prijavite se ponovo.';
+
       case 403:
         return 'Nemate dozvolu za ovu akciju.';
+
       case 404:
         return 'Traženi podatak nije pronađen.';
+
       case 409:
         return 'Akcija se ne može izvršiti zbog postojećih podataka ili poslovnog pravila.';
+
       case 500:
         return 'Došlo je do greške na serveru. Pokušajte ponovo.';
+
+      case 502:
+      case 503:
+      case 504:
+        return 'Server trenutno nije dostupan. Pokušajte ponovo za nekoliko trenutaka.';
+
       default:
         return 'Zahtjev nije mogao biti izvršen.';
     }

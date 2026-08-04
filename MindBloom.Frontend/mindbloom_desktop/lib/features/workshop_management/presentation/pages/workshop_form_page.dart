@@ -8,6 +8,9 @@ import '../../../../core/validation/app_validators.dart';
 import '../../../../core/validation/file_validation.dart';
 import '../../../../core/widgets/app_error_banner.dart';
 import '../viewmodels/workshop_form_viewmodel.dart';
+import '../../../../core/widgets/app_error_panel.dart';
+import '../../../../core/widgets/app_loading_overlay.dart';
+import '../../../../core/widgets/app_loading_state.dart';
 
 class WorkshopFormPage extends StatefulWidget {
   final int? workshopId;
@@ -508,7 +511,9 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
         appBar: AppBar(
           title: Text(_isEditing ? 'Uredi radionicu' : 'Kreiraj radionicu'),
         ),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const AppLoadingState(
+          message: 'Učitavanje podataka radionice...',
+        ),
       );
     }
 
@@ -523,345 +528,354 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
       appBar: AppBar(
         title: Text(_isEditing ? 'Uredi radionicu' : 'Kreiraj radionicu'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
-            child: Form(
-              key: _formKey,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextFormField(
-                        controller: _titleController,
-                        enabled: !_isBusy,
-                        maxLength: 150,
-                        decoration: const InputDecoration(
-                          labelText: 'Naziv',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) => AppValidators.textLength(
-                          value,
-                          fieldName: 'Naziv',
-                          minLength: 3,
+      body: AppLoadingOverlay(
+        isLoading: _isBusy,
+        message: _viewModel.isUploadingImage
+            ? 'Učitavanje slike...'
+            : 'Spremanje radionice...',
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: Form(
+                key: _formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextFormField(
+                          controller: _titleController,
+                          enabled: !_isBusy,
                           maxLength: 150,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _descriptionController,
-                        enabled: !_isBusy,
-                        minLines: 5,
-                        maxLines: 10,
-                        maxLength: 2000,
-                        decoration: const InputDecoration(
-                          labelText: 'Opis',
-                          border: OutlineInputBorder(),
-                          alignLabelWithHint: true,
-                        ),
-                        validator: (value) => AppValidators.textLength(
-                          value,
-                          fieldName: 'Opis',
-                          minLength: 10,
-                          maxLength: 2000,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _imageUrlController.text.trim().isEmpty
-                                      ? 'Naslovna slika nije učitana.'
-                                      : 'Naslovna slika je učitana.',
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              OutlinedButton.icon(
-                                onPressed: _isBusy ? null : _pickAndUploadImage,
-                                icon: _viewModel.isUploadingImage
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Icon(Icons.upload_file),
-                                label: Text(
-                                  _viewModel.isUploadingImage
-                                      ? 'Učitavanje...'
-                                      : _imageUrlController.text.trim().isEmpty
-                                      ? 'Učitaj sliku'
-                                      : 'Zamijeni sliku',
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (_imageUrlController.text.trim().isNotEmpty) ...[
-                            const SizedBox(height: 16),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.network(
-                                _resolveImageUrl(_imageUrlController.text),
-                                height: 240,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    height: 180,
-                                    alignment: Alignment.center,
-                                    child: const Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.broken_image_outlined,
-                                          size: 48,
-                                        ),
-                                        SizedBox(height: 8),
-                                        Text(
-                                          'Pregled slike nije moguće učitati.',
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<int>(
-                        initialValue: _type,
-                        decoration: const InputDecoration(
-                          labelText: 'Tip radionice',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 1, child: Text('Online')),
-                          DropdownMenuItem(value: 2, child: Text('Uživo')),
-                        ],
-                        onChanged: _isBusy
-                            ? null
-                            : (value) {
-                                if (value == null) {
-                                  return;
-                                }
-
-                                _viewModel.clearError();
-
-                                setState(() {
-                                  _type = value;
-                                });
-
-                                _formKey.currentState?.validate();
-                              },
-                      ),
-                      const SizedBox(height: 12),
-                      if (_type == 1)
-                        TextFormField(
-                          controller: _onlineLinkController,
-                          enabled: !_isBusy,
-                          maxLength: 1000,
                           decoration: const InputDecoration(
-                            labelText: 'Link za online radionicu',
-                            hintText: 'https://...',
+                            labelText: 'Naziv',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.link),
-                          ),
-                          validator: (value) => AppValidators.httpUrl(
-                            value,
-                            fieldName: 'Online link',
-                            required: true,
-                            maxLength: 1000,
-                          ),
-                        ),
-                      if (_type == 2)
-                        TextFormField(
-                          controller: _locationController,
-                          enabled: !_isBusy,
-                          maxLength: 300,
-                          decoration: const InputDecoration(
-                            labelText: 'Lokacija',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.location_on_outlined),
                           ),
                           validator: (value) => AppValidators.textLength(
                             value,
-                            fieldName: 'Lokacija',
-                            maxLength: 300,
+                            fieldName: 'Naziv',
+                            minLength: 3,
+                            maxLength: 150,
                           ),
                         ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: _isBusy ? null : _selectStartDate,
-                            icon: const Icon(Icons.event_available),
-                            label: Text(
-                              'Početak: ${formatter.format(_startDateTime)}',
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: _isBusy ? null : _selectEndDate,
-                            icon: const Icon(Icons.event_busy),
-                            label: Text(
-                              'Završetak: ${formatter.format(_endDateTime)}',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      InkWell(
-                        onTap: _isBusy ? null : _pickRegistrationDeadline,
-                        borderRadius: BorderRadius.circular(8),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Rok za prijavu',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.event_busy),
-                          ),
-                          child: Text(
-                            _registrationDeadline == null
-                                ? 'Odaberite rok za prijavu'
-                                : formatter.format(_registrationDeadline!),
-                          ),
-                        ),
-                      ),
-                      if (_dateError != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          _dateError!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _capacityController,
-                              enabled: !_isBusy,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Broj mjesta',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: _validateCapacity,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _priceController,
-                              enabled: !_isBusy,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              decoration: const InputDecoration(
-                                labelText: 'Cijena',
-                                suffixText: 'KM',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (value) => AppValidators.price(
-                                value,
-                                fieldName: 'Cijena',
-                                allowZero: true,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<int?>(
-                        initialValue: _therapistId,
-                        decoration: const InputDecoration(
-                          labelText: 'Terapeut',
-                          helperText:
-                              'Opcionalno. Ostavite prazno ako radionicu organizuje administrator.',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: [
-                          const DropdownMenuItem<int?>(
-                            value: null,
-                            child: Text('Bez dodijeljenog terapeuta'),
-                          ),
-                          ..._viewModel.therapists.map((therapist) {
-                            return DropdownMenuItem<int?>(
-                              value: therapist.id,
-                              child: Text(
-                                '${therapist.fullName} — ${therapist.specialization}',
-                              ),
-                            );
-                          }),
-                        ],
-                        onChanged: _isBusy
-                            ? null
-                            : (value) {
-                                _viewModel.clearError();
 
-                                setState(() {
-                                  _therapistId = value;
-                                });
-                              },
-                      ),
-                      if (_viewModel.error != null) ...[
-                        const SizedBox(height: 16),
-                        AppErrorBanner(
-                          message: _viewModel.error!,
-                          onDismiss: _viewModel.clearError,
-                        ),
-                      ],
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: _isBusy
-                                ? null
-                                : () {
-                                    Navigator.of(context).pop(false);
-                                  },
-                            child: const Text('Odustani'),
+                        const SizedBox(height: 12),
+
+                        TextFormField(
+                          controller: _descriptionController,
+                          enabled: !_isBusy,
+                          minLines: 5,
+                          maxLines: 10,
+                          maxLength: 2000,
+                          decoration: const InputDecoration(
+                            labelText: 'Opis',
+                            border: OutlineInputBorder(),
+                            alignLabelWithHint: true,
                           ),
-                          const SizedBox(width: 12),
-                          FilledButton.icon(
-                            onPressed: _viewModel.isSaving ? null : _save,
-                            icon: _viewModel.isSaving
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.save_outlined),
-                            label: Text(
-                              _viewModel.isSaving
-                                  ? 'Spremanje...'
-                                  : _isEditing
-                                  ? 'Spremi izmjene'
-                                  : 'Kreiraj radionicu',
+                          validator: (value) => AppValidators.textLength(
+                            value,
+                            fieldName: 'Opis',
+                            minLength: 10,
+                            maxLength: 2000,
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _imageUrlController.text.trim().isEmpty
+                                        ? 'Naslovna slika nije učitana.'
+                                        : 'Naslovna slika je učitana.',
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                OutlinedButton.icon(
+                                  onPressed: _isBusy
+                                      ? null
+                                      : _pickAndUploadImage,
+                                  icon: const Icon(Icons.upload_file),
+                                  label: Text(
+                                    _imageUrlController.text.trim().isEmpty
+                                        ? 'Učitaj sliku'
+                                        : 'Zamijeni sliku',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_imageUrlController.text.trim().isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  _resolveImageUrl(_imageUrlController.text),
+                                  height: 240,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      height: 180,
+                                      alignment: Alignment.center,
+                                      child: const Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.broken_image_outlined,
+                                            size: 48,
+                                          ),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            'Pregled slike nije moguće učitati.',
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        DropdownButtonFormField<int>(
+                          initialValue: _type,
+                          decoration: const InputDecoration(
+                            labelText: 'Tip radionice',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 1, child: Text('Online')),
+                            DropdownMenuItem(value: 2, child: Text('Uživo')),
+                          ],
+                          onChanged: _isBusy
+                              ? null
+                              : (value) {
+                                  if (value == null) {
+                                    return;
+                                  }
+
+                                  _viewModel.clearError();
+
+                                  setState(() {
+                                    _type = value;
+                                  });
+
+                                  _formKey.currentState?.validate();
+                                },
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        if (_type == 1)
+                          TextFormField(
+                            controller: _onlineLinkController,
+                            enabled: !_isBusy,
+                            maxLength: 1000,
+                            decoration: const InputDecoration(
+                              labelText: 'Link za online radionicu',
+                              hintText: 'https://...',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.link),
+                            ),
+                            validator: (value) => AppValidators.httpUrl(
+                              value,
+                              fieldName: 'Online link',
+                              required: true,
+                              maxLength: 1000,
+                            ),
+                          ),
+
+                        if (_type == 2)
+                          TextFormField(
+                            controller: _locationController,
+                            enabled: !_isBusy,
+                            maxLength: 300,
+                            decoration: const InputDecoration(
+                              labelText: 'Lokacija',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.location_on_outlined),
+                            ),
+                            validator: (value) => AppValidators.textLength(
+                              value,
+                              fieldName: 'Lokacija',
+                              maxLength: 300,
+                            ),
+                          ),
+
+                        const SizedBox(height: 12),
+
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: _isBusy ? null : _selectStartDate,
+                              icon: const Icon(Icons.event_available),
+                              label: Text(
+                                'Početak: ${formatter.format(_startDateTime)}',
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: _isBusy ? null : _selectEndDate,
+                              icon: const Icon(Icons.event_busy),
+                              label: Text(
+                                'Završetak: ${formatter.format(_endDateTime)}',
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        InkWell(
+                          onTap: _isBusy ? null : _pickRegistrationDeadline,
+                          borderRadius: BorderRadius.circular(8),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Rok za prijavu',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.event_busy),
+                            ),
+                            child: Text(
+                              _registrationDeadline == null
+                                  ? 'Odaberite rok za prijavu'
+                                  : formatter.format(_registrationDeadline!),
+                            ),
+                          ),
+                        ),
+
+                        if (_dateError != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            _dateError!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
                             ),
                           ),
                         ],
-                      ),
-                    ],
+
+                        const SizedBox(height: 16),
+
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _capacityController,
+                                enabled: !_isBusy,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText: 'Broj mjesta',
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: _validateCapacity,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _priceController,
+                                enabled: !_isBusy,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                decoration: const InputDecoration(
+                                  labelText: 'Cijena',
+                                  suffixText: 'KM',
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (value) => AppValidators.price(
+                                  value,
+                                  fieldName: 'Cijena',
+                                  allowZero: true,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        DropdownButtonFormField<int?>(
+                          initialValue: _therapistId,
+                          decoration: const InputDecoration(
+                            labelText: 'Terapeut',
+                            helperText:
+                                'Opcionalno. Ostavite prazno ako radionicu organizuje administrator.',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: [
+                            const DropdownMenuItem<int?>(
+                              value: null,
+                              child: Text('Bez dodijeljenog terapeuta'),
+                            ),
+                            ..._viewModel.therapists.map((therapist) {
+                              return DropdownMenuItem<int?>(
+                                value: therapist.id,
+                                child: Text(
+                                  '${therapist.fullName} — ${therapist.specialization}',
+                                ),
+                              );
+                            }),
+                          ],
+                          onChanged: _isBusy
+                              ? null
+                              : (value) {
+                                  _viewModel.clearError();
+
+                                  setState(() {
+                                    _therapistId = value;
+                                  });
+                                },
+                        ),
+
+                        if (_viewModel.error != null) ...[
+                          const SizedBox(height: 16),
+                          AppErrorBanner(
+                            message: _viewModel.error!,
+                            onDismiss: _viewModel.clearError,
+                          ),
+                        ],
+
+                        const SizedBox(height: 24),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: _isBusy
+                                  ? null
+                                  : () {
+                                      Navigator.of(context).pop(false);
+                                    },
+                              child: const Text('Odustani'),
+                            ),
+                            const SizedBox(width: 12),
+                            FilledButton.icon(
+                              onPressed: _isBusy ? null : _save,
+                              icon: const Icon(Icons.save_outlined),
+                              label: Text(
+                                _isEditing
+                                    ? 'Spremi izmjene'
+                                    : 'Kreiraj radionicu',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -873,27 +887,11 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
   }
 
   Widget _buildInitialError() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 650),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppErrorBanner(message: _viewModel.error!),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () {
-                  _viewModel.initialize(widget.workshopId);
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('Pokušaj ponovo'),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return AppErrorPanel(
+      message: _viewModel.error ?? 'Radionicu nije moguće učitati.',
+      onRetry: () {
+        _viewModel.initialize(widget.workshopId);
+      },
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/error/app_error_helper.dart';
 import '../../data/repositories/auth_repository.dart';
 
 class AuthViewModel extends ChangeNotifier {
@@ -16,8 +17,13 @@ class AuthViewModel extends ChangeNotifier {
     required String password,
     required bool rememberMe,
   }) async {
+    if (isLoading) {
+      return false;
+    }
+
     isLoading = true;
     errorMessage = null;
+
     notifyListeners();
 
     try {
@@ -27,27 +33,25 @@ class AuthViewModel extends ChangeNotifier {
         rememberMe: rememberMe,
       );
 
-      isLoading = false;
-      notifyListeners();
-
       return true;
     } catch (error) {
-      errorMessage = _cleanError(error);
-
-      isLoading = false;
-      notifyListeners();
+      errorMessage = AppErrorHelper.message(error);
 
       return false;
+    } finally {
+      isLoading = false;
+
+      notifyListeners();
     }
   }
 
-  String _cleanError(Object error) {
-    final value = error.toString();
-
-    if (value.startsWith('Exception: ')) {
-      return value.substring('Exception: '.length);
+  void clearError() {
+    if (errorMessage == null) {
+      return;
     }
 
-    return value;
+    errorMessage = null;
+
+    notifyListeners();
   }
 }

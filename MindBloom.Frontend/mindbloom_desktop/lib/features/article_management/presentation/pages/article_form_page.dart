@@ -8,6 +8,9 @@ import '../../../../core/validation/file_validation.dart';
 import '../../../../core/widgets/app_error_banner.dart';
 import '../viewmodels/article_form_viewmodel.dart';
 import 'article_preview_page.dart';
+import '../../../../core/widgets/app_error_panel.dart';
+import '../../../../core/widgets/app_loading_overlay.dart';
+import '../../../../core/widgets/app_loading_state.dart';
 
 class ArticleFormPage extends StatefulWidget {
   final int? articleId;
@@ -304,230 +307,217 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
 
   Widget _buildBody() {
     if (_viewModel.isLoading || !_formInitialized) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingState(message: 'Učitavanje podataka članka...');
     }
 
     if (_viewModel.errorMessage != null &&
         _viewModel.article == null &&
         widget.isEditing) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 650),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppErrorBanner(message: _viewModel.errorMessage!),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: _loadArticle,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Pokušaj ponovo'),
-                ),
-              ],
-            ),
-          ),
-        ),
+      return AppErrorPanel(
+        message: _viewModel.errorMessage!,
+        onRetry: () {
+          _loadArticle();
+        },
       );
     }
 
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
-          child: Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _titleController,
-                  enabled: !_viewModel.isSaving,
-                  maxLength: 200,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Naslov',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: _validateTitle,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _descriptionController,
-                  enabled: !_viewModel.isSaving,
-                  minLines: 3,
-                  maxLines: 5,
-                  maxLength: 500,
-                  decoration: const InputDecoration(
-                    labelText: 'Opis',
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: _validateDescription,
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<int>(
-                  initialValue: _selectedCategoryId,
-                  decoration: const InputDecoration(
-                    labelText: 'Kategorija članka',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _viewModel.categories.map((category) {
-                    return DropdownMenuItem<int>(
-                      value: category.id,
-                      child: Text(category.name),
-                    );
-                  }).toList(),
-                  onChanged: _viewModel.isSaving
-                      ? null
-                      : (value) {
-                          _viewModel.clearError();
+    final isBusy = _viewModel.isSaving || _viewModel.isUploadingImage;
 
-                          setState(() {
-                            _selectedCategoryId = value;
-                          });
-                        },
-                  validator: (value) {
-                    if (value == null) {
-                      return 'Kategorija članka je obavezna.';
-                    }
-
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _contentController,
-                  enabled: !_viewModel.isSaving,
-                  minLines: 12,
-                  maxLines: 20,
-                  maxLength: 20000,
-                  decoration: const InputDecoration(
-                    labelText: 'Sadržaj članka',
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
+    return AppLoadingOverlay(
+      isLoading: isBusy,
+      message: _viewModel.isUploadingImage
+          ? 'Učitavanje slike...'
+          : 'Spremanje članka...',
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900),
+            child: Form(
+              key: _formKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextFormField(
+                    controller: _titleController,
+                    enabled: !isBusy,
+                    maxLength: 200,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Naslov',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: _validateTitle,
                   ),
-                  validator: _validateContent,
-                ),
-                const SizedBox(height: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _imageUrlController.text.trim().isEmpty
-                                ? 'Naslovna slika nije učitana.'
-                                : 'Naslovna slika je učitana.',
+
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _descriptionController,
+                    enabled: !isBusy,
+                    minLines: 3,
+                    maxLines: 5,
+                    maxLength: 500,
+                    decoration: const InputDecoration(
+                      labelText: 'Opis',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: _validateDescription,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  DropdownButtonFormField<int>(
+                    initialValue: _selectedCategoryId,
+                    decoration: const InputDecoration(
+                      labelText: 'Kategorija članka',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _viewModel.categories.map((category) {
+                      return DropdownMenuItem<int>(
+                        value: category.id,
+                        child: Text(category.name),
+                      );
+                    }).toList(),
+                    onChanged: isBusy
+                        ? null
+                        : (value) {
+                            _viewModel.clearError();
+
+                            setState(() {
+                              _selectedCategoryId = value;
+                            });
+                          },
+                    validator: (value) {
+                      if (value == null) {
+                        return 'Kategorija članka je obavezna.';
+                      }
+
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _contentController,
+                    enabled: !isBusy,
+                    minLines: 12,
+                    maxLines: 20,
+                    maxLength: 20000,
+                    decoration: const InputDecoration(
+                      labelText: 'Sadržaj članka',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: _validateContent,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _imageUrlController.text.trim().isEmpty
+                                  ? 'Naslovna slika nije učitana.'
+                                  : 'Naslovna slika je učitana.',
+                            ),
                           ),
+                          const SizedBox(width: 12),
+                          OutlinedButton.icon(
+                            onPressed: isBusy ? null : _pickAndUploadImage,
+                            icon: const Icon(Icons.upload_file),
+                            label: Text(
+                              _imageUrlController.text.trim().isEmpty
+                                  ? 'Učitaj sliku'
+                                  : 'Zamijeni sliku',
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_imageUrlController.text.trim().isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        _ImagePreview(
+                          imageUrl: _imageUrlController.text.trim(),
                         ),
-                        const SizedBox(width: 12),
-                        OutlinedButton.icon(
-                          onPressed:
-                              _viewModel.isSaving || _viewModel.isUploadingImage
-                              ? null
-                              : _pickAndUploadImage,
-                          icon: _viewModel.isUploadingImage
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.upload_file),
-                          label: Text(
-                            _viewModel.isUploadingImage
-                                ? 'Učitavanje...'
-                                : _imageUrlController.text.trim().isEmpty
-                                ? 'Učitaj sliku'
-                                : 'Zamijeni sliku',
-                          ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _imageUrlController.text,
+                          style: Theme.of(context).textTheme.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
+                    ],
+                  ),
+
+                  SwitchListTile(
+                    value: _isPublished,
+                    onChanged: isBusy
+                        ? null
+                        : (value) {
+                            _viewModel.clearError();
+
+                            setState(() {
+                              _isPublished = value;
+                            });
+                          },
+                    title: const Text('Objavljen'),
+                    subtitle: Text(
+                      _isPublished
+                          ? 'Članak će biti vidljiv korisnicima.'
+                          : 'Članak će ostati neobjavljena skica.',
                     ),
-                    if (_imageUrlController.text.trim().isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      _ImagePreview(imageUrl: _imageUrlController.text.trim()),
-                      const SizedBox(height: 8),
-                      Text(
-                        _imageUrlController.text,
-                        style: Theme.of(context).textTheme.bodySmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+
+                  if (_viewModel.errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    AppErrorBanner(
+                      message: _viewModel.errorMessage!,
+                      onDismiss: _viewModel.clearError,
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: isBusy
+                            ? null
+                            : () {
+                                Navigator.of(context).pop();
+                              },
+                        child: const Text('Odustani'),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: isBusy ? null : _openPreview,
+                        icon: const Icon(Icons.visibility_outlined),
+                        label: const Text('Pregled'),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: isBusy ? null : _save,
+                        icon: const Icon(Icons.save),
+                        label: Text(
+                          widget.articleId == null
+                              ? 'Kreiraj članak'
+                              : 'Spremi izmjene',
+                        ),
                       ),
                     ],
-                  ],
-                ),
-                SwitchListTile(
-                  value: _isPublished,
-                  onChanged: _viewModel.isSaving
-                      ? null
-                      : (value) {
-                          _viewModel.clearError();
-
-                          setState(() {
-                            _isPublished = value;
-                          });
-                        },
-                  title: const Text('Objavljen'),
-                  subtitle: Text(
-                    _isPublished
-                        ? 'Članak će biti vidljiv korisnicima.'
-                        : 'Članak će ostati neobjavljena skica.',
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                ),
-                if (_viewModel.errorMessage != null) ...[
-                  const SizedBox(height: 12),
-                  AppErrorBanner(
-                    message: _viewModel.errorMessage!,
-                    onDismiss: _viewModel.clearError,
                   ),
                 ],
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: _viewModel.isSaving
-                          ? null
-                          : () {
-                              Navigator.of(context).pop();
-                            },
-                      child: const Text('Odustani'),
-                    ),
-                    const SizedBox(width: 12),
-                    OutlinedButton.icon(
-                      onPressed: _viewModel.isSaving ? null : _openPreview,
-                      icon: const Icon(Icons.visibility_outlined),
-                      label: const Text('Pregled'),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: _viewModel.isSaving ? null : _save,
-                      icon: _viewModel.isSaving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.save),
-                      label: Text(
-                        _viewModel.isSaving
-                            ? 'Spremanje...'
-                            : widget.articleId == null
-                            ? 'Kreiraj članak'
-                            : 'Spremi izmjene',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         ),

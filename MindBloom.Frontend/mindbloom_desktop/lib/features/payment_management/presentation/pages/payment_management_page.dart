@@ -435,10 +435,13 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
     }
 
     if (_viewModel.payments.isEmpty) {
-      return const AdminTableEmptyState(
+      return AdminTableEmptyState(
         icon: Icons.payments_outlined,
-        title: 'Nema plaćanja',
-        message: 'Nijedno plaćanje ne odgovara odabranim filterima.',
+        title: _hasActiveFilters ? 'Nema rezultata' : 'Nema plaćanja',
+        message: _hasActiveFilters
+            ? 'Nijedno plaćanje ne odgovara odabranim filterima.'
+            : 'Trenutno nema evidentiranih plaćanja.',
+        onResetFilters: _hasActiveFilters ? _clearFilters : null,
       );
     }
 

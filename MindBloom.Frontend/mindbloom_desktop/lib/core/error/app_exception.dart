@@ -9,12 +9,21 @@ class AppException implements Exception {
 
   final Map<String, List<String>> validationErrors;
 
+  final bool isNetworkError;
+
+  final bool isTimeout;
+
+  final bool isSessionExpired;
+
   AppException({
     required this.message,
     this.statusCode,
     this.title,
     this.detail,
     Map<String, List<String>>? validationErrors,
+    this.isNetworkError = false,
+    this.isTimeout = false,
+    this.isSessionExpired = false,
   }) : validationErrors = validationErrors ?? const {};
 
   bool get hasValidationErrors {

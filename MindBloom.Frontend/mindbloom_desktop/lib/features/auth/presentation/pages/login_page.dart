@@ -4,6 +4,7 @@ import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../../../../core/widgets/app_error_banner.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -78,6 +79,8 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final session = SessionScope.of(context);
+
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -193,22 +196,19 @@ class _LoginPageState extends State<LoginPage> {
                         },
                       ),
 
+                      if (session.sessionExpired) ...[
+                        const SizedBox(height: 8),
+                        const AppErrorBanner(
+                          message:
+                              'Vaša sesija je istekla. Prijavite se ponovo.',
+                        ),
+                      ],
+
                       if (_viewModel.errorMessage != null) ...[
                         const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.errorContainer,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            _viewModel.errorMessage!,
-                            style: TextStyle(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onErrorContainer,
-                            ),
-                          ),
+                        AppErrorBanner(
+                          message: _viewModel.errorMessage!,
+                          onDismiss: _viewModel.clearError,
                         ),
                       ],
 

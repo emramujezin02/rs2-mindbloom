@@ -5,6 +5,8 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/widgets/app_error_banner.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../viewmodels/admin_settings_viewmodel.dart';
+import '../../../../core/widgets/app_error_panel.dart';
+import '../../../../core/widgets/app_loading_state.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -277,42 +279,23 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     if (_viewModel.isLoading && _viewModel.profile == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingState(
+        message: 'Učitavanje administratorskih postavki...',
+      );
     }
 
     if (_viewModel.profile == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 60,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _viewModel.errorMessage ??
-                    'Postavke administratora nije moguće učitati.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 18),
-              FilledButton.icon(
-                onPressed: _viewModel.isLoading
-                    ? null
-                    : () {
-                        _profileInitialized = false;
+      return AppErrorPanel(
+        message:
+            _viewModel.errorMessage ??
+            'Postavke administratora nije moguće učitati.',
+        onRetry: _viewModel.isLoading
+            ? null
+            : () {
+                _profileInitialized = false;
 
-                        _viewModel.initialize();
-                      },
-                icon: const Icon(Icons.refresh),
-                label: const Text('Pokušaj ponovo'),
-              ),
-            ],
-          ),
-        ),
+                _viewModel.initialize();
+              },
       );
     }
 

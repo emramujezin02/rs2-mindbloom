@@ -95,15 +95,9 @@ public sealed class GlobalExceptionMiddleware
                 ValidationErrors =
                     errorDefinition.ValidationErrors,
 
-                ExceptionType =
-                    _environment.IsDevelopment()
-                        ? exception.GetType().Name
-                        : null,
+                ExceptionType = null,
 
-                StackTrace =
-                    _environment.IsDevelopment()
-                        ? exception.StackTrace
-                        : null
+                StackTrace = null
             };
 
         context.Response.Clear();

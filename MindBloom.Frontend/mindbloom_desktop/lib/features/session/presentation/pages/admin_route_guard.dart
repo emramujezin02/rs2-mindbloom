@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_loading_state.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../viewmodels/session_scope.dart';
 
@@ -13,7 +14,9 @@ class AdminRouteGuard extends StatelessWidget {
     final session = SessionScope.of(context);
 
     if (!session.isInitialized) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: AppLoadingState(message: 'Provjera pristupa...'),
+      );
     }
 
     final isAdmin = session.isLoggedIn && session.currentUser?.isAdmin == true;
