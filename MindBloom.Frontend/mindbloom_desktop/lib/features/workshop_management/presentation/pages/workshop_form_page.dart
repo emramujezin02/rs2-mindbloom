@@ -374,29 +374,6 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
     _viewModel.clearError();
   }
 
-  String? _validateCapacity(String? value) {
-    final baseError = AppValidators.integerRange(
-      value,
-      fieldName: 'Broj mjesta',
-      minimum: 1,
-      maximum: 10000,
-    );
-
-    if (baseError != null) {
-      return baseError;
-    }
-
-    final capacity = AppValidators.parseInteger(value)!;
-
-    final registered = _viewModel.workshop?.registeredCount ?? 0;
-
-    if (capacity < registered) {
-      return 'Broj mjesta ne može biti manji od broja već prijavljenih učesnika ($registered).';
-    }
-
-    return null;
-  }
-
   String? _validateDates() {
     final endError = AppValidators.endAfterStart(
       start: _startDateTime,
@@ -767,43 +744,90 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
 
                         const SizedBox(height: 16),
 
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _capacityController,
-                                enabled: !_isBusy,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: 'Broj mjesta',
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: _validateCapacity,
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final compact = constraints.maxWidth < 560;
+
+                            final capacityField = TextFormField(
+                              controller: _capacityController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Capacity',
+                                border: OutlineInputBorder(),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _priceController,
-                                enabled: !_isBusy,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                decoration: const InputDecoration(
-                                  labelText: 'Cijena',
-                                  suffixText: 'KM',
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) => AppValidators.price(
-                                  value,
-                                  fieldName: 'Cijena',
-                                  allowZero: true,
-                                ),
+                              validator: (value) {
+                                final capacity = int.tryParse(
+                                  value?.trim() ?? '',
+                                );
+
+                                if (capacity == null) {
+                                  return 'Enter a valid capacity.';
+                                }
+
+                                if (capacity < 1 || capacity > 10000) {
+                                  return 'Capacity must be between 1 and 10000.';
+                                }
+
+                                final currentRegistered =
+                                    _viewModel.workshop?.registeredCount ?? 0;
+
+                                if (capacity < currentRegistered) {
+                                  return 'Capacity cannot be lower than '
+                                      '$currentRegistered registered participants.';
+                                }
+
+                                return null;
+                              },
+                            );
+
+                            final priceField = TextFormField(
+                              controller: _priceController,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              decoration: const InputDecoration(
+                                labelText: 'Price',
+                                suffixText: 'KM',
+                                border: OutlineInputBorder(),
                               ),
-                            ),
-                          ],
+                              validator: (value) {
+                                final price = double.tryParse(
+                                  (value ?? '').trim().replaceAll(',', '.'),
+                                );
+
+                                if (price == null) {
+                                  return 'Enter a valid price.';
+                                }
+
+                                if (price < 0) {
+                                  return 'Price cannot be negative.';
+                                }
+
+                                return null;
+                              },
+                            );
+
+                            if (compact) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  capacityField,
+                                  const SizedBox(height: 12),
+                                  priceField,
+                                ],
+                              );
+                            }
+
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: capacityField),
+                                const SizedBox(width: 12),
+                                Expanded(child: priceField),
+                              ],
+                            );
+                          },
                         ),
 
                         const SizedBox(height: 16),
@@ -851,25 +875,36 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
 
                         const SizedBox(height: 24),
 
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                        Wrap(
+                          alignment: WrapAlignment.end,
+                          spacing: 12,
+                          runSpacing: 10,
                           children: [
                             TextButton(
-                              onPressed: _isBusy
+                              onPressed: _viewModel.isSaving
                                   ? null
                                   : () {
                                       Navigator.of(context).pop(false);
                                     },
-                              child: const Text('Odustani'),
+                              child: const Text('Cancel'),
                             ),
-                            const SizedBox(width: 12),
                             FilledButton.icon(
-                              onPressed: _isBusy ? null : _save,
-                              icon: const Icon(Icons.save_outlined),
+                              onPressed: _viewModel.isSaving ? null : _save,
+                              icon: _viewModel.isSaving
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.save_outlined),
                               label: Text(
-                                _isEditing
-                                    ? 'Spremi izmjene'
-                                    : 'Kreiraj radionicu',
+                                _viewModel.isSaving
+                                    ? 'Saving...'
+                                    : _isEditing
+                                    ? 'Save changes'
+                                    : 'Create workshop',
                               ),
                             ),
                           ],

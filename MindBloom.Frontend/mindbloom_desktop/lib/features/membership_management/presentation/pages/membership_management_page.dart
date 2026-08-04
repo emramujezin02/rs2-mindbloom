@@ -14,6 +14,7 @@ import '../../../../core/widgets/admin_table_action_menu.dart';
 import '../../../../core/widgets/admin_table_container.dart';
 import '../../../../core/widgets/admin_table_state.dart';
 import '../../../../core/widgets/app_error_banner.dart';
+import '../../../../core/widgets/app_responsive_dialog_content.dart';
 
 class MembershipManagementPage extends StatefulWidget {
   const MembershipManagementPage({super.key});
@@ -121,27 +122,21 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
     final isEditing = plan != null;
 
     final nameController = TextEditingController(text: plan?.name ?? '');
-
     final descriptionController = TextEditingController(
       text: plan?.description ?? '',
     );
-
     final priceController = TextEditingController(
       text: plan == null ? '' : plan.price.toStringAsFixed(2),
     );
-
     final durationController = TextEditingController(
       text: plan?.durationMonths.toString() ?? '',
     );
-
     final sessionsController = TextEditingController(
       text: plan?.includedSessions.toString() ?? '',
     );
-
     final discountController = TextEditingController(
       text: plan == null ? '0' : plan.discountPercentage.toStringAsFixed(2),
     );
-
     final benefitsController = TextEditingController(
       text: plan?.benefits.join('\n') ?? '',
     );
@@ -161,226 +156,239 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
               title: Text(
                 isEditing ? 'Uredi plan članarine' : 'Kreiraj plan članarine',
               ),
-              content: SizedBox(
-                width: 620,
-                child: SingleChildScrollView(
-                  child: Form(
-                    key: formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        DropdownButtonFormField<int>(
-                          initialValue: selectedPlanType,
-                          decoration: const InputDecoration(
-                            labelText: 'Tip plana',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 1,
-                              child: Text('10 sesija'),
-                            ),
-                            DropdownMenuItem(
-                              value: 2,
-                              child: Text('20 sesija'),
-                            ),
-                            DropdownMenuItem(
-                              value: 3,
-                              child: Text('30 sesija'),
-                            ),
-                          ],
-                          onChanged: isEditing
-                              ? null
-                              : (value) {
-                                  if (value == null) {
-                                    return;
-                                  }
-
-                                  setDialogState(() {
-                                    selectedPlanType = value;
-                                  });
-                                },
+              content: AppResponsiveDialogContent(
+                preferredWidth: 620,
+                child: Form(
+                  key: formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DropdownButtonFormField<int>(
+                        initialValue: selectedPlanType,
+                        decoration: const InputDecoration(
+                          labelText: 'Tip plana',
+                          border: OutlineInputBorder(),
                         ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: nameController,
-                          maxLength: 150,
-                          textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(
-                            labelText: 'Naziv',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            return AppValidators.textLength(
-                              value,
-                              fieldName: 'Naziv',
-                              maxLength: 150,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: descriptionController,
-                          minLines: 3,
-                          maxLines: 5,
-                          maxLength: 1000,
-                          decoration: const InputDecoration(
-                            labelText: 'Opis',
-                            border: OutlineInputBorder(),
-                            alignLabelWithHint: true,
-                          ),
-                          validator: (value) {
-                            return AppValidators.textLength(
-                              value,
-                              fieldName: 'Opis',
-                              maxLength: 1000,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: priceController,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                decoration: const InputDecoration(
-                                  labelText: 'Cijena',
-                                  suffixText: 'KM',
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) {
-                                  return AppValidators.price(
-                                    value,
-                                    fieldName: 'Cijena',
-                                    allowZero: false,
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                controller: durationController,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: 'Trajanje (mjeseci)',
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) {
-                                  final parsed = AppValidators.parseInteger(
-                                    value,
-                                  );
-
-                                  if (parsed == null) {
-                                    return 'Unesite ispravno trajanje.';
-                                  }
-
-                                  if (parsed <= 0) {
-                                    return 'Trajanje mora biti veće od 0.';
-                                  }
-
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: sessionsController,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: 'Broj uključenih sesija',
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) {
-                                  final parsed = AppValidators.parseInteger(
-                                    value,
-                                  );
-
-                                  if (parsed == null) {
-                                    return 'Unesite ispravan broj sesija.';
-                                  }
-
-                                  if (parsed <= 0) {
-                                    return 'Broj sesija mora biti veći od 0.';
-                                  }
-
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                controller: discountController,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                decoration: const InputDecoration(
-                                  labelText: 'Popust (%)',
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) {
-                                  final parsed = AppValidators.parseDecimal(
-                                    value,
-                                  );
-
-                                  if (parsed == null) {
-                                    return 'Unesite ispravan popust.';
-                                  }
-
-                                  if (parsed < 0 || parsed > 100) {
-                                    return 'Popust mora biti između 0 i 100%.';
-                                  }
-
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: benefitsController,
-                          minLines: 4,
-                          maxLines: 8,
-                          decoration: const InputDecoration(
-                            labelText: 'Pogodnosti',
-                            hintText: 'Unesite jednu pogodnost po redu.',
-                            border: OutlineInputBorder(),
-                            alignLabelWithHint: true,
-                          ),
-                        ),
-                        if (!isEditing) ...[
-                          const SizedBox(height: 8),
-                          SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('Odmah aktivan'),
-                            subtitle: const Text(
-                              'Plan će biti dostupan korisnicima odmah nakon kreiranja.',
-                            ),
-                            value: isActive,
-                            onChanged: (value) {
-                              setDialogState(() {
-                                isActive = value;
-                              });
-                            },
-                          ),
+                        items: const [
+                          DropdownMenuItem(value: 1, child: Text('10 sesija')),
+                          DropdownMenuItem(value: 2, child: Text('20 sesija')),
+                          DropdownMenuItem(value: 3, child: Text('30 sesija')),
                         ],
+                        onChanged: isEditing
+                            ? null
+                            : (value) {
+                                if (value == null) {
+                                  return;
+                                }
+
+                                setDialogState(() {
+                                  selectedPlanType = value;
+                                });
+                              },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: nameController,
+                        maxLength: 150,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Naziv',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          return AppValidators.textLength(
+                            value,
+                            fieldName: 'Naziv',
+                            maxLength: 150,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: descriptionController,
+                        minLines: 3,
+                        maxLines: 5,
+                        maxLength: 1000,
+                        decoration: const InputDecoration(
+                          labelText: 'Opis',
+                          border: OutlineInputBorder(),
+                          alignLabelWithHint: true,
+                        ),
+                        validator: (value) {
+                          return AppValidators.textLength(
+                            value,
+                            fieldName: 'Opis',
+                            maxLength: 1000,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 520;
+
+                          final priceField = TextFormField(
+                            controller: priceController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Cijena',
+                              suffixText: 'KM',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              return AppValidators.price(
+                                value,
+                                fieldName: 'Cijena',
+                                allowZero: false,
+                              );
+                            },
+                          );
+
+                          final durationField = TextFormField(
+                            controller: durationController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Trajanje (mjeseci)',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              final parsed = AppValidators.parseInteger(value);
+
+                              if (parsed == null) {
+                                return 'Unesite ispravno trajanje.';
+                              }
+
+                              if (parsed <= 0) {
+                                return 'Trajanje mora biti veće od 0.';
+                              }
+
+                              return null;
+                            },
+                          );
+
+                          if (compact) {
+                            return Column(
+                              children: [
+                                priceField,
+                                const SizedBox(height: 12),
+                                durationField,
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: priceField),
+                              const SizedBox(width: 12),
+                              Expanded(child: durationField),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 520;
+
+                          final sessionsField = TextFormField(
+                            controller: sessionsController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Broj uključenih sesija',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              final parsed = AppValidators.parseInteger(value);
+
+                              if (parsed == null) {
+                                return 'Unesite ispravan broj sesija.';
+                              }
+
+                              if (parsed <= 0) {
+                                return 'Broj sesija mora biti veći od 0.';
+                              }
+
+                              return null;
+                            },
+                          );
+
+                          final discountField = TextFormField(
+                            controller: discountController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Popust (%)',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              final parsed = AppValidators.parseDecimal(value);
+
+                              if (parsed == null) {
+                                return 'Unesite ispravan popust.';
+                              }
+
+                              if (parsed < 0 || parsed > 100) {
+                                return 'Popust mora biti između 0 i 100%.';
+                              }
+
+                              return null;
+                            },
+                          );
+
+                          if (compact) {
+                            return Column(
+                              children: [
+                                sessionsField,
+                                const SizedBox(height: 12),
+                                discountField,
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: sessionsField),
+                              const SizedBox(width: 12),
+                              Expanded(child: discountField),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: benefitsController,
+                        minLines: 4,
+                        maxLines: 8,
+                        decoration: const InputDecoration(
+                          labelText: 'Pogodnosti',
+                          hintText: 'Unesite jednu pogodnost po redu.',
+                          border: OutlineInputBorder(),
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                      if (!isEditing) ...[
+                        const SizedBox(height: 8),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Odmah aktivan'),
+                          subtitle: const Text(
+                            'Plan će biti dostupan korisnicima odmah nakon kreiranja.',
+                          ),
+                          value: isActive,
+                          onChanged: (value) {
+                            setDialogState(() {
+                              isActive = value;
+                            });
+                          },
+                        ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -402,15 +410,12 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
                     final price = AppValidators.parseDecimal(
                       priceController.text,
                     );
-
                     final duration = AppValidators.parseInteger(
                       durationController.text,
                     );
-
                     final sessions = AppValidators.parseInteger(
                       sessionsController.text,
                     );
-
                     final discount = AppValidators.parseDecimal(
                       discountController.text,
                     );
@@ -495,8 +500,8 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
       builder: (dialogContext) {
         return AlertDialog(
           title: Text(plan.isActive ? 'Deaktiviraj plan' : 'Aktiviraj plan'),
-          content: SizedBox(
-            width: 480,
+          content: AppResponsiveDialogContent(
+            preferredWidth: 480,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -537,7 +542,6 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
     );
 
     final reason = reasonController.text.trim();
-
     reasonController.dispose();
 
     if (confirmed != true || !mounted) {
@@ -619,12 +623,25 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
       context: context,
       builder: (dialogContext) {
         final formatter = DateFormat('dd.MM.yyyy. HH:mm');
+        final screenSize = MediaQuery.sizeOf(dialogContext);
+
+        final width = screenSize.width > 850
+            ? 750.0
+            : (screenSize.width - 80).clamp(280.0, 750.0);
+
+        final height = screenSize.height > 700
+            ? 500.0
+            : (screenSize.height * 0.62).clamp(220.0, 500.0);
 
         return AlertDialog(
-          title: Text('History — ${plan.name}'),
+          title: Text(
+            'History — ${plan.name}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
           content: SizedBox(
-            width: 750,
-            height: 500,
+            width: width,
+            height: height,
             child: _planViewModel.history.isEmpty
                 ? const Center(child: Text('No change history available.'))
                 : ListView.separated(
@@ -647,14 +664,18 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
                             if (item.reason != null &&
                                 item.reason!.trim().isNotEmpty)
                               Text('Reason: ${item.reason}'),
-                            if (item.previousValues != null) ...[
+                            if (item.previousValues != null &&
+                                item.previousValues!.trim().isNotEmpty) ...[
                               const SizedBox(height: 6),
                               SelectableText(
                                 'Previous: ${item.previousValues}',
                               ),
                             ],
-                            if (item.newValues != null)
+                            if (item.newValues != null &&
+                                item.newValues!.trim().isNotEmpty) ...[
+                              const SizedBox(height: 6),
                               SelectableText('New: ${item.newValues}'),
+                            ],
                           ],
                         ),
                       );
@@ -825,10 +846,6 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
           const SizedBox(height: 16),
 
           Expanded(child: _buildContent()),
-
-          const SizedBox(height: 12),
-
-          _buildPagination(),
 
           const SizedBox(height: 12),
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/admin_user_audit_model.dart';
 import '../../data/models/admin_user_details_model.dart';
+import '../../../../core/widgets/app_responsive_dialog_content.dart';
 
 class UserDetailsDialog extends StatelessWidget {
   final AdminUserDetailsModel user;
@@ -14,53 +15,48 @@ class UserDetailsDialog extends StatelessWidget {
 
     return AlertDialog(
       title: const Text('User details'),
-      content: SizedBox(
-        width: 520,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _item('Full name', user.fullName),
-              _item('Email', user.email),
-              _item('Phone', user.phoneNumber ?? '-'),
-              _item('Role', user.role),
-              _item('Gender', user.gender),
-              _item(
-                'Date of birth',
-                formatter.format(user.dateOfBirth.toLocal()),
-              ),
-              _item(
-                'Registered',
-                formatter.format(user.createdAtUtc.toLocal()),
-              ),
-              _item(
-                'Last login',
-                user.lastLoginAtUtc == null
-                    ? 'Never'
-                    : formatter.format(user.lastLoginAtUtc!.toLocal()),
-              ),
-              _item('Email verified', user.isEmailVerified ? 'Yes' : 'No'),
-              _item(
-                'Two factor',
-                user.isTwoFactorEnabled ? 'Enabled' : 'Disabled',
-              ),
-              _item('Account', user.isBlocked ? 'Blocked' : 'Active'),
-              const SizedBox(height: 12),
-              const Divider(),
-              const SizedBox(height: 12),
-              Text(
-                'Audit history',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              if (user.auditHistory.isEmpty)
-                const Text('No administrative changes have been recorded.')
-              else
-                ...user.auditHistory.map((audit) => _auditItem(context, audit)),
-            ],
-          ),
+      content: AppResponsiveDialogContent(
+        preferredWidth: 520,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _item('Full name', user.fullName),
+            _item('Email', user.email),
+            _item('Phone', user.phoneNumber ?? '-'),
+            _item('Role', user.role),
+            _item('Gender', user.gender),
+            _item(
+              'Date of birth',
+              formatter.format(user.dateOfBirth.toLocal()),
+            ),
+            _item('Registered', formatter.format(user.createdAtUtc.toLocal())),
+            _item(
+              'Last login',
+              user.lastLoginAtUtc == null
+                  ? 'Never'
+                  : formatter.format(user.lastLoginAtUtc!.toLocal()),
+            ),
+            _item('Email verified', user.isEmailVerified ? 'Yes' : 'No'),
+            _item(
+              'Two factor',
+              user.isTwoFactorEnabled ? 'Enabled' : 'Disabled',
+            ),
+            _item('Account', user.isBlocked ? 'Blocked' : 'Active'),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            Text(
+              'Audit history',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            if (user.auditHistory.isEmpty)
+              const Text('No administrative changes have been recorded.')
+            else
+              ...user.auditHistory.map((audit) => _auditItem(context, audit)),
+          ],
         ),
       ),
       actions: [

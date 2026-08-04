@@ -18,8 +18,15 @@ class AppConfirmationDialog {
       builder: (dialogContext) {
         final colorScheme = Theme.of(dialogContext).colorScheme;
 
+        final screenSize = MediaQuery.sizeOf(dialogContext);
+
+        final maxWidth = screenSize.width > 560 ? 480.0 : screenSize.width - 64;
+
+        final maxHeight = screenSize.height * 0.70;
+
         return AlertDialog(
           title: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(
                 icon ??
@@ -29,10 +36,22 @@ class AppConfirmationDialog {
                 color: destructive ? colorScheme.error : colorScheme.primary,
               ),
               const SizedBox(width: 10),
-              Expanded(child: Text(title)),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
-          content: Text(message),
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: maxWidth,
+              maxHeight: maxHeight,
+            ),
+            child: SingleChildScrollView(child: Text(message)),
+          ),
           actions: [
             TextButton(
               onPressed: () {
@@ -49,13 +68,13 @@ class AppConfirmationDialog {
                     onPressed: () {
                       Navigator.of(dialogContext).pop(true);
                     },
-                    child: Text(confirmText),
+                    child: Text(confirmText, overflow: TextOverflow.ellipsis),
                   )
                 : FilledButton(
                     onPressed: () {
                       Navigator.of(dialogContext).pop(true);
                     },
-                    child: Text(confirmText),
+                    child: Text(confirmText, overflow: TextOverflow.ellipsis),
                   ),
           ],
         );

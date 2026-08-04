@@ -40,6 +40,7 @@ class AdminTableActionMenu<T> extends StatelessWidget {
       enabled: enabled,
       tooltip: 'Akcije',
       icon: const Icon(Icons.more_vert),
+      constraints: const BoxConstraints(minWidth: 210, maxWidth: 320),
       onSelected: onSelected,
       itemBuilder: (context) {
         return actions.map((action) {
@@ -51,6 +52,7 @@ class AdminTableActionMenu<T> extends StatelessWidget {
             value: action.value,
             enabled: action.enabled,
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   action.icon,
@@ -59,13 +61,19 @@ class AdminTableActionMenu<T> extends StatelessWidget {
                       ? foregroundColor
                       : Theme.of(context).disabledColor,
                 ),
+
                 const SizedBox(width: 10),
-                Text(
-                  action.label,
-                  style: TextStyle(
-                    color: action.enabled
-                        ? foregroundColor
-                        : Theme.of(context).disabledColor,
+
+                Flexible(
+                  child: Text(
+                    action.label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: action.enabled
+                          ? foregroundColor
+                          : Theme.of(context).disabledColor,
+                    ),
                   ),
                 ),
               ],

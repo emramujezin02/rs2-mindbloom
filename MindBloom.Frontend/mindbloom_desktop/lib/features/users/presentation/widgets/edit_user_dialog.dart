@@ -5,6 +5,7 @@ import '../../../../core/validation/app_validators.dart';
 import '../../../../core/widgets/app_error_banner.dart';
 import '../../data/models/admin_user_details_model.dart';
 import '../../data/models/update_admin_user_request.dart';
+import '../../../../core/widgets/app_responsive_dialog_content.dart';
 
 class EditUserDialog extends StatefulWidget {
   final AdminUserDetailsModel user;
@@ -212,111 +213,106 @@ class _EditUserDialogState extends State<EditUserDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Uredi korisnika'),
-      content: SizedBox(
-        width: 520,
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextFormField(
-                  controller: _firstNameController,
-                  enabled: !_isBusy,
-                  textInputAction: TextInputAction.next,
+      content: AppResponsiveDialogContent(
+        preferredWidth: 520,
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _firstNameController,
+                enabled: !_isBusy,
+                textInputAction: TextInputAction.next,
+                maxLength: 100,
+                decoration: const InputDecoration(
+                  labelText: 'Ime',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => AppValidators.textLength(
+                  value,
+                  fieldName: 'Ime',
                   maxLength: 100,
-                  decoration: const InputDecoration(
-                    labelText: 'Ime',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) => AppValidators.textLength(
-                    value,
-                    fieldName: 'Ime',
-                    maxLength: 100,
-                  ),
                 ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _lastNameController,
-                  enabled: !_isBusy,
-                  textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _lastNameController,
+                enabled: !_isBusy,
+                textInputAction: TextInputAction.next,
+                maxLength: 100,
+                decoration: const InputDecoration(
+                  labelText: 'Prezime',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => AppValidators.textLength(
+                  value,
+                  fieldName: 'Prezime',
                   maxLength: 100,
-                  decoration: const InputDecoration(
-                    labelText: 'Prezime',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) => AppValidators.textLength(
-                    value,
-                    fieldName: 'Prezime',
-                    maxLength: 100,
-                  ),
                 ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _phoneController,
-                  enabled: !_isBusy,
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                  maxLength: 30,
-                  decoration: const InputDecoration(
-                    labelText: 'Broj telefona',
-                    hintText: 'npr. +387 61 123 456',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) =>
-                      AppValidators.phone(value, required: false),
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _phoneController,
+                enabled: !_isBusy,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                maxLength: 30,
+                decoration: const InputDecoration(
+                  labelText: 'Broj telefona',
+                  hintText: 'npr. +387 61 123 456',
+                  border: OutlineInputBorder(),
                 ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedGender,
-                  decoration: const InputDecoration(
-                    labelText: 'Spol',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _genders.map((gender) {
-                    return DropdownMenuItem<String>(
-                      value: gender,
-                      child: Text(_genderLabel(gender)),
-                    );
-                  }).toList(),
-                  onChanged: _isBusy
-                      ? null
-                      : (value) {
-                          setState(() {
-                            _selectedGender = value;
+                validator: (value) =>
+                    AppValidators.phone(value, required: false),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedGender,
+                decoration: const InputDecoration(
+                  labelText: 'Spol',
+                  border: OutlineInputBorder(),
+                ),
+                items: _genders.map((gender) {
+                  return DropdownMenuItem<String>(
+                    value: gender,
+                    child: Text(_genderLabel(gender)),
+                  );
+                }).toList(),
+                onChanged: _isBusy
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _selectedGender = value;
 
-                            _errorMessage = null;
-                          });
-                        },
+                          _errorMessage = null;
+                        });
+                      },
+              ),
+              const SizedBox(height: 14),
+              InkWell(
+                onTap: _isBusy ? null : _selectDateOfBirth,
+                borderRadius: BorderRadius.circular(4),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Datum rođenja',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.calendar_today_outlined),
+                  ),
+                  child: Text(
+                    _dateOfBirth == null
+                        ? 'Odaberite datum'
+                        : DateFormat('dd.MM.yyyy.').format(_dateOfBirth!),
+                  ),
                 ),
+              ),
+              if (_errorMessage != null) ...[
                 const SizedBox(height: 14),
-                InkWell(
-                  onTap: _isBusy ? null : _selectDateOfBirth,
-                  borderRadius: BorderRadius.circular(4),
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Datum rođenja',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.calendar_today_outlined),
-                    ),
-                    child: Text(
-                      _dateOfBirth == null
-                          ? 'Odaberite datum'
-                          : DateFormat('dd.MM.yyyy.').format(_dateOfBirth!),
-                    ),
-                  ),
-                ),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 14),
-                  AppErrorBanner(
-                    message: _errorMessage!,
-                    onDismiss: _clearError,
-                  ),
-                ],
+                AppErrorBanner(message: _errorMessage!, onDismiss: _clearError),
               ],
-            ),
+            ],
           ),
         ),
       ),
