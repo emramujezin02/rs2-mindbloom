@@ -6,7 +6,11 @@ services:
     container_name: mindbloom-sql-server
     restart: unless-stopped
 
-    environment:
+environment:
+  DOTNET_ENVIRONMENT: "${DOTNET_ENVIRONMENT:-Production}"
+  ASPNETCORE_URLS: "http://+:8081"
+
+  DB_CONNECTION: "Server=sql-server,1433;Database=${SQL_SERVER_DATABASE};User Id=sa;Password=${SQL_SERVER_PASSWORD};TrustServerCertificate=True;Encrypt=False;"
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
       MSSQL_SA_PASSWORD: "${SQL_SERVER_PASSWORD}"
@@ -127,16 +131,16 @@ RABBITMQ_INTEGRATION_EVENT_DEAD_LETTER_ROUTING_KEY: "${RABBITMQ_INTEGRATION_EVEN
     networks:
       - mindbloom-network
 
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl --fail --silent http://localhost:8080/health || exit 1"
-        ]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+healthcheck:
+  test:
+    [
+      "CMD-SHELL",
+      "curl --fail --silent http://localhost:8081/health || exit 1"
+    ]
+  interval: 20s
+  timeout: 10s
+  retries: 5
+  start_period: 30s
 
 
   notifications-worker:
@@ -217,3 +221,8 @@ networks:
   mindbloom-network:
     name: mindbloom-network
     driver: bridge
+
+notifications-worker:
+  ASPNETCORE_URLS: "http://+:8081"
+  ports:
+  - "${WORKER_HEALTH_PORT:-8081}:8081"

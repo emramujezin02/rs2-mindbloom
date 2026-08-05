@@ -29,14 +29,67 @@ using FirebaseAdmin.Messaging;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.Extensions.Options;
 using MindBloom.NotificationsWorker.Configuration;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using MindBloom.NotificationsWorker.Health;
 
 Env.TraversePath().Load();
 
 var builder =
-    Host.CreateApplicationBuilder(args);
+    WebApplication.CreateBuilder(args);
 
 builder.Configuration
     .AddEnvironmentVariables();
+
+builder.Services
+    .AddHealthChecks()
+    .AddDbContextCheck<
+        ApplicationDbContext>(
+        name: "database",
+        failureStatus:
+            HealthStatus.Unhealthy,
+        tags:
+            new[]
+            {
+                "worker",
+                "database"
+            })
+    .AddCheck<RabbitMqHealthCheck>(
+        name:
+            "rabbitmq",
+        failureStatus:
+            HealthStatus.Unhealthy,
+        tags:
+            new[]
+            {
+                "worker",
+                "rabbitmq"
+            })
+    .AddCheck<EmailProviderHealthCheck>(
+        name:
+            "email-provider",
+        failureStatus:
+            HealthStatus.Unhealthy,
+        tags:
+            new[]
+            {
+                "worker",
+                "email"
+            })
+    .AddCheck<FirebaseHealthCheck>(
+        name:
+            "firebase",
+        failureStatus:
+            HealthStatus.Unhealthy,
+        tags:
+            new[]
+            {
+                "worker",
+                "firebase"
+            });
 
 builder.Services
     .AddOptions<FirebasePushOptions>()
@@ -271,18 +324,18 @@ builder.Services.AddSingleton(
                 firebaseApp);
     });
 
-var host =
+var app =
     builder.Build();
 
 var logger =
-    host.Services
+    app.Services
         .GetRequiredService<
             ILoggerFactory>()
         .CreateLogger(
             "MindBloom.NotificationsWorker");
 
 var lifetime =
-    host.Services
+    app.Services
         .GetRequiredService<
             IHostApplicationLifetime>();
 
@@ -307,7 +360,65 @@ lifetime.ApplicationStopped.Register(
             "MindBloom Notifications Worker stopped successfully.");
     });
 
-await host.RunAsync();
+app.MapHealthChecks(
+    "/health",
+    new HealthCheckOptions
+    {
+        ResponseWriter =
+            async (
+                context,
+                report) =>
+            {
+                context.Response.ContentType =
+                    "application/json";
+
+                var response =
+                    new
+                    {
+                        status =
+                            report.Status
+                                .ToString(),
+
+                        worker =
+                            "MindBloom.NotificationsWorker",
+
+                        checkedAtUtc =
+                            DateTime.UtcNow,
+
+                        checks =
+                            report.Entries
+                                .Select(
+                                    entry =>
+                                        new
+                                        {
+                                            name =
+                                                entry.Key,
+
+                                            status =
+                                                entry.Value
+                                                    .Status
+                                                    .ToString(),
+
+                                            description =
+                                                entry.Value
+                                                    .Description,
+
+                                            duration =
+                                                entry.Value
+                                                    .Duration
+                                                    .TotalMilliseconds
+                                        })
+                    };
+
+                await context.Response
+                    .WriteAsync(
+                        JsonSerializer
+                            .Serialize(
+                                response));
+            }
+    });
+
+await app.RunAsync();
 
 static int GetIntValue(
     IConfiguration configuration,
