@@ -1067,6 +1067,7 @@ public class WorkshopService : IWorkshopService
          $"You have successfully registered for \"{workshopTitle}\".",
          actionType:
              NotificationActionType.Workshop,
+         sendEmail:true,
          resourceId:
              workshopId);
 
@@ -1158,6 +1159,7 @@ public class WorkshopService : IWorkshopService
                 + "has been cancelled.",
                 actionType:
                     NotificationActionType.Workshop,
+                sendEmail:true,
                 resourceId:
                     workshop.Id);
 

@@ -41,12 +41,10 @@ public sealed class WorkshopCreatedEventHandler
                 message,
                 NotificationActionType
                     .Workshop,
-                resourceId:
-                    integrationEvent
-                        .WorkshopId,
-                sendEmail:
-                    false,
-                cancellationToken:
-                    cancellationToken);
+resourceId:
+    integrationEvent
+        .WorkshopId,
+cancellationToken:
+    cancellationToken);
     }
 }

@@ -27,6 +27,7 @@ public sealed class BusinessNotificationService
         NotificationActionType actionType =
             NotificationActionType.None,
         int? resourceId = null,
+        bool sendEmail = false,
         Guid? correlationId = null,
         CancellationToken cancellationToken =
             default)
@@ -104,12 +105,10 @@ public sealed class BusinessNotificationService
                 ResourceId =
                     resourceId,
 
-                /*
-                 * API više ne kreira Notification.
-                 * ID će nastati kada Worker snimi zapis.
-                 */
                 NotificationId =
-                    null
+                    null,
+
+                SendEmail = sendEmail,
             };
 
         return _integrationEventPublisher

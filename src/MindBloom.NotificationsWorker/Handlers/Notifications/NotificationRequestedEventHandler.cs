@@ -67,16 +67,6 @@ public sealed class NotificationRequestedEventHandler
                 "Notification message is required.");
         }
 
-        /*
-         * Transitional protection.
-         *
-         * Ako event dolazi iz starog toka u kojem
-         * je API već napravio Notification zapis,
-         * ne pravimo drugi isti zapis.
-         *
-         * Novi tok treba imati NotificationId = null
-         * jer Notification kreira Worker.
-         */
         if (integrationEvent
                 .NotificationId
                 .HasValue)
@@ -124,7 +114,8 @@ public sealed class NotificationRequestedEventHandler
                     integrationEvent
                         .ResourceId,
                 sendEmail:
-                    false,
+                    integrationEvent
+                        .SendEmail,
                 cancellationToken:
                     cancellationToken);
 

@@ -12,6 +12,7 @@ public interface IBusinessNotificationService
         NotificationActionType actionType =
             NotificationActionType.None,
         int? resourceId = null,
+        bool sendEmail = false,
         Guid? correlationId = null,
         CancellationToken cancellationToken =
             default);

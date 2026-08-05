@@ -18,4 +18,6 @@ public sealed record NotificationRequestedEvent
     public int? ResourceId { get; init; }
 
     public int? NotificationId { get; init; }
+
+    public bool SendEmail { get; init; }
 }
