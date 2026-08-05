@@ -130,26 +130,14 @@ public sealed class IntegrationEventConsumer
     }
 
     private async Task InitializeRabbitMqAsync(
-        CancellationToken cancellationToken)
+     CancellationToken cancellationToken)
     {
-        var factory =
-            _connectionFactory.Create(
-                _options.ConsumerClientName,
-                consumerDispatchConcurrency: 1);
-
         _connection =
-            await factory.CreateConnectionAsync(
-                _options.ConsumerClientName,
+            await CreateConnectionWithRetryAsync(
                 cancellationToken);
 
-        _connection.ConnectionShutdownAsync +=
-            OnConnectionShutdownAsync;
-
-        _connection.ConnectionRecoveryErrorAsync +=
-            OnConnectionRecoveryErrorAsync;
-
-        _connection.RecoverySucceededAsync +=
-            OnRecoverySucceededAsync;
+        SubscribeToConnectionEvents(
+            _connection);
 
         _channel =
             await _connection.CreateChannelAsync(
@@ -174,8 +162,103 @@ public sealed class IntegrationEventConsumer
                 cancellationToken);
 
         _logger.LogInformation(
-            "Integration event consumer "
-            + "connected to RabbitMQ.");
+            "Integration event consumer connected to RabbitMQ successfully. "
+            + "Queue: {Queue}, prefetch count: {PrefetchCount}.",
+            _options.IntegrationEventQueue,
+            _options.PrefetchCount);
+    }
+
+    private async Task<IConnection>
+    CreateConnectionWithRetryAsync(
+        CancellationToken cancellationToken)
+    {
+        var factory =
+            _connectionFactory.Create(
+                _options.ConsumerClientName,
+                consumerDispatchConcurrency: 1);
+
+        Exception? lastException =
+            null;
+
+        for (var attempt = 1;
+             attempt <=
+             _options.ConnectionRetryCount;
+             attempt++)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            try
+            {
+                _logger.LogInformation(
+                    "Connecting integration event consumer to RabbitMQ at "
+                    + "{HostName}:{Port}. Attempt {Attempt}/{MaximumAttempts}.",
+                    _options.HostName,
+                    _options.Port,
+                    attempt,
+                    _options.ConnectionRetryCount);
+
+                var connection =
+                    await factory
+                        .CreateConnectionAsync(
+                            _options.ConsumerClientName,
+                            cancellationToken);
+
+                _logger.LogInformation(
+                    "Integration event consumer RabbitMQ connection "
+                    + "established successfully.");
+
+                return connection;
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken
+                    .IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                lastException =
+                    exception;
+
+                _logger.LogWarning(
+                    exception,
+                    "Integration event consumer RabbitMQ connection "
+                    + "attempt {Attempt}/{MaximumAttempts} failed.",
+                    attempt,
+                    _options.ConnectionRetryCount);
+
+                if (attempt >=
+                    _options.ConnectionRetryCount)
+                {
+                    break;
+                }
+
+                await Task.Delay(
+                    TimeSpan.FromSeconds(
+                        _options
+                            .ConnectionRetryDelaySeconds),
+                    cancellationToken);
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Integration event consumer could not establish "
+            + "a RabbitMQ connection after all configured retry attempts.",
+            lastException);
+    }
+
+    private void SubscribeToConnectionEvents(
+    IConnection connection)
+    {
+        connection.ConnectionShutdownAsync +=
+            OnConnectionShutdownAsync;
+
+        connection.ConnectionRecoveryErrorAsync +=
+            OnConnectionRecoveryErrorAsync;
+
+        connection.RecoverySucceededAsync +=
+            OnRecoverySucceededAsync;
     }
 
     private async Task HandleMessageAsync(
@@ -288,13 +371,18 @@ public sealed class IntegrationEventConsumer
     }
 
     private async Task HandleTransientFailureAsync(
-        BasicDeliverEventArgs eventArgs,
-        int retryCount,
-        Exception exception)
+    BasicDeliverEventArgs eventArgs,
+    int retryCount,
+    Exception exception)
     {
         if (retryCount >=
             _options.MaximumRetryCount)
         {
+            _logger.LogError(
+                "Integration event with routing key {RoutingKey} exhausted all {MaximumAttempts} attempts and will be moved to DLQ.",
+                eventArgs.RoutingKey,
+                _options.MaximumRetryCount + 1);
+
             await MoveToDeadLetterQueueAsync(
                 eventArgs,
                 retryCount,
@@ -312,11 +400,13 @@ public sealed class IntegrationEventConsumer
             _topology.RetryDelays[
                 delayIndex];
 
-        await Task.Delay(
-            delayMilliseconds);
-
         var nextRetryCount =
             retryCount + 1;
+
+        var retryRoutingKey =
+            _topology.GetRetryRoutingKey(
+                eventArgs.RoutingKey,
+                delayMilliseconds);
 
         try
         {
@@ -329,11 +419,10 @@ public sealed class IntegrationEventConsumer
             await _channel!
                 .BasicPublishAsync(
                     exchange:
-                        _options
-                            .NotificationExchange,
+                        _options.RetryExchange,
 
                     routingKey:
-                        eventArgs.RoutingKey,
+                        retryRoutingKey,
 
                     mandatory:
                         true,
@@ -351,11 +440,7 @@ public sealed class IntegrationEventConsumer
                 eventArgs.DeliveryTag);
 
             _logger.LogWarning(
-                "Integration event with routing "
-                + "key {RoutingKey} was republished "
-                + "for retry {RetryCount}/"
-                + "{MaximumRetryCount} after "
-                + "{DelayMilliseconds} ms.",
+                "Integration event with routing key {RoutingKey} scheduled for retry {RetryCount}/{MaximumRetryCount} after {DelayMilliseconds} ms.",
                 eventArgs.RoutingKey,
                 nextRetryCount,
                 _options.MaximumRetryCount,
@@ -365,9 +450,8 @@ public sealed class IntegrationEventConsumer
         {
             _logger.LogCritical(
                 publishException,
-                "Integration event retry publish "
-                + "failed. Original message will "
-                + "be requeued.");
+                "Integration event with routing key {RoutingKey} could not be published to retry exchange. Original delivery will be requeued.",
+                eventArgs.RoutingKey);
 
             await NegativeAcknowledgeAsync(
                 eventArgs.DeliveryTag,

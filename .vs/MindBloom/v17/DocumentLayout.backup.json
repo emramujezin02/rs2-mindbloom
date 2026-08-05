@@ -540,7 +540,7 @@
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\AdminService.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\AdminService.cs",
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\AdminService.cs",
-              "ViewState": "AgIAAHwUAAAAAAAAAAAAAH8UAAAkAAAAAAAAAA==",
+              "ViewState": "AgIAAFgUAAAAAAAAAAAAAF0UAAAhAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-08-03T14:38:32.94Z",
               "EditorCaption": ""
@@ -581,8 +581,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Dispatching\\IntegrationEventDispatcher.cs",
               "ViewState": "AgIAAH0AAAAAAAAAAAAswKgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T19:51:53.822Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T19:51:53.822Z"
             },
             {
               "$type": "Document",
@@ -594,8 +593,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Dispatching\\IIntegrationEventDispatcher.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T19:50:49.11Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T19:50:49.11Z"
             },
             {
               "$type": "Document",
@@ -607,8 +605,7 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
               "ViewState": "AgIAAKYEAAAAAAAAAAAswNEEAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-03T11:34:11.961Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-03T11:34:11.961Z"
             },
             {
               "$type": "Document",
@@ -620,8 +617,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-08-04T10:44:14.617Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T10:44:14.617Z"
             },
             {
               "$type": "Document",
@@ -646,8 +642,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Program.cs",
               "ViewState": "AgIAAIEAAAAAAAAAAAAwwK0AAAAWAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T10:42:15.889Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T10:42:15.889Z"
             },
             {
               "$type": "Document",
@@ -659,8 +654,7 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\MembershipService.cs",
               "ViewState": "AgIAAPQEAAAAAAAAAAAAABsFAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T14:28:14.731Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T14:28:14.731Z"
             },
             {
               "$type": "Document",
@@ -672,8 +666,7 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\ChatService.cs",
               "ViewState": "AgIAAEECAAAAAAAAAAAAAEsCAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T17:01:04.496Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T17:01:04.496Z"
             },
             {
               "$type": "Document",
@@ -685,8 +678,7 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\AppointmentService.cs",
               "ViewState": "AgIAABIEAAAAAAAAAAAAACQEAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T14:27:59.327Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T14:27:59.327Z"
             },
             {
               "$type": "Document",
@@ -698,8 +690,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Payments\\PaymentRefundedEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAADsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T22:06:44.433Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T22:06:44.433Z"
             },
             {
               "$type": "Document",
@@ -711,8 +702,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Payments\\PaymentSucceededEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T22:06:12.324Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T22:06:12.324Z"
             },
             {
               "$type": "Document",
@@ -724,8 +714,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Reviews\\ReviewApprovedEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAEIAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T22:04:47.179Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T22:04:47.179Z"
             },
             {
               "$type": "Document",
@@ -737,8 +726,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Articles\\ArticlePublishedEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAEwAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T22:03:58.465Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T22:03:58.465Z"
             },
             {
               "$type": "Document",
@@ -750,8 +738,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Workshops\\WorkshopCancelledEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAAAgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T22:02:52.755Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T22:02:52.755Z"
             },
             {
               "$type": "Document",
@@ -763,8 +750,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Workshops\\WorkshopUpdatedEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAG4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T22:02:16.475Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T22:02:16.475Z"
             },
             {
               "$type": "Document",
@@ -776,8 +762,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Workshops\\WorkshopCreatedEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T22:01:33.348Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T22:01:33.348Z"
             },
             {
               "$type": "Document",
@@ -789,8 +774,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Memberships\\MembershipExpiredEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T21:58:18.843Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T21:58:18.843Z"
             },
             {
               "$type": "Document",
@@ -802,8 +786,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Memberships\\MembershipPurchasedEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAE0AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T21:57:42.423Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T21:57:42.423Z"
             },
             {
               "$type": "Document",
@@ -815,8 +798,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Chat\\ChatMessageCreatedEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAD4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T21:56:49.191Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T21:56:49.191Z"
             },
             {
               "$type": "Document",
@@ -828,8 +810,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Appointments\\AppointmentCompletedEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAADQAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T21:53:39.536Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T21:53:39.536Z"
             },
             {
               "$type": "Document",
@@ -841,8 +822,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Appointments\\AppointmentCancelledEventHandler.cs",
               "ViewState": "AgIAAFIAAAAAAAAAAAAwwH4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T21:53:05.702Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T21:53:05.702Z"
             },
             {
               "$type": "Document",
@@ -854,8 +834,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Appointments\\AppointmentRejectedEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAD4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T21:52:29.551Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T21:52:29.551Z"
             },
             {
               "$type": "Document",
@@ -867,8 +846,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Appointments\\AppointmentAcceptedEventHandler.cs",
               "ViewState": "AgIAABEAAAAAAAAAAAAwwD0AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T21:51:48.786Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T21:51:48.786Z"
             },
             {
               "$type": "Document",
@@ -880,8 +858,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Appointments\\AppointmentCreatedEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAADQAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T21:51:12.86Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T21:51:12.86Z"
             },
             {
               "$type": "Document",
@@ -919,8 +896,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Dispatching\\IntegrationEventDeserializer.cs",
               "ViewState": "AgIAAAIAAAAAAAAAAAAAALoAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T19:51:16.352Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T19:51:16.352Z"
             },
             {
               "$type": "Document",
@@ -932,8 +908,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\IIntegrationEventHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T19:50:06.754Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T19:50:06.754Z"
             },
             {
               "$type": "Document",
@@ -945,8 +920,7 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqConfigurationExtensions.cs",
               "ViewState": "AgIAANkAAAAAAAAAAAAAAPsAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T10:57:06.485Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T10:57:06.485Z"
             },
             {
               "$type": "Document",
@@ -958,8 +932,7 @@
               "RelativeToolTip": "src\\MindBloom.API\\.env",
               "ViewState": "AgIAAAYAAAAAAAAAAAAiwB4AAABIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2026-08-04T10:41:56.883Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T10:41:56.883Z"
             },
             {
               "$type": "Document",
@@ -971,8 +944,7 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqTopology.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T10:58:07.661Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T10:58:07.661Z"
             },
             {
               "$type": "Document",
@@ -1010,8 +982,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Reviews\\ReviewApprovedEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACQAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T17:25:29.856Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T17:25:29.856Z"
             },
             {
               "$type": "Document",
@@ -1023,8 +994,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Articles\\ArticlePublishedEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T17:24:41.704Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T17:24:41.704Z"
             },
             {
               "$type": "Document",
@@ -1036,8 +1006,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Workshops\\WorkshopUpdatedEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T17:24:05.17Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T17:24:05.17Z"
             },
             {
               "$type": "Document",
@@ -1049,8 +1018,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Memberships\\MembershipExpiredEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T17:23:42.849Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T17:23:42.849Z"
             },
             {
               "$type": "Document",
@@ -1062,8 +1030,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Chat\\ChatMessageCreatedEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAB4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T17:23:13.31Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T17:23:13.31Z"
             },
             {
               "$type": "Document",
@@ -1075,8 +1042,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Appointments\\AppointmentRejectedEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T17:22:38.437Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T17:22:38.437Z"
             },
             {
               "$type": "Document",
@@ -1088,8 +1054,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Appointments\\AppointmentAcceptedEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACQAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T17:22:04.362Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T17:22:04.362Z"
             },
             {
               "$type": "Document",
@@ -1101,8 +1066,7 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\ReviewService.cs",
               "ViewState": "AgIAAMICAAAAAAAAAAAswO0CAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T17:01:38.284Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T17:01:38.284Z"
             },
             {
               "$type": "Document",
@@ -1114,8 +1078,7 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\ArticleService.cs",
               "ViewState": "AgIAANoCAAAAAAAAAAAwwAYDAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T17:01:30.09Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T17:01:30.09Z"
             },
             {
               "$type": "Document",
@@ -1127,8 +1090,7 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\WorkshopService.cs",
               "ViewState": "AgIAAKoGAAAAAAAAAAAwwNYGAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T17:01:21.213Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T17:01:21.213Z"
             },
             {
               "$type": "Document",
@@ -1153,8 +1115,7 @@
               "RelativeToolTip": "src\\MindBloom.Application\\Common\\Interfaces\\INotificationPublisher.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T11:41:44.021Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T11:41:44.021Z"
             },
             {
               "$type": "Document",
@@ -1166,8 +1127,7 @@
               "RelativeToolTip": "src\\MindBloom.Application\\Common\\Interfaces\\IBusinessNotificationService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T15:45:09.16Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T15:45:09.16Z"
             },
             {
               "$type": "Document",
@@ -1205,8 +1165,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Workshops\\WorkshopCreatedEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T14:38:16.514Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T14:38:16.514Z"
             },
             {
               "$type": "Document",
@@ -1218,8 +1177,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Workshops\\WorkshopCancelledEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T14:38:42.449Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T14:38:42.449Z"
             },
             {
               "$type": "Document",
@@ -1231,8 +1189,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Payments\\PaymentSucceededEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T14:37:02.543Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T14:37:02.543Z"
             },
             {
               "$type": "Document",
@@ -1244,8 +1201,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Payments\\PaymentRefundedEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T14:37:33.44Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T14:37:33.44Z"
             },
             {
               "$type": "Document",
@@ -1257,8 +1213,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Memberships\\MembershipPurchasedEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAB4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T14:36:25.503Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T14:36:25.503Z"
             },
             {
               "$type": "Document",
@@ -1270,8 +1225,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Common\\IntegrationEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T14:33:53.266Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T14:33:53.266Z"
             },
             {
               "$type": "Document",
@@ -1283,8 +1237,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Appointments\\AppointmentCreatedEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T14:34:42.845Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T14:34:42.845Z"
             },
             {
               "$type": "Document",
@@ -1296,8 +1249,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Appointments\\AppointmentCompletedEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAB0AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T14:35:40.155Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T14:35:40.155Z"
             },
             {
               "$type": "Document",
@@ -1309,8 +1261,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\Appointments\\AppointmentCancelledEvent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T14:35:10.242Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T14:35:10.242Z"
             },
             {
               "$type": "Document",
@@ -1322,8 +1273,7 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Messaging\\RabbitMq\\RabbitMqConnectionFactory.cs",
               "ViewState": "AgIAABgAAAAAAAAAAAAwwEQAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T10:57:45.485Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T10:57:45.485Z"
             },
             {
               "$type": "Document",
@@ -1335,8 +1285,7 @@
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Messaging\\RabbitMqHeaders.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-04T10:42:40.218Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T10:42:40.218Z"
             },
             {
               "$type": "Document",
@@ -1470,8 +1419,7 @@
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-08-04T14:26:44.086Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T14:26:44.086Z"
             },
             {
               "$type": "Document",
@@ -1507,8 +1455,7 @@
               "RelativeToolTip": "src\\MindBloom.Application\\MindBloom.Application.csproj",
               "ViewState": "AgIAABgAAAAAAAAAAAASwCIAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-08-04T11:39:14.044Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T11:39:14.044Z"
             },
             {
               "$type": "Document",
@@ -1556,8 +1503,7 @@
               "RelativeToolTip": "src\\MindBloom.API\\MindBloom.API.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-08-04T10:44:00.437Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T10:44:00.437Z"
             },
             {
               "$type": "Document",
@@ -1569,8 +1515,7 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACcAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-08-04T10:43:49.083Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T10:43:49.083Z"
             },
             {
               "$type": "Document",
@@ -1618,8 +1563,7 @@
               "RelativeToolTip": "src\\MindBloom.API\\appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-08-04T10:41:29.692Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-04T10:41:29.692Z"
             },
             {
               "$type": "Document",
@@ -1823,8 +1767,7 @@
               "RelativeToolTip": "src\\MindBloom.API\\Middlewares\\AdminAuditMiddleware.cs",
               "ViewState": "AgIAAFEBAAAAAAAAAAAgwIEBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-03T13:58:55.218Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-03T13:58:55.218Z"
             },
             {
               "$type": "Document",

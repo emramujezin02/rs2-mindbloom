@@ -2,17 +2,10 @@
 using Microsoft.Extensions.Options;
 using MindBloom.Messaging.Contracts.Common;
 using RabbitMQ.Client;
-using static Azure.Core.HttpHeader;
-using RoutingKeys =
-    MindBloom.Messaging.Contracts.Common
-        .IntegrationEventRoutingKeys;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using RabbitMQ.Client;
 
+using RoutingKeys = MindBloom.Messaging.Contracts.Common.IntegrationEventRoutingKeys;
 
 namespace MindBloom.Infrastructure.Messaging.RabbitMq;
-
 public sealed class RabbitMqTopology
 {
     private static readonly int[]
@@ -101,10 +94,6 @@ public sealed class RabbitMqTopology
             $"{sourceRoutingKey}.retry.{delayMilliseconds}ms";
     }
 
-    /*
-     * Ove overload metode ostaju zbog postojećeg
-     * EmailNotificationConsumer koda.
-     */
     public string GetRetryQueueName(
         int delayMilliseconds)
     {
@@ -143,6 +132,10 @@ public sealed class RabbitMqTopology
         await DeclareEmailRetryQueuesAsync(
             channel,
             cancellationToken);
+
+        await DeclareIntegrationEventRetryQueuesAsync(
+    channel,
+    cancellationToken);
 
         await DeclareEmailDeadLetterQueueAsync(
             channel,
@@ -247,6 +240,86 @@ public sealed class RabbitMqTopology
                 null,
             cancellationToken:
                 cancellationToken);
+    }
+
+    private async Task
+    DeclareIntegrationEventRetryQueuesAsync(
+        IChannel channel,
+        CancellationToken cancellationToken)
+    {
+        foreach (var sourceRoutingKey
+                 in IntegrationEventRoutingKeys)
+        {
+            foreach (var delayMilliseconds
+                     in RetryDelaysMilliseconds)
+            {
+                var retryQueue =
+                    GetRetryQueueName(
+                        _options
+                            .IntegrationEventQueue
+                        + "."
+                        + sourceRoutingKey,
+                        delayMilliseconds);
+
+                var retryRoutingKey =
+                    GetRetryRoutingKey(
+                        sourceRoutingKey,
+                        delayMilliseconds);
+
+                /*
+                 * Svaki integration event routing key
+                 * dobija vlastiti retry queue.
+                 *
+                 * To je važno zato što RabbitMQ nakon
+                 * isteka TTL-a mora vratiti poruku na
+                 * originalni routing key.
+                 */
+                var arguments =
+                    new Dictionary<string, object?>
+                    {
+                        ["x-message-ttl"] =
+                            delayMilliseconds,
+
+                        ["x-dead-letter-exchange"] =
+                            _options
+                                .NotificationExchange,
+
+                        ["x-dead-letter-routing-key"] =
+                            sourceRoutingKey
+                    };
+
+                await channel.QueueDeclareAsync(
+                    queue:
+                        retryQueue,
+                    durable:
+                        true,
+                    exclusive:
+                        false,
+                    autoDelete:
+                        false,
+                    arguments:
+                        arguments,
+                    cancellationToken:
+                        cancellationToken);
+
+                await channel.QueueBindAsync(
+                    queue:
+                        retryQueue,
+                    exchange:
+                        _options.RetryExchange,
+                    routingKey:
+                        retryRoutingKey,
+                    arguments:
+                        null,
+                    cancellationToken:
+                        cancellationToken);
+            }
+        }
+
+        _logger.LogInformation(
+            "RabbitMQ integration event retry queues declared. Routing keys: {RoutingKeyCount}, retry levels: {RetryLevelCount}.",
+            IntegrationEventRoutingKeys.Length,
+            RetryDelaysMilliseconds.Length);
     }
 
     private async Task
