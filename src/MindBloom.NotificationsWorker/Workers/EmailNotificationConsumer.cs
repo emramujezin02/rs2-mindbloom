@@ -8,6 +8,8 @@ using MindBloom.NotificationsWorker.Messaging;
 using MindBloom.NotificationsWorker.Services;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using Microsoft.Extensions.DependencyInjection;
+using MindBloom.NotificationsWorker.Services;
 
 namespace MindBloom.NotificationsWorker.Workers;
 
@@ -25,6 +27,9 @@ public sealed class EmailNotificationConsumer :
 
     private readonly RabbitMqOptions
         _options;
+
+    private readonly IServiceScopeFactory
+    _scopeFactory;
 
     private readonly RabbitMqConnectionFactory
         _connectionFactory;
@@ -53,6 +58,7 @@ public sealed class EmailNotificationConsumer :
         RabbitMqTopology topology,
         IEmailService emailService,
         EmailMessageBodyBuilder bodyBuilder,
+        IServiceScopeFactory scopeFactory,
         ILogger<EmailNotificationConsumer> logger)
     {
         _options =
@@ -63,6 +69,9 @@ public sealed class EmailNotificationConsumer :
 
         _topology =
             topology;
+
+        _scopeFactory =
+    scopeFactory;
 
         _emailService =
             emailService;
@@ -294,6 +303,42 @@ public sealed class EmailNotificationConsumer :
             ValidateMessage(
                 message);
 
+            var consumerName =
+    nameof(EmailNotificationConsumer);
+
+            using var scope =
+                _scopeFactory.CreateScope();
+
+            var processedMessageService =
+                scope.ServiceProvider
+                    .GetRequiredService<
+                        ProcessedMessageService>();
+
+            var alreadyProcessed =
+                await processedMessageService
+                    .IsProcessedAsync(
+                        message.MessageId,
+                        consumerName,
+                        CancellationToken.None);
+
+            if (alreadyProcessed)
+            {
+                _logger.LogWarning(
+                    "Duplicate email notification detected. "
+                    + "Message ID: {MessageId}, "
+                    + "event type: {EventType}, "
+                    + "correlation ID: {CorrelationId}. "
+                    + "Message will be acknowledged without sending the email again.",
+                    message.MessageId,
+                    message.EventType,
+                    message.CorrelationId);
+
+                await AcknowledgeAsync(
+                    eventArgs.DeliveryTag);
+
+                return;
+            }
+
             var currentAttempt =
                 retryCount + 1;
 
@@ -316,13 +361,25 @@ public sealed class EmailNotificationConsumer :
                 message.Subject,
                 emailBody);
 
+            await processedMessageService
+                .MarkAsProcessedAsync(
+                    message.MessageId,
+                    consumerName,
+                    nameof(
+                        EmailNotificationMessage),
+                    message.CorrelationId,
+                    CancellationToken.None);
+
             await AcknowledgeAsync(
                 eventArgs.DeliveryTag);
 
             _logger.LogInformation(
-                "Email notification {MessageId} sent successfully on attempt {Attempt} and acknowledged.",
+                "Email notification {MessageId} sent successfully, "
+                + "marked as processed and acknowledged. "
+                + "Attempt: {Attempt}, correlation ID: {CorrelationId}.",
                 message.MessageId,
-                currentAttempt);
+                currentAttempt,
+                message.CorrelationId);
         }
         catch (JsonException exception)
         {

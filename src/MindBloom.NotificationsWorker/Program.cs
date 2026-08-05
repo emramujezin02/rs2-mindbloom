@@ -97,6 +97,9 @@ builder.Services.AddScoped<
     AppointmentCreatedEventHandler>();
 
 builder.Services.AddScoped<
+    ProcessedMessageService>();
+
+builder.Services.AddScoped<
     IIntegrationEventHandler<
         AppointmentAcceptedEvent>,
     AppointmentAcceptedEventHandler>();

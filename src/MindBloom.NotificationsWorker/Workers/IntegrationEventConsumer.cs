@@ -5,6 +5,7 @@ using MindBloom.NotificationsWorker.Dispatching;
 using MindBloom.NotificationsWorker.Messaging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using MindBloom.NotificationsWorker.Services;
 
 namespace MindBloom.NotificationsWorker.Workers;
 
@@ -27,6 +28,9 @@ public sealed class IntegrationEventConsumer
     private readonly IIntegrationEventDispatcher
         _dispatcher;
 
+    private readonly IServiceScopeFactory
+    _scopeFactory;
+
     private readonly ILogger<
         IntegrationEventConsumer>
         _logger;
@@ -46,6 +50,7 @@ public sealed class IntegrationEventConsumer
             deserializer,
         IIntegrationEventDispatcher
             dispatcher,
+        IServiceScopeFactory scopeFactory,
         ILogger<IntegrationEventConsumer>
             logger)
     {
@@ -66,6 +71,9 @@ public sealed class IntegrationEventConsumer
 
         _logger =
             logger;
+
+        _scopeFactory =
+    scopeFactory;
     }
 
     protected override async Task ExecuteAsync(
@@ -290,21 +298,71 @@ public sealed class IntegrationEventConsumer
                     eventArgs.RoutingKey,
                     eventArgs.Body);
 
+            var consumerName =
+                nameof(IntegrationEventConsumer);
+
+            using var scope =
+                _scopeFactory.CreateScope();
+
+            var processedMessageService =
+                scope.ServiceProvider
+                    .GetRequiredService<
+                        ProcessedMessageService>();
+
+            var alreadyProcessed =
+                await processedMessageService
+                    .IsProcessedAsync(
+                        integrationEvent.EventId,
+                        consumerName,
+                        CancellationToken.None);
+
+            if (alreadyProcessed)
+            {
+                _logger.LogWarning(
+                    "Duplicate integration event detected. "
+                    + "Event ID: {EventId}, "
+                    + "event type: {EventType}, "
+                    + "routing key: {RoutingKey}. "
+                    + "Message will be acknowledged without processing.",
+                    integrationEvent.EventId,
+                    integrationEvent
+                        .GetType()
+                        .Name,
+                    eventArgs.RoutingKey);
+
+                await AcknowledgeAsync(
+                    eventArgs.DeliveryTag);
+
+                return;
+            }
+
             _logger.LogInformation(
                 "Processing integration event "
                 + "{EventType}. Routing key: "
                 + "{RoutingKey}, attempt: "
-                + "{Attempt}/{MaximumAttempts}.",
+                + "{Attempt}/{MaximumAttempts}. "
+                + "Event ID: {EventId}.",
                 integrationEvent
                     .GetType()
                     .Name,
                 eventArgs.RoutingKey,
                 retryCount + 1,
-                _options.MaximumRetryCount + 1);
+                _options.MaximumRetryCount + 1,
+                integrationEvent.EventId);
 
             await _dispatcher.DispatchAsync(
                 integrationEvent,
                 CancellationToken.None);
+
+            await processedMessageService
+                .MarkAsProcessedAsync(
+                    integrationEvent.EventId,
+                    consumerName,
+                    integrationEvent
+                        .GetType()
+                        .Name,
+                    integrationEvent.CorrelationId,
+                    CancellationToken.None);
 
             await AcknowledgeAsync(
                 eventArgs.DeliveryTag);

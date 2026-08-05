@@ -24,6 +24,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<ProcessedMessage>
+    ProcessedMessages =>
+        Set<ProcessedMessage>();
     public DbSet<AdminAuditLog> AdminAuditLogs =>
     Set<AdminAuditLog>();
     public DbSet<Notification> Notifications => Set<Notification>();
@@ -109,6 +112,44 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany(x => x.Availabilities)
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ProcessedMessage>(
+    entity =>
+    {
+        entity.Property(x =>
+                x.MessageId)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.ConsumerName)
+            .IsRequired()
+            .HasMaxLength(150);
+
+        entity.Property(x =>
+                x.MessageType)
+            .IsRequired()
+            .HasMaxLength(250);
+
+        entity.Property(x =>
+                x.CorrelationId);
+
+        entity.Property(x =>
+                x.ProcessedAtUtc)
+            .IsRequired();
+
+        entity.HasIndex(x => new
+        {
+            x.MessageId,
+            x.ConsumerName
+        })
+            .IsUnique();
+
+        entity.HasIndex(x =>
+            x.ProcessedAtUtc);
+
+        entity.HasIndex(x =>
+            x.CorrelationId);
+    });
 
         builder.Entity<UserAudit>(entity =>
         {
