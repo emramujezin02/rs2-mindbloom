@@ -22,6 +22,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<TherapistAvailability> TherapistAvailabilities => Set<TherapistAvailability>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<Favorite> Favorites => Set<Favorite>();
+    public DbSet<FcmDeviceToken>
+    FcmDeviceTokens =>
+        Set<FcmDeviceToken>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<ProcessedMessage>
@@ -100,6 +103,55 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany(x => x.Appointments)
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<FcmDeviceToken>(
+    entity =>
+    {
+        entity.Property(x =>
+                x.Token)
+            .IsRequired()
+            .HasMaxLength(2000);
+
+        entity.Property(x =>
+                x.Platform)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        entity.Property(x =>
+                x.DeviceId)
+            .HasMaxLength(500);
+
+        entity.Property(x =>
+                x.IsActive)
+            .HasDefaultValue(true);
+
+        entity.Property(x =>
+                x.RegisteredAtUtc)
+            .IsRequired();
+
+        entity.HasOne(x =>
+                x.User)
+            .WithMany(x =>
+                x.FcmDeviceTokens)
+            .HasForeignKey(x =>
+                x.UserId)
+            .OnDelete(
+                DeleteBehavior.Cascade);
+
+        entity.HasIndex(x =>
+                x.Token)
+            .IsUnique();
+
+        entity.HasIndex(x => new
+        {
+            x.UserId,
+            x.IsActive,
+            x.IsDeleted
+        });
+
+        entity.HasIndex(x =>
+            x.DeviceId);
+    });
 
         builder.Entity<Payment>()
             .HasOne(x => x.Appointment)

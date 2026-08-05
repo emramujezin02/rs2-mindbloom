@@ -14,6 +14,9 @@ public sealed class WorkerNotificationService
     private readonly IEmailService
         _emailService;
 
+    private readonly IPushNotificationService
+    _pushNotificationService;
+
     private readonly ILogger<
         WorkerNotificationService>
         _logger;
@@ -21,14 +24,17 @@ public sealed class WorkerNotificationService
     public WorkerNotificationService(
         ApplicationDbContext context,
         IEmailService emailService,
-        ILogger<WorkerNotificationService>
-            logger)
+        IPushNotificationService pushNotificationService,
+        ILogger<WorkerNotificationService> logger)
     {
         _context =
             context;
 
         _emailService =
             emailService;
+
+        _pushNotificationService =
+            pushNotificationService;
 
         _logger =
             logger;
@@ -154,15 +160,16 @@ public sealed class WorkerNotificationService
     }
 
     public async Task NotifyAsync(
-        int userId,
-        string title,
-        string message,
-        NotificationActionType actionType,
-        int? appointmentId = null,
-        int? resourceId = null,
-        bool sendEmail = true,
-        CancellationToken cancellationToken =
-            default)
+      int userId,
+      string title,
+      string message,
+      NotificationActionType actionType,
+      int? appointmentId = null,
+      int? resourceId = null,
+      bool sendEmail = true,
+      bool sendPush = true,
+      CancellationToken cancellationToken =
+          default)
     {
         await CreateAsync(
             userId,
@@ -173,15 +180,45 @@ public sealed class WorkerNotificationService
             resourceId,
             cancellationToken);
 
-        if (!sendEmail)
+        if (sendEmail)
         {
-            return;
+            await SendEmailAsync(
+                userId,
+                title,
+                message,
+                cancellationToken);
         }
 
-        await SendEmailAsync(
-            userId,
-            title,
-            message,
-            cancellationToken);
+        if (sendPush)
+        {
+            var data =
+                new Dictionary<string, string>
+                {
+                    ["actionType"] =
+                        actionType.ToString()
+                };
+
+            if (appointmentId.HasValue)
+            {
+                data["appointmentId"] =
+                    appointmentId.Value
+                        .ToString();
+            }
+
+            if (resourceId.HasValue)
+            {
+                data["resourceId"] =
+                    resourceId.Value
+                        .ToString();
+            }
+
+            await _pushNotificationService
+                .SendToUserAsync(
+                    userId,
+                    title,
+                    message,
+                    data,
+                    cancellationToken);
+        }
     }
 }

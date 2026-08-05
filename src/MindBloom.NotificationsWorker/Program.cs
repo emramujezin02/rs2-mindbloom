@@ -17,15 +17,18 @@ using MindBloom.NotificationsWorker.Handlers.Memberships;
 using MindBloom.Messaging.Contracts.Articles;
 using MindBloom.Messaging.Contracts.Reviews;
 using MindBloom.Messaging.Contracts.Workshops;
-
 using MindBloom.NotificationsWorker.Handlers.Articles;
 using MindBloom.NotificationsWorker.Handlers.Reviews;
 using MindBloom.NotificationsWorker.Handlers.Workshops;
 using MindBloom.Messaging.Contracts.Notifications;
 using MindBloom.Messaging.Contracts.Payments;
-
 using MindBloom.NotificationsWorker.Handlers.Notifications;
 using MindBloom.NotificationsWorker.Handlers.Payments;
+using FirebaseAdmin;
+using FirebaseAdmin.Messaging;
+using Google.Apis.Auth.OAuth2;
+using Microsoft.Extensions.Options;
+using MindBloom.NotificationsWorker.Configuration;
 
 Env.TraversePath().Load();
 
@@ -34,6 +37,47 @@ var builder =
 
 builder.Configuration
     .AddEnvironmentVariables();
+
+builder.Services
+    .AddOptions<FirebasePushOptions>()
+    .Configure(options =>
+    {
+        options.CredentialsPath =
+            builder.Configuration[
+                "FIREBASE_CREDENTIALS_PATH"]
+            ?? string.Empty;
+
+        options.BatchSize =
+            GetIntValue(
+                builder.Configuration,
+                "FIREBASE_BATCH_SIZE",
+                500);
+
+        options.RetryCount =
+            GetIntValue(
+                builder.Configuration,
+                "FIREBASE_RETRY_COUNT",
+                3);
+
+        options.RetryDelaySeconds =
+            GetIntValue(
+                builder.Configuration,
+                "FIREBASE_RETRY_DELAY_SECONDS",
+                2);
+    })
+    .Validate(
+        options =>
+            options.BatchSize is > 0 and <= 500,
+        "Firebase batch size must be between 1 and 500.")
+    .Validate(
+        options =>
+            options.RetryCount >= 0,
+        "Firebase retry count cannot be negative.")
+    .Validate(
+        options =>
+            options.RetryDelaySeconds > 0,
+        "Firebase retry delay must be greater than zero.")
+    .ValidateOnStart();
 
 var connectionString =
     builder.Configuration["DB_CONNECTION"];
@@ -125,6 +169,10 @@ builder.Services.AddScoped<
     ChatMessageCreatedEventHandler>();
 
 builder.Services.AddScoped<
+    IPushNotificationService,
+    FirebasePushNotificationService>();
+
+builder.Services.AddScoped<
     IIntegrationEventHandler<
         MembershipPurchasedEvent>,
     MembershipPurchasedEventHandler>();
@@ -174,7 +222,81 @@ builder.Services.AddScoped<
         NotificationRequestedEvent>,
     NotificationRequestedEventHandler>();
 
+builder.Services.AddSingleton(
+    serviceProvider =>
+    {
+        var options =
+            serviceProvider
+                .GetRequiredService<
+                    IOptions<
+                        FirebasePushOptions>>()
+                .Value;
+
+        if (string.IsNullOrWhiteSpace(
+                options.CredentialsPath))
+        {
+            throw new InvalidOperationException(
+                "FIREBASE_CREDENTIALS_PATH is not configured.");
+        }
+
+        if (!File.Exists(
+                options.CredentialsPath))
+        {
+            throw new InvalidOperationException(
+                $"Firebase credentials file was not found at '{options.CredentialsPath}'.");
+        }
+
+        var credential =
+            GoogleCredential.FromFile(
+                options.CredentialsPath);
+
+        return FirebaseApp.Create(
+            new AppOptions
+            {
+                Credential =
+                    credential
+            });
+    });
+
+builder.Services.AddSingleton(
+    serviceProvider =>
+    {
+        var firebaseApp =
+            serviceProvider
+                .GetRequiredService<
+                    FirebaseApp>();
+
+        return FirebaseMessaging
+            .GetMessaging(
+                firebaseApp);
+    });
+
 var host =
     builder.Build();
 
 await host.RunAsync();
+
+static int GetIntValue(
+    IConfiguration configuration,
+    string key,
+    int defaultValue)
+{
+    var value =
+        configuration[key];
+
+    if (string.IsNullOrWhiteSpace(
+            value))
+    {
+        return defaultValue;
+    }
+
+    if (!int.TryParse(
+            value,
+            out var parsedValue))
+    {
+        throw new InvalidOperationException(
+            $"Environment variable '{key}' must be a valid integer.");
+    }
+
+    return parsedValue;
+}

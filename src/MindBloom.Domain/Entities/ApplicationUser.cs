@@ -28,7 +28,13 @@ public class ApplicationUser : IdentityUser<int>
     public ICollection<UserAudit> PerformedUserAudits { get; set; }
         = new List<UserAudit>();
 
+    public ICollection<FcmDeviceToken>
+    FcmDeviceTokens
+    { get; set; } =
+    new List<FcmDeviceToken>();
+
     public ICollection<AdminAuditLog>
+
     AdminAuditLogs
     { get; set; } = new List<AdminAuditLog>();
 }

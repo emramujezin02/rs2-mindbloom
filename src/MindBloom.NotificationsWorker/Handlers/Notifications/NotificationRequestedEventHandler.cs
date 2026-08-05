@@ -116,6 +116,9 @@ public sealed class NotificationRequestedEventHandler
                 sendEmail:
                     integrationEvent
                         .SendEmail,
+                sendPush:
+                    integrationEvent
+                        .SendPush,
                 cancellationToken:
                     cancellationToken);
 

@@ -206,6 +206,10 @@ public static class DependencyInjection
     IAdminAuditService,
     AdminAuditService>();
 
+        services.AddScoped<
+    IFcmDeviceTokenService,
+    FcmDeviceTokenService>();
+
         services.AddScoped<IUserSettingsService, UserSettingsService>();
 
         return services;

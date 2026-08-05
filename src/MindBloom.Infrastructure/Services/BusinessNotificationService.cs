@@ -28,6 +28,7 @@ public sealed class BusinessNotificationService
             NotificationActionType.None,
         int? resourceId = null,
         bool sendEmail = false,
+        bool sendPush = true,
         Guid? correlationId = null,
         CancellationToken cancellationToken =
             default)
@@ -109,6 +110,9 @@ public sealed class BusinessNotificationService
                     null,
 
                 SendEmail = sendEmail,
+
+                SendPush =
+    sendPush,
             };
 
         return _integrationEventPublisher

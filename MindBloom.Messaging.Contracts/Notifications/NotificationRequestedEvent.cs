@@ -20,4 +20,7 @@ public sealed record NotificationRequestedEvent
     public int? NotificationId { get; init; }
 
     public bool SendEmail { get; init; }
+
+    public bool SendPush { get; init; } =
+    true;
 }
