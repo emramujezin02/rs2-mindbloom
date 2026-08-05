@@ -17,8 +17,8 @@ public sealed class IntegrationEventConsumer
     private readonly RabbitMqOptions
         _options;
 
-    private readonly RabbitMqConnectionFactory
-        _connectionFactory;
+    private readonly RabbitMqWorkerConnectionProvider
+    _connectionProvider;
 
     private readonly RabbitMqTopology
         _topology;
@@ -45,7 +45,8 @@ public sealed class IntegrationEventConsumer
 
     private string? _consumerTag;
 
-
+    private readonly RabbitMqConsumerOperations
+    _consumerOperations;
 
     private int _activeMessageCount;
     private TaskCompletionSource
@@ -58,19 +59,22 @@ public sealed class IntegrationEventConsumer
 
     public IntegrationEventConsumer(
         IOptions<RabbitMqOptions> options,
-        RabbitMqConnectionFactory connectionFactory,
+        RabbitMqWorkerConnectionProvider
+            connectionProvider,
         RabbitMqTopology topology,
         IntegrationEventDeserializer deserializer,
         IIntegrationEventDispatcher dispatcher,
         IServiceScopeFactory scopeFactory,
         RabbitMqMonitoringMetrics monitoringMetrics,
+        RabbitMqConsumerOperations
+    consumerOperations,
         ILogger<IntegrationEventConsumer> logger)
     {
         _options =
             options.Value;
 
-        _connectionFactory =
-            connectionFactory;
+        _connectionProvider =
+            connectionProvider;
 
         _topology =
             topology;
@@ -89,6 +93,9 @@ public sealed class IntegrationEventConsumer
 
         _monitoringMetrics =
     monitoringMetrics;
+
+        _consumerOperations =
+    consumerOperations;
 
     }
 
@@ -154,19 +161,21 @@ public sealed class IntegrationEventConsumer
     }
 
     private async Task InitializeRabbitMqAsync(
-     CancellationToken cancellationToken)
+      CancellationToken cancellationToken)
     {
         _connection =
-            await CreateConnectionWithRetryAsync(
-                cancellationToken);
-
-        SubscribeToConnectionEvents(
-            _connection);
+            await _connectionProvider
+                .CreateAsync(
+                    nameof(
+                        IntegrationEventConsumer),
+                    $"{_options.ConsumerClientName}-integration",
+                    cancellationToken);
 
         _channel =
-            await _connection.CreateChannelAsync(
-                cancellationToken:
-                    cancellationToken);
+            await _connection
+                .CreateChannelAsync(
+                    cancellationToken:
+                        cancellationToken);
 
         await _topology.DeclareAsync(
             _channel,
@@ -186,104 +195,19 @@ public sealed class IntegrationEventConsumer
                 cancellationToken);
 
         _logger.LogInformation(
-            "Integration event consumer connected to RabbitMQ successfully. "
-            + "Queue: {Queue}, prefetch count: {PrefetchCount}.",
+            "RabbitMQ consumer initialized. "
+            + "Consumer: {Consumer}, "
+            + "queue: {Queue}, "
+            + "prefetch count: {PrefetchCount}.",
+            nameof(
+                IntegrationEventConsumer),
             _options.IntegrationEventQueue,
             _options.PrefetchCount);
     }
 
-    private async Task<IConnection>
-    CreateConnectionWithRetryAsync(
-        CancellationToken cancellationToken)
-    {
-        var factory =
-            _connectionFactory.Create(
-                _options.ConsumerClientName,
-                consumerDispatchConcurrency: 1);
+   
 
-        Exception? lastException =
-            null;
 
-        for (var attempt = 1;
-             attempt <=
-             _options.ConnectionRetryCount;
-             attempt++)
-        {
-            cancellationToken
-                .ThrowIfCancellationRequested();
-
-            try
-            {
-                _logger.LogInformation(
-                    "Connecting integration event consumer to RabbitMQ at "
-                    + "{HostName}:{Port}. Attempt {Attempt}/{MaximumAttempts}.",
-                    _options.HostName,
-                    _options.Port,
-                    attempt,
-                    _options.ConnectionRetryCount);
-
-                var connection =
-                    await factory
-                        .CreateConnectionAsync(
-                            _options.ConsumerClientName,
-                            cancellationToken);
-
-                _logger.LogInformation(
-                    "Integration event consumer RabbitMQ connection "
-                    + "established successfully.");
-
-                return connection;
-            }
-            catch (OperationCanceledException)
-                when (cancellationToken
-                    .IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                lastException =
-                    exception;
-
-                _logger.LogWarning(
-                    exception,
-                    "Integration event consumer RabbitMQ connection "
-                    + "attempt {Attempt}/{MaximumAttempts} failed.",
-                    attempt,
-                    _options.ConnectionRetryCount);
-
-                if (attempt >=
-                    _options.ConnectionRetryCount)
-                {
-                    break;
-                }
-
-                await Task.Delay(
-                    TimeSpan.FromSeconds(
-                        _options
-                            .ConnectionRetryDelaySeconds),
-                    cancellationToken);
-            }
-        }
-
-        throw new InvalidOperationException(
-            "Integration event consumer could not establish "
-            + "a RabbitMQ connection after all configured retry attempts.",
-            lastException);
-    }
-
-    private void SubscribeToConnectionEvents(
-    IConnection connection)
-    {
-        connection.ConnectionShutdownAsync +=
-            OnConnectionShutdownAsync;
-
-        connection.ConnectionRecoveryErrorAsync +=
-            OnConnectionRecoveryErrorAsync;
-
-        connection.RecoverySucceededAsync +=
-            OnRecoverySucceededAsync;
-    }
 
     private async Task HandleMessageAsync(
      object sender,
@@ -317,10 +241,11 @@ public sealed class IntegrationEventConsumer
             }
 
             var retryCount =
-                GetRetryCount(
-                    eventArgs
-                        .BasicProperties
-                        .Headers);
+                RabbitMqMessageHelper
+                    .GetRetryCount(
+                        eventArgs
+                            .BasicProperties
+                            .Headers);
 
             try
             {
@@ -361,8 +286,12 @@ public sealed class IntegrationEventConsumer
                             .Name,
                         eventArgs.RoutingKey);
 
-                    await AcknowledgeAsync(
-                        eventArgs.DeliveryTag);
+                    await _consumerOperations
+                        .AcknowledgeAsync(
+                            _channel!,
+                            eventArgs.DeliveryTag,
+                            nameof(
+                                IntegrationEventConsumer));
 
                     return;
                 }
@@ -394,9 +323,12 @@ public sealed class IntegrationEventConsumer
                             .Name,
                         integrationEvent.CorrelationId,
                         CancellationToken.None);
-
-                await AcknowledgeAsync(
-                    eventArgs.DeliveryTag);
+                await _consumerOperations
+                    .AcknowledgeAsync(
+                        _channel!,
+                        eventArgs.DeliveryTag,
+                        nameof(
+                            IntegrationEventConsumer));
 
                 _monitoringMetrics
     .RecordSuccess();
@@ -507,34 +439,26 @@ public sealed class IntegrationEventConsumer
 
         try
         {
-            var properties =
-                CreateForwardProperties(
+            await _consumerOperations
+                .PublishForwardedAsync(
+                    _channel!,
+                    _options.RetryExchange,
+                    retryRoutingKey,
                     eventArgs.BasicProperties,
+                    eventArgs.Body,
                     nextRetryCount,
-                    exception.Message);
+                    exception.Message,
+                    _options
+                        .IntegrationEventQueue,
+                    nameof(
+                        IntegrationEventConsumer));
 
-            await _channel!
-                .BasicPublishAsync(
-                    exchange:
-                        _options.RetryExchange,
-
-                    routingKey:
-                        retryRoutingKey,
-
-                    mandatory:
-                        true,
-
-                    basicProperties:
-                        properties,
-
-                    body:
-                        eventArgs.Body,
-
-                    cancellationToken:
-                        CancellationToken.None);
-
-            await AcknowledgeAsync(
-                eventArgs.DeliveryTag);
+            await _consumerOperations
+                .AcknowledgeAsync(
+                    _channel!,
+                    eventArgs.DeliveryTag,
+                    nameof(
+                        IntegrationEventConsumer));
 
             _monitoringMetrics
     .RecordRetry();
@@ -552,10 +476,14 @@ public sealed class IntegrationEventConsumer
                 publishException,
                 "Integration event with routing key {RoutingKey} could not be published to retry exchange. Original delivery will be requeued.",
                 eventArgs.RoutingKey);
-
-            await NegativeAcknowledgeAsync(
-                eventArgs.DeliveryTag,
-                requeue: true);
+            await _consumerOperations
+                .NegativeAcknowledgeAsync(
+                    _channel!,
+                    eventArgs.DeliveryTag,
+                    requeue:
+                        true,
+                    nameof(
+                        IntegrationEventConsumer));
         }
     }
 
@@ -568,10 +496,13 @@ public sealed class IntegrationEventConsumer
         try
         {
             var properties =
-                CreateForwardProperties(
-                    eventArgs.BasicProperties,
-                    retryCount,
-                    failureReason);
+                RabbitMqMessageHelper
+                    .CreateForwardProperties(
+                        eventArgs.BasicProperties,
+                        retryCount,
+                        failureReason,
+                        _options
+                            .IntegrationEventQueue);
 
             await _channel!
                 .BasicPublishAsync(
@@ -595,8 +526,12 @@ public sealed class IntegrationEventConsumer
                     cancellationToken:
                         CancellationToken.None);
 
-            await AcknowledgeAsync(
-                eventArgs.DeliveryTag);
+            await _consumerOperations
+                .AcknowledgeAsync(
+                    _channel!,
+                    eventArgs.DeliveryTag,
+                    nameof(
+                        IntegrationEventConsumer));
 
             _monitoringMetrics
     .RecordFailure();
@@ -617,9 +552,10 @@ public sealed class IntegrationEventConsumer
                 _options
                     .IntegrationEventDeadLetterQueue,
                 retryCount,
-                Truncate(
-                    failureReason,
-                    500));
+RabbitMqMessageHelper
+    .Truncate(
+        failureReason,
+        500));
         }
         catch (Exception exception)
         {
@@ -629,244 +565,17 @@ public sealed class IntegrationEventConsumer
                 + "moved to DLQ. Original message "
                 + "will be requeued.");
 
-            await NegativeAcknowledgeAsync(
-                eventArgs.DeliveryTag,
-                requeue: true);
+            await _consumerOperations
+                .NegativeAcknowledgeAsync(
+                    _channel!,
+                    eventArgs.DeliveryTag,
+                    requeue:
+                        true,
+                    nameof(
+                        IntegrationEventConsumer));
         }
     }
-
-    private BasicProperties
-        CreateForwardProperties(
-            IReadOnlyBasicProperties
-                originalProperties,
-            int retryCount,
-            string failureReason)
-    {
-        var headers =
-            CloneHeaders(
-                originalProperties.Headers);
-
-        headers[
-            RabbitMqHeaders.RetryCount] =
-                retryCount;
-
-        headers[
-            RabbitMqHeaders
-                .LastFailureReason] =
-                Truncate(
-                    failureReason,
-                    500);
-
-        headers[
-            RabbitMqHeaders
-                .LastFailureAtUtc] =
-                DateTime.UtcNow
-                    .ToString("O");
-
-        headers[
-            RabbitMqHeaders
-                .OriginalQueue] =
-                _options
-                    .IntegrationEventQueue;
-
-        return new BasicProperties
-        {
-            Persistent =
-                true,
-
-            ContentType =
-                originalProperties.ContentType
-                ?? "application/json",
-
-            ContentEncoding =
-                originalProperties.ContentEncoding
-                ?? "utf-8",
-
-            MessageId =
-                originalProperties.MessageId,
-
-            CorrelationId =
-                originalProperties.CorrelationId,
-
-            Type =
-                originalProperties.Type,
-
-            AppId =
-                originalProperties.AppId
-                ?? "MindBloom.NotificationsWorker",
-
-            Timestamp =
-                originalProperties.Timestamp,
-
-            Headers =
-                headers
-        };
-    }
-
-    private static Dictionary<string, object?>
-        CloneHeaders(
-            IDictionary<string, object?>?
-                originalHeaders)
-    {
-        if (originalHeaders == null)
-        {
-            return new Dictionary<
-                string,
-                object?>();
-        }
-
-        return originalHeaders.ToDictionary(
-            item => item.Key,
-            item => item.Value);
-    }
-
-    private static int GetRetryCount(
-        IDictionary<string, object?>? headers)
-    {
-        if (headers == null ||
-            !headers.TryGetValue(
-                RabbitMqHeaders.RetryCount,
-                out var value) ||
-            value == null)
-        {
-            return 0;
-        }
-
-        return value switch
-        {
-            byte byteValue =>
-                byteValue,
-
-            short shortValue =>
-                shortValue,
-
-            int intValue =>
-                intValue,
-
-            long longValue
-                when longValue <=
-                     int.MaxValue =>
-                (int)longValue,
-
-            byte[] bytes
-                when int.TryParse(
-                    Encoding.UTF8
-                        .GetString(bytes),
-                    out var parsedValue) =>
-                parsedValue,
-
-            string stringValue
-                when int.TryParse(
-                    stringValue,
-                    out var parsedValue) =>
-                parsedValue,
-
-            _ => 0
-        };
-    }
-
-    private async Task AcknowledgeAsync(
-        ulong deliveryTag)
-    {
-        if (_channel is null ||
-            !_channel.IsOpen)
-        {
-            throw new InvalidOperationException(
-                "RabbitMQ channel is not "
-                + "available for acknowledgment.");
-        }
-
-        await _channel.BasicAckAsync(
-            deliveryTag:
-                deliveryTag,
-
-            multiple:
-                false,
-
-            cancellationToken:
-                CancellationToken.None);
-    }
-
-    private async Task
-        NegativeAcknowledgeAsync(
-            ulong deliveryTag,
-            bool requeue)
-    {
-        if (_channel is null ||
-            !_channel.IsOpen)
-        {
-            return;
-        }
-
-        await _channel.BasicNackAsync(
-            deliveryTag:
-                deliveryTag,
-
-            multiple:
-                false,
-
-            requeue:
-                requeue,
-
-            cancellationToken:
-                CancellationToken.None);
-    }
-
-    private static string Truncate(
-        string value,
-        int maximumLength)
-    {
-        if (string.IsNullOrWhiteSpace(
-                value))
-        {
-            return "Unknown failure.";
-        }
-
-        return value.Length <= maximumLength
-            ? value
-            : value[..maximumLength];
-    }
-
-    private Task OnConnectionShutdownAsync(
-        object sender,
-        ShutdownEventArgs eventArgs)
-    {
-        _logger.LogWarning(
-            "RabbitMQ integration event "
-            + "connection was shut down. "
-            + "Reply code: {ReplyCode}. "
-            + "Reason: {Reason}.",
-            eventArgs.ReplyCode,
-            eventArgs.ReplyText);
-
-        return Task.CompletedTask;
-    }
-
-    private Task
-        OnConnectionRecoveryErrorAsync(
-            object sender,
-            ConnectionRecoveryErrorEventArgs
-                eventArgs)
-    {
-        _logger.LogError(
-            eventArgs.Exception,
-            "RabbitMQ integration event "
-            + "connection recovery failed.");
-
-        return Task.CompletedTask;
-    }
-
-    private Task OnRecoverySucceededAsync(
-        object sender,
-        AsyncEventArgs eventArgs)
-    {
-        _logger.LogInformation(
-            "RabbitMQ integration event "
-            + "connection recovery succeeded.");
-
-        return Task.CompletedTask;
-    }
-
+   
     private void BeginMessageProcessing()
     {
         if (Interlocked.Increment(
@@ -901,12 +610,6 @@ public sealed class IntegrationEventConsumer
         _isStopping =
             true;
 
-        /*
-         * Prvo zaustavljamo dostavljanje NOVIH
-         * RabbitMQ poruka.
-         *
-         * Aktivna poruka dobija vrijeme da završi.
-         */
         if (_channel is { IsOpen: true } &&
             !string.IsNullOrWhiteSpace(
                 _consumerTag))

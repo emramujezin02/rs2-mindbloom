@@ -35,6 +35,12 @@ public static class RabbitMqConfigurationExtensions
                         configuration,
                         "RABBITMQ_PASSWORD");
 
+                options.MonitoringIntervalSeconds =
+    GetIntValue(
+        configuration,
+        "RABBITMQ_MONITORING_INTERVAL_SECONDS",
+        60);
+
                 options.VirtualHost =
                     GetRequiredValue(
                         configuration,
@@ -237,6 +243,10 @@ public static class RabbitMqConfigurationExtensions
                 options =>
                     options.MaximumRetryCount == 4,
                 "RABBITMQ_MAXIMUM_RETRY_COUNT must be 4 because the configured retry delays are 1s, 2s, 4s and 8s.")
+            .Validate(
+    options =>
+        options.MonitoringIntervalSeconds > 0,
+    "RABBITMQ_MONITORING_INTERVAL_SECONDS must be greater than zero.")
             .Validate(
                 options =>
                     options.NetworkRecoveryIntervalSeconds > 0,

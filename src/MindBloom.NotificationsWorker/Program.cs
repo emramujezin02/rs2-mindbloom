@@ -36,6 +36,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using MindBloom.NotificationsWorker.Health;
 using MindBloom.NotificationsWorker.Monitoring;
+using MindBloom.NotificationsWorker.Messaging;
 
 Env.TraversePath().Load();
 
@@ -166,6 +167,12 @@ builder.Services
 builder.Services.AddSingleton<
     IEmailService,
     EmailService>();
+
+builder.Services.AddSingleton<
+    RabbitMqConsumerOperations>();
+
+builder.Services.AddSingleton<
+    RabbitMqWorkerConnectionProvider>();
 
 builder.Services.AddSingleton<
     EmailMessageBodyBuilder>();
