@@ -50,6 +50,16 @@ public sealed class EmailNotificationConsumer :
 
     private IChannel? _channel;
 
+    private string? _consumerTag;
+
+    private int _activeMessageCount;
+
+    private TaskCompletionSource
+        _messagesDrained =
+            CreateCompletedDrainSource();
+
+    private bool _isStopping;
+
     private bool _disposed;
 
     public EmailNotificationConsumer(
@@ -98,10 +108,10 @@ public sealed class EmailNotificationConsumer :
             consumer.ReceivedAsync +=
                 HandleMessageAsync;
 
-            var consumerTag =
+            _consumerTag =
                 await _channel!
                     .BasicConsumeAsync(
-                        queue:
+                                    queue:
                             _options.EmailQueue,
                         autoAck:
                             false,
@@ -113,7 +123,7 @@ public sealed class EmailNotificationConsumer :
             _logger.LogInformation(
                 "Notifications worker started consuming queue {Queue}. Consumer tag: {ConsumerTag}. Maximum retries: {MaximumRetryCount}.",
                 _options.EmailQueue,
-                consumerTag,
+                _consumerTag,
                 _options.MaximumRetryCount);
 
             await Task.Delay(
@@ -263,176 +273,240 @@ public sealed class EmailNotificationConsumer :
     }
 
     private async Task HandleMessageAsync(
-        object sender,
-        BasicDeliverEventArgs eventArgs)
+     object sender,
+     BasicDeliverEventArgs eventArgs)
     {
-        if (_channel is null ||
-            !_channel.IsOpen)
+        if (_isStopping)
         {
-            _logger.LogError(
-                "RabbitMQ channel is unavailable for delivery {DeliveryTag}.",
+            _logger.LogInformation(
+                "Email notification delivery {DeliveryTag} "
+                + "was received while consumer is stopping "
+                + "and will not start processing.",
                 eventArgs.DeliveryTag);
 
             return;
         }
 
-        EmailNotificationMessage? message =
-            null;
-
-        var retryCount =
-            GetRetryCount(
-                eventArgs
-                    .BasicProperties
-                    .Headers);
+        BeginMessageProcessing();
 
         try
         {
-            message =
-                JsonSerializer
-                    .Deserialize<
-                        EmailNotificationMessage>(
-                        eventArgs.Body.Span,
-                        JsonOptions);
-
-            if (message is null)
+            if (_channel is null ||
+                !_channel.IsOpen)
             {
-                throw new JsonException(
-                    "Email notification message could not be deserialized.");
-            }
-
-            ValidateMessage(
-                message);
-
-            var consumerName =
-    nameof(EmailNotificationConsumer);
-
-            using var scope =
-                _scopeFactory.CreateScope();
-
-            var processedMessageService =
-                scope.ServiceProvider
-                    .GetRequiredService<
-                        ProcessedMessageService>();
-
-            var alreadyProcessed =
-                await processedMessageService
-                    .IsProcessedAsync(
-                        message.MessageId,
-                        consumerName,
-                        CancellationToken.None);
-
-            if (alreadyProcessed)
-            {
-                _logger.LogWarning(
-                    "Duplicate email notification detected. "
-                    + "Message ID: {MessageId}, "
-                    + "event type: {EventType}, "
-                    + "correlation ID: {CorrelationId}. "
-                    + "Message will be acknowledged without sending the email again.",
-                    message.MessageId,
-                    message.EventType,
-                    message.CorrelationId);
-
-                await AcknowledgeAsync(
+                _logger.LogError(
+                    "RabbitMQ channel is unavailable for delivery {DeliveryTag}.",
                     eventArgs.DeliveryTag);
 
                 return;
             }
 
-            var currentAttempt =
-                retryCount + 1;
+            EmailNotificationMessage? message =
+                null;
 
-            var maximumAttempts =
-                _options.MaximumRetryCount + 1;
+            var retryCount =
+                GetRetryCount(
+                    eventArgs
+                        .BasicProperties
+                        .Headers);
 
-            _logger.LogInformation(
-                "Processing email notification {MessageId}. Attempt {CurrentAttempt}/{MaximumAttempts}. Correlation ID: {CorrelationId}.",
-                message.MessageId,
-                currentAttempt,
-                maximumAttempts,
-                message.CorrelationId);
+            try
+            {
+                message =
+                    JsonSerializer
+                        .Deserialize<
+                            EmailNotificationMessage>(
+                            eventArgs.Body.Span,
+                            JsonOptions);
 
-            var emailBody =
-                _bodyBuilder.Build(
+                if (message is null)
+                {
+                    throw new JsonException(
+                        "Email notification message could not be deserialized.");
+                }
+
+                ValidateMessage(
                     message);
 
-            await _emailService.SendAsync(
-                message.RecipientEmail,
-                message.Subject,
-                emailBody);
-
-            await processedMessageService
-                .MarkAsProcessedAsync(
-                    message.MessageId,
-                    consumerName,
+                var consumerName =
                     nameof(
-                        EmailNotificationMessage),
-                    message.CorrelationId,
-                    CancellationToken.None);
+                        EmailNotificationConsumer);
 
-            await AcknowledgeAsync(
-                eventArgs.DeliveryTag);
+                using var scope =
+                    _scopeFactory
+                        .CreateScope();
 
-            _logger.LogInformation(
-                "Email notification {MessageId} sent successfully, "
-                + "marked as processed and acknowledged. "
-                + "Attempt: {Attempt}, correlation ID: {CorrelationId}.",
-                message.MessageId,
-                currentAttempt,
-                message.CorrelationId);
+                var processedMessageService =
+                    scope.ServiceProvider
+                        .GetRequiredService<
+                            ProcessedMessageService>();
+
+                var alreadyProcessed =
+                    await processedMessageService
+                        .IsProcessedAsync(
+                            message.MessageId,
+                            consumerName,
+                            CancellationToken.None);
+
+                if (alreadyProcessed)
+                {
+                    _logger.LogWarning(
+                        "Duplicate email notification detected. "
+                        + "Message ID: {MessageId}, "
+                        + "event type: {EventType}, "
+                        + "correlation ID: {CorrelationId}. "
+                        + "Message will be acknowledged without sending the email again.",
+                        message.MessageId,
+                        message.EventType,
+                        message.CorrelationId);
+
+                    await AcknowledgeAsync(
+                        eventArgs.DeliveryTag);
+
+                    return;
+                }
+
+                var currentAttempt =
+                    retryCount + 1;
+
+                var maximumAttempts =
+                    _options
+                        .MaximumRetryCount + 1;
+
+                _logger.LogInformation(
+                    "Processing email notification {MessageId}. "
+                    + "Attempt {CurrentAttempt}/{MaximumAttempts}. "
+                    + "Correlation ID: {CorrelationId}.",
+                    message.MessageId,
+                    currentAttempt,
+                    maximumAttempts,
+                    message.CorrelationId);
+
+                var emailBody =
+                    _bodyBuilder.Build(
+                        message);
+
+                await _emailService
+                    .SendAsync(
+                        message.RecipientEmail,
+                        message.Subject,
+                        emailBody);
+
+                await processedMessageService
+                    .MarkAsProcessedAsync(
+                        message.MessageId,
+                        consumerName,
+                        nameof(
+                            EmailNotificationMessage),
+                        message.CorrelationId,
+                        CancellationToken.None);
+
+                await AcknowledgeAsync(
+                    eventArgs.DeliveryTag);
+
+                _logger.LogInformation(
+                    "Email notification {MessageId} sent successfully, "
+                    + "marked as processed and acknowledged. "
+                    + "Attempt: {Attempt}, correlation ID: {CorrelationId}.",
+                    message.MessageId,
+                    currentAttempt,
+                    message.CorrelationId);
+            }
+            catch (JsonException exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Delivery {DeliveryTag} contains invalid JSON and will be moved directly to the dead-letter queue.",
+                    eventArgs.DeliveryTag);
+
+                await MoveToDeadLetterQueueAsync(
+                    eventArgs,
+                    retryCount,
+                    exception.Message,
+                    message?.MessageId);
+            }
+            catch (ArgumentException exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Email notification {MessageId} contains invalid data and will be moved directly to the dead-letter queue.",
+                    message?.MessageId);
+
+                await MoveToDeadLetterQueueAsync(
+                    eventArgs,
+                    retryCount,
+                    exception.Message,
+                    message?.MessageId);
+            }
+            catch (InvalidOperationException exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Email notification {MessageId} cannot be processed and will be moved directly to the dead-letter queue.",
+                    message?.MessageId);
+
+                await MoveToDeadLetterQueueAsync(
+                    eventArgs,
+                    retryCount,
+                    exception.Message,
+                    message?.MessageId);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Sending email notification {MessageId} failed on attempt {Attempt}.",
+                    message?.MessageId,
+                    retryCount + 1);
+
+                await HandleTransientFailureAsync(
+                    eventArgs,
+                    retryCount,
+                    exception,
+                    message?.MessageId);
+            }
         }
-        catch (JsonException exception)
+        finally
         {
-            _logger.LogError(
-                exception,
-                "Delivery {DeliveryTag} contains invalid JSON and will be moved directly to the dead-letter queue.",
-                eventArgs.DeliveryTag);
-
-            await MoveToDeadLetterQueueAsync(
-                eventArgs,
-                retryCount,
-                exception.Message,
-                message?.MessageId);
+            EndMessageProcessing();
         }
-        catch (ArgumentException exception)
-        {
-            _logger.LogError(
-                exception,
-                "Email notification {MessageId} contains invalid data and will be moved directly to the dead-letter queue.",
-                message?.MessageId);
+    }
 
-            await MoveToDeadLetterQueueAsync(
-                eventArgs,
-                retryCount,
-                exception.Message,
-                message?.MessageId);
+    private static TaskCompletionSource
+    CreateCompletedDrainSource()
+    {
+        var source =
+            new TaskCompletionSource(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+
+        source.TrySetResult();
+
+        return source;
+    }
+
+    private void BeginMessageProcessing()
+    {
+        if (Interlocked.Increment(
+                ref _activeMessageCount) == 1)
+        {
+            _messagesDrained =
+                new TaskCompletionSource(
+                    TaskCreationOptions
+                        .RunContinuationsAsynchronously);
         }
-        catch (InvalidOperationException exception)
-        {
-            _logger.LogError(
-                exception,
-                "Email notification {MessageId} cannot be processed and will be moved directly to the dead-letter queue.",
-                message?.MessageId);
+    }
 
-            await MoveToDeadLetterQueueAsync(
-                eventArgs,
-                retryCount,
-                exception.Message,
-                message?.MessageId);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(
-                exception,
-                "Sending email notification {MessageId} failed on attempt {Attempt}.",
-                message?.MessageId,
-                retryCount + 1);
+    private void EndMessageProcessing()
+    {
+        var remaining =
+            Interlocked.Decrement(
+                ref _activeMessageCount);
 
-            await HandleTransientFailureAsync(
-                eventArgs,
-                retryCount,
-                exception,
-                message?.MessageId);
+        if (remaining == 0)
+        {
+            _messagesDrained
+                .TrySetResult();
         }
     }
 
@@ -549,10 +623,6 @@ public sealed class EmailNotificationConsumer :
                     cancellationToken:
                         CancellationToken.None);
 
-            /*
-             * Originalna poruka se potvrđuje tek nakon uspješnog
-             * objavljivanja u dead-letter exchange.
-             */
             await AcknowledgeAsync(
                 eventArgs.DeliveryTag);
 
@@ -868,12 +938,73 @@ public sealed class EmailNotificationConsumer :
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Stopping notifications worker.");
+            "Graceful shutdown started for email notification consumer. "
+            + "Active messages: {ActiveMessageCount}.",
+            Volatile.Read(
+                ref _activeMessageCount));
+
+        _isStopping =
+            true;
+
+        if (_channel is { IsOpen: true } &&
+            !string.IsNullOrWhiteSpace(
+                _consumerTag))
+        {
+            try
+            {
+                await _channel
+                    .BasicCancelAsync(
+                        _consumerTag,
+                        cancellationToken:
+                            CancellationToken.None);
+
+                _logger.LogInformation(
+                    "Email notification RabbitMQ consumer {ConsumerTag} cancelled. "
+                    + "No new deliveries will be accepted.",
+                    _consumerTag);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Email notification RabbitMQ consumer could not be cancelled cleanly.");
+            }
+        }
+
+        if (Volatile.Read(
+                ref _activeMessageCount) > 0)
+        {
+            _logger.LogInformation(
+                "Waiting for {ActiveMessageCount} active email notification message(s) to finish.",
+                Volatile.Read(
+                    ref _activeMessageCount));
+
+            try
+            {
+                await _messagesDrained
+                    .Task
+                    .WaitAsync(
+                        cancellationToken);
+
+                _logger.LogInformation(
+                    "All active email notification messages completed successfully.");
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken
+                    .IsCancellationRequested)
+            {
+                _logger.LogWarning(
+                    "Graceful shutdown timeout reached while waiting for email notification processing to finish.");
+            }
+        }
 
         await base.StopAsync(
             cancellationToken);
 
         await DisposeRabbitMqResourcesAsync();
+
+        _logger.LogInformation(
+            "Email notification consumer stopped successfully.");
     }
 
     private async Task

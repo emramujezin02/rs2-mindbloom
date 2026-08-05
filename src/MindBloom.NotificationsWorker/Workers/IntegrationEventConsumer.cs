@@ -39,6 +39,17 @@ public sealed class IntegrationEventConsumer
 
     private IChannel? _channel;
 
+    private string? _consumerTag;
+
+
+
+    private int _activeMessageCount;
+    private TaskCompletionSource
+        _messagesDrained =
+            CreateCompletedDrainSource();
+
+    private bool _isStopping;
+
     private bool _disposed;
 
     public IntegrationEventConsumer(
@@ -74,6 +85,7 @@ public sealed class IntegrationEventConsumer
 
         _scopeFactory =
     scopeFactory;
+
     }
 
     protected override async Task ExecuteAsync(
@@ -91,10 +103,10 @@ public sealed class IntegrationEventConsumer
             consumer.ReceivedAsync +=
                 HandleMessageAsync;
 
-            var consumerTag =
+            _consumerTag =
                 await _channel!
                     .BasicConsumeAsync(
-                        queue:
+                                    queue:
                             _options
                                 .IntegrationEventQueue,
 
@@ -112,7 +124,7 @@ public sealed class IntegrationEventConsumer
                 + "Queue: {Queue}, consumer tag: "
                 + "{ConsumerTag}.",
                 _options.IntegrationEventQueue,
-                consumerTag);
+                _consumerTag);
 
             await Task.Delay(
                 Timeout.InfiniteTimeSpan,
@@ -270,161 +282,181 @@ public sealed class IntegrationEventConsumer
     }
 
     private async Task HandleMessageAsync(
-        object sender,
-        BasicDeliverEventArgs eventArgs)
+     object sender,
+     BasicDeliverEventArgs eventArgs)
     {
-        if (_channel is null ||
-            !_channel.IsOpen)
+        if (_isStopping)
         {
-            _logger.LogError(
-                "RabbitMQ channel is unavailable "
-                + "for integration event delivery "
-                + "{DeliveryTag}.",
+            _logger.LogInformation(
+                "Integration event delivery {DeliveryTag} "
+                + "was received while consumer is stopping "
+                + "and will not start processing.",
                 eventArgs.DeliveryTag);
 
             return;
         }
 
-        var retryCount =
-            GetRetryCount(
-                eventArgs
-                    .BasicProperties
-                    .Headers);
+        BeginMessageProcessing();
 
         try
         {
-            var integrationEvent =
-                _deserializer.Deserialize(
-                    eventArgs.RoutingKey,
-                    eventArgs.Body);
-
-            var consumerName =
-                nameof(IntegrationEventConsumer);
-
-            using var scope =
-                _scopeFactory.CreateScope();
-
-            var processedMessageService =
-                scope.ServiceProvider
-                    .GetRequiredService<
-                        ProcessedMessageService>();
-
-            var alreadyProcessed =
-                await processedMessageService
-                    .IsProcessedAsync(
-                        integrationEvent.EventId,
-                        consumerName,
-                        CancellationToken.None);
-
-            if (alreadyProcessed)
+            if (_channel is null ||
+                !_channel.IsOpen)
             {
-                _logger.LogWarning(
-                    "Duplicate integration event detected. "
-                    + "Event ID: {EventId}, "
-                    + "event type: {EventType}, "
-                    + "routing key: {RoutingKey}. "
-                    + "Message will be acknowledged without processing.",
-                    integrationEvent.EventId,
-                    integrationEvent
-                        .GetType()
-                        .Name,
-                    eventArgs.RoutingKey);
-
-                await AcknowledgeAsync(
+                _logger.LogError(
+                    "RabbitMQ channel is unavailable "
+                    + "for integration event delivery "
+                    + "{DeliveryTag}.",
                     eventArgs.DeliveryTag);
 
                 return;
             }
 
-            _logger.LogInformation(
-                "Processing integration event "
-                + "{EventType}. Routing key: "
-                + "{RoutingKey}, attempt: "
-                + "{Attempt}/{MaximumAttempts}. "
-                + "Event ID: {EventId}.",
-                integrationEvent
-                    .GetType()
-                    .Name,
-                eventArgs.RoutingKey,
-                retryCount + 1,
-                _options.MaximumRetryCount + 1,
-                integrationEvent.EventId);
+            var retryCount =
+                GetRetryCount(
+                    eventArgs
+                        .BasicProperties
+                        .Headers);
 
-            await _dispatcher.DispatchAsync(
-                integrationEvent,
-                CancellationToken.None);
+            try
+            {
+                var integrationEvent =
+                    _deserializer.Deserialize(
+                        eventArgs.RoutingKey,
+                        eventArgs.Body);
 
-            await processedMessageService
-                .MarkAsProcessedAsync(
-                    integrationEvent.EventId,
-                    consumerName,
+                var consumerName =
+                    nameof(IntegrationEventConsumer);
+
+                using var scope =
+                    _scopeFactory.CreateScope();
+
+                var processedMessageService =
+                    scope.ServiceProvider
+                        .GetRequiredService<
+                            ProcessedMessageService>();
+
+                var alreadyProcessed =
+                    await processedMessageService
+                        .IsProcessedAsync(
+                            integrationEvent.EventId,
+                            consumerName,
+                            CancellationToken.None);
+
+                if (alreadyProcessed)
+                {
+                    _logger.LogWarning(
+                        "Duplicate integration event detected. "
+                        + "Event ID: {EventId}, "
+                        + "event type: {EventType}, "
+                        + "routing key: {RoutingKey}. "
+                        + "Message will be acknowledged without processing.",
+                        integrationEvent.EventId,
+                        integrationEvent
+                            .GetType()
+                            .Name,
+                        eventArgs.RoutingKey);
+
+                    await AcknowledgeAsync(
+                        eventArgs.DeliveryTag);
+
+                    return;
+                }
+
+                _logger.LogInformation(
+                    "Processing integration event "
+                    + "{EventType}. Routing key: "
+                    + "{RoutingKey}, attempt: "
+                    + "{Attempt}/{MaximumAttempts}. "
+                    + "Event ID: {EventId}.",
                     integrationEvent
                         .GetType()
                         .Name,
-                    integrationEvent.CorrelationId,
+                    eventArgs.RoutingKey,
+                    retryCount + 1,
+                    _options.MaximumRetryCount + 1,
+                    integrationEvent.EventId);
+
+                await _dispatcher.DispatchAsync(
+                    integrationEvent,
                     CancellationToken.None);
 
-            await AcknowledgeAsync(
-                eventArgs.DeliveryTag);
-        }
-        catch (NotSupportedException exception)
-        {
-            _logger.LogError(
-                exception,
-                "Unsupported integration event "
-                + "with routing key {RoutingKey} "
-                + "will be moved to DLQ.",
-                eventArgs.RoutingKey);
+                await processedMessageService
+                    .MarkAsProcessedAsync(
+                        integrationEvent.EventId,
+                        consumerName,
+                        integrationEvent
+                            .GetType()
+                            .Name,
+                        integrationEvent.CorrelationId,
+                        CancellationToken.None);
 
-            await MoveToDeadLetterQueueAsync(
-                eventArgs,
-                retryCount,
-                exception.Message);
-        }
-        catch (System.Text.Json.JsonException
-               exception)
-        {
-            _logger.LogError(
-                exception,
-                "Invalid integration event "
-                + "with routing key {RoutingKey} "
-                + "will be moved to DLQ.",
-                eventArgs.RoutingKey);
+                await AcknowledgeAsync(
+                    eventArgs.DeliveryTag);
+            }
+            catch (NotSupportedException exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Unsupported integration event "
+                    + "with routing key {RoutingKey} "
+                    + "will be moved to DLQ.",
+                    eventArgs.RoutingKey);
 
-            await MoveToDeadLetterQueueAsync(
-                eventArgs,
-                retryCount,
-                exception.Message);
-        }
-        catch (ArgumentException exception)
-        {
-            _logger.LogError(
-                exception,
-                "Invalid integration event data "
-                + "for routing key {RoutingKey} "
-                + "will be moved to DLQ.",
-                eventArgs.RoutingKey);
+                await MoveToDeadLetterQueueAsync(
+                    eventArgs,
+                    retryCount,
+                    exception.Message);
+            }
+            catch (System.Text.Json.JsonException
+                   exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Invalid integration event "
+                    + "with routing key {RoutingKey} "
+                    + "will be moved to DLQ.",
+                    eventArgs.RoutingKey);
 
-            await MoveToDeadLetterQueueAsync(
-                eventArgs,
-                retryCount,
-                exception.Message);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(
-                exception,
-                "Integration event processing "
-                + "failed. Routing key: "
-                + "{RoutingKey}, attempt: "
-                + "{Attempt}.",
-                eventArgs.RoutingKey,
-                retryCount + 1);
+                await MoveToDeadLetterQueueAsync(
+                    eventArgs,
+                    retryCount,
+                    exception.Message);
+            }
+            catch (ArgumentException exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Invalid integration event data "
+                    + "for routing key {RoutingKey} "
+                    + "will be moved to DLQ.",
+                    eventArgs.RoutingKey);
 
-            await HandleTransientFailureAsync(
-                eventArgs,
-                retryCount,
-                exception);
+                await MoveToDeadLetterQueueAsync(
+                    eventArgs,
+                    retryCount,
+                    exception.Message);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Integration event processing "
+                    + "failed. Routing key: "
+                    + "{RoutingKey}, attempt: "
+                    + "{Attempt}.",
+                    eventArgs.RoutingKey,
+                    retryCount + 1);
+
+                await HandleTransientFailureAsync(
+                    eventArgs,
+                    retryCount,
+                    exception);
+            }
+        }
+        finally
+        {
+            EndMessageProcessing();
         }
     }
 
@@ -822,11 +854,97 @@ public sealed class IntegrationEventConsumer
         return Task.CompletedTask;
     }
 
+    private void BeginMessageProcessing()
+    {
+        if (Interlocked.Increment(
+                ref _activeMessageCount) == 1)
+        {
+            _messagesDrained =
+                new TaskCompletionSource(
+                    TaskCreationOptions
+                        .RunContinuationsAsynchronously);
+        }
+    }
+
+    private void EndMessageProcessing()
+    {
+        if (Interlocked.Decrement(
+                ref _activeMessageCount) == 0)
+        {
+            _messagesDrained
+                .TrySetResult();
+        }
+    }
+
     public override async Task StopAsync(
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Stopping integration event consumer.");
+            "Graceful shutdown started for integration event consumer. "
+            + "Active messages: {ActiveMessageCount}.",
+            Volatile.Read(
+                ref _activeMessageCount));
+
+        _isStopping =
+            true;
+
+        /*
+         * Prvo zaustavljamo dostavljanje NOVIH
+         * RabbitMQ poruka.
+         *
+         * Aktivna poruka dobija vrijeme da završi.
+         */
+        if (_channel is { IsOpen: true } &&
+            !string.IsNullOrWhiteSpace(
+                _consumerTag))
+        {
+            try
+            {
+                await _channel
+                    .BasicCancelAsync(
+                        _consumerTag,
+                        cancellationToken:
+                            CancellationToken.None);
+
+                _logger.LogInformation(
+                    "Integration event RabbitMQ consumer {ConsumerTag} cancelled. "
+                    + "No new deliveries will be accepted.",
+                    _consumerTag);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Integration event RabbitMQ consumer could not be cancelled cleanly.");
+            }
+        }
+
+        if (Volatile.Read(
+                ref _activeMessageCount) > 0)
+        {
+            _logger.LogInformation(
+                "Waiting for {ActiveMessageCount} active integration event message(s) to finish.",
+                Volatile.Read(
+                    ref _activeMessageCount));
+
+            try
+            {
+                await _messagesDrained
+                    .Task
+                    .WaitAsync(
+                        cancellationToken);
+
+                _logger.LogInformation(
+                    "All active integration event messages completed successfully.");
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken
+                    .IsCancellationRequested)
+            {
+                _logger.LogWarning(
+                    "Graceful shutdown timeout reached while waiting for integration event processing to finish.");
+            }
+        }
 
         await base.StopAsync(
             cancellationToken);
@@ -905,4 +1023,19 @@ public sealed class IntegrationEventConsumer
 
         GC.SuppressFinalize(this);
     }
+
+    private static TaskCompletionSource
+    CreateCompletedDrainSource()
+    {
+        var source =
+            new TaskCompletionSource(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+
+        source.TrySetResult();
+
+        return source;
+    }
+
+
 }

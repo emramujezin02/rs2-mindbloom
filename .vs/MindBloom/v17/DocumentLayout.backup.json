@@ -3,16 +3,24 @@
   "WorkspaceRootPath": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\messaging\\rabbitmq\\rabbitmqintegrationeventpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\messaging\\rabbitmq\\rabbitmqintegrationeventpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\workers\\integrationeventconsumer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\workers\\integrationeventconsumer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\health\\firebasehealthcheck.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\health\\firebasehealthcheck.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\health\\emailproviderhealthcheck.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\health\\emailproviderhealthcheck.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\health\\rabbitmqhealthcheck.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\health\\rabbitmqhealthcheck.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\mindbloom.worker.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\mindbloom.worker.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,45 +30,71 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "RabbitMqIntegrationEventPublisher.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqIntegrationEventPublisher.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqIntegrationEventPublisher.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqIntegrationEventPublisher.cs",
-              "RelativeToolTip": "src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqIntegrationEventPublisher.cs",
-              "ViewState": "AgIAAMcAAAAAAAAAAAAAANwAAAAfAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T10:01:05.419Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "IntegrationEventConsumer.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Workers\\IntegrationEventConsumer.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Workers\\IntegrationEventConsumer.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Workers\\IntegrationEventConsumer.cs",
-              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Workers\\IntegrationEventConsumer.cs",
-              "ViewState": "AgIAANICAAAAAAAAAAAAAP8CAAAFAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T10:00:06.544Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "FirebaseHealthCheck.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Health\\FirebaseHealthCheck.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Health\\FirebaseHealthCheck.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Health\\FirebaseHealthCheck.cs",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Health\\FirebaseHealthCheck.cs",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAAAGEAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T10:14:53.802Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Program.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Program.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Program.cs",
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Program.cs",
-              "ViewState": "AgIAAAkBAAAAAAAAAAAAwBUBAAARAAAAAAAAAA==",
+              "ViewState": "AgIAACwAAAAAAAAAAAAAAEIAAAANAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T09:59:35.487Z",
+              "WhenOpened": "2026-08-05T10:09:54.506Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "EmailProviderHealthCheck.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Health\\EmailProviderHealthCheck.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Health\\EmailProviderHealthCheck.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Health\\EmailProviderHealthCheck.cs",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Health\\EmailProviderHealthCheck.cs",
+              "ViewState": "AgIAACoAAAAAAAAAAAAAAFkAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T10:14:30.374Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "RabbitMqHealthCheck.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Health\\RabbitMqHealthCheck.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Health\\RabbitMqHealthCheck.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Health\\RabbitMqHealthCheck.cs",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Health\\RabbitMqHealthCheck.cs",
+              "ViewState": "AgIAAFkAAAAAAAAAAAAAAIgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T10:14:05.785Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "MindBloom.Worker",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-08-05T10:09:12.111Z",
               "EditorCaption": ""
             }
           ]
