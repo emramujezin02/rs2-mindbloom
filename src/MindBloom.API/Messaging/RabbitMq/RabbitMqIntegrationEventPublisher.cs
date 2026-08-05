@@ -223,6 +223,18 @@ public sealed class RabbitMqIntegrationEventPublisher
             }
         }
 
+        _logger.LogError(
+            lastException,
+            "Integration event {EventId} could not be published after {MaximumAttempts} attempts. "
+            + "Type: {EventType}, correlation ID: {CorrelationId}, routing key: {RoutingKey}.",
+            integrationEvent.EventId,
+            MaximumPublishAttempts,
+            integrationEvent
+                .GetType()
+                .Name,
+            integrationEvent.CorrelationId,
+            routingKey);
+
         throw new InvalidOperationException(
             $"Integration event '{integrationEvent.EventId}' could not be published after {MaximumPublishAttempts} attempts.",
             lastException);

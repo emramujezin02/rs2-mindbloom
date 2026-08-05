@@ -825,10 +825,16 @@ public sealed class IntegrationEventConsumer
     public override async Task StopAsync(
         CancellationToken cancellationToken)
     {
+        _logger.LogInformation(
+            "Stopping integration event consumer.");
+
         await base.StopAsync(
             cancellationToken);
 
         await DisposeRabbitMqResourcesAsync();
+
+        _logger.LogInformation(
+            "Integration event consumer stopped successfully.");
     }
 
     private async Task

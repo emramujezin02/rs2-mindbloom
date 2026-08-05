@@ -3,56 +3,52 @@
   "WorkspaceRootPath": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\persistence\\migrations\\20260805091312_addfcmdevicetokens.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\persistence\\migrations\\20260805091312_addfcmdevicetokens.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\.env||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\.env||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\services\\businessnotificationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\services\\businessnotificationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\controllers\\fcmdevicetokenscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\controllers\\fcmdevicetokenscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\common\\interfaces\\ibusinessnotificationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\common\\interfaces\\ibusinessnotificationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\dependencyinjection\\dependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\dependencyinjection\\dependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}|MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.messaging.contracts\\notifications\\notificationrequestedevent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{2C724BAC-EBDA-48F4-AE59-5FB23E7B9EDE}|MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj|solutionrelative:mindbloom.messaging.contracts\\notifications\\notificationrequestedevent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\services\\fcmdevicetokenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\services\\fcmdevicetokenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\common\\interfaces\\ipushnotificationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\common\\interfaces\\ipushnotificationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\notifications\\interfaces\\ifcmdevicetokenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\notifications\\interfaces\\ifcmdevicetokenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\persistence\\context\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\persistence\\context\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\notifications\\dtos\\unregisterfcmtokendto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\notifications\\dtos\\unregisterfcmtokendto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.domain\\entities\\applicationuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|solutionrelative:src\\mindbloom.domain\\entities\\applicationuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.domain\\entities\\fcmdevicetoken.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|solutionrelative:src\\mindbloom.domain\\entities\\fcmdevicetoken.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\mindbloom.infrastructure.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\mindbloom.infrastructure.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\mindbloom.worker.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\mindbloom.worker.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\services\\workshopservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\services\\workshopservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\handlers\\workshops\\workshopcreatedeventhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\handlers\\workshops\\workshopcreatedeventhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\notifications\\dtos\\registerfcmtokendto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\notifications\\dtos\\registerfcmtokendto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\handlers\\notifications\\notificationrequestedeventhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\handlers\\notifications\\notificationrequestedeventhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\services\\workernotificationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\services\\workernotificationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\services\\firebasepushnotificationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\services\\firebasepushnotificationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.notificationsworker\\configuration\\firebasepushoptions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5544BDA-E3FB-4630-94E0-AEA63C845349}|src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj|solutionrelative:src\\mindbloom.notificationsworker\\configuration\\firebasepushoptions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -67,170 +63,157 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "20260805091312_AddFcmDeviceTokens.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260805091312_AddFcmDeviceTokens.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260805091312_AddFcmDeviceTokens.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260805091312_AddFcmDeviceTokens.cs",
-              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260805091312_AddFcmDeviceTokens.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T09:13:13.187Z",
+              "Title": ".env",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\.env",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\.env",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\.env",
+              "RelativeToolTip": "src\\MindBloom.API\\.env",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-08-05T09:45:03.64Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "BusinessNotificationService.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\BusinessNotificationService.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\BusinessNotificationService.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\BusinessNotificationService.cs",
-              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\BusinessNotificationService.cs",
-              "ViewState": "AgIAAFkAAAAAAAAAAAAIwHIAAAANAAAAAAAAAA==",
+              "Title": "FcmDeviceTokensController.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\FcmDeviceTokensController.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\FcmDeviceTokensController.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\FcmDeviceTokensController.cs",
+              "RelativeToolTip": "src\\MindBloom.API\\Controllers\\FcmDeviceTokensController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAArAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T08:48:17.713Z",
+              "WhenOpened": "2026-08-05T09:38:24.855Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "IBusinessNotificationService.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Common\\Interfaces\\IBusinessNotificationService.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Common\\Interfaces\\IBusinessNotificationService.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Common\\Interfaces\\IBusinessNotificationService.cs",
-              "RelativeToolTip": "src\\MindBloom.Application\\Common\\Interfaces\\IBusinessNotificationService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAdAAAAAAAAAA==",
+              "Title": "DependencyInjection.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
+              "RelativeToolTip": "src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
+              "ViewState": "AgIAAKUAAAAAAAAAAAAAwNIAAAAdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T08:47:56.049Z",
+              "WhenOpened": "2026-08-05T09:37:36.62Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 3,
-              "Title": "NotificationRequestedEvent.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.Messaging.Contracts\\Notifications\\NotificationRequestedEvent.cs",
-              "RelativeDocumentMoniker": "MindBloom.Messaging.Contracts\\Notifications\\NotificationRequestedEvent.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.Messaging.Contracts\\Notifications\\NotificationRequestedEvent.cs",
-              "RelativeToolTip": "MindBloom.Messaging.Contracts\\Notifications\\NotificationRequestedEvent.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAAJAAAAAAAAAA==",
+              "Title": "FcmDeviceTokenService.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\FcmDeviceTokenService.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\FcmDeviceTokenService.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\FcmDeviceTokenService.cs",
+              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\FcmDeviceTokenService.cs",
+              "ViewState": "AgIAALwAAAAAAAAAAAAAAMwAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T08:47:20.245Z",
+              "WhenOpened": "2026-08-05T09:37:12.057Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 4,
-              "Title": "IPushNotificationService.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Common\\Interfaces\\IPushNotificationService.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Common\\Interfaces\\IPushNotificationService.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Common\\Interfaces\\IPushNotificationService.cs",
-              "RelativeToolTip": "src\\MindBloom.Application\\Common\\Interfaces\\IPushNotificationService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
+              "Title": "IFcmDeviceTokenService.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Notifications\\Interfaces\\IFcmDeviceTokenService.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Notifications\\Interfaces\\IFcmDeviceTokenService.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Notifications\\Interfaces\\IFcmDeviceTokenService.cs",
+              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Notifications\\Interfaces\\IFcmDeviceTokenService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T09:10:22.309Z",
+              "WhenOpened": "2026-08-05T09:36:40.336Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 5,
-              "Title": "ApplicationDbContext.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
-              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
-              "ViewState": "AgIAAHYAAAAAAAAAAAAswI8AAAAAAAAAAAAAAA==",
+              "Title": "UnregisterFcmTokenDto.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Notifications\\DTOs\\UnregisterFcmTokenDto.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Notifications\\DTOs\\UnregisterFcmTokenDto.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Notifications\\DTOs\\UnregisterFcmTokenDto.cs",
+              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Notifications\\DTOs\\UnregisterFcmTokenDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T09:09:14.852Z",
+              "WhenOpened": "2026-08-05T09:36:11.391Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 6,
-              "Title": "ApplicationUser.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\ApplicationUser.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\ApplicationUser.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\ApplicationUser.cs",
-              "RelativeToolTip": "src\\MindBloom.Domain\\Entities\\ApplicationUser.cs",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAAACEAAAAfAAAAAAAAAA==",
+              "Title": "RegisterFcmTokenDto.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Notifications\\DTOs\\RegisterFcmTokenDto.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Notifications\\DTOs\\RegisterFcmTokenDto.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Notifications\\DTOs\\RegisterFcmTokenDto.cs",
+              "RelativeToolTip": "src\\MindBloom.Application\\Features\\Notifications\\DTOs\\RegisterFcmTokenDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T09:08:52.21Z",
+              "WhenOpened": "2026-08-05T09:35:47.674Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 7,
-              "Title": "FcmDeviceToken.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\FcmDeviceToken.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\FcmDeviceToken.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\FcmDeviceToken.cs",
-              "RelativeToolTip": "src\\MindBloom.Domain\\Entities\\FcmDeviceToken.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T09:08:31.954Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "MindBloom.Infrastructure",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj",
-              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj",
-              "RelativeToolTip": "src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACcAAAAKAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-08-05T09:06:22.436Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "MindBloom.Worker",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
-              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
-              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACUAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-08-05T09:06:08.977Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "WorkshopService.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\WorkshopService.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\WorkshopService.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\WorkshopService.cs",
-              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\WorkshopService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAIYEAAAoAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T08:51:52.431Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 11,
-              "Title": "WorkshopCreatedEventHandler.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Handlers\\Workshops\\WorkshopCreatedEventHandler.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Handlers\\Workshops\\WorkshopCreatedEventHandler.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Handlers\\Workshops\\WorkshopCreatedEventHandler.cs",
-              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Workshops\\WorkshopCreatedEventHandler.cs",
-              "ViewState": "AgIAAAsAAAAAAAAAAAAAAC8AAAAXAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T08:50:37.214Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
               "Title": "NotificationRequestedEventHandler.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Handlers\\Notifications\\NotificationRequestedEventHandler.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Handlers\\Notifications\\NotificationRequestedEventHandler.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Handlers\\Notifications\\NotificationRequestedEventHandler.cs",
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Handlers\\Notifications\\NotificationRequestedEventHandler.cs",
-              "ViewState": "AgIAAFcAAAAAAAAAAAAAAGsAAAAwAAAAAAAAAA==",
+              "ViewState": "AgIAAFIAAAAAAAAAAAAAAHoAAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-05T08:49:37.936Z",
+              "WhenOpened": "2026-08-05T09:25:19.17Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "WorkerNotificationService.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Services\\WorkerNotificationService.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Services\\WorkerNotificationService.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Services\\WorkerNotificationService.cs",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Services\\WorkerNotificationService.cs",
+              "ViewState": "AgIAALEAAAAAAAAAAAAAwL8AAAAVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T09:24:07.068Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Program.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Program.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Program.cs",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Program.cs",
+              "ViewState": "AgIAAAABAAAAAAAAAAAAwBkBAAAVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T09:20:14.153Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "FirebasePushNotificationService.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Services\\FirebasePushNotificationService.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Services\\FirebasePushNotificationService.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Services\\FirebasePushNotificationService.cs",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Services\\FirebasePushNotificationService.cs",
+              "ViewState": "AgIAAJsBAAAAAAAAAAAuwMoBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T09:19:50.027Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "FirebasePushOptions.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Configuration\\FirebasePushOptions.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\Configuration\\FirebasePushOptions.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\Configuration\\FirebasePushOptions.cs",
+              "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\Configuration\\FirebasePushOptions.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T09:19:12.048Z",
               "EditorCaption": ""
             }
           ]

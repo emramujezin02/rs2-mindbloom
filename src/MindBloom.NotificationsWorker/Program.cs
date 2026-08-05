@@ -274,6 +274,39 @@ builder.Services.AddSingleton(
 var host =
     builder.Build();
 
+var logger =
+    host.Services
+        .GetRequiredService<
+            ILoggerFactory>()
+        .CreateLogger(
+            "MindBloom.NotificationsWorker");
+
+var lifetime =
+    host.Services
+        .GetRequiredService<
+            IHostApplicationLifetime>();
+
+lifetime.ApplicationStarted.Register(
+    () =>
+    {
+        logger.LogInformation(
+            "MindBloom Notifications Worker started successfully.");
+    });
+
+lifetime.ApplicationStopping.Register(
+    () =>
+    {
+        logger.LogInformation(
+            "MindBloom Notifications Worker is stopping.");
+    });
+
+lifetime.ApplicationStopped.Register(
+    () =>
+    {
+        logger.LogInformation(
+            "MindBloom Notifications Worker stopped successfully.");
+    });
+
 await host.RunAsync();
 
 static int GetIntValue(
