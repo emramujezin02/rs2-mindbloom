@@ -22,7 +22,6 @@ public class AdminService : IAdminService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _context;
-    private readonly INotificationSender _notificationSender;
     private readonly IPaymentService _paymentService;
     private readonly IMembershipService _membershipService;
     private readonly IAuthService _authService;
@@ -31,7 +30,6 @@ public class AdminService : IAdminService
     public AdminService(
         UserManager<ApplicationUser> userManager,
         ApplicationDbContext context,
-        INotificationSender notificationSender,
         IBusinessNotificationService businessNotificationService,
         IPaymentService paymentService,
         IMembershipService membershipService,
@@ -42,9 +40,6 @@ public class AdminService : IAdminService
 
         _context =
             context;
-
-        _notificationSender =
-            notificationSender;
 
         _paymentService =
             paymentService;
@@ -722,32 +717,6 @@ public class AdminService : IAdminService
                         "Your therapist verification status was updated."
                 };
 
-            _context.Notifications.Add(
-                new Notification
-                {
-                    UserId =
-                        therapist.UserId,
-
-                    ActionType =
-                        NotificationActionType
-                            .TherapistProfile,
-
-                    ResourceId =
-                        therapistId,
-
-                    Title =
-                        title,
-
-                    Message =
-                        message,
-
-                    IsRead =
-                        false,
-
-                    SentAtUtc =
-                        changedAtUtc
-                });
-
             await _context.SaveChangesAsync();
 
             await transaction.CommitAsync();
@@ -759,11 +728,16 @@ public class AdminService : IAdminService
             throw;
         }
 
-        await _notificationSender
-    .SendToUserAsync(
+        await _businessNotificationService
+    .PublishAsync(
         therapist.UserId,
         title,
-        message);
+        message,
+        actionType:
+            NotificationActionType
+                .TherapistProfile,
+        resourceId:
+            therapistId);
     }
 
     public async Task<AdminDashboardDto>
@@ -1761,31 +1735,6 @@ public class AdminService : IAdminService
                 .ReviewModerationAudits
                 .Add(audit);
 
-            _context.Notifications.Add(
-                new Notification
-                {
-                    UserId =
-                        review.Client.UserId,
-
-                    ActionType =
-    NotificationActionType.Review,
-
-                    ResourceId =
-    review.Id,
-
-                    Title =
-    "Review removed",
-
-                    Message =
-                        "Your review was removed by an administrator. "
-                        + $"Reason: {reason}",
-
-                    IsRead =
-                        false,
-
-                    SentAtUtc =
-                        now
-                });
 
             await _context.SaveChangesAsync();
 
@@ -1798,12 +1747,16 @@ public class AdminService : IAdminService
             throw;
         }
 
-        await _notificationSender
-            .SendToUserAsync(
+        await _businessNotificationService
+            .PublishAsync(
                 review.Client.UserId,
                 "Review removed",
                 "Your review was removed by an administrator. "
-                + $"Reason: {reason}");
+                + $"Reason: {reason}",
+                actionType:
+                    NotificationActionType.Review,
+                resourceId:
+                    review.Id);
     }
 
     public async Task<
@@ -2339,79 +2292,11 @@ public class AdminService : IAdminService
         _context.AppointmentStatusAudits.Add(
             audit);
 
-        _context.Notifications.AddRange(
-            new Notification
-            {
-                UserId =
-                    appointment.Client.UserId,
-
-                AppointmentId =
-                    appointment.Id,
-
-                ActionType =
-    NotificationActionType.Appointment,
-
-                Title =
-                    "Appointment cancelled by administrator",
-
-                Message =
-                    "Your appointment was cancelled "
-                    + "by an administrator. "
-                    + $"Reason: {reason}",
-
-                IsRead =
-                    false,
-
-                SentAtUtc =
-                    now
-            },
-new Notification
-{
-    UserId =
-        appointment.Therapist.UserId,
-
-    AppointmentId =
-        appointment.Id,
-
-    ActionType =
-        NotificationActionType.Appointment,
-
-    Title =
-        "Appointment cancelled by administrator",
-
-    Message =
-        "An appointment was cancelled "
-        + "by an administrator. "
-        + $"Reason: {reason}",
-
-    IsRead =
-        false,
-
-    SentAtUtc =
-        now
-});
+ 
 
         await _context.SaveChangesAsync();
 
-        await _notificationSender
-            .SendToUserAsync(
-                appointment.Client.UserId,
-                "Appointment cancelled by administrator",
-                "Your appointment was cancelled "
-                + "by an administrator. "
-                + $"Reason: {reason}");
 
-        if (appointment.Therapist.UserId !=
-            appointment.Client.UserId)
-        {
-            await _notificationSender
-                .SendToUserAsync(
-                    appointment.Therapist.UserId,
-                    "Appointment cancelled by administrator",
-                    "An appointment was cancelled "
-                    + "by an administrator. "
-                    + $"Reason: {reason}");
-        }
     }
 
     public async Task<
@@ -5199,31 +5084,6 @@ new Notification
                         now
                 });
 
-            _context.Notifications.Add(
-                new Notification
-                {
-                    UserId =
-                        review.Client.UserId,
-
-                    ActionType =
-                        NotificationActionType.Review,
-
-                    ResourceId =
-                        review.Id,
-
-                    Title =
-                        "Review rejected",
-
-                    Message =
-                        "Your review was rejected. "
-                        + $"Reason: {reason}",
-
-                    IsRead =
-                        false,
-
-                    SentAtUtc =
-                        now
-                });
 
             await _context.SaveChangesAsync();
 
@@ -5235,12 +5095,16 @@ new Notification
             throw;
         }
 
-        await _notificationSender
-            .SendToUserAsync(
+        await _businessNotificationService
+            .PublishAsync(
                 review.Client.UserId,
                 "Review rejected",
                 "Your review was rejected. "
-                + $"Reason: {reason}");
+                + $"Reason: {reason}",
+                actionType:
+                    NotificationActionType.Review,
+                resourceId:
+                    review.Id);
     }
 
     public async Task HideReviewAsync(
@@ -5356,36 +5220,10 @@ new Notification
                     Reason =
                         reason,
 
-                    PerformedAtUtc =
-                        now
+                    PerformedAtUtc = now
                 });
 
-            _context.Notifications.Add(
-                new Notification
-                {
-                    UserId =
-                        review.Client.UserId,
-
-                    ActionType =
-                        NotificationActionType.Review,
-
-                    ResourceId =
-                        review.Id,
-
-                    Title =
-                        "Review hidden",
-
-                    Message =
-                        "Your previously published review "
-                        + "has been hidden by an administrator. "
-                        + $"Reason: {reason}",
-
-                    IsRead =
-                        false,
-
-                    SentAtUtc =
-                        now
-                });
+          
 
             await _context.SaveChangesAsync();
 
@@ -5397,13 +5235,17 @@ new Notification
             throw;
         }
 
-        await _notificationSender
-            .SendToUserAsync(
+        await _businessNotificationService
+            .PublishAsync(
                 review.Client.UserId,
                 "Review hidden",
                 "Your previously published review "
                 + "has been hidden by an administrator. "
-                + $"Reason: {reason}");
+                + $"Reason: {reason}",
+                actionType:
+                    NotificationActionType.Review,
+                resourceId:
+                    review.Id);
     }
 
     private void AddMembershipPlanAudit(

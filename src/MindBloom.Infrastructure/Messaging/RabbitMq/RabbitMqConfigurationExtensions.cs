@@ -121,6 +121,21 @@ public static class RabbitMqConfigurationExtensions
                         "RABBITMQ_CONNECTION_RETRY_COUNT",
                         5);
 
+                options.IntegrationEventQueue =
+    configuration[
+        "RABBITMQ_INTEGRATION_EVENT_QUEUE"]
+    ?? "mindbloom.integration-events";
+
+                options.IntegrationEventDeadLetterQueue =
+                    configuration[
+                        "RABBITMQ_INTEGRATION_EVENT_DEAD_LETTER_QUEUE"]
+                    ?? "mindbloom.integration-events.dlq";
+
+                options.IntegrationEventDeadLetterRoutingKey =
+                    configuration[
+                        "RABBITMQ_INTEGRATION_EVENT_DEAD_LETTER_ROUTING_KEY"]
+                    ?? "integration-event.dead";
+
                 options.ConnectionRetryDelaySeconds =
                     GetIntValue(
                         configuration,
@@ -216,6 +231,23 @@ public static class RabbitMqConfigurationExtensions
                 options =>
                     options.ConnectionRetryCount > 0,
                 "RABBITMQ_CONNECTION_RETRY_COUNT must be greater than zero.")
+            .Validate(
+    options =>
+        !string.IsNullOrWhiteSpace(
+            options.IntegrationEventQueue),
+    "RabbitMQ integration event queue is required.")
+.Validate(
+    options =>
+        !string.IsNullOrWhiteSpace(
+            options
+                .IntegrationEventDeadLetterQueue),
+    "RabbitMQ integration event dead-letter queue is required.")
+.Validate(
+    options =>
+        !string.IsNullOrWhiteSpace(
+            options
+                .IntegrationEventDeadLetterRoutingKey),
+    "RabbitMQ integration event dead-letter routing key is required.")
             .Validate(
                 options =>
                     options.ConnectionRetryDelaySeconds > 0,

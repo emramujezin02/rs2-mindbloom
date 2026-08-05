@@ -19,8 +19,6 @@ public class AppointmentService : IAppointmentService
 {
     private readonly ApplicationDbContext _context;
 
-    private readonly IBusinessNotificationService _businessNotificationService;
-
     private readonly IPaymentService _paymentService;
 
     private readonly IMembershipService _membershipService;
@@ -60,8 +58,6 @@ public class AppointmentService : IAppointmentService
 
     public AppointmentService(
         ApplicationDbContext context,
-        IBusinessNotificationService
-            businessNotificationService,
         IPaymentService paymentService,
         IMembershipService membershipService,
         IIntegrationEventPublisher
@@ -69,9 +65,6 @@ public class AppointmentService : IAppointmentService
     {
         _context =
             context;
-
-        _businessNotificationService =
-            businessNotificationService;
 
         _paymentService =
             paymentService;
@@ -286,14 +279,7 @@ public class AppointmentService : IAppointmentService
                 IntegrationEventRoutingKeys
                     .AppointmentCreated);
 
-        await _businessNotificationService
-            .PublishAsync(
-                therapist.UserId,
-                "New appointment request",
-                "You have received a new appointment request.",
-                appointment.Id,
-                correlationId:
-                    correlationId);
+
 
         return new AppointmentResponseDto
         {
@@ -402,15 +388,6 @@ public class AppointmentService : IAppointmentService
                     appointmentCompletedEvent,
                     IntegrationEventRoutingKeys
                         .AppointmentCompleted);
-
-            await _businessNotificationService
-                .PublishAsync(
-                    appointment.Client.UserId,
-                    "Appointment completed",
-                    "Your appointment has been completed automatically.",
-                    appointment.Id,
-                    correlationId:
-                        correlationId);
         }
     }
 
@@ -553,6 +530,8 @@ public class AppointmentService : IAppointmentService
     {
         var therapist =
             await _context.Therapists
+                .Include(x =>
+                    x.User)
                 .FirstOrDefaultAsync(x =>
                     x.UserId ==
                         therapistUserId);
@@ -654,98 +633,239 @@ public class AppointmentService : IAppointmentService
         await _context.SaveChangesAsync();
 
         var correlationId =
-    Guid.NewGuid();
+            Guid.NewGuid();
 
-        if (request.Status ==
-            AppointmentStatus.Completed)
+        switch (request.Status)
         {
-            var appointmentCompletedEvent =
-                new AppointmentCompletedEvent
+            case AppointmentStatus.Accepted:
                 {
-                    CorrelationId =
-                        correlationId,
+                    var appointmentAcceptedEvent =
+                        new AppointmentAcceptedEvent
+                        {
+                            CorrelationId =
+                                correlationId,
 
-                    TimestampUtc =
-                        DateTime.UtcNow,
+                            TimestampUtc =
+                                DateTime.UtcNow,
 
-                    AppointmentId =
-                        appointment.Id,
+                            AppointmentId =
+                                appointment.Id,
 
-                    ClientId =
-                        appointment.ClientId,
+                            ClientId =
+                                appointment.ClientId,
 
-                    ClientUserId =
-                        appointment.Client.UserId,
+                            ClientUserId =
+                                appointment.Client.UserId,
 
-                    TherapistId =
-                        appointment.TherapistId,
+                            ClientEmail =
+                                appointment.Client.User.Email
+                                ?? string.Empty,
 
-                    TherapistUserId =
-                        therapistUserId,
+                            ClientName =
+                                BuildFullName(
+                                    appointment.Client.User.FirstName,
+                                    appointment.Client.User.LastName),
 
-                    StartUtc =
-                        appointment.StartUtc,
+                            TherapistId =
+                                appointment.TherapistId,
 
-                    EndUtc =
-                        appointment.EndUtc,
+                            TherapistUserId =
+                                therapistUserId,
 
-                    CompletedByUserId =
-                        therapistUserId,
+                            TherapistName =
+                                BuildFullName(
+                                    therapist.User.FirstName,
+                                    therapist.User.LastName),
 
-                    AppointmentType =
-                        appointment.Type.ToString(),
+                            StartUtc =
+                                appointment.StartUtc,
 
-                    Price =
-                        appointment.Price
-                };
+                            EndUtc =
+                                appointment.EndUtc,
 
-            await _integrationEventPublisher
-                .PublishAsync(
-                    appointmentCompletedEvent,
-                    IntegrationEventRoutingKeys
-                        .AppointmentCompleted);
+                            AppointmentType =
+                                appointment.Type.ToString(),
+
+                            MeetingLink =
+                                appointment.MeetingLink,
+
+                            Location =
+                                appointment.Location
+                        };
+
+                    await _integrationEventPublisher
+                        .PublishAsync(
+                            appointmentAcceptedEvent,
+                            IntegrationEventRoutingKeys
+                                .AppointmentAccepted);
+
+                    break;
+                }
+
+            case AppointmentStatus.Rejected:
+                {
+                    var appointmentRejectedEvent =
+                        new AppointmentRejectedEvent
+                        {
+                            CorrelationId =
+                                correlationId,
+
+                            TimestampUtc =
+                                DateTime.UtcNow,
+
+                            AppointmentId =
+                                appointment.Id,
+
+                            ClientId =
+                                appointment.ClientId,
+
+                            ClientUserId =
+                                appointment.Client.UserId,
+
+                            ClientEmail =
+                                appointment.Client.User.Email
+                                ?? string.Empty,
+
+                            ClientName =
+                                BuildFullName(
+                                    appointment.Client.User.FirstName,
+                                    appointment.Client.User.LastName),
+
+                            TherapistId =
+                                appointment.TherapistId,
+
+                            TherapistUserId =
+                                therapistUserId,
+
+                            TherapistName =
+                                BuildFullName(
+                                    therapist.User.FirstName,
+                                    therapist.User.LastName),
+
+                            StartUtc =
+                                appointment.StartUtc,
+
+                            EndUtc =
+                                appointment.EndUtc,
+
+                            Reason =
+                                "Appointment rejected by therapist."
+                        };
+
+                    await _integrationEventPublisher
+                        .PublishAsync(
+                            appointmentRejectedEvent,
+                            IntegrationEventRoutingKeys
+                                .AppointmentRejected);
+
+                    break;
+                }
+
+            case AppointmentStatus.Cancelled:
+                {
+                    var appointmentCancelledEvent =
+                        new AppointmentCancelledEvent
+                        {
+                            CorrelationId =
+                                correlationId,
+
+                            TimestampUtc =
+                                DateTime.UtcNow,
+
+                            AppointmentId =
+                                appointment.Id,
+
+                            ClientId =
+                                appointment.ClientId,
+
+                            ClientUserId =
+                                appointment.Client.UserId,
+
+                            TherapistId =
+                                appointment.TherapistId,
+
+                            TherapistUserId =
+                                therapistUserId,
+
+                            CancelledByUserId =
+                                therapistUserId,
+
+                            PreviousStatus =
+                                previousStatus.ToString(),
+
+                            Reason =
+                                "Appointment cancelled by therapist.",
+
+                            StartUtc =
+                                appointment.StartUtc,
+
+                            EndUtc =
+                                appointment.EndUtc
+                        };
+
+                    await _integrationEventPublisher
+                        .PublishAsync(
+                            appointmentCancelledEvent,
+                            IntegrationEventRoutingKeys
+                                .AppointmentCancelled);
+
+                    break;
+                }
+
+            case AppointmentStatus.Completed:
+                {
+                    var appointmentCompletedEvent =
+                        new AppointmentCompletedEvent
+                        {
+                            CorrelationId =
+                                correlationId,
+
+                            TimestampUtc =
+                                DateTime.UtcNow,
+
+                            AppointmentId =
+                                appointment.Id,
+
+                            ClientId =
+                                appointment.ClientId,
+
+                            ClientUserId =
+                                appointment.Client.UserId,
+
+                            TherapistId =
+                                appointment.TherapistId,
+
+                            TherapistUserId =
+                                therapistUserId,
+
+                            StartUtc =
+                                appointment.StartUtc,
+
+                            EndUtc =
+                                appointment.EndUtc,
+
+                            CompletedByUserId =
+                                therapistUserId,
+
+                            AppointmentType =
+                                appointment.Type.ToString(),
+
+                            Price =
+                                appointment.Price,
+
+                            IsPaid =
+                                appointment.IsPaid
+                        };
+
+                    await _integrationEventPublisher
+                        .PublishAsync(
+                            appointmentCompletedEvent,
+                            IntegrationEventRoutingKeys
+                                .AppointmentCompleted);
+
+                    break;
+                }
         }
-
-        var notificationTitle =
-            request.Status switch
-            {
-                AppointmentStatus.Accepted =>
-                    "Appointment accepted",
-
-                AppointmentStatus.Rejected =>
-                    "Appointment rejected",
-
-                AppointmentStatus.Completed =>
-                    "Appointment completed",
-
-                _ =>
-                    "Appointment updated"
-            };
-
-        var notificationMessage =
-            request.Status switch
-            {
-                AppointmentStatus.Accepted =>
-                    "Your appointment request has been accepted by the therapist.",
-
-                AppointmentStatus.Rejected =>
-                    "Your appointment request has been rejected by the therapist.",
-
-                AppointmentStatus.Completed =>
-                    "Your appointment has been marked as completed.",
-
-                _ =>
-                    $"Your appointment status is now {request.Status}."
-            };
-
-        await _businessNotificationService
-            .PublishAsync(
-                appointment.Client.UserId,
-                notificationTitle,
-                notificationMessage,
-                appointment.Id,
-                correlationId:
-                    correlationId);
     }
 
     public async Task CancelAppointmentAsync(
@@ -939,15 +1059,6 @@ public class AppointmentService : IAppointmentService
                 IntegrationEventRoutingKeys
                     .AppointmentCancelled);
 
-        await _businessNotificationService
-            .PublishAsync(
-                appointment.Therapist.UserId,
-                "Appointment cancelled",
-                "A client cancelled the appointment. "
-                + $"Reason: {reason}",
-                appointment.Id,
-                correlationId:
-                    correlationId);
     }
 
     public async Task<TherapistStatsDto>
@@ -1456,6 +1567,15 @@ public class AppointmentService : IAppointmentService
             ClientId =
                 appointment.ClientId
         };
+    }
+
+    private static string BuildFullName(
+    string? firstName,
+    string? lastName)
+    {
+        return
+            $"{firstName} {lastName}"
+                .Trim();
     }
 }
 

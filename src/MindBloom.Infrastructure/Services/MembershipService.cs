@@ -13,6 +13,7 @@ using MindBloom.Application.Common.BusinessRules;
 using MindBloom.Messaging.Contracts.Common;
 using MindBloom.Messaging.Contracts.Memberships;
 using MindBloom.Messaging.Contracts.Payments;
+using MindBloom.Messaging.Contracts.Notifications;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -26,14 +27,12 @@ public class MembershipService : IMembershipService
     private readonly StripeVerificationService _stripeVerificationService;
     private readonly IIntegrationEventPublisher
     _integrationEventPublisher;
-    private readonly IBusinessNotificationService _businessNotificationService;
+
 
     public MembershipService(
         ApplicationDbContext context,
         StripeVerificationService
             stripeVerificationService,
-        IBusinessNotificationService
-            businessNotificationService,
         IIntegrationEventPublisher
             integrationEventPublisher)
     {
@@ -42,9 +41,6 @@ public class MembershipService : IMembershipService
 
         _stripeVerificationService =
             stripeVerificationService;
-
-        _businessNotificationService =
-            businessNotificationService;
 
         _integrationEventPublisher =
             integrationEventPublisher;
@@ -733,33 +729,6 @@ public class MembershipService : IMembershipService
                 IntegrationEventRoutingKeys
                     .PaymentSucceeded);
 
-        await _businessNotificationService
-            .PublishAsync(
-                clientUserId,
-                "Membership purchased",
-                $"Your {GetPlanName(membership.PlanType)} "
-                + $"for {membership.Therapist.User.FirstName} "
-                + $"{membership.Therapist.User.LastName} "
-                + "has been activated.",
-                actionType:
-                    NotificationActionType.Membership,
-                resourceId:
-                    membership.Id);
-
-        if (membership.Therapist.UserId !=
-            clientUserId)
-        {
-            await _businessNotificationService
-                .PublishAsync(
-                    membership.Therapist.UserId,
-                    "New membership purchase",
-                    $"A client purchased your "
-                    + $"{GetPlanName(membership.PlanType)}.",
-                    actionType:
-                        NotificationActionType.Membership,
-                    resourceId:
-                        membership.Id);
-        }
 
         return MapMembership(
             membership,
@@ -802,6 +771,9 @@ public class MembershipService : IMembershipService
         var stateChanged =
             false;
 
+        var expiredMemberships =
+            new List<ClientMembership>();
+
         foreach (var membership in memberships)
         {
             var isExpired =
@@ -812,8 +784,10 @@ public class MembershipService : IMembershipService
                 membership.RemainingSessions <= 0;
 
             if (membership.IsActive &&
-                (isExpired ||
-                 hasNoRemainingSessions))
+                (
+                    isExpired ||
+                    hasNoRemainingSessions
+                ))
             {
                 membership.IsActive =
                     false;
@@ -823,12 +797,64 @@ public class MembershipService : IMembershipService
 
                 stateChanged =
                     true;
+
+                if (isExpired)
+                {
+                    expiredMemberships.Add(
+                        membership);
+                }
             }
         }
 
         if (stateChanged)
         {
             await _context.SaveChangesAsync();
+
+            foreach (var membership
+                     in expiredMemberships)
+            {
+                var notificationRequestedEvent =
+                    new NotificationRequestedEvent
+                    {
+                        CorrelationId =
+                            Guid.NewGuid(),
+
+                        TimestampUtc =
+                            nowUtc,
+
+                        UserId =
+                            clientUserId,
+
+                        Title =
+                            "Membership expired",
+
+                        Message =
+                            $"Your {GetPlanName(membership.PlanType)} "
+                            + $"with {membership.Therapist.User.FirstName} "
+                            + $"{membership.Therapist.User.LastName} "
+                            + "has expired.",
+
+                        AppointmentId =
+                            null,
+
+                        ActionType =
+                            NotificationActionType
+                                .Membership
+                                .ToString(),
+
+                        ResourceId =
+                            membership.Id,
+
+                        NotificationId =
+                            null
+                    };
+
+                await _integrationEventPublisher
+                    .PublishAsync(
+                        notificationRequestedEvent,
+                        IntegrationEventRoutingKeys
+                            .NotificationRequested);
+            }
         }
 
         return memberships
@@ -1198,28 +1224,87 @@ public class MembershipService : IMembershipService
             throw;
         }
 
-        await _businessNotificationService
+        var correlationId =
+      Guid.NewGuid();
+
+        await _integrationEventPublisher
             .PublishAsync(
-                clientUserId,
-                "Membership session reserved",
-                $"One membership session with "
-                + $"{therapistName} "
-                + "has been reserved for your appointment. "
-                + $"Remaining sessions: {remainingSessions}.",
-                request.AppointmentId,
-                NotificationActionType.Appointment);
+                new NotificationRequestedEvent
+                {
+                    CorrelationId =
+                        correlationId,
+
+                    TimestampUtc =
+                        DateTime.UtcNow,
+
+                    UserId =
+                        clientUserId,
+
+                    Title =
+                        "Membership session reserved",
+
+                    Message =
+                        $"One membership session with "
+                        + $"{therapistName} "
+                        + "has been reserved for your appointment. "
+                        + $"Remaining sessions: {remainingSessions}.",
+
+                    AppointmentId =
+                        request.AppointmentId,
+
+                    ActionType =
+                        NotificationActionType
+                            .Appointment
+                            .ToString(),
+
+                    ResourceId =
+                        request.AppointmentId,
+
+                    NotificationId =
+                        null
+                },
+                IntegrationEventRoutingKeys
+                    .NotificationRequested);
 
         if (therapistUserId > 0 &&
             therapistUserId != clientUserId)
         {
-            await _businessNotificationService
+            await _integrationEventPublisher
                 .PublishAsync(
-                    therapistUserId,
-                    "Membership used for appointment",
-                    "A client reserved a membership session "
-                    + "for an accepted appointment.",
-                    request.AppointmentId,
-                    NotificationActionType.Appointment);
+                    new NotificationRequestedEvent
+                    {
+                        CorrelationId =
+                            correlationId,
+
+                        TimestampUtc =
+                            DateTime.UtcNow,
+
+                        UserId =
+                            therapistUserId,
+
+                        Title =
+                            "Membership used for appointment",
+
+                        Message =
+                            "A client reserved a membership session "
+                            + "for an accepted appointment.",
+
+                        AppointmentId =
+                            request.AppointmentId,
+
+                        ActionType =
+                            NotificationActionType
+                                .Appointment
+                                .ToString(),
+
+                        ResourceId =
+                            request.AppointmentId,
+
+                        NotificationId =
+                            null
+                    },
+                    IntegrationEventRoutingKeys
+                        .NotificationRequested);
         }
     }
 

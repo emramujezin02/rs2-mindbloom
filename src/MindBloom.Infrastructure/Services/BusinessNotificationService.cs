@@ -1,7 +1,5 @@
 ﻿using MindBloom.Application.Common.Interfaces;
-using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
-using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Messaging.Contracts.Common;
 using MindBloom.Messaging.Contracts.Notifications;
 
@@ -10,32 +8,18 @@ namespace MindBloom.Infrastructure.Services;
 public sealed class BusinessNotificationService
     : IBusinessNotificationService
 {
-    private readonly ApplicationDbContext
-        _context;
-
-    private readonly INotificationSender
-        _notificationSender;
-
     private readonly IIntegrationEventPublisher
         _integrationEventPublisher;
 
     public BusinessNotificationService(
-        ApplicationDbContext context,
-        INotificationSender notificationSender,
         IIntegrationEventPublisher
             integrationEventPublisher)
     {
-        _context =
-            context;
-
-        _notificationSender =
-            notificationSender;
-
         _integrationEventPublisher =
             integrationEventPublisher;
     }
 
-    public async Task PublishAsync(
+    public Task PublishAsync(
         int userId,
         string title,
         string message,
@@ -55,12 +39,12 @@ public sealed class BusinessNotificationService
         }
 
         var normalizedTitle =
-            title?.Trim() ??
-            string.Empty;
+            title?.Trim()
+            ?? string.Empty;
 
         var normalizedMessage =
-            message?.Trim() ??
-            string.Empty;
+            message?.Trim()
+            ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(
                 normalizedTitle))
@@ -83,57 +67,15 @@ public sealed class BusinessNotificationService
             appointmentId.HasValue)
         {
             actionType =
-                NotificationActionType.Appointment;
+                NotificationActionType
+                    .Appointment;
         }
-
-        var occurredAtUtc =
-            DateTime.UtcNow;
 
         var resolvedCorrelationId =
             correlationId.HasValue &&
             correlationId.Value != Guid.Empty
                 ? correlationId.Value
                 : Guid.NewGuid();
-
-        var notification =
-            new Notification
-            {
-                UserId =
-                    userId,
-
-                AppointmentId =
-                    appointmentId,
-
-                ActionType =
-                    actionType,
-
-                ResourceId =
-                    resourceId,
-
-                Title =
-                    normalizedTitle,
-
-                Message =
-                    normalizedMessage,
-
-                IsRead =
-                    false,
-
-                SentAtUtc =
-                    occurredAtUtc
-            };
-
-        _context.Notifications.Add(
-            notification);
-
-        await _context.SaveChangesAsync(
-            cancellationToken);
-
-        await _notificationSender
-            .SendToUserAsync(
-                userId,
-                normalizedTitle,
-                normalizedMessage);
 
         var notificationRequestedEvent =
             new NotificationRequestedEvent
@@ -142,13 +84,10 @@ public sealed class BusinessNotificationService
                     resolvedCorrelationId,
 
                 TimestampUtc =
-                    occurredAtUtc,
+                    DateTime.UtcNow,
 
                 UserId =
                     userId,
-
-                NotificationId =
-                    notification.Id,
 
                 Title =
                     normalizedTitle,
@@ -163,10 +102,17 @@ public sealed class BusinessNotificationService
                     actionType.ToString(),
 
                 ResourceId =
-                    resourceId
+                    resourceId,
+
+                /*
+                 * API više ne kreira Notification.
+                 * ID će nastati kada Worker snimi zapis.
+                 */
+                NotificationId =
+                    null
             };
 
-        await _integrationEventPublisher
+        return _integrationEventPublisher
             .PublishAsync(
                 notificationRequestedEvent,
                 IntegrationEventRoutingKeys

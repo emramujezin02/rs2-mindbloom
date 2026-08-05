@@ -31,17 +31,42 @@ public sealed class RabbitMqOptions
     public string EmailRoutingKey { get; set; } =
         string.Empty;
 
+    /*
+     * Queue za sve standardizovane
+     * integration event contracte.
+     */
+    public string IntegrationEventQueue { get; set; } =
+        string.Empty;
+
     public string RetryExchange { get; set; } =
         string.Empty;
 
     public string DeadLetterExchange { get; set; } =
         string.Empty;
 
+    /*
+     * DLQ postojećeg email queuea.
+     */
     public string DeadLetterQueue { get; set; } =
         string.Empty;
 
     public string DeadLetterRoutingKey { get; set; } =
         string.Empty;
+
+    /*
+     * Poseban DLQ za integration evente.
+     */
+    public string IntegrationEventDeadLetterQueue
+    {
+        get;
+        set;
+    } = string.Empty;
+
+    public string IntegrationEventDeadLetterRoutingKey
+    {
+        get;
+        set;
+    } = string.Empty;
 
     public ushort PrefetchCount { get; set; } = 1;
 

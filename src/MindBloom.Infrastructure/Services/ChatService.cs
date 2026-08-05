@@ -8,6 +8,8 @@ using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Common.Interfaces;
+using MindBloom.Messaging.Contracts.Common;
+using MindBloom.Messaging.Contracts.Notifications;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -15,18 +17,20 @@ public sealed class ChatService : IChatService
 {
     private readonly ApplicationDbContext
         _context;
-    private readonly IBusinessNotificationService
-    _businessNotificationService;
+
+    private readonly IIntegrationEventPublisher
+        _integrationEventPublisher;
 
     public ChatService(
         ApplicationDbContext context,
-        IBusinessNotificationService
-            businessNotificationService)
+        IIntegrationEventPublisher
+            integrationEventPublisher)
     {
-        _context = context;
+        _context =
+            context;
 
-        _businessNotificationService =
-            businessNotificationService;
+        _integrationEventPublisher =
+            integrationEventPublisher;
     }
 
     public async Task<List<ConversationListItemDto>>
@@ -567,15 +571,49 @@ public sealed class ChatService : IChatService
 
         if (recipientUserId > 0)
         {
-            await _businessNotificationService
+            var correlationId =
+                Guid.NewGuid();
+
+            var notificationRequestedEvent =
+                new NotificationRequestedEvent
+                {
+                    CorrelationId =
+                        correlationId,
+
+                    TimestampUtc =
+                        DateTime.UtcNow,
+
+                    UserId =
+                        recipientUserId,
+
+                    Title =
+                        "New chat message",
+
+                    Message =
+                        $"{sender.FirstName} "
+                        + $"{sender.LastName} "
+                        + "sent you a message.",
+
+                    AppointmentId =
+                        conversation.AppointmentId,
+
+                    ActionType =
+                        NotificationActionType
+                            .Chat
+                            .ToString(),
+
+                    ResourceId =
+                        conversation.Id,
+
+                    NotificationId =
+                        null
+                };
+
+            await _integrationEventPublisher
                 .PublishAsync(
-                    recipientUserId,
-                    "New chat message",
-                    $"{sender.FirstName} "
-                    + $"{sender.LastName} "
-                    + "sent you a message.",
-                    conversation.AppointmentId,
-                    NotificationActionType.Chat);
+                    notificationRequestedEvent,
+                    IntegrationEventRoutingKeys
+                        .NotificationRequested);
         }
 
         return MapMessage(
