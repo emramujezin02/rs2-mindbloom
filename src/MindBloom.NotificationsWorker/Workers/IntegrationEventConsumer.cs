@@ -6,6 +6,7 @@ using MindBloom.NotificationsWorker.Messaging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using MindBloom.NotificationsWorker.Services;
+using MindBloom.NotificationsWorker.Monitoring;
 
 namespace MindBloom.NotificationsWorker.Workers;
 
@@ -31,6 +32,9 @@ public sealed class IntegrationEventConsumer
     private readonly IServiceScopeFactory
     _scopeFactory;
 
+    private readonly RabbitMqMonitoringMetrics
+    _monitoringMetrics;
+
     private readonly ILogger<
         IntegrationEventConsumer>
         _logger;
@@ -54,16 +58,13 @@ public sealed class IntegrationEventConsumer
 
     public IntegrationEventConsumer(
         IOptions<RabbitMqOptions> options,
-        RabbitMqConnectionFactory
-            connectionFactory,
+        RabbitMqConnectionFactory connectionFactory,
         RabbitMqTopology topology,
-        IntegrationEventDeserializer
-            deserializer,
-        IIntegrationEventDispatcher
-            dispatcher,
+        IntegrationEventDeserializer deserializer,
+        IIntegrationEventDispatcher dispatcher,
         IServiceScopeFactory scopeFactory,
-        ILogger<IntegrationEventConsumer>
-            logger)
+        RabbitMqMonitoringMetrics monitoringMetrics,
+        ILogger<IntegrationEventConsumer> logger)
     {
         _options =
             options.Value;
@@ -85,6 +86,9 @@ public sealed class IntegrationEventConsumer
 
         _scopeFactory =
     scopeFactory;
+
+        _monitoringMetrics =
+    monitoringMetrics;
 
     }
 
@@ -393,6 +397,9 @@ public sealed class IntegrationEventConsumer
 
                 await AcknowledgeAsync(
                     eventArgs.DeliveryTag);
+
+                _monitoringMetrics
+    .RecordSuccess();
             }
             catch (NotSupportedException exception)
             {
@@ -529,6 +536,9 @@ public sealed class IntegrationEventConsumer
             await AcknowledgeAsync(
                 eventArgs.DeliveryTag);
 
+            _monitoringMetrics
+    .RecordRetry();
+
             _logger.LogWarning(
                 "Integration event with routing key {RoutingKey} scheduled for retry {RetryCount}/{MaximumRetryCount} after {DelayMilliseconds} ms.",
                 eventArgs.RoutingKey,
@@ -587,6 +597,9 @@ public sealed class IntegrationEventConsumer
 
             await AcknowledgeAsync(
                 eventArgs.DeliveryTag);
+
+            _monitoringMetrics
+    .RecordFailure();
 
             _logger.LogError(
                 "Integration event moved to DLQ. "

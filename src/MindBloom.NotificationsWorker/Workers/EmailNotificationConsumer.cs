@@ -10,6 +10,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Microsoft.Extensions.DependencyInjection;
 using MindBloom.NotificationsWorker.Services;
+using MindBloom.NotificationsWorker.Monitoring;
 
 namespace MindBloom.NotificationsWorker.Workers;
 
@@ -30,6 +31,9 @@ public sealed class EmailNotificationConsumer :
 
     private readonly IServiceScopeFactory
     _scopeFactory;
+
+    private readonly RabbitMqMonitoringMetrics
+    _monitoringMetrics;
 
     private readonly RabbitMqConnectionFactory
         _connectionFactory;
@@ -54,9 +58,7 @@ public sealed class EmailNotificationConsumer :
 
     private int _activeMessageCount;
 
-    private TaskCompletionSource
-        _messagesDrained =
-            CreateCompletedDrainSource();
+    private TaskCompletionSource _messagesDrained = CreateCompletedDrainSource();
 
     private bool _isStopping;
 
@@ -69,6 +71,7 @@ public sealed class EmailNotificationConsumer :
         IEmailService emailService,
         EmailMessageBodyBuilder bodyBuilder,
         IServiceScopeFactory scopeFactory,
+        RabbitMqMonitoringMetrics monitoringMetrics,
         ILogger<EmailNotificationConsumer> logger)
     {
         _options =
@@ -91,6 +94,9 @@ public sealed class EmailNotificationConsumer :
 
         _logger =
             logger;
+
+        _monitoringMetrics =
+    monitoringMetrics;
     }
 
     protected override async Task ExecuteAsync(
@@ -404,6 +410,9 @@ public sealed class EmailNotificationConsumer :
                 await AcknowledgeAsync(
                     eventArgs.DeliveryTag);
 
+                _monitoringMetrics
+    .RecordSuccess();
+
                 _logger.LogInformation(
                     "Email notification {MessageId} sent successfully, "
                     + "marked as processed and acknowledged. "
@@ -572,6 +581,9 @@ public sealed class EmailNotificationConsumer :
             await AcknowledgeAsync(
                 eventArgs.DeliveryTag);
 
+            _monitoringMetrics
+    .RecordRetry();
+
             _logger.LogWarning(
                 "Email notification {MessageId} scheduled for retry {RetryCount}/{MaximumRetryCount} after {DelayMilliseconds} ms.",
                 messageId,
@@ -625,6 +637,9 @@ public sealed class EmailNotificationConsumer :
 
             await AcknowledgeAsync(
                 eventArgs.DeliveryTag);
+
+            _monitoringMetrics
+    .RecordFailure();
 
             _logger.LogError(
                 "Email notification moved to DLQ. "

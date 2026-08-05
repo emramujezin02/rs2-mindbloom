@@ -35,6 +35,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using MindBloom.NotificationsWorker.Health;
+using MindBloom.NotificationsWorker.Monitoring;
 
 Env.TraversePath().Load();
 
@@ -185,9 +186,6 @@ builder.Services.AddHostedService<
 builder.Services.AddHostedService<
     IntegrationEventConsumer>();
 
-builder.Services.AddHostedService<
-    DeadLetterQueueMonitor>();
-
 builder.Services.AddScoped<
     IIntegrationEventHandler<
         AppointmentCreatedEvent>,
@@ -260,6 +258,9 @@ builder.Services.AddScoped<
         ReviewApprovedEvent>,
     ReviewApprovedEventHandler>();
 
+builder.Services.AddHostedService<
+    RabbitMqMonitoringService>();
+
 builder.Services.AddScoped<
     IIntegrationEventHandler<
         PaymentSucceededEvent>,
@@ -274,6 +275,9 @@ builder.Services.AddScoped<
     IIntegrationEventHandler<
         NotificationRequestedEvent>,
     NotificationRequestedEventHandler>();
+
+builder.Services.AddSingleton<
+    RabbitMqMonitoringMetrics>();
 
 builder.Services.AddSingleton(
     serviceProvider =>

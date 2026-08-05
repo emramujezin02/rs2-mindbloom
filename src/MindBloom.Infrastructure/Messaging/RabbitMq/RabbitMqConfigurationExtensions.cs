@@ -40,6 +40,12 @@ public static class RabbitMqConfigurationExtensions
                         configuration,
                         "RABBITMQ_VIRTUAL_HOST");
 
+                options.MonitoringIntervalSeconds =
+    GetIntValue(
+        configuration,
+        "RABBITMQ_MONITORING_INTERVAL_SECONDS",
+        60);
+
                 options.PublisherClientName =
                     GetRequiredValue(
                         configuration,

@@ -97,4 +97,10 @@ public sealed class RabbitMqOptions
         set;
     } = 1;
 
+    public int MonitoringIntervalSeconds
+    {
+        get;
+        set;
+    } = 60;
+
 }
