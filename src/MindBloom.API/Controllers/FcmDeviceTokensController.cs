@@ -8,7 +8,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/fcm-tokens")]
-[Authorize]
+[Authorize(Policy = "AuthenticatedUser")]
 public sealed class FcmDeviceTokensController
     : ControllerBase
 {

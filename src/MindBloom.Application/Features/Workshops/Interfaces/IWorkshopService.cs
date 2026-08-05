@@ -61,6 +61,11 @@ public interface IWorkshopService
             int pageNumber,
             int pageSize);
 
+    Task<WorkshopResponseDto>
+    GetPublicByIdAsync(
+        int workshopId,
+        int? clientUserId);
+
     Task<PagedResponse<WorkshopRegistrationResponseDto>>
         GetRegistrationsAsync(
             int userId,

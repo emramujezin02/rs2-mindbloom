@@ -8,6 +8,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = "AuthenticatedUser")]
 public sealed class TherapyApproachesController
     : ControllerBase
 {

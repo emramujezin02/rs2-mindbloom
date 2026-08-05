@@ -122,7 +122,7 @@ public class TherapistService : ITherapistService
                 Id = x.Id,
                 UserId = x.UserId,
                 FullName = x.User.FirstName + " " + x.User.LastName,
-                Email = x.User.Email!,
+                Email = string.Empty,
                 Specialization = x.Specialization,
                 Biography = x.Biography,
                 HourlyRate = x.HourlyRate,
@@ -130,11 +130,11 @@ public class TherapistService : ITherapistService
                 AverageRating = x.Reviews.Any() ? Math.Round(x.Reviews.Average(r => r.Rating), 1): 0,
                 TotalReviews = x.Reviews.Count,
                 VerificationStatus = x.VerificationStatus.ToString(),
-                VerificationNotes = x.VerificationNotes,
+                VerificationNotes = null,
                 ProfileImageUrl = x.User.ProfileImageUrl ?? x.ProfileImagePath,
                 Country = x.Country,
                 City = x.City,
-                Address = x.Address,
+                Address = null,
                 OffersOnline = x.OffersOnline,
                 OffersInPerson = x.OffersInPerson,
                 Latitude = x.Latitude,
@@ -1335,8 +1335,7 @@ public class TherapistService : ITherapistService
                 + therapist.User.LastName,
 
             Email =
-                therapist.User.Email
-                ?? string.Empty,
+    string.Empty,
 
             Biography =
                 therapist.Biography,
@@ -1432,7 +1431,7 @@ public class TherapistService : ITherapistService
                 therapist.City,
 
             Address =
-                therapist.Address,
+    null,
 
             OffersOnline =
                 therapist.OffersOnline,
@@ -1997,7 +1996,9 @@ public class TherapistService : ITherapistService
         var therapist =
             await _context.Therapists
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == therapistUserId);
+                    x.UserId ==
+                        therapistUserId &&
+                    !x.IsDeleted);
 
         if (therapist == null)
         {
@@ -2005,60 +2006,77 @@ public class TherapistService : ITherapistService
                 "Therapist not found.");
         }
 
-        await ValidateDocumentAsync(file);
+        await ValidateDocumentAsync(
+            file);
 
-        var webRootPath =
-    _environment.WebRootPath
-    ?? Path.Combine(
-        Directory.GetCurrentDirectory(),
-        "wwwroot");
+        /*
+         * Dokumenti terapeuta su privatni.
+         * Ne smiju biti smješteni unutar wwwroot,
+         * jer bi ih StaticFiles middleware mogao
+         * servirati bez authorization provjere.
+         */
+        var privateRoot =
+            Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "private-storage");
 
         var uploadsFolder =
             Path.Combine(
-                _environment.WebRootPath?? Path.Combine(webRootPath,"uploads","therapist"),
-                "uploads",
-                "therapists");
+                privateRoot,
+                "therapist-documents");
 
         if (!Directory.Exists(
-            uploadsFolder))
+                uploadsFolder))
         {
             Directory.CreateDirectory(
                 uploadsFolder);
         }
 
         var extension =
-            Path.GetExtension(file.FileName)
+            Path.GetExtension(
+                    file.FileName)
                 .ToLowerInvariant();
 
         var uniqueFileName =
             $"{Guid.NewGuid():N}{extension}";
 
-        var filePath =
+        var physicalPath =
             Path.Combine(
                 uploadsFolder,
                 uniqueFileName);
 
-        using var stream =
-            new FileStream(
-                filePath,
-                FileMode.Create);
-
-        await file.CopyToAsync(stream);
+        await using (
+            var stream =
+                new FileStream(
+                    physicalPath,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None))
+        {
+            await file.CopyToAsync(
+                stream);
+        }
 
         var document =
             new TherapistDocument
             {
-                TherapistId = therapist.Id,
+                TherapistId =
+                    therapist.Id,
 
-                FileName = uniqueFileName,
+                FileName =
+                    Path.GetFileName(
+                        file.FileName),
 
                 FilePath =
-                    $"/uploads/therapists/{uniqueFileName}",
+                    Path.Combine(
+                        "therapist-documents",
+                        uniqueFileName),
 
                 ContentType =
                     file.ContentType,
 
-                IsApproved = false
+                IsApproved =
+                    false
             };
 
         _context.TherapistDocuments
@@ -2074,18 +2092,24 @@ public class TherapistService : ITherapistService
     {
         return await _context
             .TherapistDocuments
+            .AsNoTracking()
             .Where(x =>
-                x.TherapistId == therapistId)
+                x.TherapistId ==
+                    therapistId &&
+                !x.IsDeleted)
+            .OrderByDescending(x =>
+                x.CreatedAtUtc)
             .Select(x =>
                 new TherapistDocumentResponseDto
                 {
-                    Id = x.Id,
+                    Id =
+                        x.Id,
 
                     FileName =
                         x.FileName,
 
                     FilePath =
-                        x.FilePath,
+                        string.Empty,
 
                     ContentType =
                         x.ContentType,
@@ -2094,6 +2118,74 @@ public class TherapistService : ITherapistService
                         x.IsApproved
                 })
             .ToListAsync();
+    }
+
+    public async Task<TherapistDocumentDownloadDto>
+    DownloadDocumentAsync(
+        int documentId)
+    {
+        var document =
+            await _context
+                .TherapistDocuments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.Id ==
+                        documentId &&
+                    !x.IsDeleted);
+
+        if (document == null)
+        {
+            throw new NotFoundException(
+                "Document not found.");
+        }
+
+        var privateRoot =
+            Path.GetFullPath(
+                Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "private-storage"));
+
+        var physicalPath =
+            Path.GetFullPath(
+                Path.Combine(
+                    privateRoot,
+                    document.FilePath));
+
+        if (!physicalPath.StartsWith(
+                privateRoot +
+                Path.DirectorySeparatorChar,
+                StringComparison
+                    .OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid document storage path.");
+        }
+
+        if (!File.Exists(
+                physicalPath))
+        {
+            throw new NotFoundException(
+                "Document file was not found.");
+        }
+
+        var content =
+            await File.ReadAllBytesAsync(
+                physicalPath);
+
+        return new TherapistDocumentDownloadDto
+        {
+            Content =
+                content,
+
+            FileName =
+                document.FileName,
+
+            ContentType =
+                string.IsNullOrWhiteSpace(
+                    document.ContentType)
+                    ? "application/octet-stream"
+                    : document.ContentType
+        };
     }
 
     public async Task DeleteDocumentAsync(
@@ -2125,16 +2217,32 @@ public class TherapistService : ITherapistService
                 "Document not found.");
         }
 
-        var physicalPath =
-            Path.Combine(
-                _environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(),"wwwroot"),
-                document.FilePath.TrimStart('/')
-                    .Replace("/",
-                        Path.DirectorySeparatorChar.ToString()));
+        var privateRoot =
+            Path.GetFullPath(
+                Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "private-storage"));
 
-        if (File.Exists(physicalPath))
+        var physicalPath =
+            Path.GetFullPath(
+                Path.Combine(
+                    privateRoot,
+                    document.FilePath));
+
+        if (!physicalPath.StartsWith(
+                privateRoot +
+                Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase))
         {
-            File.Delete(physicalPath);
+            throw new UnauthorizedAccessException(
+                "Invalid document storage path.");
+        }
+
+        if (File.Exists(
+                physicalPath))
+        {
+            File.Delete(
+                physicalPath);
         }
 
         _context.TherapistDocuments

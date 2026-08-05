@@ -8,6 +8,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = "ClientOnly")]
 public class PaymentsController : ControllerBase
 {
     private readonly IPaymentService
@@ -20,7 +21,6 @@ public class PaymentsController : ControllerBase
             paymentService;
     }
 
-    [Authorize(Roles = "Client")]
     [HttpPost("create-intent")]
     public async Task<IActionResult>
         CreateIntent(
@@ -38,7 +38,6 @@ public class PaymentsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Client")]
     [HttpPost("confirm")]
     public async Task<IActionResult>
         Confirm(
@@ -55,7 +54,6 @@ public class PaymentsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Roles = "Client")]
     [HttpGet("mine")]
     public async Task<IActionResult>
         GetMyPayments()
@@ -71,7 +69,6 @@ public class PaymentsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Client")]
     [HttpGet("{paymentId}/receipt")]
     public async Task<IActionResult>
         GetReceipt(

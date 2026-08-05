@@ -9,7 +9,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = "ClientOrTherapist")]
 public class ChatController : ControllerBase
 {
     private readonly IChatService

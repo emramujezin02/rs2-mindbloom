@@ -8,7 +8,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/user-settings")]
-[Authorize]
+[Authorize(Policy = "AuthenticatedUser")]
 public class UserSettingsController : ControllerBase
 {
     private readonly IUserSettingsService

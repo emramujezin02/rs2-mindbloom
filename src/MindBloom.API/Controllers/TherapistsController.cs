@@ -9,6 +9,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = "AuthenticatedUser")]
 public class TherapistsController : ControllerBase
 {
     private readonly ITherapistService _therapistService;
@@ -19,17 +20,14 @@ public class TherapistsController : ControllerBase
         _therapistService = therapistService;
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpPost]
     public async Task<IActionResult> Create(
         CreateTherapistDto request)
     {
-        var userId = int.Parse(
-            User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
         var result =
             await _therapistService.CreateAsync(
-                userId,
+                GetCurrentUserId(),
                 request);
 
         return StatusCode(
@@ -37,6 +35,7 @@ public class TherapistsController : ControllerBase
     result);
     }
 
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -46,24 +45,20 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpPost("availability")]
     public async Task<IActionResult> AddAvailability(
         CreateAvailabilityDto request)
     {
-        var therapistUserId =
-            int.Parse(
-                User.FindFirstValue(
-                    ClaimTypes.NameIdentifier)!);
-
         await _therapistService
             .AddAvailabilityAsync(
-                therapistUserId,
+                GetCurrentUserId(),
                 request);
 
         return NoContent();
     }
 
+    [AllowAnonymous]
     [HttpGet("{therapistId}/availability")]
     public async Task<IActionResult> GetAvailabilities(
         int therapistId)
@@ -75,9 +70,9 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
+    [AllowAnonymous]
     [HttpGet("search")]
-    public async Task<IActionResult>
-    Search(
+    public async Task<IActionResult> Search(
         [FromQuery] SearchTherapistsDto request)
     {
         var result =
@@ -87,9 +82,10 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
+    [AllowAnonymous]
     [HttpPost("filter")]
     public async Task<IActionResult> Filter(
-    TherapistFilterDto filter)
+        [FromBody] TherapistFilterDto filter)
     {
         var result =
             await _therapistService
@@ -98,9 +94,10 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}")]
-    public async Task<IActionResult>
- GetById(int id)
+    public async Task<IActionResult> GetById(
+        int id)
     {
         int? currentUserId = null;
 
@@ -125,66 +122,49 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpDelete("availability/{availabilityId}")]
     public async Task<IActionResult>
     DeleteAvailability(
         int availabilityId)
     {
-        var userId =
-    int.Parse(
-        User.FindFirst(
-            ClaimTypes.NameIdentifier)!.Value);
-
         await _therapistService
             .DeleteAvailabilityAsync(
-                userId,
+                GetCurrentUserId(),
                 availabilityId);
 
         return NoContent();
     }
 
     [HttpGet("dashboard")]
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     public async Task<IActionResult>
     GetDashboard()
     {
-        var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!.Value);
-
         var result =
             await _therapistService
-                .GetDashboardAsync(userId);
+                .GetDashboardAsync(GetCurrentUserId());
 
         return Ok(result);
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpPost("unavailable-dates")]
     public async Task<IActionResult>
     AddUnavailableDate(
         CreateUnavailableDateDto request)
     {
-        var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
-
         await _therapistService
             .AddUnavailableDateAsync(
-                userId,
+                GetCurrentUserId(),
                 request);
 
         return NoContent();
     }
 
+    [AllowAnonymous]
     [HttpGet("{therapistId}/unavailable-dates")]
-    public async Task<IActionResult>
-    GetUnavailableDates(
-        int therapistId)
+    public async Task<IActionResult> GetUnavailableDates(int therapistId)
     {
         var result =
             await _therapistService
@@ -195,43 +175,32 @@ public class TherapistsController : ControllerBase
     }
 
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpDelete(
     "unavailable-dates/{id}")]
     public async Task<IActionResult>
     DeleteUnavailableDate(
         int id)
     {
-        var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
 
         await _therapistService
             .DeleteUnavailableDateAsync(
-                userId,
+                GetCurrentUserId(),
                 id);
 
         return NoContent();
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpPost("documents")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult>
     UploadDocument(
         [FromForm] UploadTherapistDocumentDto request)
     {
-        var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
-
         await _therapistService
             .UploadDocumentAsync(
-                userId,
+                GetCurrentUserId(),
                 request.File);
 
         return Ok(new
@@ -241,9 +210,9 @@ public class TherapistsController : ControllerBase
         });
     }
 
+    [Authorize(Policy = "AdminOnly")]
     [HttpGet("{therapistId}/documents")]
-    public async Task<IActionResult>
-    GetDocuments(
+    public async Task<IActionResult> GetDocuments(
         int therapistId)
     {
         var result =
@@ -254,100 +223,96 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpDelete("documents/{id}")]
     public async Task<IActionResult>
     DeleteDocument(
         int id)
     {
-        var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
-
         await _therapistService
             .DeleteDocumentAsync(
-                userId,
+                GetCurrentUserId(),
                 id);
 
         return NoContent();
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpGet("clients")]
     public async Task<IActionResult>
     GetClients(
         [FromQuery] string? search)
     {
-        var therapistUserId =
-            int.Parse(
-                User.FindFirstValue(
-                    ClaimTypes.NameIdentifier)!);
-
         var result =
             await _therapistService
                 .GetClientsAsync(
-                    therapistUserId,
+                    GetCurrentUserId(),
                     search);
 
         return Ok(result);
     }
-
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpGet("clients/{clientId:int}")]
     public async Task<IActionResult>
         GetClientDetails(
             int clientId)
     {
-        var therapistUserId =
-            int.Parse(
-                User.FindFirstValue(
-                    ClaimTypes.NameIdentifier)!);
+
 
         var result =
             await _therapistService
                 .GetClientDetailsAsync(
-                    therapistUserId,
+                    GetCurrentUserId(),
                     clientId);
 
         return Ok(result);
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "AdminOnly")]
+    [HttpGet("documents/{documentId:int}/download")]
+    public async Task<IActionResult>
+    DownloadDocument(
+        int documentId)
+    {
+        var document =
+            await _therapistService
+                .DownloadDocumentAsync(
+                    documentId);
+
+        return File(
+            document.Content,
+            document.ContentType,
+            document.FileName);
+    }
+
+    [Authorize(Policy = "TherapistOnly")]
     [HttpGet("profile")]
     public async Task<ActionResult<TherapistProfileDto>>
     GetProfile()
     {
-        var userId =
-            GetCurrentUserId();
-
         var profile =
             await _therapistService
-                .GetProfileAsync(userId);
+                .GetProfileAsync(GetCurrentUserId());
 
         return Ok(profile);
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpPut("profile")]
     public async Task<IActionResult>
     UpdateProfile(
         [FromBody]
         UpdateTherapistProfileDto request)
     {
-        var userId =
-            GetCurrentUserId();
-
         await _therapistService
             .UpdateProfileAsync(
-                userId,
+                GetCurrentUserId(),
                 request);
 
         return NoContent();
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpPost("profile/image")]
     [Consumes("multipart/form-data")]
     public async Task<
@@ -356,29 +321,23 @@ UploadProfileImage(
     [FromForm]
     UploadTherapistProfileImageDto request)
     {
-        var userId =
-            GetCurrentUserId();
-
         var result =
             await _therapistService
                 .UploadProfileImageAsync(
-                    userId,
+                    GetCurrentUserId(),
                     request.File);
 
         return Ok(result);
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpDelete("profile/image")]
     public async Task<IActionResult>
 DeleteProfileImage()
     {
-        var userId =
-            GetCurrentUserId();
-
         await _therapistService
             .DeleteProfileImageAsync(
-                userId);
+                GetCurrentUserId());
 
         return NoContent();
     }

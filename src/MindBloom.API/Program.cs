@@ -314,15 +314,14 @@ app.UseStatusCodePages(
         await response.WriteAsync(json);
     });
 
-app.UseSwagger();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
 
-app.UseSwaggerUI();
+    app.UseSwaggerUI();
+}
 
 app.UseCors("AllowAll");
-
-app.UseHttpsRedirection();
-
-app.UseStaticFiles();
 
 app.UseAuthentication();
 
@@ -330,7 +329,9 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapHealthChecks("/health");
+app.MapHealthChecks(
+        "/health")
+    .AllowAnonymous();
 
 app.MapHub<NotificationHub>(
         "/hubs/notifications")

@@ -8,6 +8,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = "AuthenticatedUser")]
 public class AppointmentsController : ControllerBase
 {
     private readonly IAppointmentService _appointmentService;
@@ -18,106 +19,91 @@ public class AppointmentsController : ControllerBase
         _appointmentService = appointmentService;
     }
 
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     [HttpPost]
     public async Task<IActionResult> Create(
         CreateAppointmentDto request)
     {
-        var userId = int.Parse(
-            User.FindFirstValue(
-                ClaimTypes.NameIdentifier)!);
+
 
         var result =
             await _appointmentService.CreateAsync(
-                userId,
+                GetCurrentUserId(),
                 request);
 
         return Ok(result);
     }
 
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     [HttpGet("mine")]
     public async Task<IActionResult> Mine()
     {
-        var userId = int.Parse(
-            User.FindFirstValue(
-                ClaimTypes.NameIdentifier)!);
+
 
         var result =
             await _appointmentService
-                .GetMyAppointmentsAsync(userId);
+                .GetMyAppointmentsAsync(GetCurrentUserId());
 
         return Ok(result);
     }
 
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     [HttpGet("{appointmentId:int}")]
     public async Task<IActionResult>
     GetClientAppointmentDetails(
         int appointmentId)
     {
-        var userId =
-            int.Parse(
-                User.FindFirstValue(
-                    ClaimTypes.NameIdentifier)!);
+
 
         var result =
             await _appointmentService
                 .GetClientAppointmentDetailsAsync(
-                    userId,
+                    GetCurrentUserId(),
                     appointmentId);
 
         return Ok(result);
     }
 
     [HttpGet("therapist")]
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     public async Task<IActionResult>
     GetTherapistAppointments()
     {
-        var therapistUserId =
-            int.Parse(
-                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
         var result =
             await _appointmentService
                 .GetTherapistAppointmentsAsync(
-                    therapistUserId);
+                    GetCurrentUserId());
 
         return Ok(result);
     }
 
     [HttpPut("status")]
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     public async Task<IActionResult>
     UpdateStatus(
         UpdateAppointmentStatusDto request)
     {
-        var therapistUserId =
-            int.Parse(
-                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
         await _appointmentService
             .UpdateStatusAsync(
-                therapistUserId,
+                GetCurrentUserId(),
                 request);
 
         return NoContent();
     }
 
     [HttpPut("{appointmentId}/cancel")]
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     public async Task<IActionResult> CancelAppointment(
     int appointmentId,
     CancelAppointmentDto request)
     {
-        var userId = int.Parse(
-            User.FindFirstValue(
-                ClaimTypes.NameIdentifier)!);
+
 
         await _appointmentService
             .CancelAppointmentAsync(
-                userId,
+                GetCurrentUserId(),
                 appointmentId,
                 request);
 
@@ -125,38 +111,31 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpGet("therapist/stats")]
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     public async Task<IActionResult>
     GetTherapistStats()
     {
-        var therapistUserId =
-            int.Parse(
-                User.FindFirstValue(
-                    ClaimTypes.NameIdentifier)!);
+
 
         var result =
             await _appointmentService
                 .GetTherapistStatsAsync(
-                    therapistUserId);
+                    GetCurrentUserId());
 
         return Ok(result);
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpPost("notes")]
     public async Task<IActionResult>
     AddAppointmentNote(
         CreateAppointmentNoteDto request)
     {
-        var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+
 
         await _appointmentService
             .AddAppointmentNoteAsync(
-                userId,
+                GetCurrentUserId(),
                 request);
 
         return Ok(new
@@ -166,69 +145,56 @@ public class AppointmentsController : ControllerBase
         });
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpGet("{appointmentId}/notes")]
     public async Task<IActionResult>
     GetAppointmentNote(
         int appointmentId)
     {
-        var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
 
         var result =
             await _appointmentService
                 .GetAppointmentNoteAsync(
-                    userId,
+                    GetCurrentUserId(),
                     appointmentId);
 
         return Ok(result);
     }
 
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     [HttpGet("client-dashboard")]
     public async Task<IActionResult>
     GetClientDashboard()
     {
-        var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+ 
 
         var result =
             await _appointmentService
                 .GetClientDashboardAsync(
-                    userId);
+                    GetCurrentUserId());
 
         return Ok(result);
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpPut("{appointmentId}/meeting-link")]
     public async Task<IActionResult>
     UpdateMeetingLink(
         int appointmentId,
         UpdateMeetingLinkDto request)
     {
-        var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+
 
         await _appointmentService
             .UpdateMeetingLinkAsync(
-                userId,
+                GetCurrentUserId(),
                 appointmentId,
                 request);
 
         return NoContent();
     }
 
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     [HttpGet(
     "therapist/{therapistId}/occupied-slots")]
     public async Task<IActionResult>
@@ -243,5 +209,23 @@ public class AppointmentsController : ControllerBase
                     date);
 
         return Ok(result);
+    }
+
+    private int GetCurrentUserId()
+    {
+        var value =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(
+                value,
+                out var userId) ||
+            userId <= 0)
+        {
+            throw new UnauthorizedAccessException(
+                "Authenticated user identifier is missing or invalid.");
+        }
+
+        return userId;
     }
 }

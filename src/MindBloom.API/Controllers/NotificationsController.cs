@@ -9,7 +9,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = "AuthenticatedUser")]
 public sealed class NotificationsController
     : ControllerBase
 {

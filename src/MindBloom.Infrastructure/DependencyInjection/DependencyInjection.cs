@@ -29,6 +29,9 @@ using MindBloom.Application.Features.Chat.Interfaces;
 using MindBloom.Application.Features.ReferenceData.Interfaces;
 using MindBloom.Application.Features.AdminReports.Interfaces;
 using MindBloom.Infrastructure.Services.Geocoding;
+using Microsoft.AspNetCore.Authorization;
+using MindBloom.Domain.Enums;
+using System.Security.Claims;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -122,7 +125,9 @@ public static class DependencyInjection
                    ValidateIssuerSigningKey = true,
                    ValidIssuer = jwtSettings.Issuer,
                    ValidAudience = jwtSettings.Audience,
-                   IssuerSigningKey = new SymmetricSecurityKey(key)
+                   IssuerSigningKey = new SymmetricSecurityKey(key),
+                   NameClaimType = ClaimTypes.NameIdentifier,
+                   RoleClaimType = ClaimTypes.Role,
                };
 
            options.Events =
@@ -159,6 +164,80 @@ public static class DependencyInjection
             }
     };
        });
+
+        services.AddAuthorization(options =>
+        {
+            options.FallbackPolicy =
+                new AuthorizationPolicyBuilder(
+                        JwtBearerDefaults
+                            .AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .Build();
+
+            options.AddPolicy(
+                "ClientOnly",
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+
+                    policy.RequireRole(
+                        UserRole.Client
+                            .ToString());
+                });
+
+            options.AddPolicy(
+                "TherapistOnly",
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+
+                    policy.RequireRole(
+                        UserRole.Therapist
+                            .ToString());
+                });
+
+            options.AddPolicy(
+                "AdminOnly",
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+
+                    policy.RequireRole(
+                        UserRole.Admin
+                            .ToString());
+                });
+
+            options.AddPolicy(
+                "ClientOrTherapist",
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+
+                    policy.RequireRole(
+                        UserRole.Client
+                            .ToString(),
+                        UserRole.Therapist
+                            .ToString());
+                });
+
+            options.AddPolicy(
+    "AdminOrTherapist",
+    policy =>
+    {
+        policy.RequireAuthenticatedUser();
+
+        policy.RequireRole(
+            UserRole.Admin.ToString(),
+            UserRole.Therapist.ToString());
+    });
+
+            options.AddPolicy(
+                "AuthenticatedUser",
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                });
+        });
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 

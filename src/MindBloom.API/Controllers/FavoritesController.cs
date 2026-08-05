@@ -5,9 +5,9 @@ using MindBloom.Application.Features.Favorites.Interfaces;
 using System.Security.Claims;
 
 namespace MindBloom.API.Controllers;
-
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = "ClientOnly")]
 public class FavoritesController : ControllerBase
 {
     private readonly IFavoriteService
@@ -19,16 +19,12 @@ public class FavoritesController : ControllerBase
         _favoriteService = favoriteService;
     }
 
-    [Authorize(Roles = "Client")]
     [HttpPost]
     public async Task<IActionResult> Add(
         AddFavoriteDto request)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetCurrentUserId();
 
         await _favoriteService.AddAsync(
             userId,
@@ -41,16 +37,12 @@ public class FavoritesController : ControllerBase
         });
     }
 
-    [Authorize(Roles = "Client")]
     [HttpDelete("{therapistId}")]
     public async Task<IActionResult> Remove(
         int therapistId)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetCurrentUserId();
 
         await _favoriteService.RemoveAsync(
             userId,
@@ -63,21 +55,35 @@ public class FavoritesController : ControllerBase
         });
     }
 
-    [Authorize(Roles = "Client")]
     [HttpGet("mine")]
     public async Task<IActionResult>
         GetMyFavorites()
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetCurrentUserId();
 
         var result =
             await _favoriteService
                 .GetMyFavoritesAsync(userId);
 
         return Ok(result);
+    }
+
+    private int GetCurrentUserId()
+    {
+        var value =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(
+                value,
+                out var userId) ||
+            userId <= 0)
+        {
+            throw new UnauthorizedAccessException(
+                "Authenticated user identifier is missing or invalid.");
+        }
+
+        return userId;
     }
 }

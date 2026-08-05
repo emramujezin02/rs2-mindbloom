@@ -8,7 +8,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = "AuthenticatedUser")]
 public class MembershipsController : ControllerBase
 {
     private readonly IMembershipService
@@ -36,7 +36,7 @@ public class MembershipsController : ControllerBase
     }
 
     [HttpPost("create-payment-intent")]
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     public async Task<IActionResult>
         CreatePaymentIntent(
             CreateMembershipPaymentIntentDto request)
@@ -54,7 +54,7 @@ public class MembershipsController : ControllerBase
     }
 
     [HttpPost("confirm-payment")]
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     public async Task<IActionResult>
         ConfirmPayment(
             ConfirmMembershipPaymentDto request)
@@ -72,7 +72,7 @@ public class MembershipsController : ControllerBase
     }
 
     [HttpGet("mine")]
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     public async Task<IActionResult>
         GetMyMemberships()
     {
@@ -88,7 +88,7 @@ public class MembershipsController : ControllerBase
     }
 
     [HttpGet("{membershipId}/receipt")]
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     public async Task<IActionResult>
         GetReceipt(
             int membershipId)
@@ -106,7 +106,7 @@ public class MembershipsController : ControllerBase
     }
 
     [HttpPost("use")]
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     public async Task<IActionResult>
         UseMembership(
             UseMembershipDto request)

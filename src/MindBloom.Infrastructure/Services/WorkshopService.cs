@@ -204,6 +204,31 @@ public class WorkshopService : IWorkshopService
     }
 
     public async Task<WorkshopResponseDto>
+    GetPublicByIdAsync(
+        int workshopId,
+        int? clientUserId)
+    {
+        var isPublic =
+            await _context.Workshops
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.Id == workshopId &&
+                    !x.IsDeleted &&
+                    x.Status ==
+                        WorkshopStatus.Scheduled);
+
+        if (!isPublic)
+        {
+            throw new NotFoundException(
+                "Workshop not found.");
+        }
+
+        return await GetByIdAsync(
+            workshopId,
+            clientUserId);
+    }
+
+    public async Task<WorkshopResponseDto>
         GetByIdAsync(
             int workshopId,
             int? clientUserId)

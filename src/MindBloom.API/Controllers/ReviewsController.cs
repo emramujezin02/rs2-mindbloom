@@ -9,6 +9,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = "AuthenticatedUser")]
 public class ReviewsController : ControllerBase
 {
     private readonly IReviewService
@@ -36,7 +37,7 @@ public class ReviewsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     [HttpPost]
     public async Task<IActionResult>
         Create(
@@ -58,6 +59,7 @@ public class ReviewsController : ControllerBase
             });
     }
 
+    [AllowAnonymous]
     [HttpGet("therapist/{therapistId}")]
     public async Task<IActionResult>
         GetTherapistReviews(
@@ -73,6 +75,7 @@ public class ReviewsController : ControllerBase
         return Ok(result);
     }
 
+    [AllowAnonymous]
     [HttpGet("therapist/{therapistId}/rating")]
     public async Task<IActionResult>
         GetTherapistRating(
@@ -86,7 +89,7 @@ public class ReviewsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     [HttpGet("eligibility/{appointmentId}")]
     public async Task<IActionResult>
     GetEligibility(
@@ -104,7 +107,7 @@ public class ReviewsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     [HttpDelete("{reviewId}")]
     public async Task<IActionResult>
         Delete(
@@ -120,7 +123,7 @@ public class ReviewsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     [HttpPut("{reviewId}")]
     public async Task<IActionResult>
         Update(
@@ -138,7 +141,7 @@ public class ReviewsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Roles = "Client")]
+    [Authorize(Policy = "ClientOnly")]
     [HttpGet("mine")]
     public async Task<IActionResult>
         GetMyReviews(
@@ -164,7 +167,7 @@ public class ReviewsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Therapist")]
+    [Authorize(Policy = "TherapistOnly")]
     [HttpPut("{reviewId}/reply")]
     public async Task<IActionResult>
         ReplyToReview(

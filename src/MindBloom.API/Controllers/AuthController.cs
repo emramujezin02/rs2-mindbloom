@@ -1,113 +1,99 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Auth.DTOs;
 using MindBloom.Application.Features.Auth.Interfaces;
-using System.Security.Claims;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase
+[Authorize(Policy = "AuthenticatedUser")]
+public sealed class AuthController
+    : ControllerBase
 {
-    private readonly IAuthService _authService;
+    private readonly IAuthService
+        _authService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(
+        IAuthService authService)
     {
-        _authService = authService;
+        _authService =
+            authService;
     }
 
+    /*
+     * JAVNI AUTH ENDPOINTI
+     */
+
+    [AllowAnonymous]
     [HttpPost("register")]
     public async Task<IActionResult> Register(
+        [FromBody]
         RegisterRequestDto request)
     {
         var response =
-            await _authService.RegisterAsync(request);
+            await _authService
+                .RegisterAsync(request);
 
         return Ok(response);
     }
 
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<IActionResult> Login(
+        [FromBody]
         LoginRequestDto request)
     {
         var response =
-            await _authService.LoginAsync(request);
+            await _authService
+                .LoginAsync(request);
 
         return Ok(response);
     }
 
-    [Authorize]
-    [HttpGet("me")]
-    public IActionResult Me()
-    {
-        return Ok(new
-        {
-            UserId =
-                User.FindFirstValue(ClaimTypes.NameIdentifier),
-
-            Email =
-                User.FindFirstValue(ClaimTypes.Email),
-
-            Username =
-                User.FindFirstValue(ClaimTypes.Name),
-
-            Role =
-                User.FindFirstValue(ClaimTypes.Role)
-        });
-    }
-
+    [AllowAnonymous]
     [HttpPost("forgot-password")]
     public async Task<IActionResult>
-    ForgotPassword(
-        ForgotPasswordDto request)
+        ForgotPassword(
+            [FromBody]
+            ForgotPasswordDto request)
     {
         await _authService
             .ForgotPasswordAsync(request);
 
         return Ok(
-            "Password reset code sent.");
+            new
+            {
+                message =
+                    "If an account with the provided email exists, password reset instructions have been sent."
+            });
     }
 
+    [AllowAnonymous]
     [HttpPost("reset-password")]
     public async Task<IActionResult>
-    ResetPassword(
-        ResetPasswordDto request)
+        ResetPassword(
+            [FromBody]
+            ResetPasswordDto request)
     {
         await _authService
             .ResetPasswordAsync(request);
 
         return Ok(
-            "Password reset successful.");
-    }
-
-    [HttpPost("change-password")]
-    [Authorize]
-    public async Task<IActionResult>
-    ChangePassword(
-        ChangePasswordDto request)
-    {
-        var userId =
-            int.Parse(
-                User.FindFirstValue(
-                    ClaimTypes.NameIdentifier)!);
-
-        await _authService.ChangePasswordAsync(
-            userId,
-            request);
-
-        return Ok(
             new
             {
                 message =
-                    "Password changed successfully."
+                    "Password reset successful."
             });
     }
 
+    [AllowAnonymous]
     [HttpPost("send-verification-email")]
     public async Task<IActionResult>
-    SendVerificationEmail(
-        ForgotPasswordDto request)
+        SendVerificationEmail(
+            [FromBody]
+            ForgotPasswordDto request)
     {
         await _authService
             .SendVerificationEmailAsync(
@@ -117,14 +103,16 @@ public class AuthController : ControllerBase
             new
             {
                 message =
-                    "Verification email sent."
+                    "If the account is eligible for verification, a verification email has been sent."
             });
     }
 
+    [AllowAnonymous]
     [HttpGet("verify-email")]
     public async Task<IActionResult>
-    VerifyEmail(
-        [FromQuery] VerifyEmailDto request)
+        VerifyEmail(
+            [FromQuery]
+            VerifyEmailDto request)
     {
         await _authService
             .VerifyEmailAsync(request);
@@ -137,10 +125,12 @@ public class AuthController : ControllerBase
             });
     }
 
+    [AllowAnonymous]
     [HttpPost("refresh-token")]
     public async Task<IActionResult>
-    RefreshToken(
-        RefreshTokenRequestDto request)
+        RefreshToken(
+            [FromBody]
+            RefreshTokenRequestDto request)
     {
         var response =
             await _authService
@@ -149,115 +139,188 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
-    [Authorize]
-    [HttpDelete("delete-account")]
-    public async Task<IActionResult> DeleteAccount(
-    DeleteAccountRequestDto request)
-    {
-        var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!.Value);
-
-        await _authService.DeleteAccountAsync(
-            userId,
-            request);
-
-        return Ok(new
-        {
-            message =
-                "Account deleted successfully."
-        });
-    }
-
+    [AllowAnonymous]
     [HttpPost("login-2fa")]
     public async Task<IActionResult>
-    LoginWith2FA(
-        LoginRequestDto request)
+        LoginWith2FA(
+            [FromBody]
+            LoginRequestDto request)
     {
-        var result =
+        var response =
             await _authService
                 .LoginWith2FAAsync(request);
 
-        return Ok(result);
+        return Ok(response);
     }
 
+    [AllowAnonymous]
     [HttpPost("verify-2fa")]
     public async Task<IActionResult>
-    Verify2FA(
-        Verify2FADto request)
+        Verify2FA(
+            [FromBody]
+            Verify2FADto request)
     {
-        var result =
+        var response =
             await _authService
                 .Verify2FAAsync(request);
 
-        return Ok(result);
+        return Ok(response);
     }
 
-    [Authorize]
-    [HttpPost("enable-2fa")]
+    [AllowAnonymous]
+    [HttpPost("send-verification-code")]
     public async Task<IActionResult>
-    Enable2FA()
+        SendVerificationCode(
+            [FromBody]
+            SendEmailVerificationCodeDto request)
+    {
+        await _authService
+            .SendEmailVerificationCodeAsync(
+                request.Email);
+
+        return Ok(
+            new
+            {
+                message =
+                    "If the account is eligible for verification, a verification code has been sent."
+            });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("verify-email-code")]
+    public async Task<IActionResult>
+        VerifyEmailCode(
+            [FromBody]
+            VerifyEmailCodeDto request)
+    {
+        await _authService
+            .VerifyEmailCodeAsync(request);
+
+        return Ok(
+            new
+            {
+                message =
+                    "Email verified successfully."
+            });
+    }
+
+    /*
+     * AUTENTIFIKOVANI AUTH ENDPOINTI
+     */
+
+    [HttpGet("me")]
+    public IActionResult Me()
+    {
+        return Ok(
+            new
+            {
+                UserId =
+                    User.FindFirstValue(
+                        ClaimTypes.NameIdentifier),
+
+                Email =
+                    User.FindFirstValue(
+                        ClaimTypes.Email),
+
+                Username =
+                    User.FindFirstValue(
+                        ClaimTypes.Name),
+
+                Role =
+                    User.FindFirstValue(
+                        ClaimTypes.Role)
+            });
+    }
+
+    [HttpPost("change-password")]
+    public async Task<IActionResult>
+        ChangePassword(
+            [FromBody]
+            ChangePasswordDto request)
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetAuthenticatedUserId();
+
+        await _authService
+            .ChangePasswordAsync(
+                userId,
+                request);
+
+        return Ok(
+            new
+            {
+                message =
+                    "Password changed successfully."
+            });
+    }
+
+    [HttpDelete("delete-account")]
+    public async Task<IActionResult>
+        DeleteAccount(
+            [FromBody]
+            DeleteAccountRequestDto request)
+    {
+        var userId =
+            GetAuthenticatedUserId();
+
+        await _authService
+            .DeleteAccountAsync(
+                userId,
+                request);
+
+        return Ok(
+            new
+            {
+                message =
+                    "Account deleted successfully."
+            });
+    }
+
+    [HttpPost("enable-2fa")]
+    public async Task<IActionResult>
+        Enable2FA()
+    {
+        var userId =
+            GetAuthenticatedUserId();
 
         await _authService
             .Enable2FAAsync(userId);
 
-        return Ok(new
-        {
-            message =
-                "2FA enabled successfully."
-        });
+        return Ok(
+            new
+            {
+                message =
+                    "2FA enabled successfully."
+            });
     }
 
-    [Authorize]
     [HttpPost("disable-2fa")]
     public async Task<IActionResult>
-    Disable2FA()
+        Disable2FA()
     {
         var userId =
-            int.Parse(
-                User.FindFirst(
-                    ClaimTypes.NameIdentifier)!
-                .Value);
+            GetAuthenticatedUserId();
 
         await _authService
             .Disable2FAAsync(userId);
 
-        return Ok(new
-        {
-            message =
-                "2FA disabled successfully."
-        });
+        return Ok(
+            new
+            {
+                message =
+                    "2FA disabled successfully."
+            });
     }
 
-    [Authorize]
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout()
+    public async Task<IActionResult>
+        Logout()
     {
-        var userIdValue =
-            User.FindFirstValue(
-                ClaimTypes.NameIdentifier);
+        var userId =
+            GetAuthenticatedUserId();
 
-        if (!int.TryParse(
-                userIdValue,
-                out var userId))
-        {
-            return Unauthorized(
-                new
-                {
-                    message =
-                        "Invalid authenticated user."
-                });
-        }
-
-        await _authService.LogoutAsync(
-            userId);
+        await _authService
+            .LogoutAsync(userId);
 
         return Ok(
             new
@@ -267,54 +330,39 @@ public class AuthController : ControllerBase
             });
     }
 
-    [Authorize]
     [HttpGet("2fa-status")]
     public async Task<IActionResult>
-    Get2FAStatus()
+        Get2FAStatus()
     {
         var userId =
-            int.Parse(
-                User.FindFirstValue(
-                    ClaimTypes.NameIdentifier)!);
+            GetAuthenticatedUserId();
 
         var isEnabled =
             await _authService
                 .Is2FAEnabledAsync(userId);
 
-        return Ok(new
-        {
-            isEnabled
-        });
+        return Ok(
+            new
+            {
+                isEnabled
+            });
     }
 
-    [HttpPost("send-verification-code")]
-    public async Task<IActionResult>
-    SendVerificationCode(
-        SendEmailVerificationCodeDto request)
+    private int GetAuthenticatedUserId()
     {
-        await _authService
-            .SendEmailVerificationCodeAsync(
-                request.Email);
+        var value =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
 
-        return Ok(new
+        if (!int.TryParse(
+                value,
+                out var userId) ||
+            userId <= 0)
         {
-            message =
-                "Verification code sent successfully."
-        });
-    }
+            throw new UnauthorizedAccessException(
+                "Authenticated user identifier is missing or invalid.");
+        }
 
-    [HttpPost("verify-email-code")]
-    public async Task<IActionResult>
-        VerifyEmailCode(
-            VerifyEmailCodeDto request)
-    {
-        await _authService
-            .VerifyEmailCodeAsync(request);
-
-        return Ok(new
-        {
-            message =
-                "Email verified successfully."
-        });
+        return userId;
     }
 }

@@ -8,7 +8,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/recommendations")]
-[Authorize]
+[Authorize(Policy = "ClientOnly")]
 public sealed class RecommendationsController : ControllerBase
 {
     private readonly IRecommendationService _recommendationService;

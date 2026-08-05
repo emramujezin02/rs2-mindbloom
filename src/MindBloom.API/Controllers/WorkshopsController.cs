@@ -9,6 +9,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = "AuthenticatedUser")]
 public class WorkshopsController : ControllerBase
 {
     private readonly IWorkshopService
@@ -21,6 +22,7 @@ public class WorkshopsController : ControllerBase
             workshopService;
     }
 
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult>
         GetPublic(
@@ -39,6 +41,7 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult>
         GetById(
@@ -49,18 +52,14 @@ public class WorkshopsController : ControllerBase
 
         var result =
             await _workshopService
-                .GetByIdAsync(
+                .GetPublicByIdAsync(
                     id,
                     clientUserId);
 
         return Ok(result);
     }
 
-    [Authorize(
-        Roles =
-            RoleConstants.Admin
-            + ","
-            + RoleConstants.Therapist)]
+    [Authorize(Policy = "AdminOrTherapist")]
     [HttpGet("manage")]
     public async Task<IActionResult>
         GetManageList(
@@ -84,11 +83,7 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(
-        Roles =
-            RoleConstants.Admin
-            + ","
-            + RoleConstants.Therapist)]
+    [Authorize(Policy = "AdminOrTherapist")]
     [HttpGet("{id}/registrations")]
     public async Task<IActionResult>
         GetRegistrations(
@@ -117,11 +112,7 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(
-        Roles =
-            RoleConstants.Admin
-            + ","
-            + RoleConstants.Therapist)]
+    [Authorize(Policy = "AdminOrTherapist")]
     [HttpPost]
     public async Task<IActionResult>
         Create(
@@ -144,11 +135,7 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(
-        Roles =
-            RoleConstants.Admin
-            + ","
-            + RoleConstants.Therapist)]
+    [Authorize(Policy = "AdminOrTherapist")]
     [HttpPut("{id}")]
     public async Task<IActionResult>
         Update(
@@ -173,11 +160,7 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(
-        Roles =
-            RoleConstants.Admin
-            + ","
-            + RoleConstants.Therapist)]
+    [Authorize(Policy = "AdminOrTherapist")]
     [HttpPut("{id}/status")]
     public async Task<IActionResult>
         UpdateStatus(
@@ -202,11 +185,7 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(
-        Roles =
-            RoleConstants.Admin
-            + ","
-            + RoleConstants.Therapist)]
+    [Authorize(Policy = "AdminOrTherapist")]
     [HttpDelete("{id}")]
     public async Task<IActionResult>
         Delete(
@@ -232,8 +211,7 @@ public class WorkshopsController : ControllerBase
         });
     }
 
-    [Authorize(
-        Roles = RoleConstants.Client)]
+    [Authorize(Policy = "ClientOnly")]
     [HttpPost("{id}/register")]
     public async Task<IActionResult>
         Register(
@@ -254,8 +232,7 @@ public class WorkshopsController : ControllerBase
         });
     }
 
-    [Authorize(
-        Roles = RoleConstants.Client)]
+    [Authorize(Policy = "ClientOnly")]
     [HttpDelete("{id}/registration")]
     public async Task<IActionResult>
         CancelRegistration(
@@ -276,8 +253,7 @@ public class WorkshopsController : ControllerBase
         });
     }
 
-    [Authorize(
-        Roles = RoleConstants.Client)]
+    [Authorize(Policy = "ClientOnly")]
     [HttpGet("mine")]
     public async Task<IActionResult>
         GetMyRegistrations(
@@ -331,11 +307,7 @@ public class WorkshopsController : ControllerBase
             : null;
     }
 
-    [Authorize(
-    Roles =
-        RoleConstants.Admin
-        + ","
-        + RoleConstants.Therapist)]
+    [Authorize(Policy = "AdminOrTherapist")]
     [HttpPost("image")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult>
