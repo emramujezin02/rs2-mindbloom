@@ -499,12 +499,24 @@ public sealed class IntegrationEventConsumer
                 eventArgs.DeliveryTag);
 
             _logger.LogError(
-                "Integration event with routing "
-                + "key {RoutingKey} moved to "
-                + "dead-letter queue {Queue}.",
+                "Integration event moved to DLQ. "
+                + "RoutingKey: {RoutingKey}, "
+                + "MessageId: {MessageId}, "
+                + "CorrelationId: {CorrelationId}, "
+                + "Queue: {DeadLetterQueue}, "
+                + "RetryCount: {RetryCount}, "
+                + "FailureReason: {FailureReason}.",
                 eventArgs.RoutingKey,
+                eventArgs.BasicProperties
+                    .MessageId,
+                eventArgs.BasicProperties
+                    .CorrelationId,
                 _options
-                    .IntegrationEventDeadLetterQueue);
+                    .IntegrationEventDeadLetterQueue,
+                retryCount,
+                Truncate(
+                    failureReason,
+                    500));
         }
         catch (Exception exception)
         {

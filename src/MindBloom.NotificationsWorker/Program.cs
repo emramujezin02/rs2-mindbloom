@@ -88,6 +88,9 @@ builder.Services.AddHostedService<
 builder.Services.AddHostedService<
     IntegrationEventConsumer>();
 
+builder.Services.AddHostedService<
+    DeadLetterQueueMonitor>();
+
 builder.Services.AddScoped<
     IIntegrationEventHandler<
         AppointmentCreatedEvent>,

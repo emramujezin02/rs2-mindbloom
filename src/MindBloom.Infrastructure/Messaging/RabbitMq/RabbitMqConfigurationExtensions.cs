@@ -136,6 +136,18 @@ public static class RabbitMqConfigurationExtensions
                         "RABBITMQ_INTEGRATION_EVENT_DEAD_LETTER_ROUTING_KEY"]
                     ?? "integration-event.dead";
 
+                options.DeadLetterMonitoringIntervalSeconds =
+    GetIntValue(
+        configuration,
+        "RABBITMQ_DLQ_MONITORING_INTERVAL_SECONDS",
+        60);
+
+                options.DeadLetterWarningMessageCount =
+                    GetUIntValue(
+                        configuration,
+                        "RABBITMQ_DLQ_WARNING_MESSAGE_COUNT",
+                        1);
+
                 options.ConnectionRetryDelaySeconds =
                     GetIntValue(
                         configuration,
@@ -223,6 +235,10 @@ public static class RabbitMqConfigurationExtensions
                 options =>
                     options.NetworkRecoveryIntervalSeconds > 0,
                 "RABBITMQ_RECOVERY_INTERVAL_SECONDS must be greater than zero.")
+           .Validate(
+    options =>
+        options.DeadLetterMonitoringIntervalSeconds > 0,
+    "RabbitMQ DLQ monitoring interval must be greater than zero.")
             .Validate(
                 options =>
                     options.RequestedHeartbeatSeconds > 0,
@@ -296,6 +312,31 @@ public static class RabbitMqConfigurationExtensions
         {
             throw new InvalidOperationException(
                 $"RabbitMQ configuration value '{key}' must be a valid integer.");
+        }
+
+        return parsedValue;
+    }
+
+    private static uint GetUIntValue(
+    IConfiguration configuration,
+    string key,
+    uint defaultValue)
+    {
+        var value =
+            configuration[key];
+
+        if (string.IsNullOrWhiteSpace(
+                value))
+        {
+            return defaultValue;
+        }
+
+        if (!uint.TryParse(
+                value,
+                out var parsedValue))
+        {
+            throw new InvalidOperationException(
+                $"Environment variable '{key}' must be a valid non-negative integer.");
         }
 
         return parsedValue;

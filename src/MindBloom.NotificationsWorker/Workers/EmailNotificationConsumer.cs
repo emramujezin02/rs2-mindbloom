@@ -438,10 +438,6 @@ public sealed class EmailNotificationConsumer :
                     cancellationToken:
                         CancellationToken.None);
 
-            /*
-             * Originalna poruka dobija ACK tek nakon što je kopija
-             * uspješno objavljena u odgovarajući retry queue.
-             */
             await AcknowledgeAsync(
                 eventArgs.DeliveryTag);
 
@@ -459,10 +455,6 @@ public sealed class EmailNotificationConsumer :
                 "Email notification {MessageId} could not be published to retry exchange. Original delivery will be requeued.",
                 messageId);
 
-            /*
-             * Ako retry publish ne uspije, originalna poruka se ne smije
-             * izgubiti. Zato se vraća u glavni queue.
-             */
             await NegativeAcknowledgeAsync(
                 eventArgs.DeliveryTag,
                 requeue: true);
@@ -508,10 +500,20 @@ public sealed class EmailNotificationConsumer :
                 eventArgs.DeliveryTag);
 
             _logger.LogError(
-                "Email notification {MessageId} moved to dead-letter queue {DeadLetterQueue}. Retry count: {RetryCount}.",
+                "Email notification moved to DLQ. "
+                + "MessageId: {MessageId}, "
+                + "CorrelationId: {CorrelationId}, "
+                + "Queue: {DeadLetterQueue}, "
+                + "RetryCount: {RetryCount}, "
+                + "FailureReason: {FailureReason}.",
                 messageId,
+                eventArgs.BasicProperties
+                    .CorrelationId,
                 _options.DeadLetterQueue,
-                retryCount);
+                retryCount,
+                Truncate(
+                    failureReason,
+                    500));
         }
         catch (Exception exception)
         {
