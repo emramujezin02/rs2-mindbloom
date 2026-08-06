@@ -474,14 +474,27 @@ public sealed class ChatService : IChatService
         ValidateChatAvailability(
             conversation.Appointment);
 
-        var sender =
+        ApplicationUser sender;
+
+        if (currentUserId ==
+            conversation.Appointment.Client.UserId)
+        {
+            sender =
+                conversation.Appointment.Client.User;
+        }
+        else if (
             currentUserId ==
-                conversation.Appointment
-                    .Client.UserId
-                ? conversation.Appointment
-                    .Client.User
-                : conversation.Appointment
-                    .Therapist.User;
+            conversation.Appointment.Therapist.UserId)
+        {
+            sender =
+                conversation.Appointment.Therapist.User;
+        }
+        else
+        {
+            throw new UnauthorizedAccessException(
+                "Authenticated user is not allowed "
+                + "to send messages in this conversation.");
+        }
 
         var existingMessage =
             await _context.ChatMessages

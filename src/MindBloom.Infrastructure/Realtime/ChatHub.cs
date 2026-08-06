@@ -2,6 +2,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Chat.DTOs;
 using MindBloom.Application.Features.Chat.Interfaces;
@@ -16,18 +17,100 @@ public sealed class ChatHub : Hub
 
     private readonly IValidator<SendChatMessageDto>
         _messageValidator;
+    private readonly ILogger<ChatHub>
+    _logger;
+    private readonly IChatMessageRateLimiter
+    _messageRateLimiter;
 
     public ChatHub(
         IChatService chatService,
         IValidator<SendChatMessageDto>
-            messageValidator)
+            messageValidator,
+        IChatMessageRateLimiter
+            messageRateLimiter,
+        ILogger<ChatHub> logger)
     {
         _chatService =
             chatService;
 
         _messageValidator =
             messageValidator;
+
+        _messageRateLimiter =
+            messageRateLimiter;
+
+        _logger =
+            logger;
     }
+
+    public override async Task OnConnectedAsync()
+    {
+        try
+        {
+            var userId =
+                GetCurrentUserId();
+
+            _logger.LogInformation(
+                "Authenticated chat connection established. "
+                + "UserId: {UserId}, "
+                + "ConnectionId: {ConnectionId}.",
+                userId,
+                Context.ConnectionId);
+
+            await base.OnConnectedAsync();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Chat connection rejected because "
+                + "the authenticated user identity "
+                + "could not be resolved. "
+                + "ConnectionId: {ConnectionId}.",
+                Context.ConnectionId);
+
+            Context.Abort();
+
+            throw;
+        }
+    }
+
+    public override async Task OnDisconnectedAsync(
+    Exception? exception)
+    {
+        var userIdValue =
+            Context.User?
+                .FindFirstValue(
+                    ClaimTypes.NameIdentifier);
+
+        if (int.TryParse(
+                userIdValue,
+                out var userId))
+        {
+            if (exception == null)
+            {
+                _logger.LogInformation(
+                    "Chat connection disconnected. "
+                    + "UserId: {UserId}, "
+                    + "ConnectionId: {ConnectionId}.",
+                    userId,
+                    Context.ConnectionId);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Chat connection disconnected unexpectedly. "
+                    + "UserId: {UserId}, "
+                    + "ConnectionId: {ConnectionId}.",
+                    userId,
+                    Context.ConnectionId);
+            }
+        }
+
+        await base.OnDisconnectedAsync(
+            exception);
+    }
+
 
     public async Task JoinConversation(
         int conversationId)
@@ -35,25 +118,50 @@ public sealed class ChatHub : Hub
         var userId =
             GetCurrentUserId();
 
-        await EnsureParticipantAsync(
-            userId,
-            conversationId);
+        try
+        {
+            await EnsureParticipantAsync(
+                userId,
+                conversationId);
 
-        await Groups.AddToGroupAsync(
-            Context.ConnectionId,
-            GetConversationGroupName(
-                conversationId));
+            await Groups.AddToGroupAsync(
+                Context.ConnectionId,
+                GetConversationGroupName(
+                    conversationId));
 
-        var readAtUtc =
-            await _chatService
-                .MarkConversationAsReadAsync(
-                    userId,
-                    conversationId);
+            var readAtUtc =
+                await _chatService
+                    .MarkConversationAsReadAsync(
+                        userId,
+                        conversationId);
 
-        await NotifyConversationReadAsync(
-            conversationId,
-            userId,
-            readAtUtc);
+            await NotifyConversationReadAsync(
+                conversationId,
+                userId,
+                readAtUtc);
+
+            _logger.LogInformation(
+                "User joined authorized chat conversation. "
+                + "UserId: {UserId}, "
+                + "ConversationId: {ConversationId}, "
+                + "ConnectionId: {ConnectionId}.",
+                userId,
+                conversationId,
+                Context.ConnectionId);
+        }
+        catch (ForbiddenException)
+        {
+            _logger.LogWarning(
+                "Unauthorized chat group join rejected. "
+                + "UserId: {UserId}, "
+                + "ConversationId: {ConversationId}, "
+                + "ConnectionId: {ConnectionId}.",
+                userId,
+                conversationId,
+                Context.ConnectionId);
+
+            throw;
+        }
     }
 
     public async Task LeaveConversation(
@@ -93,6 +201,35 @@ public sealed class ChatHub : Hub
         var userId =
             GetCurrentUserId();
 
+        await EnsureParticipantAsync(
+    userId,
+    conversationId);
+
+        if (!_messageRateLimiter.TryAcquire(
+        userId,
+        conversationId,
+        out var retryAfter))
+        {
+            _logger.LogWarning(
+                "Chat message rate limit exceeded. "
+                + "UserId: {UserId}, "
+                + "ConversationId: {ConversationId}, "
+                + "ConnectionId: {ConnectionId}.",
+                userId,
+                conversationId,
+                Context.ConnectionId);
+
+            var retryAfterSeconds =
+                Math.Max(
+                    1,
+                    (int)Math.Ceiling(
+                        retryAfter.TotalSeconds));
+
+            throw new HubException(
+                $"Too many messages. Try again in "
+                + $"{retryAfterSeconds} seconds.");
+        }
+
         var request =
             new SendChatMessageDto
             {
@@ -123,6 +260,8 @@ public sealed class ChatHub : Hub
             throw new HubException(
                 message);
         }
+
+
 
         var result =
             await _chatService
@@ -270,11 +409,22 @@ public sealed class ChatHub : Hub
                     userId,
                     conversationId);
 
-        if (!isParticipant)
+        if (isParticipant)
         {
-            throw new ForbiddenException(
-                "You are not allowed to access this conversation.");
+            return;
         }
+
+        _logger.LogWarning(
+            "Chat conversation access rejected. "
+            + "UserId: {UserId}, "
+            + "ConversationId: {ConversationId}, "
+            + "ConnectionId: {ConnectionId}.",
+            userId,
+            conversationId,
+            Context.ConnectionId);
+
+        throw new ForbiddenException(
+            "You are not allowed to access this conversation.");
     }
 
     private int GetCurrentUserId()

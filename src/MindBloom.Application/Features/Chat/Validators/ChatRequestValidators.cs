@@ -8,6 +8,8 @@ public static class ChatValidationRules
     public const int MaximumMessageLength = 2000;
     public const int MaximumPageSize = 100;
     public const int MaximumClientMessageIdLength = 100;
+    public const int MaximumMessagesPerWindow = 20;
+    public const int MessageRateLimitWindowSeconds = 10;
 }
 
 public sealed class SendChatMessageDtoValidator

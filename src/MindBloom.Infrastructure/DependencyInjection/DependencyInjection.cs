@@ -285,6 +285,10 @@ public static class DependencyInjection
     ITherapistClientAccessService,
     TherapistClientAccessService>();
 
+        services.AddSingleton<
+    IChatMessageRateLimiter,
+    ChatMessageRateLimiter>();
+
         services.AddScoped<
     IFcmDeviceTokenService,
     FcmDeviceTokenService>();
