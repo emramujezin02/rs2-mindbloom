@@ -2,11 +2,27 @@
 
 public class JwtSettings
 {
-    public string SecretKey { get; set; } = string.Empty;
+    public const int MinimumSecretLength =
+        32;
 
-    public string Issuer { get; set; } = string.Empty;
+    public const int MinimumExpirationMinutes =
+        5;
 
-    public string Audience { get; set; } = string.Empty;
+    public const int MaximumExpirationMinutes =
+        60;
 
-    public int ExpirationInMinutes { get; set; }
+    public string SecretKey { get; set; } =
+        string.Empty;
+
+    public string Issuer { get; set; } =
+        string.Empty;
+
+    public string Audience { get; set; } =
+        string.Empty;
+
+    public int ExpirationInMinutes
+    {
+        get;
+        set;
+    } = 15;
 }

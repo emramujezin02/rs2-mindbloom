@@ -81,13 +81,129 @@ public static class DependencyInjection
         .AddEntityFrameworkStores<ApplicationDbContext>()
         .AddDefaultTokenProviders();
 
-        var jwtSettings = new JwtSettings
+        var jwtSecret =
+            Environment.GetEnvironmentVariable(
+                "JWT_SECRET");
+
+        var jwtIssuer =
+            Environment.GetEnvironmentVariable(
+                "JWT_ISSUER");
+
+        var jwtAudience =
+            Environment.GetEnvironmentVariable(
+                "JWT_AUDIENCE");
+
+        var jwtExpirationValue =
+            Environment.GetEnvironmentVariable(
+                "JWT_EXPIRATION_MINUTES");
+
+        if (string.IsNullOrWhiteSpace(
+                jwtSecret))
         {
-            SecretKey = Environment.GetEnvironmentVariable("JWT_SECRET")!,
-            Issuer = Environment.GetEnvironmentVariable("JWT_ISSUER")!,
-            Audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")!,
-            ExpirationInMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRATION_MINUTES")!)
-        };
+            throw new InvalidOperationException(
+                "Environment variable 'JWT_SECRET' is required.");
+        }
+
+        if (Encoding.UTF8.GetByteCount(
+                jwtSecret) <
+            JwtSettings.MinimumSecretLength)
+        {
+            throw new InvalidOperationException(
+                $"JWT_SECRET must contain at least "
+                + $"{JwtSettings.MinimumSecretLength} bytes.");
+        }
+
+        var forbiddenJwtSecrets =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+        "secret",
+        "jwt-secret",
+        "changeme",
+        "change-me",
+        "your-secret-key",
+        "your-jwt-secret",
+        "your-super-secret-key"
+            };
+
+        if (forbiddenJwtSecrets.Contains(
+                jwtSecret.Trim()))
+        {
+            throw new InvalidOperationException(
+                "JWT_SECRET uses an unsafe default/example value.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                jwtIssuer))
+        {
+            throw new InvalidOperationException(
+                "Environment variable 'JWT_ISSUER' is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                jwtAudience))
+        {
+            throw new InvalidOperationException(
+                "Environment variable 'JWT_AUDIENCE' is required.");
+        }
+
+        if (!int.TryParse(
+                jwtExpirationValue,
+                out var jwtExpirationMinutes))
+        {
+            throw new InvalidOperationException(
+                "Environment variable "
+                + "'JWT_EXPIRATION_MINUTES' "
+                + "must be a valid integer.");
+        }
+
+        if (jwtExpirationMinutes <
+                JwtSettings
+                    .MinimumExpirationMinutes ||
+            jwtExpirationMinutes >
+                JwtSettings
+                    .MaximumExpirationMinutes)
+        {
+            throw new InvalidOperationException(
+                "JWT_EXPIRATION_MINUTES must be "
+                + $"between "
+                + $"{JwtSettings.MinimumExpirationMinutes} "
+                + $"and "
+                + $"{JwtSettings.MaximumExpirationMinutes}.");
+        }
+
+        var jwtSettings =
+            new JwtSettings
+            {
+                SecretKey =
+                    jwtSecret,
+
+                Issuer =
+                    jwtIssuer.Trim(),
+
+                Audience =
+                    jwtAudience.Trim(),
+
+                ExpirationInMinutes =
+                    jwtExpirationMinutes
+            };
+
+        services.Configure<JwtSettings>(
+            options =>
+            {
+                options.SecretKey =
+                    jwtSettings.SecretKey;
+
+                options.Issuer =
+                    jwtSettings.Issuer;
+
+                options.Audience =
+                    jwtSettings.Audience;
+
+                options.ExpirationInMinutes =
+                    jwtSettings
+                        .ExpirationInMinutes;
+            });
 
         services.Configure<JwtSettings>(options =>
         {
@@ -106,65 +222,129 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(10);
         });
 
+        var environmentName =
+    Environment.GetEnvironmentVariable(
+        "ASPNETCORE_ENVIRONMENT")
+    ??
+    Environment.GetEnvironmentVariable(
+        "DOTNET_ENVIRONMENT")
+    ??
+    "Production";
 
-        var key = Encoding.UTF8.GetBytes(jwtSettings.SecretKey);
+        var isDevelopment =
+            string.Equals(
+                environmentName,
+                "Development",
+                StringComparison.OrdinalIgnoreCase);
 
-        services.AddAuthentication(options =>
-        {
-            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        var key =
+      Encoding.UTF8.GetBytes(
+          jwtSettings.SecretKey);
 
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        })
-       .AddJwtBearer(options =>
-       {
-           options.TokenValidationParameters =
-               new TokenValidationParameters
-               {
-                   ValidateIssuer = true,
-                   ValidateAudience = true,
-                   ValidateLifetime = true,
-                   ValidateIssuerSigningKey = true,
-                   ValidIssuer = jwtSettings.Issuer,
-                   ValidAudience = jwtSettings.Audience,
-                   IssuerSigningKey = new SymmetricSecurityKey(key),
-                   NameClaimType = ClaimTypes.NameIdentifier,
-                   RoleClaimType = ClaimTypes.Role,
-               };
-
-           options.Events =
-               new JwtBearerEvents
-               {
-                   OnMessageReceived =
-             context =>
+        services.AddAuthentication(
+            options =>
             {
-                var accessToken =
-                    context.Request
-                        .Query["access_token"]
-                        .FirstOrDefault();
+                options.DefaultAuthenticateScheme =
+                    JwtBearerDefaults
+                        .AuthenticationScheme;
 
-                var requestPath =
-                    context.HttpContext
-                        .Request
-                        .Path;
-
-                var isSignalRHub =
-    requestPath.StartsWithSegments(
-        "/hubs/notifications") ||
-    requestPath.StartsWithSegments(
-        "/hubs/chat");
-
-                if (!string.IsNullOrWhiteSpace(
-                        accessToken) &&
-                    isSignalRHub)
+                options.DefaultChallengeScheme =
+                    JwtBearerDefaults
+                        .AuthenticationScheme;
+            })
+            .AddJwtBearer(
+                options =>
                 {
-                    context.Token =
-                        accessToken;
-                }
+                    options.RequireHttpsMetadata =
+                        !isDevelopment;
 
-                return Task.CompletedTask;
-            }
-    };
-       });
+                    options.SaveToken =
+                        false;
+
+                    options.TokenValidationParameters =
+                        new TokenValidationParameters
+                        {
+                            ValidateIssuer =
+                                true,
+
+                            ValidateAudience =
+                                true,
+
+                            ValidateLifetime =
+                                true,
+
+                            ValidateIssuerSigningKey =
+                                true,
+
+                            RequireExpirationTime =
+                                true,
+
+                            RequireSignedTokens =
+                                true,
+
+                            ValidIssuer =
+                                jwtSettings.Issuer,
+
+                            ValidAudience =
+                                jwtSettings.Audience,
+
+                            IssuerSigningKey =
+                                new SymmetricSecurityKey(
+                                    key),
+
+                            ClockSkew =
+                                TimeSpan.FromSeconds(
+                                    30),
+
+                            NameClaimType =
+                                ClaimTypes
+                                    .NameIdentifier,
+
+                            RoleClaimType =
+                                ClaimTypes.Role
+                        };
+
+                    options.Events =
+                        new JwtBearerEvents
+                        {
+                            OnMessageReceived =
+                                context =>
+                                {
+                                    var accessToken =
+                                        context.Request
+                                            .Query[
+                                                "access_token"]
+                                            .FirstOrDefault();
+
+                                    var requestPath =
+                                        context
+                                            .HttpContext
+                                            .Request
+                                            .Path;
+
+                                    var isSignalRHub =
+                                        requestPath
+                                            .StartsWithSegments(
+                                                "/hubs/notifications")
+                                        ||
+                                        requestPath
+                                            .StartsWithSegments(
+                                                "/hubs/chat");
+
+                                    if (!string
+                                            .IsNullOrWhiteSpace(
+                                                accessToken) &&
+                                        isSignalRHub)
+                                    {
+                                        context.Token =
+                                            accessToken;
+                                    }
+
+                                    return Task
+                                        .CompletedTask;
+                                }
+                        };
+                });
 
         services.AddAuthorization(options =>
         {

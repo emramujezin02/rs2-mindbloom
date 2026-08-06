@@ -24,6 +24,8 @@ build/
 # Environment files
 .env
 .env.*
+.env.production
+.env.production.*
 !.env-example
 
 # Logs
