@@ -1481,5 +1481,31 @@ public class AuthService : IAuthService
         await _context.SaveChangesAsync();
     }
 
+    public async Task LogoutAllAsync(
+    int userId)
+    {
+        if (userId <= 0)
+        {
+            throw new BadRequestException(
+                "User identifier is invalid.");
+        }
+
+        var userExists =
+            await _context.Users
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.Id == userId);
+
+        if (!userExists)
+        {
+            throw new NotFoundException(
+                "User not found.");
+        }
+
+        await RevokeAllUserSessionsAsync(
+            userId,
+            DateTime.UtcNow);
+    }
+
 
 }

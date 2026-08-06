@@ -93,6 +93,10 @@ class AuthApiService {
     );
   }
 
+  Future<void> logoutAll() async {
+    await apiClient.post('/Auth/logout-all');
+  }
+
   Future<void> verifyEmailCode(VerifyEmailCodeRequest request) async {
     await apiClient.post(
       '/Auth/verify-email-code',

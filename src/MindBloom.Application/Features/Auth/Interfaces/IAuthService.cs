@@ -17,6 +17,8 @@ public interface IAuthService
     Task SendVerificationEmailAsync(string email);
 
     Task VerifyEmailAsync(VerifyEmailDto request);
+    Task LogoutAllAsync(
+    int userId);
 
     Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto request);
 

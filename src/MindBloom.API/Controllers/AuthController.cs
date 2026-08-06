@@ -345,6 +345,25 @@ public sealed class AuthController
             });
     }
 
+    [HttpPost("logout-all")]
+    public async Task<IActionResult>
+    LogoutAll()
+    {
+        var userId =
+            GetAuthenticatedUserId();
+
+        await _authService
+            .LogoutAllAsync(
+                userId);
+
+        return Ok(
+            new
+            {
+                message =
+                    "All sessions have been logged out successfully."
+            });
+    }
+
     private int GetAuthenticatedUserId()
     {
         var value =

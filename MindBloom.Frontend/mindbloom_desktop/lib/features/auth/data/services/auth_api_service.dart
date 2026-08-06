@@ -45,4 +45,8 @@ class AuthApiService {
       body: {'currentPassword': currentPassword, 'newPassword': newPassword},
     );
   }
+
+  Future<void> logoutAll() async {
+    await apiClient.post('/Auth/logout-all');
+  }
 }

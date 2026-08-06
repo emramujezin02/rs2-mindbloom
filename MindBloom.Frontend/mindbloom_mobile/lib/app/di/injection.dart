@@ -102,7 +102,7 @@ import '../../features/settings/presentation/viewmodels/therapist_settings_viewm
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
   static final ApiClient apiClient = ApiClient(sessionStorage: sessionStorage);
-
+  static ChatDetailsViewModel? _activeChatDetailsViewModel;
   static final NotificationRepository _notificationRepository =
       NotificationRepository(
         apiService: NotificationApiService(apiClient: apiClient),
@@ -119,6 +119,7 @@ class AppInjection {
     return SessionViewModel(
       sessionStorage: sessionStorage,
       authRepository: authRepository,
+      onSessionEnded: stopRealtimeSession,
     );
   }
 
@@ -326,7 +327,7 @@ class AppInjection {
   }
 
   static ChatDetailsViewModel createChatDetailsViewModel() {
-    return ChatDetailsViewModel(
+    final viewModel = ChatDetailsViewModel(
       repository: _createChatRepository(),
       realtimeServiceFactory:
           ({
@@ -346,6 +347,10 @@ class AppInjection {
             );
           },
     );
+
+    _activeChatDetailsViewModel = viewModel;
+
+    return viewModel;
   }
 
   static RecommendationApiService createRecommendationApiService() {
@@ -510,5 +515,26 @@ class AppInjection {
 
   static UserSettingsRepository createUserSettingsRepository() {
     return _createUserSettingsRepository();
+  }
+
+  static Future<void> stopRealtimeSession() async {
+    /*
+   * NotificationViewModel je singleton
+   * i zato ga moramo eksplicitno
+   * očistiti između korisničkih sesija.
+   */
+    await _notificationViewModel.stop();
+
+    /*
+   * Ako je otvoren chat, prekidamo
+   * njegovu SignalR konekciju.
+   */
+    final chatViewModel = _activeChatDetailsViewModel;
+
+    if (chatViewModel != null) {
+      await chatViewModel.close();
+
+      _activeChatDetailsViewModel = null;
+    }
   }
 }

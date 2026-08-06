@@ -5,18 +5,27 @@ import '../../../../services/session_storage_service.dart';
 
 class SessionViewModel extends ChangeNotifier {
   final SessionStorageService sessionStorage;
+
   final AuthRepository authRepository;
 
+  final Future<void> Function() onSessionEnded;
+
   bool isInitialized = false;
+
   bool isLoggedIn = false;
+
   String? role;
+
   bool get isClient => role == 'Client';
+
   bool get isTherapist => role == 'Therapist';
+
   bool get isAdmin => role == 'Admin';
 
   SessionViewModel({
     required this.sessionStorage,
     required this.authRepository,
+    required this.onSessionEnded,
   });
 
   Future<void> initialize() async {
@@ -32,15 +41,40 @@ class SessionViewModel extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await authRepository.logout();
+    try {
+      await authRepository.logout();
+    } finally {
+      /*
+       * Čak i ako backend nije dostupan,
+       * lokalna sesija i realtime
+       * konekcije moraju biti ugašene.
+       */
+      await onSessionEnded();
 
-    await sessionStorage.clearSession();
+      await sessionStorage.clearSession();
 
-    role = null;
+      role = null;
 
-    isLoggedIn = false;
+      isLoggedIn = false;
 
-    notifyListeners();
+      notifyListeners();
+    }
+  }
+
+  Future<void> logoutAll() async {
+    try {
+      await authRepository.logoutAll();
+    } finally {
+      await onSessionEnded();
+
+      await sessionStorage.clearSession();
+
+      role = null;
+
+      isLoggedIn = false;
+
+      notifyListeners();
+    }
   }
 
   Future<void> updateSession({required String role}) async {

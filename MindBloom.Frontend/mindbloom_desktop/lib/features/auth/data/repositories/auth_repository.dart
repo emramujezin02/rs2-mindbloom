@@ -64,6 +64,14 @@ class AuthRepository {
     }
   }
 
+  Future<void> logoutAll() async {
+    try {
+      await apiService.logoutAll();
+    } finally {
+      await sessionStorage.clearSession();
+    }
+  }
+
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,

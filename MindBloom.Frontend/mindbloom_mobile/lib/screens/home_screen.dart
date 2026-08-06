@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/widgets/app_loading_widget.dart';
-import '../features/landing/presentation/pages/landing_page.dart';
+import '../features/auth/presentation/pages/login_page.dart';
 import '../features/navigation/presentation/pages/client_navigation_shell.dart';
 import '../features/navigation/presentation/pages/therapist_navigation_shell.dart';
 import '../features/notification/presentation/viewmodels/notification_scope.dart';
@@ -55,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (!session.isLoggedIn) {
-      return const LandingPage();
+      return const LoginPage();
     }
 
     if (session.isTherapist) {

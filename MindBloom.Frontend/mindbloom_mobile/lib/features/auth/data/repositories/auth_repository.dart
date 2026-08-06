@@ -89,6 +89,20 @@ class AuthRepository {
     return serverLogoutSucceeded;
   }
 
+  Future<bool> logoutAll() async {
+    var serverLogoutSucceeded = true;
+
+    try {
+      await authApiService.logoutAll();
+    } catch (_) {
+      serverLogoutSucceeded = false;
+    } finally {
+      await sessionStorage.clearSession();
+    }
+
+    return serverLogoutSucceeded;
+  }
+
   Future<void> sendEmailVerificationCode(String email) {
     return authApiService.sendEmailVerificationCode(
       SendEmailVerificationCodeRequest(email: email),
