@@ -33,6 +33,7 @@ using Microsoft.AspNetCore.Authorization;
 using MindBloom.Domain.Enums;
 using System.Security.Claims;
 using MindBloom.Shared.Constants;
+using MindBloom.Application.Features.Auth.Validators;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -70,16 +71,48 @@ public static class DependencyInjection
 
         services.AddSignalR();
 
-        services.AddIdentity<ApplicationUser, IdentityRole<int>>(options =>
-        {
-            options.Password.RequireDigit = true;
-            options.Password.RequireLowercase = true;
-            options.Password.RequireUppercase = true;
-            options.Password.RequireNonAlphanumeric = false;
-            options.Password.RequiredLength = 6;
-        })
-        .AddEntityFrameworkStores<ApplicationDbContext>()
-        .AddDefaultTokenProviders();
+        services
+            .AddIdentity<
+                ApplicationUser,
+                IdentityRole<int>>(
+                options =>
+                {
+                    options.Password
+                        .RequireDigit =
+                        true;
+
+                    options.Password
+                        .RequireLowercase =
+                        true;
+
+                    options.Password
+                        .RequireUppercase =
+                        true;
+
+                    options.Password
+                        .RequireNonAlphanumeric =
+                        true;
+
+                    options.Password
+                        .RequiredLength =
+                        AuthValidationRules
+                            .MinimumPasswordLength;
+
+                    options.Password
+                        .RequiredUniqueChars =
+                        4;
+
+                    options.User
+                        .RequireUniqueEmail =
+                        true;
+
+                    options.SignIn
+                        .RequireConfirmedEmail =
+                        false;
+                })
+            .AddEntityFrameworkStores<
+                ApplicationDbContext>()
+            .AddDefaultTokenProviders();
 
         var jwtSecret =
             Environment.GetEnvironmentVariable(

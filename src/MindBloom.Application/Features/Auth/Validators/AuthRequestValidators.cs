@@ -107,6 +107,41 @@ public sealed class RegisterRequestDtoValidator
             .WithMessage(
                 "First name contains invalid characters.");
 
+        RuleFor(x => x.Gender)
+    .Cascade(
+        CascadeMode.Stop)
+    .NotEmpty()
+    .WithMessage(
+        "Gender is required.")
+    .Must(value =>
+    {
+        if (string.IsNullOrWhiteSpace(
+                value))
+        {
+            return false;
+        }
+
+        var normalized =
+            value.Trim();
+
+        return normalized.Equals(
+                   "Male",
+                   StringComparison
+                       .OrdinalIgnoreCase)
+               ||
+               normalized.Equals(
+                   "Female",
+                   StringComparison
+                       .OrdinalIgnoreCase)
+               ||
+               normalized.Equals(
+                   "Other",
+                   StringComparison
+                       .OrdinalIgnoreCase);
+    })
+    .WithMessage(
+        "Gender must be Male, Female or Other.");
+
         RuleFor(x => x.LastName)
             .Cascade(CascadeMode.Stop)
             .NotEmpty()

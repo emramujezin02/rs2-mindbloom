@@ -23,7 +23,8 @@ using MindBloom.Application.Features.PrivateJournalEntries.Validators;
 using MindBloom.Application.Features.ClientOnboarding.Interfaces;
 using MindBloom.Application.Features.ClientOnboarding.Validators;
 using MindBloom.Application.Features.Users.Interfaces;
-
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 Env.Load("../../.env");
 
@@ -193,6 +194,45 @@ builder.Services.AddSwaggerGen(options =>
         });
 });
 
+builder.Services.AddRateLimiter(
+    options =>
+    {
+        options.RejectionStatusCode =
+            StatusCodes
+                .Status429TooManyRequests;
+
+        options.AddPolicy(
+            "registration",
+            httpContext =>
+                RateLimitPartition
+                    .GetFixedWindowLimiter(
+                        partitionKey:
+                            httpContext
+                                .Connection
+                                .RemoteIpAddress?
+                                .ToString()
+                            ?? "unknown",
+
+                        factory:
+                            _ =>
+                                new FixedWindowRateLimiterOptions
+                                {
+                                    PermitLimit =
+                                        5,
+
+                                    Window =
+                                        TimeSpan
+                                            .FromMinutes(
+                                                10),
+
+                                    QueueLimit =
+                                        0,
+
+                                    AutoReplenishment =
+                                        true
+                                }));
+    });
+
 var app = builder.Build();
 
 app.UseHttpsRedirection();
@@ -322,6 +362,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 

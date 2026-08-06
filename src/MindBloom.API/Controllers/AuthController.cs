@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Auth.DTOs;
 using MindBloom.Application.Features.Auth.Interfaces;
 using MindBloom.Shared.Constants;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace MindBloom.API.Controllers;
 
@@ -25,6 +26,7 @@ public sealed class AuthController
 
     [AllowAnonymous]
     [HttpPost("register")]
+    [EnableRateLimiting("registration")]
     public async Task<IActionResult> Register(
         [FromBody]
         RegisterRequestDto request)
@@ -34,6 +36,26 @@ public sealed class AuthController
                 .RegisterAsync(request);
 
         return Ok(response);
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting(
+    "registration")]
+    [HttpPost("register-therapist")]
+    public async Task<IActionResult>
+    RegisterTherapist(
+        [FromBody]
+        RegisterTherapistRequestDto request)
+    {
+        var response =
+            await _authService
+                .RegisterTherapistAsync(
+                    request);
+
+        return StatusCode(
+            StatusCodes
+                .Status201Created,
+            response);
     }
 
     [AllowAnonymous]

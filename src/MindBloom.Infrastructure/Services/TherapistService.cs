@@ -67,6 +67,19 @@ public class TherapistService : ITherapistService
             throw new NotFoundException("User not found.");
         }
 
+        var existingTherapist =
+    await _context.Therapists
+        .AsNoTracking()
+        .FirstOrDefaultAsync(x =>
+            x.UserId == userId &&
+            !x.IsDeleted);
+
+        if (existingTherapist != null)
+        {
+            throw new BusinessException(
+                "Therapist profile already exists.");
+        }
+
         var therapist = new Therapist
         {
             UserId = userId,

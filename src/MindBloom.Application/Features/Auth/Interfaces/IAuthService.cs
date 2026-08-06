@@ -40,4 +40,8 @@ public interface IAuthService
     Task SendEmailVerificationCodeAsync(string email);
 
     Task VerifyEmailCodeAsync(VerifyEmailCodeDto request);
+
+    Task<RegisterTherapistResponseDto>
+    RegisterTherapistAsync(
+        RegisterTherapistRequestDto request);
 }

@@ -9,7 +9,10 @@ using System.Security.Cryptography;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.BusinessRules;
 using MindBloom.Messaging.Contracts.Notifications;
-
+using MindBloom.Shared.Constants;
+using MindBloom.Application.Features.Therapists.DTOs;
+using MindBloom.Application.Features.Therapists.Interfaces;
+using MindBloom.Domain.Enums;
 namespace MindBloom.Infrastructure.Services;
 
 public class AuthService : IAuthService
@@ -17,7 +20,8 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
 
     private readonly IJwtTokenService _jwtTokenService;
-
+    private readonly ITherapistService
+    _therapistService;
     private readonly ApplicationDbContext _context;
 
     private readonly INotificationPublisher
@@ -26,6 +30,7 @@ public class AuthService : IAuthService
         UserManager<ApplicationUser> userManager,
         IJwtTokenService jwtTokenService,
         ApplicationDbContext context,
+        ITherapistService therapistService,
         INotificationPublisher notificationPublisher)
     {
         _userManager =
@@ -36,6 +41,9 @@ public class AuthService : IAuthService
 
         _context =
             context;
+
+        _therapistService =
+    therapistService;
 
         _notificationPublisher =
             notificationPublisher;
@@ -57,8 +65,7 @@ public class AuthService : IAuthService
     public async Task<AuthResponseDto> RegisterAsync(
     RegisterRequestDto request)
     {
-        const string clientRole =
-            "Client";
+        const string clientRole = RoleConstants.Client;
 
         var normalizedEmail =
             request.Email
@@ -271,6 +278,209 @@ public class AuthService : IAuthService
             RefreshToken =
                 refreshToken
         };
+    }
+
+    public async Task<
+    RegisterTherapistResponseDto>
+    RegisterTherapistAsync(
+        RegisterTherapistRequestDto request)
+    {
+        var normalizedEmail =
+            request.Email
+                .Trim()
+                .ToLowerInvariant();
+
+        var normalizedUsername =
+            request.Username.Trim();
+
+        var normalizedGender =
+            request.Gender.Trim();
+
+        var existingEmailUser =
+            await _userManager
+                .FindByEmailAsync(
+                    normalizedEmail);
+
+        BusinessRuleGuard.Against(
+            existingEmailUser != null,
+            "A user with this email already exists.");
+
+        var existingUsernameUser =
+            await _userManager
+                .FindByNameAsync(
+                    normalizedUsername);
+
+        BusinessRuleGuard.Against(
+            existingUsernameUser != null,
+            "A user with this username already exists.");
+
+        var allowedGenders =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            "Male",
+            "Female",
+            "Other"
+            };
+
+        BusinessRuleGuard.Against(
+            !allowedGenders.Contains(
+                normalizedGender),
+            "Gender must be Male, Female or Other.");
+
+        var user =
+            new ApplicationUser
+            {
+                FirstName =
+                    request.FirstName.Trim(),
+
+                LastName =
+                    request.LastName.Trim(),
+
+                Email =
+                    normalizedEmail,
+
+                UserName =
+                    normalizedUsername,
+
+                DateOfBirth =
+                    request.DateOfBirth,
+
+                Gender =
+                    normalizedGender,
+
+                CreatedAtUtc =
+                    DateTime.UtcNow,
+
+                EmailConfirmed =
+                    IsDemoAccount(
+                        normalizedEmail),
+
+                IsEmailVerified =
+                    IsDemoAccount(
+                        normalizedEmail),
+
+                IsActive =
+                    true
+            };
+
+        var createResult =
+            await _userManager
+                .CreateAsync(
+                    user,
+                    request.Password);
+
+        if (!createResult.Succeeded)
+        {
+            var errors =
+                string.Join(
+                    ", ",
+                    createResult.Errors
+                        .Select(x =>
+                            x.Description));
+
+            throw new BadRequestException(
+                errors);
+        }
+
+        try
+        {
+            var addRoleResult =
+                await _userManager
+                    .AddToRoleAsync(
+                        user,
+                        RoleConstants
+                            .Therapist);
+
+            if (!addRoleResult.Succeeded)
+            {
+                throw new BadRequestException(
+                    string.Join(
+                        ", ",
+                        addRoleResult.Errors
+                            .Select(x =>
+                                x.Description)));
+            }
+
+            var therapist =
+                await _therapistService
+                    .CreateAsync(
+                        user.Id,
+                        new CreateTherapistDto
+                        {
+                            Specialization =
+                                request
+                                    .Specialization
+                                    .Trim(),
+
+                            Biography =
+                                request
+                                    .Biography
+                                    .Trim(),
+
+                            HourlyRate =
+                                request.HourlyRate,
+
+                            ExperienceYears =
+                                request
+                                    .ExperienceYears,
+
+                            Country =
+                                request.Country
+                                    .Trim(),
+
+                            City =
+                                request.City
+                                    .Trim(),
+
+                            Address =
+                                request.Address
+                                    .Trim(),
+
+                            OffersOnline =
+                                request
+                                    .OffersOnline,
+
+                            OffersInPerson =
+                                request
+                                    .OffersInPerson
+                        });
+
+            if (!IsDemoAccount(
+                    normalizedEmail))
+            {
+                await SendEmailVerificationCodeAsync(
+                    normalizedEmail);
+            }
+
+            return new RegisterTherapistResponseDto
+            {
+                UserId =
+                    user.Id,
+
+                TherapistId =
+                    therapist.Id,
+
+                Email =
+                    normalizedEmail,
+
+                VerificationStatus =
+                    TherapistVerificationStatus
+                        .Pending
+                        .ToString(),
+
+                Message =
+                    "Therapist registration submitted successfully. "
+                    + "Your profile is pending verification."
+            };
+        }
+        catch
+        {
+            await _userManager
+                .DeleteAsync(user);
+
+            throw;
+        }
     }
 
     public async Task<AuthResponseDto> LoginAsync(
