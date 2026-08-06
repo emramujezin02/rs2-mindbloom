@@ -6,6 +6,7 @@ using MindBloom.Application.Features.JournalEntries.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Application.Common.Pagination;
+using MindBloom.Application.Common.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -14,6 +15,8 @@ public class JournalEntryService
 {
 
     private readonly ApplicationDbContext _context;
+    private readonly ITherapistClientAccessService
+    _therapistClientAccessService;
     private static readonly HashSet<string>
     AllowedEmotions =
         new(
@@ -33,9 +36,15 @@ public class JournalEntryService
             "Confused"
         };
     public JournalEntryService(
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+        ITherapistClientAccessService
+            therapistClientAccessService)
     {
-        _context = context;
+        _context =
+            context;
+
+        _therapistClientAccessService =
+            therapistClientAccessService;
     }
 
     public async Task<JournalEntryResponseDto>
@@ -250,11 +259,13 @@ public class JournalEntryService
         pageNumber,
         pageSize);
 
-        await EnsureTherapistOwnsClientAsync(
-            therapistUserId,
+        await _therapistClientAccessService
+            .EnsureActiveRelationshipAsync(
+                therapistUserId,
+                clientId);
+
+        await EnsureClientAllowsMoodSharingAsync(
             clientId);
-
-
 
         var query =
             _context.MoodEntries
@@ -322,8 +333,12 @@ public class JournalEntryService
          int clientId,
          int days)
     {
-        await EnsureTherapistOwnsClientAsync(
-            therapistUserId,
+        await _therapistClientAccessService
+            .EnsureActiveRelationshipAsync(
+                therapistUserId,
+                clientId);
+
+        await EnsureClientAllowsMoodSharingAsync(
             clientId);
 
         var toUtc =
@@ -681,53 +696,6 @@ public class JournalEntryService
         };
     }
 
-    private async Task
-    EnsureTherapistOwnsClientAsync(
-        int therapistUserId,
-        int clientId)
-    {
-        var therapist =
-            await _context.Therapists
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x =>
-                    x.UserId ==
-                    therapistUserId);
-
-        if (therapist == null)
-        {
-            throw new NotFoundException(
-                "Therapist not found.");
-        }
-
-        var clientExists =
-            await _context.Clients
-                .AsNoTracking()
-                .AnyAsync(x =>
-                    x.Id == clientId);
-
-        if (!clientExists)
-        {
-            throw new NotFoundException(
-                "Client not found.");
-        }
-
-        var hasClientRelationship =
-            await _context.Appointments
-                .AsNoTracking()
-                .AnyAsync(x =>
-                    x.TherapistId ==
-                        therapist.Id &&
-                    x.ClientId ==
-                        clientId &&
-                    !x.IsDeleted);
-
-        if (!hasClientRelationship)
-        {
-            throw new UnauthorizedAccessException(
-                "You do not have permission to access this client's emotional tracker.");
-        }
-    }
-
     private static void ValidateRequest(
     int mood,
     IEnumerable<string>? emotions,
@@ -819,6 +787,45 @@ public class JournalEntryService
         return string.IsNullOrWhiteSpace(note)
             ? string.Empty
             : note.Trim();
+    }
+
+    private async Task
+    EnsureClientAllowsMoodSharingAsync(
+        int clientId)
+    {
+        var clientUserId =
+            await _context.Clients
+                .AsNoTracking()
+                .Where(x =>
+                    x.Id == clientId &&
+                    !x.IsDeleted)
+                .Select(x =>
+                    (int?)x.UserId)
+                .FirstOrDefaultAsync();
+
+        if (!clientUserId.HasValue)
+        {
+            throw new NotFoundException(
+                "Client not found.");
+        }
+
+        var sharingEnabled =
+            await _context.UserSettings
+                .AsNoTracking()
+                .Where(x =>
+                    x.UserId ==
+                        clientUserId.Value &&
+                    !x.IsDeleted)
+                .Select(x =>
+                    (bool?)
+                        x.ShareMoodAndEmotionsWithTherapists)
+                .FirstOrDefaultAsync();
+
+        if (sharingEnabled != true)
+        {
+            throw new NotFoundException(
+                "Client mood and emotion data is not available.");
+        }
     }
 
     private static void ValidateAnalyticsPeriod(

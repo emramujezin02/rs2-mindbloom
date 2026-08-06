@@ -282,6 +282,10 @@ public static class DependencyInjection
     AdminAuditService>();
 
         services.AddScoped<
+    ITherapistClientAccessService,
+    TherapistClientAccessService>();
+
+        services.AddScoped<
     IFcmDeviceTokenService,
     FcmDeviceTokenService>();
 

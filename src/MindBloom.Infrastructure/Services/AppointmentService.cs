@@ -1354,6 +1354,13 @@ public class AppointmentService : IAppointmentService
                 "Meeting link can only be added to online appointments.");
         }
 
+        if (appointment.Status !=
+    AppointmentStatus.Accepted)
+        {
+            throw new BusinessException(
+                "Meeting link can only be updated for an accepted appointment.");
+        }
+
         appointment.MeetingLink =
             request.MeetingLink;
 

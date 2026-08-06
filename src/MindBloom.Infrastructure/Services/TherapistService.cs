@@ -18,6 +18,7 @@ public class TherapistService : ITherapistService
 {
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _environment;
+    private readonly ITherapistClientAccessService _therapistClientAccessService;
 
     private const long MaximumDocumentSize =
     10 * 1024 * 1024;
@@ -43,11 +44,16 @@ public class TherapistService : ITherapistService
 
     private readonly IGeocodingService _geocodingService;
 
-    public TherapistService(ApplicationDbContext context, IWebHostEnvironment environment, IGeocodingService geocodingService)
+    public TherapistService(
+        ApplicationDbContext context, 
+        IWebHostEnvironment environment, 
+        IGeocodingService geocodingService, 
+        ITherapistClientAccessService therapistClientAccessService)
     {
         _context = context;
         _environment = environment;
         _geocodingService = geocodingService;
+        _therapistClientAccessService = therapistClientAccessService;
 
     }
     public async Task<TherapistResponseDto> CreateAsync(int userId, CreateTherapistDto request)
@@ -2277,9 +2283,16 @@ public class TherapistService : ITherapistService
                 .AsNoTracking()
                 .Include(x => x.Client)
                     .ThenInclude(x => x.User)
-                .Where(x =>
+.Where(x =>
     !x.IsDeleted &&
-    x.TherapistId == therapist.Id);
+    x.TherapistId ==
+        therapist.Id &&
+    (
+        x.Status ==
+            AppointmentStatus.Accepted ||
+        x.Status ==
+            AppointmentStatus.Completed
+    ));
 
         if (!string.IsNullOrWhiteSpace(
                 normalizedSearch))
@@ -2418,6 +2431,11 @@ public class TherapistService : ITherapistService
             throw new NotFoundException(
                 "Therapist not found.");
         }
+
+        await _therapistClientAccessService
+    .EnsureRelationshipAsync(
+        therapistUserId,
+        clientId);
 
         var appointments =
             await _context.Appointments

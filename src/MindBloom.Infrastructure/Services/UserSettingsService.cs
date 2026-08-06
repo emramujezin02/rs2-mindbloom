@@ -76,11 +76,18 @@ public class UserSettingsService
         {
             settings = new UserSettings
             {
-                UserId = userId,
+                UserId =
+                    userId,
+
                 NotificationsEnabled =
                     request.NotificationsEnabled,
+
                 ShowProfilePublicly =
-                    request.ShowProfilePublicly
+                    request.ShowProfilePublicly,
+
+                ShareMoodAndEmotionsWithTherapists =
+                    request
+                        .ShareMoodAndEmotionsWithTherapists
             };
 
             _context.UserSettings.Add(settings);
@@ -94,6 +101,10 @@ public class UserSettingsService
 
             settings.ShowProfilePublicly =
                 request.ShowProfilePublicly;
+
+            settings.ShareMoodAndEmotionsWithTherapists =
+    request
+        .ShareMoodAndEmotionsWithTherapists;
         }
 
         await _context.SaveChangesAsync();
@@ -110,7 +121,11 @@ public class UserSettingsService
                 settings.NotificationsEnabled,
 
             ShowProfilePublicly =
-                settings.ShowProfilePublicly
+                settings.ShowProfilePublicly,
+
+            ShareMoodAndEmotionsWithTherapists =
+                settings
+                    .ShareMoodAndEmotionsWithTherapists
         };
     }
 }

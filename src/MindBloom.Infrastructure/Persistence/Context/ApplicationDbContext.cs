@@ -539,6 +539,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 x.ShowProfilePublicly)
             .HasDefaultValue(true);
 
+        entity.Property(x =>
+        x.ShareMoodAndEmotionsWithTherapists)
+    .HasDefaultValue(false);
+
         entity.HasIndex(x => x.UserId)
             .IsUnique();
     });

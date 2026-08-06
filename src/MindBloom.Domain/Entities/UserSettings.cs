@@ -9,4 +9,10 @@ public class UserSettings : BaseEntity
     public bool NotificationsEnabled { get; set; } = true;
 
     public bool ShowProfilePublicly { get; set; } = true;
+
+    public bool ShareMoodAndEmotionsWithTherapists
+    {
+        get;
+        set;
+    } = false;
 }
