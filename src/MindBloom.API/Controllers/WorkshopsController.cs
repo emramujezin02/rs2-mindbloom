@@ -307,17 +307,19 @@ public class WorkshopsController : ControllerBase
             : null;
     }
 
-    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
+    [Authorize(
+        Policy =
+            AuthorizationPolicyConstants.AdminOrTherapist)]
     [HttpPost("image")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
     public async Task<IActionResult>
-    UploadImage(
-        IFormFile file)
+        UploadImage(
+            IFormFile file)
     {
         var result =
             await _workshopService
-                .UploadImageAsync(
-                    file);
+                .UploadImageAsync(file);
 
         return Ok(result);
     }

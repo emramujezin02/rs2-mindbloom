@@ -608,31 +608,34 @@ public class ArticleService : IArticleService
     }
 
     public async Task<ArticleImageUploadDto>
-    UploadImageAsync(
-        IFormFile file)
+     UploadImageAsync(
+         IFormFile file)
     {
         if (file == null ||
             file.Length == 0)
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Article image is required.");
         }
 
         const long maximumFileSize =
             5 * 1024 * 1024;
 
-        if (file.Length > maximumFileSize)
+        if (file.Length >
+            maximumFileSize)
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Article image may not exceed 5 MB.");
         }
 
         var extension =
-            Path.GetExtension(file.FileName)
+            Path.GetExtension(
+                    file.FileName)
                 .ToLowerInvariant();
 
         var allowedExtensions =
-            new HashSet<string>
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
             {
             ".jpg",
             ".jpeg",
@@ -640,10 +643,12 @@ public class ArticleService : IArticleService
             ".webp"
             };
 
-        if (!allowedExtensions.Contains(
+        if (string.IsNullOrWhiteSpace(
+                extension) ||
+            !allowedExtensions.Contains(
                 extension))
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Only JPG, JPEG, PNG and WEBP images are allowed.");
         }
 
@@ -656,17 +661,20 @@ public class ArticleService : IArticleService
             "image/webp"
             };
 
-        if (!allowedContentTypes.Contains(
+        if (string.IsNullOrWhiteSpace(
+                file.ContentType) ||
+            !allowedContentTypes.Contains(
                 file.ContentType))
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Invalid image content type.");
         }
 
         await using var validationStream =
             file.OpenReadStream();
 
-        var header = new byte[12];
+        var header =
+            new byte[12];
 
         var bytesRead =
             await validationStream.ReadAsync(
@@ -674,13 +682,14 @@ public class ArticleService : IArticleService
                     0,
                     header.Length));
 
-        if (bytesRead < 4)
+        if (bytesRead < 3)
         {
-            throw new Exception(
+            throw new BadRequestException(
                 "Invalid image file.");
         }
 
         var isJpeg =
+            bytesRead >= 3 &&
             header[0] == 0xFF &&
             header[1] == 0xD8 &&
             header[2] == 0xFF;
@@ -707,7 +716,7 @@ public class ArticleService : IArticleService
             header[10] == 0x42 &&
             header[11] == 0x50;
 
-        var signatureMatchesExtension =
+        var extensionMatchesContent =
             extension switch
             {
                 ".jpg" or ".jpeg" =>
@@ -719,16 +728,42 @@ public class ArticleService : IArticleService
                 ".webp" =>
                     isWebp,
 
-                _ => false
+                _ =>
+                    false
             };
 
-        if (!signatureMatchesExtension)
+        if (!extensionMatchesContent)
         {
-            throw new Exception(
-                "The uploaded file is not a valid image.");
+            throw new BadRequestException(
+                "The uploaded file content does not match its extension.");
         }
 
-        var webRootPath = _environment.WebRootPath;
+        var mimeMatchesContent =
+            file.ContentType
+                .ToLowerInvariant()
+            switch
+            {
+                "image/jpeg" =>
+                    isJpeg,
+
+                "image/png" =>
+                    isPng,
+
+                "image/webp" =>
+                    isWebp,
+
+                _ =>
+                    false
+            };
+
+        if (!mimeMatchesContent)
+        {
+            throw new BadRequestException(
+                "The uploaded file content does not match its MIME type.");
+        }
+
+        var webRootPath =
+            _environment.WebRootPath;
 
         if (string.IsNullOrWhiteSpace(
                 webRootPath))
@@ -740,10 +775,11 @@ public class ArticleService : IArticleService
         }
 
         var uploadDirectory =
-            Path.Combine(
-                webRootPath,
-                "uploads",
-                "articles");
+            Path.GetFullPath(
+                Path.Combine(
+                    webRootPath,
+                    "uploads",
+                    "articles"));
 
         Directory.CreateDirectory(
             uploadDirectory);
@@ -752,15 +788,27 @@ public class ArticleService : IArticleService
             $"{Guid.NewGuid():N}{extension}";
 
         var physicalPath =
-            Path.Combine(
-                uploadDirectory,
-                safeFileName);
+            Path.GetFullPath(
+                Path.Combine(
+                    uploadDirectory,
+                    safeFileName));
+
+        if (!physicalPath.StartsWith(
+                uploadDirectory +
+                Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid article image storage path.");
+        }
 
         await using (
             var outputStream =
                 new FileStream(
                     physicalPath,
-                    FileMode.CreateNew))
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None))
         {
             await file.CopyToAsync(
                 outputStream);

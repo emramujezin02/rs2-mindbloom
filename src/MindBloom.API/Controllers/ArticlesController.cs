@@ -210,11 +210,13 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpPost("image")]
-    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<ArticleImageUploadDto>>
-    UploadImage(
-        IFormFile file)
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<
+        ActionResult<ArticleImageUploadDto>>
+        UploadImage(
+            IFormFile file)
     {
         var result =
             await _articleService

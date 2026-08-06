@@ -195,9 +195,11 @@ public class TherapistsController : ControllerBase
     [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpPost("documents")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
     public async Task<IActionResult>
-    UploadDocument(
-        [FromForm] UploadTherapistDocumentDto request)
+        UploadDocument(
+            [FromForm]
+        UploadTherapistDocumentDto request)
     {
         await _therapistService
             .UploadDocumentAsync(
@@ -313,14 +315,17 @@ public class TherapistsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
+    [Authorize(
+        Policy =
+            AuthorizationPolicyConstants.TherapistOnly)]
     [HttpPost("profile/image")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
     public async Task<
-ActionResult<TherapistProfileImageDto>>
-UploadProfileImage(
-    [FromForm]
-    UploadTherapistProfileImageDto request)
+        ActionResult<TherapistProfileImageDto>>
+        UploadProfileImage(
+            [FromForm]
+        UploadTherapistProfileImageDto request)
     {
         var result =
             await _therapistService
@@ -359,4 +364,6 @@ DeleteProfileImage()
 
         return userId;
     }
+
+
 }

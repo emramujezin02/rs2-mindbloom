@@ -1632,7 +1632,8 @@ public class WorkshopService : IWorkshopService
                 .ToLowerInvariant();
 
         var allowedExtensions =
-            new HashSet<string>
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
             {
             ".jpg",
             ".jpeg",
@@ -1640,7 +1641,9 @@ public class WorkshopService : IWorkshopService
             ".webp"
             };
 
-        if (!allowedExtensions.Contains(
+        if (string.IsNullOrWhiteSpace(
+                extension) ||
+            !allowedExtensions.Contains(
                 extension))
         {
             throw new BadRequestException(
@@ -1656,7 +1659,9 @@ public class WorkshopService : IWorkshopService
             "image/webp"
             };
 
-        if (!allowedContentTypes.Contains(
+        if (string.IsNullOrWhiteSpace(
+                file.ContentType) ||
+            !allowedContentTypes.Contains(
                 file.ContentType))
         {
             throw new BadRequestException(
@@ -1675,13 +1680,14 @@ public class WorkshopService : IWorkshopService
                     0,
                     header.Length));
 
-        if (bytesRead < 4)
+        if (bytesRead < 3)
         {
             throw new BadRequestException(
                 "Invalid image file.");
         }
 
         var isJpeg =
+            bytesRead >= 3 &&
             header[0] == 0xFF &&
             header[1] == 0xD8 &&
             header[2] == 0xFF;
@@ -1708,7 +1714,7 @@ public class WorkshopService : IWorkshopService
             header[10] == 0x42 &&
             header[11] == 0x50;
 
-        var signatureMatchesExtension =
+        var extensionMatchesContent =
             extension switch
             {
                 ".jpg" or ".jpeg" =>
@@ -1724,10 +1730,34 @@ public class WorkshopService : IWorkshopService
                     false
             };
 
-        if (!signatureMatchesExtension)
+        if (!extensionMatchesContent)
         {
             throw new BadRequestException(
-                "The uploaded file is not a valid image.");
+                "The uploaded file content does not match its extension.");
+        }
+
+        var mimeMatchesContent =
+            file.ContentType
+                .ToLowerInvariant()
+            switch
+            {
+                "image/jpeg" =>
+                    isJpeg,
+
+                "image/png" =>
+                    isPng,
+
+                "image/webp" =>
+                    isWebp,
+
+                _ =>
+                    false
+            };
+
+        if (!mimeMatchesContent)
+        {
+            throw new BadRequestException(
+                "The uploaded file content does not match its MIME type.");
         }
 
         var webRootPath =
@@ -1743,10 +1773,11 @@ public class WorkshopService : IWorkshopService
         }
 
         var uploadDirectory =
-            Path.Combine(
-                webRootPath,
-                "uploads",
-                "workshops");
+            Path.GetFullPath(
+                Path.Combine(
+                    webRootPath,
+                    "uploads",
+                    "workshops"));
 
         Directory.CreateDirectory(
             uploadDirectory);
@@ -1755,15 +1786,27 @@ public class WorkshopService : IWorkshopService
             $"{Guid.NewGuid():N}{extension}";
 
         var physicalPath =
-            Path.Combine(
-                uploadDirectory,
-                safeFileName);
+            Path.GetFullPath(
+                Path.Combine(
+                    uploadDirectory,
+                    safeFileName));
+
+        if (!physicalPath.StartsWith(
+                uploadDirectory +
+                Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid workshop image storage path.");
+        }
 
         await using (
             var outputStream =
                 new FileStream(
                     physicalPath,
-                    FileMode.CreateNew))
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None))
         {
             await file.CopyToAsync(
                 outputStream);

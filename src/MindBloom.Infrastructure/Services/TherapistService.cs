@@ -1097,36 +1097,8 @@ public class TherapistService : ITherapistService
                 "Therapist profile not found.");
         }
 
-        if (file == null || file.Length == 0)
-        {
-            throw new ArgumentException(
-                "Profile image is required.");
-        }
-
-        const long maximumFileSize =
-            5 * 1024 * 1024;
-
-        if (file.Length > maximumFileSize)
-        {
-            throw new ArgumentException(
-                "Profile image cannot be larger than 5 MB.");
-        }
-
-        var allowedContentTypes =
-            new HashSet<string>(
-                StringComparer.OrdinalIgnoreCase)
-            {
-            "image/jpeg",
-            "image/png",
-            "image/webp"
-            };
-
-        if (!allowedContentTypes.Contains(
-                file.ContentType))
-        {
-            throw new ArgumentException(
-                "Only JPG, PNG and WEBP images are allowed.");
-        }
+        await ValidateTherapistProfileImageAsync(
+     file);
 
         var extension =
             Path.GetExtension(file.FileName)
@@ -1175,7 +1147,7 @@ public class TherapistService : ITherapistService
         await using (var stream =
             new FileStream(
                 physicalFilePath,
-                FileMode.Create))
+                FileMode.CreateNew))
         {
             await file.CopyToAsync(stream);
         }
@@ -2744,46 +2716,208 @@ public class TherapistService : ITherapistService
             webRootPath);
     }
 
-    private static async Task ValidateDocumentAsync(
-    IFormFile file)
+    private static async Task
+    ValidateTherapistProfileImageAsync(
+        IFormFile file)
     {
-        if (file == null || file.Length == 0)
+        if (file == null ||
+            file.Length == 0)
         {
             throw new BadRequestException(
-                "Select a document.");
+                "Profile image is required.");
         }
 
-        if (file.Length > MaximumDocumentSize)
+        const long maximumFileSize =
+            5 * 1024 * 1024;
+
+        if (file.Length >
+            maximumFileSize)
         {
             throw new BadRequestException(
-                "Maximum document size is 10 MB.");
+                "Profile image cannot be larger than 5 MB.");
         }
 
         var extension =
-            Path.GetExtension(file.FileName);
+            Path.GetExtension(
+                    file.FileName)
+                .ToLowerInvariant();
 
-        if (string.IsNullOrWhiteSpace(extension) ||
-            !AllowedDocumentExtensions.Contains(extension))
+        var allowedExtensions =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+            };
+
+        if (string.IsNullOrWhiteSpace(
+                extension) ||
+            !allowedExtensions.Contains(
+                extension))
         {
             throw new BadRequestException(
-                "Only JPG, JPEG, PNG and PDF files are allowed.");
+                "Only JPG, JPEG, PNG and WEBP images are allowed.");
         }
 
-        if (string.IsNullOrWhiteSpace(file.ContentType) ||
-            !AllowedDocumentMimeTypes.Contains(file.ContentType))
+        var allowedContentTypes =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+            };
+
+        if (string.IsNullOrWhiteSpace(
+                file.ContentType) ||
+            !allowedContentTypes.Contains(
+                file.ContentType))
         {
             throw new BadRequestException(
-                "Unsupported content type.");
+                "Unsupported profile image content type.");
         }
 
-        var header = new byte[8];
+        var header =
+            new byte[12];
 
         await using var stream =
             file.OpenReadStream();
 
         var bytesRead =
             await stream.ReadAsync(
-                header.AsMemory(0, header.Length));
+                header.AsMemory(
+                    0,
+                    header.Length));
+
+        var isJpeg =
+            bytesRead >= 3 &&
+            header[0] == 0xFF &&
+            header[1] == 0xD8 &&
+            header[2] == 0xFF;
+
+        var isPng =
+            bytesRead >= 8 &&
+            header[0] == 0x89 &&
+            header[1] == 0x50 &&
+            header[2] == 0x4E &&
+            header[3] == 0x47 &&
+            header[4] == 0x0D &&
+            header[5] == 0x0A &&
+            header[6] == 0x1A &&
+            header[7] == 0x0A;
+
+        var isWebp =
+            bytesRead >= 12 &&
+            header[0] == 0x52 &&
+            header[1] == 0x49 &&
+            header[2] == 0x46 &&
+            header[3] == 0x46 &&
+            header[8] == 0x57 &&
+            header[9] == 0x45 &&
+            header[10] == 0x42 &&
+            header[11] == 0x50;
+
+        var extensionMatchesContent =
+            extension switch
+            {
+                ".jpg" or ".jpeg" =>
+                    isJpeg,
+
+                ".png" =>
+                    isPng,
+
+                ".webp" =>
+                    isWebp,
+
+                _ =>
+                    false
+            };
+
+        if (!extensionMatchesContent)
+        {
+            throw new BadRequestException(
+                "The uploaded file content does not match its extension.");
+        }
+
+        var mimeMatchesContent =
+            file.ContentType
+                .ToLowerInvariant()
+            switch
+            {
+                "image/jpeg" =>
+                    isJpeg,
+
+                "image/png" =>
+                    isPng,
+
+                "image/webp" =>
+                    isWebp,
+
+                _ =>
+                    false
+            };
+
+        if (!mimeMatchesContent)
+        {
+            throw new BadRequestException(
+                "The uploaded file content does not match its MIME type.");
+        }
+    }
+
+    private static async Task
+     ValidateDocumentAsync(
+         IFormFile file)
+    {
+        if (file == null ||
+            file.Length == 0)
+        {
+            throw new BadRequestException(
+                "Select a document.");
+        }
+
+        if (file.Length >
+            MaximumDocumentSize)
+        {
+            throw new BadRequestException(
+                "Maximum document size is 10 MB.");
+        }
+
+        var extension =
+            Path.GetExtension(
+                    file.FileName)
+                .ToLowerInvariant();
+
+        if (string.IsNullOrWhiteSpace(
+                extension) ||
+            !AllowedDocumentExtensions.Contains(
+                extension))
+        {
+            throw new BadRequestException(
+                "Only JPG, JPEG, PNG and PDF files are allowed.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                file.ContentType) ||
+            !AllowedDocumentMimeTypes.Contains(
+                file.ContentType))
+        {
+            throw new BadRequestException(
+                "Unsupported content type.");
+        }
+
+        var header =
+            new byte[8];
+
+        await using var stream =
+            file.OpenReadStream();
+
+        var bytesRead =
+            await stream.ReadAsync(
+                header.AsMemory(
+                    0,
+                    header.Length));
 
         var isJpeg =
             bytesRead >= 3 &&
@@ -2803,16 +2937,57 @@ public class TherapistService : ITherapistService
             header[7] == 0x0A;
 
         var isPdf =
-            bytesRead >= 4 &&
+            bytesRead >= 5 &&
             header[0] == 0x25 &&
             header[1] == 0x50 &&
             header[2] == 0x44 &&
-            header[3] == 0x46;
+            header[3] == 0x46 &&
+            header[4] == 0x2D;
 
-        if (!isJpeg && !isPng && !isPdf)
+        var extensionMatchesContent =
+            extension switch
+            {
+                ".jpg" or ".jpeg" =>
+                    isJpeg,
+
+                ".png" =>
+                    isPng,
+
+                ".pdf" =>
+                    isPdf,
+
+                _ =>
+                    false
+            };
+
+        if (!extensionMatchesContent)
         {
             throw new BadRequestException(
-                "Invalid file format.");
+                "The uploaded document content does not match its extension.");
+        }
+
+        var mimeMatchesContent =
+            file.ContentType
+                .ToLowerInvariant()
+            switch
+            {
+                "image/jpeg" =>
+                    isJpeg,
+
+                "image/png" =>
+                    isPng,
+
+                "application/pdf" =>
+                    isPdf,
+
+                _ =>
+                    false
+            };
+
+        if (!mimeMatchesContent)
+        {
+            throw new BadRequestException(
+                "The uploaded document content does not match its MIME type.");
         }
     }
 
