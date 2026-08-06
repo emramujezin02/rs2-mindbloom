@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Common.Models;
 using MindBloom.Application.Features.Admin.DTOs;
 using MindBloom.Application.Features.Admin.Interfaces;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/admin/audit-logs")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
 public class AdminAuditController
     : ControllerBase
 {

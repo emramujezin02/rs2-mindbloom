@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Appointments.DTOs;
 using MindBloom.Application.Features.Appointments.Interfaces;
 using System.Security.Claims;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "AuthenticatedUser")]
+[Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
 public class AppointmentsController : ControllerBase
 {
     private readonly IAppointmentService _appointmentService;
@@ -19,7 +20,7 @@ public class AppointmentsController : ControllerBase
         _appointmentService = appointmentService;
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpPost]
     public async Task<IActionResult> Create(
         CreateAppointmentDto request)
@@ -34,7 +35,7 @@ public class AppointmentsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpGet("mine")]
     public async Task<IActionResult> Mine()
     {
@@ -47,7 +48,7 @@ public class AppointmentsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpGet("{appointmentId:int}")]
     public async Task<IActionResult>
     GetClientAppointmentDetails(
@@ -65,7 +66,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpGet("therapist")]
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     public async Task<IActionResult>
     GetTherapistAppointments()
     {
@@ -79,7 +80,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("status")]
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     public async Task<IActionResult>
     UpdateStatus(
         UpdateAppointmentStatusDto request)
@@ -94,7 +95,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("{appointmentId}/cancel")]
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     public async Task<IActionResult> CancelAppointment(
     int appointmentId,
     CancelAppointmentDto request)
@@ -111,7 +112,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpGet("therapist/stats")]
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     public async Task<IActionResult>
     GetTherapistStats()
     {
@@ -125,7 +126,7 @@ public class AppointmentsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpPost("notes")]
     public async Task<IActionResult>
     AddAppointmentNote(
@@ -145,7 +146,7 @@ public class AppointmentsController : ControllerBase
         });
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpGet("{appointmentId}/notes")]
     public async Task<IActionResult>
     GetAppointmentNote(
@@ -161,7 +162,7 @@ public class AppointmentsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpGet("client-dashboard")]
     public async Task<IActionResult>
     GetClientDashboard()
@@ -176,7 +177,7 @@ public class AppointmentsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpPut("{appointmentId}/meeting-link")]
     public async Task<IActionResult>
     UpdateMeetingLink(
@@ -194,7 +195,7 @@ public class AppointmentsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpGet(
     "therapist/{therapistId}/occupied-slots")]
     public async Task<IActionResult>

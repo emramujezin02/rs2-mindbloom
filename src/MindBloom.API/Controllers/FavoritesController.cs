@@ -3,11 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Favorites.DTOs;
 using MindBloom.Application.Features.Favorites.Interfaces;
 using System.Security.Claims;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "ClientOnly")]
+[Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
 public class FavoritesController : ControllerBase
 {
     private readonly IFavoriteService

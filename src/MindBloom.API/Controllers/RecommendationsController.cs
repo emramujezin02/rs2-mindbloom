@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Recommendations.DTOs;
 using MindBloom.Application.Recommendations.Services;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/recommendations")]
-[Authorize(Policy = "ClientOnly")]
+[Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
 public sealed class RecommendationsController : ControllerBase
 {
     private readonly IRecommendationService _recommendationService;

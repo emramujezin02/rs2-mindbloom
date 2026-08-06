@@ -9,7 +9,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "AuthenticatedUser")]
+[Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
 public class WorkshopsController : ControllerBase
 {
     private readonly IWorkshopService
@@ -59,7 +59,7 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOrTherapist")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [HttpGet("manage")]
     public async Task<IActionResult>
         GetManageList(
@@ -83,7 +83,7 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOrTherapist")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [HttpGet("{id}/registrations")]
     public async Task<IActionResult>
         GetRegistrations(
@@ -112,7 +112,7 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOrTherapist")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [HttpPost]
     public async Task<IActionResult>
         Create(
@@ -135,7 +135,7 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOrTherapist")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [HttpPut("{id}")]
     public async Task<IActionResult>
         Update(
@@ -160,7 +160,7 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOrTherapist")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [HttpPut("{id}/status")]
     public async Task<IActionResult>
         UpdateStatus(
@@ -185,7 +185,7 @@ public class WorkshopsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOrTherapist")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [HttpDelete("{id}")]
     public async Task<IActionResult>
         Delete(
@@ -211,7 +211,7 @@ public class WorkshopsController : ControllerBase
         });
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpPost("{id}/register")]
     public async Task<IActionResult>
         Register(
@@ -232,7 +232,7 @@ public class WorkshopsController : ControllerBase
         });
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpDelete("{id}/registration")]
     public async Task<IActionResult>
         CancelRegistration(
@@ -253,7 +253,7 @@ public class WorkshopsController : ControllerBase
         });
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpGet("mine")]
     public async Task<IActionResult>
         GetMyRegistrations(
@@ -307,7 +307,7 @@ public class WorkshopsController : ControllerBase
             : null;
     }
 
-    [Authorize(Policy = "AdminOrTherapist")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [HttpPost("image")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult>

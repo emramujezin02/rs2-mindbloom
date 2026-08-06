@@ -9,7 +9,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "AuthenticatedUser")]
+[Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
 public class JournalEntriesController
     : ControllerBase
 {
@@ -23,7 +23,7 @@ public class JournalEntriesController
             journalEntryService;
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpPost]
     public async Task<IActionResult> Create(
         CreateJournalEntryDto request)
@@ -40,7 +40,7 @@ public class JournalEntriesController
         return Ok(result);
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpGet("mine")]
     public async Task<IActionResult> Mine(
     [FromQuery]
@@ -61,7 +61,7 @@ public class JournalEntriesController
         return Ok(result);
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(
         int id)
@@ -78,7 +78,7 @@ public class JournalEntriesController
         return Ok(result);
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
         int id,
@@ -97,7 +97,7 @@ public class JournalEntriesController
         return Ok(result);
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(
         int id)
@@ -117,7 +117,7 @@ public class JournalEntriesController
         });
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpGet("clients/{clientId:int}/history")]
     public async Task<IActionResult>
     GetClientHistory(
@@ -139,7 +139,7 @@ public class JournalEntriesController
         return Ok(result);
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpGet(
     "clients/{clientId:int}/trend")]
     public async Task<IActionResult>
@@ -161,7 +161,7 @@ public class JournalEntriesController
         return Ok(result);
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpGet(
     "clients/{clientId:int}/analytics")]
     public async Task<IActionResult>
@@ -200,7 +200,7 @@ public class JournalEntriesController
         return userId;
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpGet("analytics/mine")]
     public async Task<IActionResult>
     GetMyAnalytics(

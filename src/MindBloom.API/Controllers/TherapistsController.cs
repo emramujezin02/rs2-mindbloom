@@ -4,12 +4,13 @@ using MindBloom.Application.Features.Therapists.DTOs;
 using MindBloom.Application.Features.Therapists.Interfaces;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "AuthenticatedUser")]
+[Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
 public class TherapistsController : ControllerBase
 {
     private readonly ITherapistService _therapistService;
@@ -20,7 +21,7 @@ public class TherapistsController : ControllerBase
         _therapistService = therapistService;
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpPost]
     public async Task<IActionResult> Create(
         CreateTherapistDto request)
@@ -45,7 +46,7 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpPost("availability")]
     public async Task<IActionResult> AddAvailability(
         CreateAvailabilityDto request)
@@ -122,7 +123,7 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpDelete("availability/{availabilityId}")]
     public async Task<IActionResult>
     DeleteAvailability(
@@ -137,7 +138,7 @@ public class TherapistsController : ControllerBase
     }
 
     [HttpGet("dashboard")]
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     public async Task<IActionResult>
     GetDashboard()
     {
@@ -148,7 +149,7 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpPost("unavailable-dates")]
     public async Task<IActionResult>
     AddUnavailableDate(
@@ -175,7 +176,7 @@ public class TherapistsController : ControllerBase
     }
 
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpDelete(
     "unavailable-dates/{id}")]
     public async Task<IActionResult>
@@ -191,7 +192,7 @@ public class TherapistsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpPost("documents")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult>
@@ -210,7 +211,7 @@ public class TherapistsController : ControllerBase
         });
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpGet("{therapistId}/documents")]
     public async Task<IActionResult> GetDocuments(
         int therapistId)
@@ -223,7 +224,7 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpDelete("documents/{id}")]
     public async Task<IActionResult>
     DeleteDocument(
@@ -237,7 +238,7 @@ public class TherapistsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpGet("clients")]
     public async Task<IActionResult>
     GetClients(
@@ -251,7 +252,7 @@ public class TherapistsController : ControllerBase
 
         return Ok(result);
     }
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpGet("clients/{clientId:int}")]
     public async Task<IActionResult>
         GetClientDetails(
@@ -268,7 +269,7 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpGet("documents/{documentId:int}/download")]
     public async Task<IActionResult>
     DownloadDocument(
@@ -285,7 +286,7 @@ public class TherapistsController : ControllerBase
             document.FileName);
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpGet("profile")]
     public async Task<ActionResult<TherapistProfileDto>>
     GetProfile()
@@ -297,7 +298,7 @@ public class TherapistsController : ControllerBase
         return Ok(profile);
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpPut("profile")]
     public async Task<IActionResult>
     UpdateProfile(
@@ -312,7 +313,7 @@ public class TherapistsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpPost("profile/image")]
     [Consumes("multipart/form-data")]
     public async Task<
@@ -330,7 +331,7 @@ UploadProfileImage(
         return Ok(result);
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpDelete("profile/image")]
     public async Task<IActionResult>
 DeleteProfileImage()

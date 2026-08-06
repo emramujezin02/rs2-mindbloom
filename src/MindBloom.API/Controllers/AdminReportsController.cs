@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.AdminReports.DTOs;
 using MindBloom.Application.Features.AdminReports.Interfaces;
 using System.Security.Claims;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/admin/reports")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
 public class AdminReportsController : ControllerBase
 {
     private readonly IAdminReportService

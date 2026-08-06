@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Notifications.DTOs;
 using MindBloom.Application.Features.Notifications.Interfaces;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/fcm-tokens")]
-[Authorize(Policy = "AuthenticatedUser")]
+[Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
 public sealed class FcmDeviceTokensController
     : ControllerBase
 {

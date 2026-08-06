@@ -4,12 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Chat.DTOs;
 using MindBloom.Application.Features.Chat.Interfaces;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "ClientOrTherapist")]
+[Authorize(Policy = AuthorizationPolicyConstants.ClientOrTherapist)]
 public class ChatController : ControllerBase
 {
     private readonly IChatService

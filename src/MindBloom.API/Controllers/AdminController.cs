@@ -4,12 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Admin.DTOs;
 using MindBloom.Application.Features.Admin.Interfaces;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
 public class AdminController : ControllerBase
 {
     private readonly IAdminService

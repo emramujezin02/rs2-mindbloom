@@ -4,12 +4,13 @@ using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Features.Reviews.DTOs;
 using MindBloom.Application.Features.Reviews.Interfaces;
 using System.Security.Claims;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "AuthenticatedUser")]
+[Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
 public class ReviewsController : ControllerBase
 {
     private readonly IReviewService
@@ -37,7 +38,7 @@ public class ReviewsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpPost]
     public async Task<IActionResult>
         Create(
@@ -89,7 +90,7 @@ public class ReviewsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpGet("eligibility/{appointmentId}")]
     public async Task<IActionResult>
     GetEligibility(
@@ -107,7 +108,7 @@ public class ReviewsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpDelete("{reviewId}")]
     public async Task<IActionResult>
         Delete(
@@ -123,7 +124,7 @@ public class ReviewsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpPut("{reviewId}")]
     public async Task<IActionResult>
         Update(
@@ -141,7 +142,7 @@ public class ReviewsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpGet("mine")]
     public async Task<IActionResult>
         GetMyReviews(
@@ -167,7 +168,7 @@ public class ReviewsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "TherapistOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpPut("{reviewId}/reply")]
     public async Task<IActionResult>
         ReplyToReview(

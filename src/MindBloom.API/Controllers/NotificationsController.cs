@@ -4,12 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Notifications.DTOs;
 using MindBloom.Application.Features.Notifications.Interfaces;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "AuthenticatedUser")]
+[Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
 public sealed class NotificationsController
     : ControllerBase
 {

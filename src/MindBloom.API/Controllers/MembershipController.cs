@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Memberships.DTOs;
 using MindBloom.Application.Features.Memberships.Interfaces;
 using System.Security.Claims;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "AuthenticatedUser")]
+[Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
 public class MembershipsController : ControllerBase
 {
     private readonly IMembershipService
@@ -36,7 +37,7 @@ public class MembershipsController : ControllerBase
     }
 
     [HttpPost("create-payment-intent")]
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     public async Task<IActionResult>
         CreatePaymentIntent(
             CreateMembershipPaymentIntentDto request)
@@ -54,7 +55,7 @@ public class MembershipsController : ControllerBase
     }
 
     [HttpPost("confirm-payment")]
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     public async Task<IActionResult>
         ConfirmPayment(
             ConfirmMembershipPaymentDto request)
@@ -72,7 +73,7 @@ public class MembershipsController : ControllerBase
     }
 
     [HttpGet("mine")]
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     public async Task<IActionResult>
         GetMyMemberships()
     {
@@ -88,7 +89,7 @@ public class MembershipsController : ControllerBase
     }
 
     [HttpGet("{membershipId}/receipt")]
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     public async Task<IActionResult>
         GetReceipt(
             int membershipId)
@@ -106,7 +107,7 @@ public class MembershipsController : ControllerBase
     }
 
     [HttpPost("use")]
-    [Authorize(Policy = "ClientOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     public async Task<IActionResult>
         UseMembership(
             UseMembershipDto request)

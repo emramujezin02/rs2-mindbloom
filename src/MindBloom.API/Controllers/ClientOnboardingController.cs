@@ -2,16 +2,15 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Common.Exceptions;
-using MindBloom.Application
-    .Features.ClientOnboarding.DTOs;
-using MindBloom.Application
-    .Features.ClientOnboarding.Interfaces;
+using MindBloom.Application.Features.ClientOnboarding.DTOs;
+using MindBloom.Application.Features.ClientOnboarding.Interfaces;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/client-onboarding")]
-[Authorize(Policy = "ClientOnly")]
+[Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
 public sealed class ClientOnboardingController
     : ControllerBase
 {

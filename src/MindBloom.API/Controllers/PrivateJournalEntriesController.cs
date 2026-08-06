@@ -11,7 +11,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "ClientOnly")]
+[Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
 public sealed class PrivateJournalEntriesController
     : ControllerBase
 {

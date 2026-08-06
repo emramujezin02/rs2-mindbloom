@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Payments.DTOs;
 using MindBloom.Application.Features.Payments.Interfaces;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "ClientOnly")]
+[Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
 public class PaymentsController : ControllerBase
 {
     private readonly IPaymentService

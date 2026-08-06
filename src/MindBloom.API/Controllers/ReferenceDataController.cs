@@ -2,12 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.ReferenceData.DTOs;
 using MindBloom.Application.Features.ReferenceData.Interfaces;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/reference-data")]
-[Authorize(Policy = "AuthenticatedUser")]
+[Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
 public class ReferenceDataController : ControllerBase
 {
     private readonly IReferenceDataService _referenceDataService;
@@ -32,7 +33,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpGet("therapist-specializations")]
     public async Task<ActionResult<
         TherapistSpecializationPagedResponseDto>>
@@ -48,7 +49,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpGet("therapist-specializations/{id:int}")]
     public async Task<ActionResult<
         TherapistSpecializationResponseDto>>
@@ -64,7 +65,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpPost("therapist-specializations")]
     public async Task<ActionResult<
         TherapistSpecializationResponseDto>>
@@ -86,7 +87,7 @@ public class ReferenceDataController : ControllerBase
             result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpPut("therapist-specializations/{id:int}")]
     public async Task<ActionResult<
         TherapistSpecializationResponseDto>>
@@ -104,7 +105,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpPut("therapist-specializations/{id:int}/status")]
     public async Task<ActionResult<
         TherapistSpecializationResponseDto>>
@@ -122,7 +123,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpDelete("therapist-specializations/{id:int}")]
     public async Task<IActionResult>
         DeleteTherapistSpecialization(
@@ -152,7 +153,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpGet("therapy-approaches")]
     public async Task<ActionResult<
         TherapyApproachPagedResponseDto>>
@@ -170,7 +171,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpGet("therapy-approaches/{id:int}")]
     public async Task<ActionResult<
         TherapyApproachResponseDto>>
@@ -187,7 +188,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpPost("therapy-approaches")]
     public async Task<ActionResult<
         TherapyApproachResponseDto>>
@@ -211,7 +212,7 @@ public class ReferenceDataController : ControllerBase
             result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpPut("therapy-approaches/{id:int}")]
     public async Task<ActionResult<
         TherapyApproachResponseDto>>
@@ -231,7 +232,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpPut("therapy-approaches/{id:int}/status")]
     public async Task<ActionResult<
         TherapyApproachResponseDto>>
@@ -251,7 +252,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpDelete("therapy-approaches/{id:int}")]
     public async Task<IActionResult>
         DeleteTherapyApproach(
@@ -281,7 +282,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpGet("article-categories")]
     public async Task<ActionResult<
         ArticleCategoryReferencePagedResponseDto>>
@@ -299,7 +300,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpGet("article-categories/{id:int}")]
     public async Task<ActionResult<
         ArticleCategoryReferenceResponseDto>>
@@ -316,7 +317,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpPost("article-categories")]
     public async Task<ActionResult<
         ArticleCategoryReferenceResponseDto>>
@@ -340,7 +341,7 @@ public class ReferenceDataController : ControllerBase
             result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpPut("article-categories/{id:int}")]
     public async Task<ActionResult<
         ArticleCategoryReferenceResponseDto>>
@@ -360,7 +361,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpPut("article-categories/{id:int}/status")]
     public async Task<ActionResult<
         ArticleCategoryReferenceResponseDto>>
@@ -380,7 +381,7 @@ public class ReferenceDataController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpDelete("article-categories/{id:int}")]
     public async Task<IActionResult>
         DeleteArticleCategory(

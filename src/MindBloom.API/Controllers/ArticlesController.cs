@@ -10,7 +10,7 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "AuthenticatedUser")]
+[Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
 public class ArticlesController : ControllerBase
 {
     private readonly IArticleService
@@ -52,7 +52,7 @@ public class ArticlesController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpGet("management")]
     public async Task<IActionResult>
         GetManagement(
@@ -67,7 +67,7 @@ public class ArticlesController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpGet("management/{id:int}")]
     public async Task<IActionResult>
         GetManagementById(
@@ -81,7 +81,7 @@ public class ArticlesController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOrTherapist")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [HttpPost]
     public async Task<IActionResult>
         Create(
@@ -104,7 +104,7 @@ public class ArticlesController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOrTherapist")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [HttpPut("{id:int}")]
     public async Task<IActionResult>
         Update(
@@ -129,7 +129,7 @@ public class ArticlesController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOrTherapist")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [HttpPut("{id:int}/publication")]
     public async Task<IActionResult>
         UpdatePublication(
@@ -154,7 +154,7 @@ public class ArticlesController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOrTherapist")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult>
         Delete(
@@ -210,7 +210,7 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpPost("image")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<ArticleImageUploadDto>>
     UploadImage(

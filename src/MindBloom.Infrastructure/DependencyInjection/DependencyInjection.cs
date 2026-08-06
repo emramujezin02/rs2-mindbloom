@@ -32,6 +32,7 @@ using MindBloom.Infrastructure.Services.Geocoding;
 using Microsoft.AspNetCore.Authorization;
 using MindBloom.Domain.Enums;
 using System.Security.Claims;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -175,64 +176,59 @@ public static class DependencyInjection
                     .Build();
 
             options.AddPolicy(
-                "ClientOnly",
+                AuthorizationPolicyConstants.ClientOnly,
                 policy =>
                 {
                     policy.RequireAuthenticatedUser();
 
                     policy.RequireRole(
-                        UserRole.Client
-                            .ToString());
+                        RoleConstants.Client);
                 });
 
             options.AddPolicy(
-                "TherapistOnly",
+                AuthorizationPolicyConstants.TherapistOnly,
                 policy =>
                 {
                     policy.RequireAuthenticatedUser();
 
                     policy.RequireRole(
-                        UserRole.Therapist
-                            .ToString());
+                        RoleConstants.Therapist);
                 });
 
             options.AddPolicy(
-                "AdminOnly",
+                AuthorizationPolicyConstants.AdminOnly,
                 policy =>
                 {
                     policy.RequireAuthenticatedUser();
 
                     policy.RequireRole(
-                        UserRole.Admin
-                            .ToString());
+                        RoleConstants.Admin);
                 });
 
             options.AddPolicy(
-                "ClientOrTherapist",
+                AuthorizationPolicyConstants.ClientOrTherapist,
                 policy =>
                 {
                     policy.RequireAuthenticatedUser();
 
                     policy.RequireRole(
-                        UserRole.Client
-                            .ToString(),
-                        UserRole.Therapist
-                            .ToString());
+                        RoleConstants.Client,
+                        RoleConstants.Therapist);
                 });
 
             options.AddPolicy(
-    "AdminOrTherapist",
-    policy =>
-    {
-        policy.RequireAuthenticatedUser();
+                AuthorizationPolicyConstants.AdminOrTherapist,
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
 
-        policy.RequireRole(
-            UserRole.Admin.ToString(),
-            UserRole.Therapist.ToString());
-    });
+                    policy.RequireRole(
+                        RoleConstants.Admin,
+                        RoleConstants.Therapist);
+                });
 
             options.AddPolicy(
-                "AuthenticatedUser",
+                AuthorizationPolicyConstants.AuthenticatedUser,
                 policy =>
                 {
                     policy.RequireAuthenticatedUser();
