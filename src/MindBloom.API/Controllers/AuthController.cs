@@ -23,10 +23,6 @@ public sealed class AuthController
             authService;
     }
 
-    /*
-     * JAVNI AUTH ENDPOINTI
-     */
-
     [AllowAnonymous]
     [HttpPost("register")]
     public async Task<IActionResult> Register(
@@ -205,10 +201,6 @@ public sealed class AuthController
             });
     }
 
-    /*
-     * AUTENTIFIKOVANI AUTH ENDPOINTI
-     */
-
     [HttpGet("me")]
     public IActionResult Me()
     {
@@ -315,13 +307,17 @@ public sealed class AuthController
 
     [HttpPost("logout")]
     public async Task<IActionResult>
-        Logout()
+        Logout(
+            [FromBody]
+        RefreshTokenRequestDto request)
     {
         var userId =
             GetAuthenticatedUserId();
 
         await _authService
-            .LogoutAsync(userId);
+            .LogoutAsync(
+                userId,
+                request.RefreshToken);
 
         return Ok(
             new

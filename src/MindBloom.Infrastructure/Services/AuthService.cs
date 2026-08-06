@@ -55,161 +55,236 @@ public class AuthService : IAuthService
     }
 
     public async Task<AuthResponseDto> RegisterAsync(
-     RegisterRequestDto request)
+    RegisterRequestDto request)
     {
-        const string clientRole = "Client";
+        const string clientRole =
+            "Client";
 
         var normalizedEmail =
-            request.Email.Trim().ToLowerInvariant();
+            request.Email
+                .Trim()
+                .ToLowerInvariant();
 
         var normalizedUsername =
             request.Username.Trim();
 
         var normalizedGender =
-    request.Gender.Trim();
+            request.Gender.Trim();
 
         var allowedGenders =
             new HashSet<string>(
                 StringComparer.OrdinalIgnoreCase)
             {
-        "Male",
-        "Female",
-        "Other"
+            "Male",
+            "Female",
+            "Other"
             };
 
         BusinessRuleGuard.Against(
-            !allowedGenders.Contains(normalizedGender),
+            !allowedGenders.Contains(
+                normalizedGender),
             "Gender must be Male, Female or Other.");
 
         var existingEmailUser =
-           await _userManager.FindByEmailAsync(
-               normalizedEmail);
+            await _userManager
+                .FindByEmailAsync(
+                    normalizedEmail);
 
         BusinessRuleGuard.Against(
             existingEmailUser != null,
             "A user with this email already exists.");
 
         var existingUsernameUser =
-            await _userManager.FindByNameAsync(
-                normalizedUsername);
+            await _userManager
+                .FindByNameAsync(
+                    normalizedUsername);
 
         BusinessRuleGuard.Against(
             existingUsernameUser != null,
             "A user with this username already exists.");
 
+        var user =
+            new ApplicationUser
+            {
+                FirstName =
+                    request.FirstName.Trim(),
 
+                LastName =
+                    request.LastName.Trim(),
 
-        var user = new ApplicationUser
-        {
-            FirstName = request.FirstName.Trim(),
-            LastName = request.LastName.Trim(),
-            Email = normalizedEmail,
-            UserName = normalizedUsername,
-            DateOfBirth = request.DateOfBirth,
-            Gender = normalizedGender,
-            CreatedAtUtc = DateTime.UtcNow,
-            EmailConfirmed =
-                IsDemoAccount(normalizedEmail),
-            IsEmailVerified =
-                IsDemoAccount(normalizedEmail)
-        };
+                Email =
+                    normalizedEmail,
+
+                UserName =
+                    normalizedUsername,
+
+                DateOfBirth =
+                    request.DateOfBirth,
+
+                Gender =
+                    normalizedGender,
+
+                CreatedAtUtc =
+                    DateTime.UtcNow,
+
+                EmailConfirmed =
+                    IsDemoAccount(
+                        normalizedEmail),
+
+                IsEmailVerified =
+                    IsDemoAccount(
+                        normalizedEmail)
+            };
 
         var createResult =
-            await _userManager.CreateAsync(
-                user,
-                request.Password);
+            await _userManager
+                .CreateAsync(
+                    user,
+                    request.Password);
 
         if (!createResult.Succeeded)
         {
             throw new Exception(
                 string.Join(
                     ", ",
-                    createResult.Errors.Select(
-                        error => error.Description)));
+                    createResult.Errors
+                        .Select(
+                            error =>
+                                error.Description)));
         }
 
         var addRoleResult =
-            await _userManager.AddToRoleAsync(
-                user,
-                clientRole);
+            await _userManager
+                .AddToRoleAsync(
+                    user,
+                    clientRole);
 
         if (!addRoleResult.Succeeded)
         {
-            await _userManager.DeleteAsync(user);
+            await _userManager
+                .DeleteAsync(user);
 
             throw new Exception(
                 string.Join(
                     ", ",
-                    addRoleResult.Errors.Select(
-                        error => error.Description)));
+                    addRoleResult.Errors
+                        .Select(
+                            error =>
+                                error.Description)));
         }
 
-        var client = new Client
-        {
-            UserId = user.Id
-        };
+        var client =
+            new Client
+            {
+                UserId =
+                    user.Id
+            };
 
-        _context.Clients.Add(client);
+        _context.Clients.Add(
+            client);
 
         try
         {
-            await _context.SaveChangesAsync();
+            await _context
+                .SaveChangesAsync();
         }
         catch
         {
-            await _userManager.DeleteAsync(user);
+            await _userManager
+                .DeleteAsync(user);
+
             throw;
         }
 
-        if (!IsDemoAccount(user.Email!))
+        if (!IsDemoAccount(
+                user.Email!))
         {
             await SendEmailVerificationCodeAsync(
                 user.Email!);
         }
 
         var token =
-            await _jwtTokenService.GenerateTokenAsync(
-                user);
+            await _jwtTokenService
+                .GenerateTokenAsync(
+                    user);
 
         var refreshToken =
-            _jwtTokenService.GenerateRefreshToken();
+            _jwtTokenService
+                .GenerateRefreshToken();
+
+        var now =
+            DateTime.UtcNow;
 
         var refreshTokenEntity =
             new RefreshToken
             {
-                UserId = user.Id,
-                Token = refreshToken,
+                UserId =
+                    user.Id,
+
+                TokenHash =
+                    HashRefreshToken(
+                        refreshToken),
+
+                IssuedAtUtc =
+                    now,
+
                 ExpiresAtUtc =
-                    DateTime.UtcNow.AddDays(7),
-                IsRevoked = false
+                    now.AddDays(7),
+
+                RevokedAtUtc =
+                    null,
+
+                ReplacedByTokenHash =
+                    null,
+
+                SessionId =
+                    Guid.NewGuid()
+                        .ToString("N")
             };
 
         _context.RefreshTokens.Add(
             refreshTokenEntity);
 
-        await _context.SaveChangesAsync();
+        await _context
+            .SaveChangesAsync();
 
         return new AuthResponseDto
         {
-            Id = user.Id,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            Email = user.Email!,
-            Token = token,
-            Role = clientRole,
-            RefreshToken = refreshToken
+            Id =
+                user.Id,
+
+            FirstName =
+                user.FirstName,
+
+            LastName =
+                user.LastName,
+
+            Email =
+                user.Email!,
+
+            Token =
+                token,
+
+            Role =
+                clientRole,
+
+            RefreshToken =
+                refreshToken
         };
     }
 
     public async Task<AuthResponseDto> LoginAsync(
-        LoginRequestDto request)
+    LoginRequestDto request)
     {
         var user =
-            await _userManager.FindByEmailAsync(request.Email);
+            await _userManager
+                .FindByEmailAsync(
+                    request.Email);
 
         if (user == null)
         {
-            throw new Exception("Invalid credentials.");
+            throw new Exception(
+                "Invalid credentials.");
         }
 
         if (user.IsBlocked)
@@ -218,73 +293,109 @@ public class AuthService : IAuthService
                 "Your account is blocked.");
         }
 
-        if (!user.IsEmailVerified
-    && !IsDemoAccount(user.Email!))
+        if (!user.IsEmailVerified &&
+            !IsDemoAccount(
+                user.Email!))
         {
             throw new Exception(
                 "Email is not verified.");
         }
 
         var isPasswordValid =
-            await _userManager.CheckPasswordAsync(
-                user,
-                request.Password);
+            await _userManager
+                .CheckPasswordAsync(
+                    user,
+                    request.Password);
 
         if (!isPasswordValid)
         {
-            throw new Exception("Invalid credentials.");
+            throw new Exception(
+                "Invalid credentials.");
         }
-        var oldTokens =
-    await _context.RefreshTokens
-        .Where(x =>
-            x.UserId == user.Id
-            && !x.IsRevoked)
-        .ToListAsync();
 
-        foreach (var oldToken in oldTokens)
+        var roles =
+            await _userManager
+                .GetRolesAsync(
+                    user);
+
+        if (roles.Count == 0)
         {
-            oldToken.IsRevoked = true;
+            throw new InvalidOperationException(
+                "User does not have an assigned role.");
         }
 
+        var token =
+            await _jwtTokenService
+                .GenerateTokenAsync(
+                    user);
 
-        var roles = await _userManager.GetRolesAsync(user);
+        var refreshToken =
+            _jwtTokenService
+                .GenerateRefreshToken();
 
-        var token = await _jwtTokenService.GenerateTokenAsync(user);
-
-        var refreshToken =_jwtTokenService.GenerateRefreshToken();
+        var now =
+            DateTime.UtcNow;
 
         var refreshTokenEntity =
-    new RefreshToken
-    {
-        UserId = user.Id,
+            new RefreshToken
+            {
+                UserId =
+                    user.Id,
 
-        Token = refreshToken,
+                TokenHash =
+                    HashRefreshToken(
+                        refreshToken),
 
-        ExpiresAtUtc =
-    request.RememberMe
-        ? DateTime.UtcNow.AddDays(30)
-        : DateTime.UtcNow.AddDays(1),
+                IssuedAtUtc =
+                    now,
 
-        IsRevoked = false
-    };
+                ExpiresAtUtc =
+                    request.RememberMe
+                        ? now.AddDays(30)
+                        : now.AddDays(1),
+
+                RevokedAtUtc =
+                    null,
+
+                ReplacedByTokenHash =
+                    null,
+
+                SessionId =
+                    Guid.NewGuid()
+                        .ToString("N")
+            };
 
         _context.RefreshTokens.Add(
             refreshTokenEntity);
 
-        user.LastLoginAtUtc = DateTime.UtcNow;
+        user.LastLoginAtUtc =
+            now;
 
-        await _context.SaveChangesAsync();
+        await _context
+            .SaveChangesAsync();
 
         return new AuthResponseDto
         {
-            Id = user.Id,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            Email = user.Email!,
-            Token = token,
-            Role = roles.First(),
-            RefreshToken=refreshToken,
-            
+            Id =
+                user.Id,
+
+            FirstName =
+                user.FirstName,
+
+            LastName =
+                user.LastName,
+
+            Email =
+                user.Email!,
+
+            Token =
+                token,
+
+            Role =
+                roles.First(),
+
+            RefreshToken =
+                refreshToken
         };
     }
 
@@ -406,6 +517,10 @@ public class AuthService : IAuthService
 
         resetCode.IsUsed = true;
 
+        await RevokeAllUserSessionsAsync(
+    user.Id,
+    DateTime.UtcNow);
+
         await _context.SaveChangesAsync();
     }
 
@@ -467,23 +582,9 @@ public class AuthService : IAuthService
                     : errorMessage);
         }
 
-        var activeRefreshTokens =
-            await _context.RefreshTokens
-                .Where(x =>
-                    x.UserId == userId &&
-                    !x.IsRevoked)
-                .ToListAsync();
-
-        foreach (var refreshToken
-                 in activeRefreshTokens)
-        {
-            refreshToken.IsRevoked = true;
-
-            refreshToken.UpdatedAtUtc =
-                DateTime.UtcNow;
-        }
-
-        await _context.SaveChangesAsync();
+        await RevokeAllUserSessionsAsync(
+            userId,
+            DateTime.UtcNow);
     }
 
     public async Task SendVerificationEmailAsync(
@@ -579,32 +680,72 @@ public class AuthService : IAuthService
     RefreshTokenAsync(
         RefreshTokenRequestDto request)
     {
+        if (string.IsNullOrWhiteSpace(
+                request.RefreshToken))
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid refresh token.");
+        }
+
+        var tokenHash =
+            HashRefreshToken(
+                request.RefreshToken);
+
         var refreshToken =
             await _context.RefreshTokens
                 .Include(x => x.User)
                 .FirstOrDefaultAsync(x =>
-                    x.Token == request.RefreshToken);
+                    x.TokenHash ==
+                        tokenHash);
 
         if (refreshToken == null)
         {
-            throw new Exception(
+            throw new UnauthorizedAccessException(
                 "Invalid refresh token.");
         }
 
-        if (refreshToken.IsRevoked)
+        var now =
+            DateTime.UtcNow;
+
+        /*
+         * REUSE DETECTION:
+         * Ako je već opozvan token ponovo
+         * iskorišten, smatramo da je session
+         * chain potencijalno kompromitovan.
+         */
+        if (refreshToken.RevokedAtUtc.HasValue)
         {
-            throw new Exception(
-                "Refresh token revoked.");
+            await RevokeSessionAsync(
+                refreshToken.UserId,
+                refreshToken.SessionId,
+                now);
+
+            throw new UnauthorizedAccessException(
+                "Refresh token reuse detected.");
         }
 
-        if (refreshToken.ExpiresAtUtc
-            < DateTime.UtcNow)
+        if (refreshToken.ExpiresAtUtc <=
+            now)
         {
-            throw new Exception(
+            refreshToken.RevokedAtUtc =
+                now;
+
+            await _context.SaveChangesAsync();
+
+            throw new UnauthorizedAccessException(
                 "Refresh token expired.");
         }
 
-        refreshToken.IsRevoked = true;
+        if (refreshToken.User.IsBlocked ||
+            !refreshToken.User.IsActive)
+        {
+            await RevokeAllUserSessionsAsync(
+                refreshToken.UserId,
+                now);
+
+            throw new UnauthorizedAccessException(
+                "User session is no longer valid.");
+        }
 
         var newJwtToken =
             await _jwtTokenService
@@ -615,20 +756,43 @@ public class AuthService : IAuthService
             _jwtTokenService
                 .GenerateRefreshToken();
 
+        var newRefreshTokenHash =
+            HashRefreshToken(
+                newRefreshToken);
+
+        /*
+         * Stari token postaje nevažeći
+         * prije izdavanja novog.
+         */
+        refreshToken.RevokedAtUtc =
+            now;
+
+        refreshToken.ReplacedByTokenHash =
+            newRefreshTokenHash;
+
         var newRefreshTokenEntity =
             new RefreshToken
             {
                 UserId =
                     refreshToken.UserId,
 
-                Token =
-                    newRefreshToken,
+                TokenHash =
+                    newRefreshTokenHash,
+
+                IssuedAtUtc =
+                    now,
 
                 ExpiresAtUtc =
-                    DateTime.UtcNow.AddDays(7),
+                    refreshToken.ExpiresAtUtc,
 
-                IsRevoked = false
-               
+                RevokedAtUtc =
+                    null,
+
+                ReplacedByTokenHash =
+                    null,
+
+                SessionId =
+                    refreshToken.SessionId
             };
 
         _context.RefreshTokens.Add(
@@ -636,17 +800,35 @@ public class AuthService : IAuthService
 
         await _context.SaveChangesAsync();
 
-        var roles = await _userManager.GetRolesAsync(refreshToken.User);
+        var roles =
+            await _userManager
+                .GetRolesAsync(
+                    refreshToken.User);
 
         return new AuthResponseDto
         {
-            Token = newJwtToken,
-            RefreshToken = newRefreshToken,
-            Id=refreshToken.UserId,
-            FirstName=refreshToken.User.FirstName,
-            LastName=refreshToken.User.LastName,
-            Email = refreshToken.User.Email ?? string.Empty,
-            Role =roles.First()
+            Token =
+                newJwtToken,
+
+            RefreshToken =
+                newRefreshToken,
+
+            Id =
+                refreshToken.UserId,
+
+            FirstName =
+                refreshToken.User.FirstName,
+
+            LastName =
+                refreshToken.User.LastName,
+
+            Email =
+                refreshToken.User.Email
+                ?? string.Empty,
+
+            Role =
+                roles.FirstOrDefault()
+                ?? string.Empty
         };
     }
 
@@ -821,12 +1003,13 @@ public class AuthService : IAuthService
     }
 
     public async Task<AuthResponseDto>
-    Verify2FAAsync(
-        Verify2FADto request)
+     Verify2FAAsync(
+         Verify2FADto request)
     {
         var user =
-            await _userManager.FindByEmailAsync(
-                request.Email);
+            await _userManager
+                .FindByEmailAsync(
+                    request.Email);
 
         if (user == null)
         {
@@ -847,14 +1030,19 @@ public class AuthService : IAuthService
                 "No active verification code exists.");
         }
 
-        if (user.TwoFactorCodeExpiresAtUtc == null ||
+        if (user.TwoFactorCodeExpiresAtUtc ==
+                null ||
             user.TwoFactorCodeExpiresAtUtc <
-            DateTime.UtcNow)
+                DateTime.UtcNow)
         {
-            user.TwoFactorCode = null;
-            user.TwoFactorCodeExpiresAtUtc = null;
+            user.TwoFactorCode =
+                null;
 
-            await _userManager.UpdateAsync(user);
+            user.TwoFactorCodeExpiresAtUtc =
+                null;
+
+            await _userManager
+                .UpdateAsync(user);
 
             throw new Exception(
                 "Verification code expired.");
@@ -867,58 +1055,96 @@ public class AuthService : IAuthService
                 "Invalid verification code.");
         }
 
-        user.TwoFactorCode = null;
-        user.TwoFactorCodeExpiresAtUtc = null;
+        user.TwoFactorCode =
+            null;
 
-        await _userManager.UpdateAsync(user);
+        user.TwoFactorCodeExpiresAtUtc =
+            null;
 
-        var oldTokens =
-            await _context.RefreshTokens
-                .Where(x =>
-                    x.UserId == user.Id &&
-                    !x.IsRevoked)
-                .ToListAsync();
-
-        foreach (var oldToken in oldTokens)
-        {
-            oldToken.IsRevoked = true;
-        }
+        await _userManager
+            .UpdateAsync(user);
 
         var roles =
-            await _userManager.GetRolesAsync(user);
+            await _userManager
+                .GetRolesAsync(
+                    user);
+
+        if (roles.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "User does not have an assigned role.");
+        }
 
         var token =
             await _jwtTokenService
-                .GenerateTokenAsync(user);
+                .GenerateTokenAsync(
+                    user);
 
         var refreshToken =
             _jwtTokenService
                 .GenerateRefreshToken();
 
-        _context.RefreshTokens.Add(
+        var now =
+            DateTime.UtcNow;
+
+        var refreshTokenEntity =
             new RefreshToken
             {
-                UserId = user.Id,
-                Token = refreshToken,
+                UserId =
+                    user.Id,
+
+                TokenHash =
+                    HashRefreshToken(
+                        refreshToken),
+
+                IssuedAtUtc =
+                    now,
+
                 ExpiresAtUtc =
-                    DateTime.UtcNow.AddDays(7),
-                IsRevoked = false
-            });
+                    now.AddDays(7),
 
-        user.LastLoginAtUtc = DateTime.UtcNow;
+                RevokedAtUtc =
+                    null,
 
-        await _context.SaveChangesAsync();
+                ReplacedByTokenHash =
+                    null,
+
+                SessionId =
+                    Guid.NewGuid()
+                        .ToString("N")
+            };
+
+        _context.RefreshTokens.Add(
+            refreshTokenEntity);
+
+        user.LastLoginAtUtc =
+            now;
+
+        await _context
+            .SaveChangesAsync();
 
         return new AuthResponseDto
         {
-            Id = user.Id,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            Email = user.Email!,
-            Token = token,
-            RefreshToken = refreshToken,
-            Role = roles.FirstOrDefault()
-                ?? string.Empty
+            Id =
+                user.Id,
+
+            FirstName =
+                user.FirstName,
+
+            LastName =
+                user.LastName,
+
+            Email =
+                user.Email!,
+
+            Token =
+                token,
+
+            RefreshToken =
+                refreshToken,
+
+            Role =
+                roles.First()
         };
     }
 
@@ -959,38 +1185,42 @@ public class AuthService : IAuthService
     }
 
     public async Task LogoutAsync(
-    int userId)
+     int userId,
+     string refreshToken)
     {
-        var userExists =
-            await _userManager.Users
-                .AnyAsync(x =>
-                    x.Id == userId);
-
-        if (!userExists)
+        if (string.IsNullOrWhiteSpace(
+                refreshToken))
         {
-            throw new NotFoundException(
-                "User not found.");
+            throw new BadRequestException(
+                "Refresh token is required.");
         }
 
-        var activeRefreshTokens =
-            await _context.RefreshTokens
-                .Where(x =>
-                    x.UserId == userId
-                    && !x.IsRevoked)
-                .ToListAsync();
+        var tokenHash =
+            HashRefreshToken(
+                refreshToken);
 
-        if (activeRefreshTokens.Count == 0)
+        var token =
+            await _context.RefreshTokens
+                .FirstOrDefaultAsync(x =>
+                    x.UserId ==
+                        userId &&
+                    x.TokenHash ==
+                        tokenHash);
+
+        if (token == null)
         {
             return;
         }
 
-        foreach (var refreshToken
-                 in activeRefreshTokens)
+        if (token.RevokedAtUtc.HasValue)
         {
-            refreshToken.IsRevoked = true;
+            return;
         }
 
-        await _context.SaveChangesAsync();
+        await RevokeSessionAsync(
+            userId,
+            token.SessionId,
+            DateTime.UtcNow);
     }
 
     public async Task<bool>
@@ -1184,4 +1414,72 @@ public class AuthService : IAuthService
 
         await _context.SaveChangesAsync();
     }
+    private static string HashRefreshToken(
+    string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            throw new BadRequestException(
+                "Refresh token is required.");
+        }
+
+        var bytes =
+            System.Text.Encoding.UTF8
+                .GetBytes(token.Trim());
+
+        var hash =
+            SHA256.HashData(bytes);
+
+        return Convert.ToHexString(hash);
+    }
+
+    private async Task RevokeSessionAsync(
+    int userId,
+    string sessionId,
+    DateTime revokedAtUtc)
+    {
+        var sessionTokens =
+            await _context.RefreshTokens
+                .Where(x =>
+                    x.UserId ==
+                        userId &&
+                    x.SessionId ==
+                        sessionId &&
+                    !x.RevokedAtUtc.HasValue)
+                .ToListAsync();
+
+        foreach (var token
+                 in sessionTokens)
+        {
+            token.RevokedAtUtc =
+                revokedAtUtc;
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task
+    RevokeAllUserSessionsAsync(
+        int userId,
+        DateTime revokedAtUtc)
+    {
+        var activeTokens =
+            await _context.RefreshTokens
+                .Where(x =>
+                    x.UserId ==
+                        userId &&
+                    !x.RevokedAtUtc.HasValue)
+                .ToListAsync();
+
+        foreach (var token
+                 in activeTokens)
+        {
+            token.RevokedAtUtc =
+                revokedAtUtc;
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+
 }

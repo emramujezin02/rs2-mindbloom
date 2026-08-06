@@ -32,8 +32,8 @@ class AuthApiService {
     return CurrentUserModel.fromJson(response);
   }
 
-  Future<void> logout() async {
-    await apiClient.post('/Auth/logout');
+  Future<void> logout(String refreshToken) async {
+    await apiClient.post('/Auth/logout', body: {'refreshToken': refreshToken});
   }
 
   Future<void> changePassword({

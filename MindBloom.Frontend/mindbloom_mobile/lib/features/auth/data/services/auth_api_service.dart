@@ -79,8 +79,8 @@ class AuthApiService {
     await apiClient.post('/Auth/disable-2fa');
   }
 
-  Future<void> logout() async {
-    await apiClient.post('/Auth/logout');
+  Future<void> logout(String refreshToken) async {
+    await apiClient.post('/Auth/logout', body: {'refreshToken': refreshToken});
   }
 
   Future<void> sendEmailVerificationCode(

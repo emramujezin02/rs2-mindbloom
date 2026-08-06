@@ -104,6 +104,53 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.Entity<RefreshToken>(
+    entity =>
+    {
+        entity.Property(x =>
+                x.TokenHash)
+            .IsRequired()
+            .HasMaxLength(64);
+
+        entity.Property(x =>
+                x.SessionId)
+            .IsRequired()
+            .HasMaxLength(64);
+
+        entity.Property(x =>
+                x.ReplacedByTokenHash)
+            .HasMaxLength(64);
+
+        entity.Property(x =>
+                x.IssuedAtUtc)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.ExpiresAtUtc)
+            .IsRequired();
+
+        entity.HasOne(x =>
+                x.User)
+            .WithMany()
+            .HasForeignKey(x =>
+                x.UserId)
+            .OnDelete(
+                DeleteBehavior.Cascade);
+
+        entity.HasIndex(x =>
+                x.TokenHash)
+            .IsUnique();
+
+        entity.HasIndex(x => new
+        {
+            x.UserId,
+            x.SessionId
+        });
+
+        entity.HasIndex(x =>
+            x.ExpiresAtUtc);
+    });
+
         builder.Entity<FcmDeviceToken>(
     entity =>
     {

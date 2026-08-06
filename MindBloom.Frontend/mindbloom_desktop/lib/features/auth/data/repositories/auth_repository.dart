@@ -53,8 +53,12 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
+    final refreshToken = await sessionStorage.getRefreshToken();
+
     try {
-      await apiService.logout();
+      if (refreshToken != null && refreshToken.trim().isNotEmpty) {
+        await apiService.logout(refreshToken.trim());
+      }
     } finally {
       await sessionStorage.clearSession();
     }

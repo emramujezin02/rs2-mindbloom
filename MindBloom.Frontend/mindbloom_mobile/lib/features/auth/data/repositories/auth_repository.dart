@@ -74,8 +74,12 @@ class AuthRepository {
   Future<bool> logout() async {
     var serverLogoutSucceeded = true;
 
+    final refreshToken = await sessionStorage.getRefreshToken();
+
     try {
-      await authApiService.logout();
+      if (refreshToken != null && refreshToken.trim().isNotEmpty) {
+        await authApiService.logout(refreshToken.trim());
+      }
     } catch (_) {
       serverLogoutSucceeded = false;
     } finally {
