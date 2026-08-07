@@ -13,6 +13,9 @@ using MindBloom.Shared.Constants;
 using MindBloom.Application.Features.Therapists.DTOs;
 using MindBloom.Application.Features.Therapists.Interfaces;
 using MindBloom.Domain.Enums;
+using System.Text;
+using Microsoft.AspNetCore.WebUtilities;
+
 namespace MindBloom.Infrastructure.Services;
 
 public class AuthService : IAuthService
@@ -612,126 +615,274 @@ public class AuthService : IAuthService
     public async Task ForgotPasswordAsync(
     ForgotPasswordDto request)
     {
-        var user =
-            await _userManager.FindByEmailAsync(
-                request.Email);
+        var normalizedEmail =
+            request.Email
+                .Trim()
+                .ToLowerInvariant();
 
+        var user =
+            await _userManager
+                .FindByEmailAsync(
+                    normalizedEmail);
+
+        /*
+         * Namjerno vraćamo bez greške.
+         *
+         * Controller će zato dati potpuno isti
+         * generički odgovor bez obzira postoji
+         * li account sa ovim emailom.
+         */
         if (user == null)
         {
-            throw new NotFoundException("User not found.");
-        }
-
-        var code =
-            new Random()
-                .Next(100000, 999999)
-                .ToString();
-
-        var resetCode =
-            new PasswordResetCode
-            {
-                Email = request.Email,
-
-                Code = code,
-
-                ExpiresAtUtc =
-                    DateTime.UtcNow.AddMinutes(10),
-
-                IsUsed = false
-            };
-
-        _context.PasswordResetCodes.Add(resetCode);
-
-        await _context.SaveChangesAsync();
-
-        if (!IsDemoAccount(user.Email!))
-        {
-            await _notificationPublisher
-                .PublishEmailAsync(
-                    new EmailNotificationMessage
-                    {
-                        CorrelationId =
-                            Guid.NewGuid(),
-
-                        EventType =
-                            NotificationEventType
-                                .PasswordResetRequested,
-
-                        RecipientEmail =
-                            user.Email!,
-
-                        RecipientName =
-                            $"{user.FirstName} {user.LastName}"
-                                .Trim(),
-
-                        Subject =
-                            "Reset Password Code",
-
-                        Body =
-                            $"Your reset code is: {code}",
-
-                        IsHtml =
-                            false,
-
-                        Source =
-                            "MindBloom.API"
-                    });
-        }
-    }
-
-    public async Task ResetPasswordAsync(
-    ResetPasswordDto request)
-    {
-        var user =
-            await _userManager.FindByEmailAsync(
-                request.Email);
-
-        if (user == null)
-        {
-            throw new NotFoundException("User not found.");
-        }
-
-        var resetCode =
-            await _context.PasswordResetCodes
-                .OrderByDescending(x => x.CreatedAtUtc)
-                .FirstOrDefaultAsync(x =>
-                    x.Email == request.Email
-                    && x.Code == request.Code
-                    && !x.IsUsed);
-
-        if (resetCode == null)
-        {
-            throw new Exception("Invalid code.");
-        }
-
-        if (resetCode.ExpiresAtUtc < DateTime.UtcNow)
-        {
-            throw new Exception("Code expired.");
+            return;
         }
 
         var resetToken =
             await _userManager
-                .GeneratePasswordResetTokenAsync(user);
+                .GeneratePasswordResetTokenAsync(
+                    user);
+
+        /*
+         * Identity token može sadržavati znakove
+         * koji nisu pogodni za URL/transport.
+         */
+        var encodedToken =
+            WebEncoders.Base64UrlEncode(
+                Encoding.UTF8.GetBytes(
+                    resetToken));
+
+        var tokenHash =
+            HashPasswordResetToken(
+                encodedToken);
+
+        var now =
+            DateTime.UtcNow;
+
+        /*
+         * Ranije aktivne zahtjeve za reset
+         * činimo nevažećim.
+         */
+        var previousRequests =
+            await _context.PasswordResetCodes
+                .Where(x =>
+                    x.Email ==
+                        normalizedEmail &&
+                    !x.IsUsed)
+                .ToListAsync();
+
+        foreach (var previousRequest
+                 in previousRequests)
+        {
+            previousRequest.IsUsed =
+                true;
+
+            previousRequest.UsedAtUtc =
+                now;
+        }
+
+        var resetRequest =
+            new PasswordResetCode
+            {
+                Email =
+                    normalizedEmail,
+
+                TokenHash =
+                    tokenHash,
+
+                ExpiresAtUtc =
+                    now.AddMinutes(15),
+
+                IsUsed =
+                    false,
+
+                UsedAtUtc =
+                    null
+            };
+
+        _context.PasswordResetCodes.Add(
+            resetRequest);
+
+        await _context
+            .SaveChangesAsync();
+
+        if (IsDemoAccount(
+                user.Email!))
+        {
+            return;
+        }
+
+        await _notificationPublisher
+            .PublishEmailAsync(
+                new EmailNotificationMessage
+                {
+                    CorrelationId =
+                        Guid.NewGuid(),
+
+                    EventType =
+                        NotificationEventType
+                            .PasswordResetRequested,
+
+                    RecipientEmail =
+                        user.Email!,
+
+                    RecipientName =
+                        $"{user.FirstName} {user.LastName}"
+                            .Trim(),
+
+                    Subject =
+                        "MindBloom password reset",
+
+                    Body =
+                        "Use the following password reset token:\n\n"
+                        + encodedToken
+                        + "\n\nThis token expires in 15 minutes. "
+                        + "If you did not request a password reset, "
+                        + "you can ignore this email.",
+
+                    IsHtml =
+                        false,
+
+                    Source =
+                        "MindBloom.API"
+                });
+    }
+
+    public async Task ResetPasswordAsync(
+     ResetPasswordDto request)
+    {
+        var normalizedEmail =
+            request.Email
+                .Trim()
+                .ToLowerInvariant();
+
+        var safeErrorMessage =
+            "Password reset request is invalid or has expired.";
+
+        if (string.IsNullOrWhiteSpace(
+                request.Token))
+        {
+            throw new BadRequestException(
+                safeErrorMessage);
+        }
+
+        var user =
+            await _userManager
+                .FindByEmailAsync(
+                    normalizedEmail);
+
+        /*
+         * Ne otkrivamo da li account postoji.
+         */
+        if (user == null)
+        {
+            throw new BadRequestException(
+                safeErrorMessage);
+        }
+
+        var encodedToken =
+            request.Token.Trim();
+
+        var tokenHash =
+            HashPasswordResetToken(
+                encodedToken);
+
+        var resetRequest =
+            await _context.PasswordResetCodes
+                .OrderByDescending(x =>
+                    x.CreatedAtUtc)
+                .FirstOrDefaultAsync(x =>
+                    x.Email ==
+                        normalizedEmail &&
+                    x.TokenHash ==
+                        tokenHash &&
+                    !x.IsUsed);
+
+        if (resetRequest == null ||
+            resetRequest.ExpiresAtUtc <=
+                DateTime.UtcNow)
+        {
+            throw new BadRequestException(
+                safeErrorMessage);
+        }
+
+        string identityToken;
+
+        try
+        {
+            var tokenBytes =
+                WebEncoders.Base64UrlDecode(
+                    encodedToken);
+
+            identityToken =
+                Encoding.UTF8.GetString(
+                    tokenBytes);
+        }
+        catch
+        {
+            throw new BadRequestException(
+                safeErrorMessage);
+        }
 
         var result =
             await _userManager
                 .ResetPasswordAsync(
                     user,
-                    resetToken,
+                    identityToken,
                     request.NewPassword);
 
         if (!result.Succeeded)
         {
-            throw new Exception(
-                result.Errors.First().Description);
+            /*
+             * Ne vraćamo detalj da li je token
+             * invalidan, istekao ili već iskorišten.
+             *
+             * Validacija lozinke se svakako izvršava
+             * server-side prije dolaska ovdje.
+             */
+            throw new BadRequestException(
+                safeErrorMessage);
         }
 
-        resetCode.IsUsed = true;
+        var now =
+            DateTime.UtcNow;
+
+        resetRequest.IsUsed =
+            true;
+
+        resetRequest.UsedAtUtc =
+            now;
+
+        _context.UserAudits.Add(
+            new UserAudit
+            {
+                TargetUserId =
+                    user.Id,
+
+                ChangedByUserId =
+                    user.Id,
+
+                Action =
+                    "PasswordReset",
+
+                PreviousValues =
+                    null,
+
+                NewValues =
+                    null,
+
+                Reason =
+                    "Password reset completed through the self-service recovery flow.",
+
+                ChangedAtUtc =
+                    now
+            });
 
         await RevokeAllUserSessionsAsync(
-    user.Id,
-    DateTime.UtcNow);
+            user.Id,
+            now);
 
-        await _context.SaveChangesAsync();
+        await _context
+            .SaveChangesAsync();
     }
 
     public async Task ChangePasswordAsync(
@@ -1717,5 +1868,25 @@ public class AuthService : IAuthService
             DateTime.UtcNow);
     }
 
+    private static string HashPasswordResetToken(
+    string token)
+    {
+        if (string.IsNullOrWhiteSpace(
+                token))
+        {
+            throw new BadRequestException(
+                "Password reset token is required.");
+        }
 
+        var bytes =
+            Encoding.UTF8.GetBytes(
+                token.Trim());
+
+        var hash =
+            SHA256.HashData(
+                bytes);
+
+        return Convert.ToHexString(
+            hash);
+    }
 }

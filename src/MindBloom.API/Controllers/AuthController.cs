@@ -26,7 +26,9 @@ public sealed class AuthController
 
     [AllowAnonymous]
     [HttpPost("register")]
-    [EnableRateLimiting("registration")]
+    [EnableRateLimiting(
+    RateLimitPolicyConstants
+        .Registration)]
     public async Task<IActionResult> Register(
         [FromBody]
         RegisterRequestDto request)
@@ -72,14 +74,18 @@ public sealed class AuthController
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+        RateLimitPolicyConstants
+            .ForgotPassword)]
     [HttpPost("forgot-password")]
     public async Task<IActionResult>
         ForgotPassword(
             [FromBody]
-            ForgotPasswordDto request)
+        ForgotPasswordDto request)
     {
         await _authService
-            .ForgotPasswordAsync(request);
+            .ForgotPasswordAsync(
+                request);
 
         return Ok(
             new
@@ -90,14 +96,18 @@ public sealed class AuthController
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+        RateLimitPolicyConstants
+            .ResetPassword)]
     [HttpPost("reset-password")]
     public async Task<IActionResult>
         ResetPassword(
             [FromBody]
-            ResetPasswordDto request)
+        ResetPasswordDto request)
     {
         await _authService
-            .ResetPasswordAsync(request);
+            .ResetPasswordAsync(
+                request);
 
         return Ok(
             new

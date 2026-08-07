@@ -25,6 +25,7 @@ using MindBloom.Application.Features.ClientOnboarding.Validators;
 using MindBloom.Application.Features.Users.Interfaces;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using MindBloom.Shared.Constants;
 
 Env.Load("../../.env");
 
@@ -202,7 +203,71 @@ builder.Services.AddRateLimiter(
                 .Status429TooManyRequests;
 
         options.AddPolicy(
-            "registration",
+    RateLimitPolicyConstants
+        .ForgotPassword,
+    httpContext =>
+        RateLimitPartition
+            .GetFixedWindowLimiter(
+                partitionKey:
+                    httpContext
+                        .Connection
+                        .RemoteIpAddress?
+                        .ToString()
+                    ?? "unknown",
+
+                factory:
+                    _ =>
+                        new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit =
+                                3,
+
+                            Window =
+                                TimeSpan
+                                    .FromMinutes(
+                                        15),
+
+                            QueueLimit =
+                                0,
+
+                            AutoReplenishment =
+                                true
+                        }));
+
+        options.AddPolicy(
+            RateLimitPolicyConstants
+                .ResetPassword,
+            httpContext =>
+                RateLimitPartition
+                    .GetFixedWindowLimiter(
+                        partitionKey:
+                            httpContext
+                                .Connection
+                                .RemoteIpAddress?
+                                .ToString()
+                            ?? "unknown",
+
+                        factory:
+                            _ =>
+                                new FixedWindowRateLimiterOptions
+                                {
+                                    PermitLimit =
+                                        5,
+
+                                    Window =
+                                        TimeSpan
+                                            .FromMinutes(
+                                                15),
+
+                                    QueueLimit =
+                                        0,
+
+                                    AutoReplenishment =
+                                        true
+                                }));
+
+        options.AddPolicy(
+            RateLimitPolicyConstants.Registration,
             httpContext =>
                 RateLimitPartition
                     .GetFixedWindowLimiter(

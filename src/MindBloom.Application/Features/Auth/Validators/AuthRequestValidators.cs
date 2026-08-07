@@ -266,8 +266,17 @@ public sealed class ResetPasswordDtoValidator
         RuleFor(x => x.Email)
             .ValidEmail();
 
-        RuleFor(x => x.Code)
-            .ValidVerificationCode();
+        RuleFor(x => x.Token)
+            .Cascade(
+                CascadeMode.Stop)
+            .NotEmpty()
+            .WithMessage(
+                "Password reset token is required.")
+            .MaximumLength(
+                AuthValidationRules
+                    .MaximumTokenLength)
+            .WithMessage(
+                $"Password reset token may contain at most {AuthValidationRules.MaximumTokenLength} characters.");
 
         RuleFor(x => x.NewPassword)
             .ValidPassword(
