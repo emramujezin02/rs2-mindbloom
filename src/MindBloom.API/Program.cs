@@ -35,6 +35,13 @@ Env.TraversePath().Load();
 var builder =
     WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(
+    options =>
+    {
+        options.AddServerHeader =
+            false;
+    });
+
 builder.Configuration
     .AddEnvironmentVariables();
 
@@ -398,11 +405,33 @@ builder.Services.AddRateLimiter(
             rateLimiting.PublicSearch);
     });
 
+builder.Services.AddHsts(
+    options =>
+    {
+        options.Preload =
+            true;
+
+        options.IncludeSubDomains =
+            true;
+
+        options.MaxAge =
+            TimeSpan.FromDays(
+                365);
+    });
+
 var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
 
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
+
+app.UseMiddleware<
+    SecurityHeadersMiddleware>();
 
 app.UseMiddleware<
     CorrelationIdMiddleware>();

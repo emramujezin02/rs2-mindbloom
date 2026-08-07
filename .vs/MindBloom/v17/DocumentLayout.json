@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\middlewares\\securityheadersmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\middlewares\\securityheadersmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -126,11 +130,37 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "SecurityHeadersMiddleware.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Middlewares\\SecurityHeadersMiddleware.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\Middlewares\\SecurityHeadersMiddleware.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Middlewares\\SecurityHeadersMiddleware.cs",
+              "RelativeToolTip": "src\\MindBloom.API\\Middlewares\\SecurityHeadersMiddleware.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAuwAIAAAAUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-07T10:55:41.356Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Program.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\Program.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Program.cs",
+              "RelativeToolTip": "src\\MindBloom.API\\Program.cs",
+              "ViewState": "AgIAAJYBAAAAAAAAAAAuwKIBAAAVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-07T09:19:34.888Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "appsettings.Production.json",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\appsettings.Production.json",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\appsettings.Production.json",
@@ -138,12 +168,11 @@
               "RelativeToolTip": "src\\MindBloom.API\\appsettings.Production.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-08-07T10:39:49.105Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-07T10:39:49.105Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\appsettings.json",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\appsettings.json",
@@ -156,20 +185,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Program.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.API\\Program.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Program.cs",
-              "RelativeToolTip": "src\\MindBloom.API\\Program.cs",
-              "ViewState": "AgIAAPoBAAAAAAAAAAAuwAACAAApAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-07T09:19:34.888Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "appsettings.Development.json",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\appsettings.Development.json",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\appsettings.Development.json",
@@ -177,12 +193,11 @@
               "RelativeToolTip": "src\\MindBloom.API\\appsettings.Development.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-08-07T10:33:43.015Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-07T10:33:43.015Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "CorsPolicyConstants.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Shared\\Constants\\CorsPolicyConstants.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Shared\\Constants\\CorsPolicyConstants.cs",
@@ -190,12 +205,11 @@
               "RelativeToolTip": "src\\MindBloom.Shared\\Constants\\CorsPolicyConstants.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-07T10:38:01.985Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-07T10:38:01.985Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "CorsSettings.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Configuration\\CorsSettings.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Configuration\\CorsSettings.cs",
@@ -203,12 +217,11 @@
               "RelativeToolTip": "src\\MindBloom.API\\Configuration\\CorsSettings.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACYAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-07T10:37:27.171Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-07T10:37:27.171Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "ChatMessageRateLimiter.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\ChatMessageRateLimiter.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\ChatMessageRateLimiter.cs",
@@ -216,12 +229,11 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Services\\ChatMessageRateLimiter.cs",
               "ViewState": "AgIAAGQAAAAAAAAAAAAmwI8AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-07T10:27:52.01Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-07T10:27:52.01Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "ArticlesController.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\ArticlesController.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\ArticlesController.cs",
@@ -229,12 +241,11 @@
               "RelativeToolTip": "src\\MindBloom.API\\Controllers\\ArticlesController.cs",
               "ViewState": "AgIAAAQAAAAAAAAAAAAAAB0AAAAXAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-07T10:21:12.337Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-07T10:21:12.337Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "WorkshopsController.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\WorkshopsController.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\WorkshopsController.cs",
@@ -246,7 +257,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 10,
               "Title": "TherapistsController.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\TherapistsController.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\TherapistsController.cs",
@@ -258,7 +269,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 11,
               "Title": "UserController.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\UserController.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\UserController.cs",
@@ -266,12 +277,11 @@
               "RelativeToolTip": "src\\MindBloom.API\\Controllers\\UserController.cs",
               "ViewState": "AgIAADgAAAAAAAAAAAAAAEsAAAAmAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-07T10:20:00.402Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-07T10:20:00.402Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 12,
               "Title": "RecommendationsController.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\RecommendationsController.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\RecommendationsController.cs",
@@ -283,7 +293,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 13,
               "Title": "ChatController.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\ChatController.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\ChatController.cs",
@@ -295,7 +305,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 14,
               "Title": "AuthController.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Controllers\\AuthController.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Controllers\\AuthController.cs",
@@ -307,7 +317,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 16,
               "Title": "RateLimitingOptions.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Configuration\\RateLimitingOptions.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Configuration\\RateLimitingOptions.cs",
@@ -319,7 +329,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 15,
               "Title": "RateLimitPolicyConstants.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Shared\\Constants\\RateLimitPolicyConstants.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Shared\\Constants\\RateLimitPolicyConstants.cs",
@@ -331,7 +341,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 17,
               "Title": "20260807094829_RemoveLegacyTwoFactorCodeColumns.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260807094829_RemoveLegacyTwoFactorCodeColumns.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260807094829_RemoveLegacyTwoFactorCodeColumns.cs",
@@ -343,7 +353,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 18,
               "Title": "AuthService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Services\\AuthService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Services\\AuthService.cs",
@@ -355,7 +365,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 19,
               "Title": "IAuthService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\Interfaces\\IAuthService.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Auth\\Interfaces\\IAuthService.cs",
@@ -367,7 +377,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 20,
               "Title": "ApplicationUser.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\ApplicationUser.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\ApplicationUser.cs",
@@ -380,7 +390,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 28,
+              "DocumentIndex": 29,
               "Title": "20260807092546_SecureEmailTwoFactorAuthentication.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260807092546_SecureEmailTwoFactorAuthentication.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260807092546_SecureEmailTwoFactorAuthentication.cs",
@@ -388,11 +398,12 @@
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260807092546_SecureEmailTwoFactorAuthentication.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-07T09:25:46.503Z"
+              "WhenOpened": "2026-08-07T09:25:46.503Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 21,
               "Title": "ApplicationDbContext.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
@@ -405,7 +416,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 22,
               "Title": "AuthRequestValidators.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\Validators\\AuthRequestValidators.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Auth\\Validators\\AuthRequestValidators.cs",
@@ -417,7 +428,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 23,
               "Title": "ChangeTwoFactorSettingsDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\DTOs\\ChangeTwoFactorSettingsDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Auth\\DTOs\\ChangeTwoFactorSettingsDto.cs",
@@ -429,7 +440,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 24,
               "Title": "Verify2FADto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\DTOs\\Verify2FADto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Auth\\DTOs\\Verify2FADto.cs",
@@ -441,7 +452,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 25,
               "Title": "Login2FAResponseDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\DTOs\\Login2FAResponseDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Auth\\DTOs\\Login2FAResponseDto.cs",
@@ -453,7 +464,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 26,
               "Title": "TwoFactorLoginChallenge.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\TwoFactorLoginChallenge.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\TwoFactorLoginChallenge.cs",
@@ -465,7 +476,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 27,
               "Title": "AdminAuditDataSanitizer.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Security\\AdminAuditDataSanitizer.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.API\\Security\\AdminAuditDataSanitizer.cs",
@@ -473,11 +484,12 @@
               "RelativeToolTip": "src\\MindBloom.API\\Security\\AdminAuditDataSanitizer.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACQAAAAhAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-07T08:58:59.279Z"
+              "WhenOpened": "2026-08-07T08:58:59.279Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 28,
               "Title": "ChangePasswordDto.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\Auth\\DTOs\\ChangePasswordDto.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\Auth\\DTOs\\ChangePasswordDto.cs",
