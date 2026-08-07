@@ -20,12 +20,14 @@ class _TwoFactorSettingsPageState extends State<TwoFactorSettingsPage> {
     super.initState();
 
     _viewModel.addListener(_refresh);
+
     _viewModel.load2FAStatus();
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
+
     _viewModel.dispose();
 
     super.dispose();
@@ -42,39 +44,98 @@ class _TwoFactorSettingsPageState extends State<TwoFactorSettingsPage> {
   }
 
   Future<void> _changeStatus(bool enabled) async {
-    final confirmed = await showDialog<bool>(
+    final passwordController = TextEditingController();
+
+    var obscurePassword = true;
+
+    final currentPassword = await showDialog<String>(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(enabled ? 'Enable 2FA' : 'Disable 2FA'),
-          content: Text(
-            enabled
-                ? 'A verification code will be required during future logins.'
-                : 'Future logins will no longer require a verification code.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: const Text('Confirm'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(enabled ? 'Enable 2FA' : 'Disable 2FA'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    enabled
+                        ? 'Confirm your identity before enabling two-factor authentication.'
+                        : 'Confirm your identity before disabling two-factor authentication.',
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: obscurePassword,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      labelText: 'Current password',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          setDialogState(() {
+                            obscurePassword = !obscurePassword;
+                          });
+                        },
+                        icon: Icon(
+                          obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                      ),
+                    ),
+                    onSubmitted: (value) {
+                      final password = value.trim();
+
+                      if (password.isEmpty) {
+                        return;
+                      }
+
+                      Navigator.of(dialogContext).pop(password);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final password = passwordController.text.trim();
+
+                    if (password.isEmpty) {
+                      return;
+                    }
+
+                    Navigator.of(dialogContext).pop(password);
+                  },
+                  child: const Text('Confirm'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
 
-    if (confirmed != true || !mounted) {
+    passwordController.dispose();
+
+    if (!mounted || currentPassword == null || currentPassword.isEmpty) {
       return;
     }
 
-    final success = await _viewModel.set2FAEnabled(enabled);
+    final success = await _viewModel.set2FAEnabled(
+      enabled: enabled,
+      currentPassword: currentPassword,
+    );
 
     if (!mounted || !success) {
       return;
@@ -134,6 +195,11 @@ class _TwoFactorSettingsPageState extends State<TwoFactorSettingsPage> {
           const SizedBox(height: 20),
           const Text(
             'Two-factor authentication adds an email verification code to your login process.',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Your current password is required before this security setting can be changed.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),

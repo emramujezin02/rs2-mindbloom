@@ -25,6 +25,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<FcmDeviceToken>
     FcmDeviceTokens =>
         Set<FcmDeviceToken>();
+    public DbSet<TwoFactorLoginChallenge>
+    TwoFactorLoginChallenges
+    {
+        get;
+        set;
+    }
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<ProcessedMessage>
@@ -103,6 +109,60 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany(x => x.Appointments)
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<TwoFactorLoginChallenge>(
+    entity =>
+    {
+        entity.Property(x =>
+                x.ChallengeHash)
+            .IsRequired()
+            .HasMaxLength(64);
+
+        entity.Property(x =>
+                x.CodeHash)
+            .IsRequired()
+            .HasMaxLength(1000);
+
+        entity.Property(x =>
+                x.IssuedAtUtc)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.ExpiresAtUtc)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.FailedAttempts)
+            .HasDefaultValue(0);
+
+        entity.Property(x =>
+                x.MaximumAttempts)
+            .HasDefaultValue(5);
+
+        entity.Property(x =>
+                x.IsUsed)
+            .HasDefaultValue(false);
+
+        entity.HasOne(x =>
+                x.User)
+            .WithMany(x =>
+                x.TwoFactorLoginChallenges)
+            .HasForeignKey(x =>
+                x.UserId)
+            .OnDelete(
+                DeleteBehavior.Cascade);
+
+        entity.HasIndex(x =>
+                x.ChallengeHash)
+            .IsUnique();
+
+        entity.HasIndex(x => new
+        {
+            x.UserId,
+            x.IsUsed,
+            x.ExpiresAtUtc
+        });
+    });
 
         builder.Entity<RefreshToken>(
     entity =>

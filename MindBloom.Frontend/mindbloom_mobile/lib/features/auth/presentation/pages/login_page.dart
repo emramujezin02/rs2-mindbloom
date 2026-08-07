@@ -91,7 +91,23 @@ class _LoginPageState extends State<LoginPage> {
      * korisnik kojem je uključen 2FA prvo mora potvrditi kod.
      */
     if (_viewModel.requiresTwoFactor) {
-      Navigator.of(context).pushNamed(AppRouter.verify2FA, arguments: email);
+      final challengeToken = _viewModel.pendingTwoFactorChallengeToken;
+
+      if (challengeToken == null || challengeToken.trim().isEmpty) {
+        return;
+      }
+
+      Navigator.of(context).pushNamed(
+        AppRouter.verify2FA,
+        arguments: {
+          'email': _viewModel.pendingTwoFactorEmail ?? email,
+
+          'challengeToken': challengeToken,
+
+          'challengeExpiresAtUtc':
+              _viewModel.pendingTwoFactorChallengeExpiresAtUtc,
+        },
+      );
 
       return;
     }

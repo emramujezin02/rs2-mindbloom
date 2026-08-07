@@ -25,6 +25,10 @@ class AuthViewModel extends ChangeNotifier {
 
   String? pendingTwoFactorEmail;
 
+  String? pendingTwoFactorChallengeToken;
+
+  DateTime? pendingTwoFactorChallengeExpiresAtUtc;
+
   bool isTwoFactorEnabled = false;
 
   bool needsEmailVerification = false;
@@ -59,9 +63,17 @@ class AuthViewModel extends ChangeNotifier {
     _clearErrors();
 
     successMessage = null;
+
     requiresTwoFactor = false;
+
     pendingTwoFactorEmail = null;
+
+    pendingTwoFactorChallengeToken = null;
+
+    pendingTwoFactorChallengeExpiresAtUtc = null;
+
     needsEmailVerification = false;
+
     pendingVerificationEmail = null;
 
     notifyListeners();
@@ -74,10 +86,34 @@ class AuthViewModel extends ChangeNotifier {
       requiresTwoFactor = response.requiresTwoFactor;
 
       if (requiresTwoFactor) {
+        final challengeToken = response.challengeToken;
+
+        if (challengeToken == null || challengeToken.trim().isEmpty) {
+          throw Exception(
+            'The server did not return a valid two-factor authentication challenge.',
+          );
+        }
+
         pendingTwoFactorEmail = email;
 
+        pendingTwoFactorChallengeToken = challengeToken.trim();
+
+        pendingTwoFactorChallengeExpiresAtUtc = response.challengeExpiresAtUtc;
+
         successMessage = response.message;
+
+        return true;
       }
+
+      /*
+     * Za običan login nema aktivnog
+     * 2FA challenge-a.
+     */
+      pendingTwoFactorEmail = null;
+
+      pendingTwoFactorChallengeToken = null;
+
+      pendingTwoFactorChallengeExpiresAtUtc = null;
 
       return true;
     } catch (error) {
@@ -101,7 +137,10 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> verify2FA({required String email, required String code}) async {
+  Future<bool> verify2FA({
+    required String challengeToken,
+    required String code,
+  }) async {
     if (isLoading) {
       return false;
     }
@@ -116,11 +155,16 @@ class AuthViewModel extends ChangeNotifier {
 
     try {
       await authRepository.verify2FA(
-        Verify2FARequest(email: email, code: code),
+        Verify2FARequest(challengeToken: challengeToken, code: code),
       );
 
       requiresTwoFactor = false;
+
       pendingTwoFactorEmail = null;
+
+      pendingTwoFactorChallengeToken = null;
+
+      pendingTwoFactorChallengeExpiresAtUtc = null;
 
       successMessage = 'Dvofaktorska autentifikacija je uspješno završena.';
 
@@ -161,7 +205,10 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> set2FAEnabled(bool enabled) async {
+  Future<bool> set2FAEnabled({
+    required bool enabled,
+    required String currentPassword,
+  }) async {
     if (isLoading) {
       return false;
     }
@@ -176,9 +223,9 @@ class AuthViewModel extends ChangeNotifier {
 
     try {
       if (enabled) {
-        await authRepository.enable2FA();
+        await authRepository.enable2FA(currentPassword);
       } else {
-        await authRepository.disable2FA();
+        await authRepository.disable2FA(currentPassword);
       }
 
       isTwoFactorEnabled = enabled;

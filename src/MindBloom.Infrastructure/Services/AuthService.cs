@@ -1259,71 +1259,220 @@ public class AuthService : IAuthService
     }
 
     public async Task<Login2FAResponseDto>
-    LoginWith2FAAsync(
-        LoginRequestDto request)
+     LoginWith2FAAsync(
+         LoginRequestDto request)
     {
+        var normalizedEmail =
+            request.Email
+                .Trim()
+                .ToLowerInvariant();
+
         var user =
-            await _userManager.FindByEmailAsync(
-                request.Email);
+            await _userManager
+                .FindByEmailAsync(
+                    normalizedEmail);
 
         if (user == null)
         {
-            throw new Exception(
+            throw new UnauthorizedException(
                 "Invalid credentials.");
         }
 
-        if (user.IsBlocked)
+        if (user.IsBlocked ||
+            !user.IsActive)
         {
-            throw new Exception(
-                "Your account is blocked.");
+            throw new UnauthorizedException(
+                "Invalid credentials.");
         }
 
         if (!user.IsEmailVerified &&
-            !IsDemoAccount(user.Email!))
+            !IsDemoAccount(
+                user.Email!))
         {
-            throw new Exception(
+            throw new UnauthorizedException(
                 "Email is not verified.");
         }
 
         var isPasswordValid =
-            await _userManager.CheckPasswordAsync(
-                user,
-                request.Password);
+            await _userManager
+                .CheckPasswordAsync(
+                    user,
+                    request.Password);
 
         if (!isPasswordValid)
         {
-            throw new Exception(
+            throw new UnauthorizedException(
                 "Invalid credentials.");
         }
 
         if (!user.TwoFactorEnabledCustom ||
-            IsDemoAccount(user.Email!))
+            IsDemoAccount(
+                user.Email!))
         {
             var authResponse =
-                await LoginAsync(request);
+                await LoginAsync(
+                    request);
 
             return new Login2FAResponseDto
             {
-                RequiresTwoFactor = false,
+                RequiresTwoFactor =
+                    false,
+
                 Message =
                     "Login successful.",
-                Auth = authResponse
+
+                ChallengeToken =
+                    null,
+
+                ChallengeExpiresAtUtc =
+                    null,
+
+                Auth =
+                    authResponse
             };
         }
 
+        var now =
+            DateTime.UtcNow;
+
+        /*
+         * Prethodni aktivni challenge-i više
+         * ne smiju biti upotrebljivi.
+         */
+        var previousChallenges =
+            await _context
+                .TwoFactorLoginChallenges
+                .Where(x =>
+                    x.UserId == user.Id &&
+                    !x.IsUsed &&
+                    !x.IsDeleted)
+                .ToListAsync();
+
+        foreach (var previousChallenge
+                 in previousChallenges)
+        {
+            previousChallenge.IsUsed =
+                true;
+
+            previousChallenge.UsedAtUtc =
+                now;
+        }
+
+        /*
+         * Kriptografski siguran 6-cifreni
+         * jednokratni kod.
+         */
         var code =
-            System.Security.Cryptography
-                .RandomNumberGenerator
-                .GetInt32(100000, 1000000)
+            RandomNumberGenerator
+                .GetInt32(
+                    100000,
+                    1000000)
                 .ToString();
 
-        user.TwoFactorCode = code;
+        /*
+         * Kod se NE sprema kao plaintext.
+         */
+        var codeHash =
+            _userManager.PasswordHasher
+                .HashPassword(
+                    user,
+                    code);
 
-        user.TwoFactorCodeExpiresAtUtc =
-            DateTime.UtcNow.AddMinutes(5);
+        /*
+         * Challenge token je zaseban,
+         * kriptografski slučajan token.
+         */
+        var challengeBytes =
+            RandomNumberGenerator
+                .GetBytes(32);
 
-        await _userManager.UpdateAsync(user);
+        var challengeToken =
+            WebEncoders
+                .Base64UrlEncode(
+                    challengeBytes);
 
+        var challengeHash =
+            HashTwoFactorChallenge(
+                challengeToken);
+
+        var expiresAtUtc =
+            now.AddMinutes(5);
+
+        var challenge =
+            new TwoFactorLoginChallenge
+            {
+                UserId =
+                    user.Id,
+
+                ChallengeHash =
+                    challengeHash,
+
+                CodeHash =
+                    codeHash,
+
+                IssuedAtUtc =
+                    now,
+
+                ExpiresAtUtc =
+                    expiresAtUtc,
+
+                FailedAttempts =
+                    0,
+
+                MaximumAttempts =
+                    5,
+
+                IsUsed =
+                    false,
+
+                UsedAtUtc =
+                    null,
+
+                LockedAtUtc =
+                    null,
+
+                RememberMe =
+                    request.RememberMe
+            };
+
+        _context
+            .TwoFactorLoginChallenges
+            .Add(
+                challenge);
+
+        _context.UserAudits.Add(
+            new UserAudit
+            {
+                TargetUserId =
+                    user.Id,
+
+                ChangedByUserId =
+                    user.Id,
+
+                Action =
+                    "TwoFactorLoginChallengeCreated",
+
+                PreviousValues =
+                    null,
+
+                NewValues =
+                    null,
+
+                Reason =
+                    "Two-factor authentication challenge created.",
+
+                ChangedAtUtc =
+                    now
+            });
+
+        await _context
+            .SaveChangesAsync();
+
+        /*
+         * Kod postoji samo u memoriji dovoljno
+         * dugo da bude poslan Worker-u.
+         * U bazi ostaje samo hash.
+         */
         await _notificationPublisher
             .PublishEmailAsync(
                 new EmailNotificationMessage
@@ -1346,7 +1495,11 @@ public class AuthService : IAuthService
                         "MindBloom 2FA Code",
 
                     Body =
-                        $"Your verification code is: {code}",
+                        "Your MindBloom verification code is: "
+                        + code
+                        + Environment.NewLine
+                        + Environment.NewLine
+                        + "This code expires in 5 minutes.",
 
                     IsHtml =
                         false,
@@ -1357,10 +1510,20 @@ public class AuthService : IAuthService
 
         return new Login2FAResponseDto
         {
-            RequiresTwoFactor = true,
+            RequiresTwoFactor =
+                true,
+
             Message =
                 "A verification code has been sent to your email.",
-            Auth = null
+
+            ChallengeToken =
+                challengeToken,
+
+            ChallengeExpiresAtUtc =
+                expiresAtUtc,
+
+            Auth =
+                null
         };
     }
 
@@ -1368,63 +1531,201 @@ public class AuthService : IAuthService
      Verify2FAAsync(
          Verify2FADto request)
     {
-        var user =
-            await _userManager
-                .FindByEmailAsync(
-                    request.Email);
-
-        if (user == null)
-        {
-            throw new NotFoundException(
-                "User not found.");
-        }
-
-        if (!user.TwoFactorEnabledCustom)
-        {
-            throw new Exception(
-                "Two-factor authentication is not enabled.");
-        }
+        const string safeErrorMessage =
+            "Two-factor authentication verification failed.";
 
         if (string.IsNullOrWhiteSpace(
-                user.TwoFactorCode))
+                request.ChallengeToken))
         {
-            throw new Exception(
-                "No active verification code exists.");
+            throw new UnauthorizedException(
+                safeErrorMessage);
         }
 
-        if (user.TwoFactorCodeExpiresAtUtc ==
-                null ||
-            user.TwoFactorCodeExpiresAtUtc <
-                DateTime.UtcNow)
+        var challengeHash =
+            HashTwoFactorChallenge(
+                request.ChallengeToken);
+
+        var challenge =
+            await _context
+                .TwoFactorLoginChallenges
+                .Include(x =>
+                    x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.ChallengeHash ==
+                        challengeHash &&
+                    !x.IsDeleted);
+
+        if (challenge == null)
         {
-            user.TwoFactorCode =
-                null;
-
-            user.TwoFactorCodeExpiresAtUtc =
-                null;
-
-            await _userManager
-                .UpdateAsync(user);
-
-            throw new Exception(
-                "Verification code expired.");
+            throw new UnauthorizedException(
+                safeErrorMessage);
         }
 
-        if (user.TwoFactorCode !=
-            request.Code.Trim())
+        var now =
+            DateTime.UtcNow;
+
+        /*
+         * Challenge je jednokratan.
+         */
+        if (challenge.IsUsed)
         {
-            throw new Exception(
-                "Invalid verification code.");
+            throw new UnauthorizedException(
+                safeErrorMessage);
         }
 
-        user.TwoFactorCode =
-            null;
+        /*
+         * Zaključan challenge se više
+         * ne može pokušavati.
+         */
+        if (challenge.LockedAtUtc
+            .HasValue)
+        {
+            throw new UnauthorizedException(
+                safeErrorMessage);
+        }
 
-        user.TwoFactorCodeExpiresAtUtc =
-            null;
+        /*
+         * Istek challenge-a.
+         */
+        if (challenge.ExpiresAtUtc <=
+            now)
+        {
+            challenge.IsUsed =
+                true;
 
-        await _userManager
-            .UpdateAsync(user);
+            challenge.UsedAtUtc =
+                now;
+
+            _context.UserAudits.Add(
+                new UserAudit
+                {
+                    TargetUserId =
+                        challenge.UserId,
+
+                    ChangedByUserId =
+                        challenge.UserId,
+
+                    Action =
+                        "TwoFactorVerificationExpired",
+
+                    PreviousValues =
+                        null,
+
+                    NewValues =
+                        null,
+
+                    Reason =
+                        "Expired two-factor authentication challenge.",
+
+                    ChangedAtUtc =
+                        now
+                });
+
+            await _context
+                .SaveChangesAsync();
+
+            throw new UnauthorizedException(
+                safeErrorMessage);
+        }
+
+        var user =
+            challenge.User;
+
+        if (user.IsBlocked ||
+            !user.IsActive ||
+            !user.TwoFactorEnabledCustom)
+        {
+            challenge.IsUsed =
+                true;
+
+            challenge.UsedAtUtc =
+                now;
+
+            await _context
+                .SaveChangesAsync();
+
+            throw new UnauthorizedException(
+                safeErrorMessage);
+        }
+
+        /*
+         * Poređenje se radi sa hashom.
+         * Plaintext kod nije u bazi.
+         */
+        var verificationResult =
+            _userManager
+                .PasswordHasher
+                .VerifyHashedPassword(
+                    user,
+                    challenge.CodeHash,
+                    request.Code.Trim());
+
+        if (verificationResult ==
+            PasswordVerificationResult.Failed)
+        {
+            challenge.FailedAttempts++;
+
+            /*
+             * Najviše 5 pogrešnih pokušaja.
+             */
+            if (challenge.FailedAttempts >=
+                challenge.MaximumAttempts)
+            {
+                challenge.LockedAtUtc =
+                    now;
+
+                challenge.IsUsed =
+                    true;
+
+                challenge.UsedAtUtc =
+                    now;
+            }
+
+            _context.UserAudits.Add(
+                new UserAudit
+                {
+                    TargetUserId =
+                        user.Id,
+
+                    ChangedByUserId =
+                        user.Id,
+
+                    Action =
+                        challenge.IsUsed
+                            ? "TwoFactorVerificationLocked"
+                            : "TwoFactorVerificationFailed",
+
+                    PreviousValues =
+                        null,
+
+                    NewValues =
+                        null,
+
+                    Reason =
+                        challenge.IsUsed
+                            ? "Two-factor authentication challenge locked after too many failed attempts."
+                            : "Two-factor authentication verification failed.",
+
+                    ChangedAtUtc =
+                        now
+                });
+
+            await _context
+                .SaveChangesAsync();
+
+            throw new UnauthorizedException(
+                safeErrorMessage);
+        }
+
+        /*
+         * Challenge se označava iskorištenim
+         * PRIJE izdavanja pune sesije.
+         */
+        challenge.IsUsed =
+            true;
+
+        challenge.UsedAtUtc =
+            now;
 
         var roles =
             await _userManager
@@ -1437,7 +1738,7 @@ public class AuthService : IAuthService
                 "User does not have an assigned role.");
         }
 
-        var token =
+        var accessToken =
             await _jwtTokenService
                 .GenerateTokenAsync(
                     user);
@@ -1445,9 +1746,6 @@ public class AuthService : IAuthService
         var refreshToken =
             _jwtTokenService
                 .GenerateRefreshToken();
-
-        var now =
-            DateTime.UtcNow;
 
         var refreshTokenEntity =
             new RefreshToken
@@ -1463,7 +1761,9 @@ public class AuthService : IAuthService
                     now,
 
                 ExpiresAtUtc =
-                    now.AddDays(7),
+                    challenge.RememberMe
+                        ? now.AddDays(30)
+                        : now.AddDays(1),
 
                 RevokedAtUtc =
                     null,
@@ -1481,6 +1781,31 @@ public class AuthService : IAuthService
 
         user.LastLoginAtUtc =
             now;
+
+        _context.UserAudits.Add(
+            new UserAudit
+            {
+                TargetUserId =
+                    user.Id,
+
+                ChangedByUserId =
+                    user.Id,
+
+                Action =
+                    "TwoFactorVerificationSucceeded",
+
+                PreviousValues =
+                    null,
+
+                NewValues =
+                    null,
+
+                Reason =
+                    "Two-factor authentication completed successfully.",
+
+                ChangedAtUtc =
+                    now
+            });
 
         await _context
             .SaveChangesAsync();
@@ -1500,7 +1825,7 @@ public class AuthService : IAuthService
                 user.Email!,
 
             Token =
-                token,
+                accessToken,
 
             RefreshToken =
                 refreshToken,
@@ -1511,39 +1836,192 @@ public class AuthService : IAuthService
     }
 
     public async Task Enable2FAAsync(
-    int userId)
+     int userId,
+     ChangeTwoFactorSettingDto request)
     {
         var user =
-            await _userManager.Users
-                .FirstOrDefaultAsync(x =>
-                    x.Id == userId);
+            await _userManager
+                .FindByIdAsync(
+                    userId.ToString());
 
         if (user == null)
         {
-            throw new NotFoundException("User not found.");
+            throw new NotFoundException(
+                "User not found.");
         }
 
-        user.TwoFactorEnabledCustom = true;
+        if (!user.IsActive ||
+            user.IsBlocked)
+        {
+            throw new UnauthorizedException(
+                "Account is not available.");
+        }
 
-        await _userManager.UpdateAsync(user);
+        var passwordValid =
+            await _userManager
+                .CheckPasswordAsync(
+                    user,
+                    request.CurrentPassword);
+
+        if (!passwordValid)
+        {
+            throw new UnauthorizedException(
+                "Current password is incorrect.");
+        }
+
+        if (user.TwoFactorEnabledCustom)
+        {
+            return;
+        }
+
+        var now =
+            DateTime.UtcNow;
+
+        user.TwoFactorEnabledCustom =
+            true;
+
+        var updateResult =
+            await _userManager
+                .UpdateAsync(
+                    user);
+
+        if (!updateResult.Succeeded)
+        {
+            throw new BadRequestException(
+                "Two-factor authentication could not be enabled.");
+        }
+
+        _context.UserAudits.Add(
+            new UserAudit
+            {
+                TargetUserId =
+                    user.Id,
+
+                ChangedByUserId =
+                    user.Id,
+
+                Action =
+                    "TwoFactorEnabled",
+
+                PreviousValues =
+                    null,
+
+                NewValues =
+                    null,
+
+                Reason =
+                    "Two-factor authentication enabled by account owner.",
+
+                ChangedAtUtc =
+                    now
+            });
+
+        await _context
+            .SaveChangesAsync();
     }
 
     public async Task Disable2FAAsync(
-    int userId)
+    int userId,
+    ChangeTwoFactorSettingDto request)
     {
         var user =
-            await _userManager.Users
-                .FirstOrDefaultAsync(x =>
-                    x.Id == userId);
+            await _userManager
+                .FindByIdAsync(
+                    userId.ToString());
 
         if (user == null)
         {
-            throw new NotFoundException("User not found.");
+            throw new NotFoundException(
+                "User not found.");
         }
 
-        user.TwoFactorEnabledCustom = false;
+        if (!user.IsActive ||
+    user.IsBlocked)
+        {
+            throw new UnauthorizedException(
+                "Account is not available.");
+        }
 
-        await _userManager.UpdateAsync(user);
+        var passwordValid =
+            await _userManager
+                .CheckPasswordAsync(
+                    user,
+                    request.CurrentPassword);
+
+        if (!passwordValid)
+        {
+            throw new UnauthorizedException(
+                "Current password is incorrect.");
+        }
+
+        if (!user.TwoFactorEnabledCustom)
+        {
+            return;
+        }
+
+        var now =
+            DateTime.UtcNow;
+
+        user.TwoFactorEnabledCustom =
+            false;
+
+        var activeChallenges =
+            await _context
+                .TwoFactorLoginChallenges
+                .Where(x =>
+                    x.UserId == user.Id &&
+                    !x.IsUsed &&
+                    !x.IsDeleted)
+                .ToListAsync();
+
+        foreach (var challenge
+                 in activeChallenges)
+        {
+            challenge.IsUsed =
+                true;
+
+            challenge.UsedAtUtc =
+                now;
+        }
+
+        var updateResult =
+            await _userManager
+                .UpdateAsync(
+                    user);
+
+        if (!updateResult.Succeeded)
+        {
+            throw new BadRequestException(
+                "Two-factor authentication could not be disabled.");
+        }
+
+        _context.UserAudits.Add(
+            new UserAudit
+            {
+                TargetUserId =
+                    user.Id,
+
+                ChangedByUserId =
+                    user.Id,
+
+                Action =
+                    "TwoFactorDisabled",
+
+                PreviousValues =
+                    null,
+
+                NewValues =
+                    null,
+
+                Reason =
+                    "Two-factor authentication disabled by account owner.",
+
+                ChangedAtUtc =
+                    now
+            });
+
+        await _context
+            .SaveChangesAsync();
     }
 
     public async Task LogoutAsync(
@@ -1889,5 +2367,30 @@ public class AuthService : IAuthService
 
         return Convert.ToHexString(
             hash);
+    }
+
+    private static string
+    HashTwoFactorChallenge(
+        string challengeToken)
+    {
+        if (string.IsNullOrWhiteSpace(
+                challengeToken))
+        {
+            throw new UnauthorizedException(
+                "Two-factor authentication verification failed.");
+        }
+
+        var bytes =
+            Encoding.UTF8
+                .GetBytes(
+                    challengeToken.Trim());
+
+        var hash =
+            SHA256.HashData(
+                bytes);
+
+        return Convert
+            .ToHexString(
+                hash);
     }
 }

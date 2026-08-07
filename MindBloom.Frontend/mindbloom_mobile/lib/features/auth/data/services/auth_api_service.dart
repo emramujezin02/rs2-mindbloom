@@ -71,12 +71,18 @@ class AuthApiService {
     return response['isEnabled'] ?? false;
   }
 
-  Future<void> enable2FA() async {
-    await apiClient.post('/Auth/enable-2fa');
+  Future<void> enable2FA(String currentPassword) async {
+    await apiClient.post(
+      '/Auth/enable-2fa',
+      body: {'currentPassword': currentPassword},
+    );
   }
 
-  Future<void> disable2FA() async {
-    await apiClient.post('/Auth/disable-2fa');
+  Future<void> disable2FA(String currentPassword) async {
+    await apiClient.post(
+      '/Auth/disable-2fa',
+      body: {'currentPassword': currentPassword},
+    );
   }
 
   Future<void> logout(String refreshToken) async {

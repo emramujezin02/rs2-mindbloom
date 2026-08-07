@@ -63,12 +63,12 @@ class AuthRepository {
     return authApiService.get2FAStatus();
   }
 
-  Future<void> enable2FA() {
-    return authApiService.enable2FA();
+  Future<void> enable2FA(String currentPassword) {
+    return authApiService.enable2FA(currentPassword);
   }
 
-  Future<void> disable2FA() {
-    return authApiService.disable2FA();
+  Future<void> disable2FA(String currentPassword) {
+    return authApiService.disable2FA(currentPassword);
   }
 
   Future<bool> logout() async {

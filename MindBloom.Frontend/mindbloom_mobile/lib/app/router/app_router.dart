@@ -267,9 +267,38 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const MyReviewsPage());
 
       case verify2FA:
-        final email = settings.arguments as String;
+        final arguments = settings.arguments;
 
-        return MaterialPageRoute(builder: (_) => Verify2FAPage(email: email));
+        if (arguments is! Map<String, dynamic>) {
+          return MaterialPageRoute(builder: (_) => const LoginPage());
+        }
+
+        final email = arguments['email']?.toString() ?? '';
+
+        final challengeToken = arguments['challengeToken']?.toString() ?? '';
+
+        final expiresAtValue = arguments['challengeExpiresAtUtc'];
+
+        DateTime? challengeExpiresAtUtc;
+
+        if (expiresAtValue is DateTime) {
+          challengeExpiresAtUtc = expiresAtValue;
+        } else if (expiresAtValue != null) {
+          challengeExpiresAtUtc = DateTime.tryParse(expiresAtValue.toString());
+        }
+
+        if (challengeToken.trim().isEmpty) {
+          return MaterialPageRoute(builder: (_) => const LoginPage());
+        }
+
+        return MaterialPageRoute(
+          builder: (_) => Verify2FAPage(
+            email: email,
+            challengeToken: challengeToken,
+            challengeExpiresAtUtc: challengeExpiresAtUtc,
+          ),
+          settings: settings,
+        );
 
       case twoFactorSettings:
         return MaterialPageRoute(builder: (_) => const TwoFactorSettingsPage());

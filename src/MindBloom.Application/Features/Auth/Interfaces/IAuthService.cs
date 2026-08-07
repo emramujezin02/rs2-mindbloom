@@ -28,9 +28,13 @@ public interface IAuthService
 
     Task<AuthResponseDto> Verify2FAAsync(Verify2FADto request);
 
-    Task Enable2FAAsync(int userId);
+    Task Enable2FAAsync(
+        int userId,
+        ChangeTwoFactorSettingDto request);
 
-    Task Disable2FAAsync(int userId);
+    Task Disable2FAAsync(
+        int userId,
+        ChangeTwoFactorSettingDto request);
 
     Task LogoutAsync(
         int userId,

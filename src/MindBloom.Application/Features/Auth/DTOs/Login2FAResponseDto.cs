@@ -4,7 +4,16 @@ public class Login2FAResponseDto
 {
     public bool RequiresTwoFactor { get; set; }
 
-    public string Message { get; set; } = string.Empty;
+    public string Message { get; set; } =
+        string.Empty;
+
+    public string? ChallengeToken { get; set; }
+
+    public DateTime? ChallengeExpiresAtUtc
+    {
+        get;
+        set;
+    }
 
     public AuthResponseDto? Auth { get; set; }
 }

@@ -338,11 +338,42 @@ public sealed class Verify2FADtoValidator
 {
     public Verify2FADtoValidator()
     {
-        RuleFor(x => x.Email)
-            .ValidEmail();
+        RuleFor(x => x.ChallengeToken)
+            .Cascade(
+                CascadeMode.Stop)
+            .NotEmpty()
+            .WithMessage(
+                "Two-factor challenge token is required.")
+            .MaximumLength(
+                AuthValidationRules
+                    .MaximumTokenLength)
+            .WithMessage(
+                $"Two-factor challenge token may contain at most {AuthValidationRules.MaximumTokenLength} characters.");
 
         RuleFor(x => x.Code)
             .ValidVerificationCode();
+    }
+}
+
+public sealed class
+    ChangeTwoFactorSettingDtoValidator
+    : AbstractValidator<
+        ChangeTwoFactorSettingDto>
+{
+    public ChangeTwoFactorSettingDtoValidator()
+    {
+        RuleFor(x =>
+                x.CurrentPassword)
+            .Cascade(
+                CascadeMode.Stop)
+            .NotEmpty()
+            .WithMessage(
+                "Current password is required.")
+            .MaximumLength(
+                AuthValidationRules
+                    .MaximumPasswordLength)
+            .WithMessage(
+                $"Current password may contain at most {AuthValidationRules.MaximumPasswordLength} characters.");
     }
 }
 

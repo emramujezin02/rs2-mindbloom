@@ -169,11 +169,14 @@ public sealed class AuthController
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+        RateLimitPolicyConstants
+            .TwoFactorLogin)]
     [HttpPost("login-2fa")]
     public async Task<IActionResult>
         LoginWith2FA(
             [FromBody]
-            LoginRequestDto request)
+        LoginRequestDto request)
     {
         var response =
             await _authService
@@ -183,11 +186,14 @@ public sealed class AuthController
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+        RateLimitPolicyConstants
+            .TwoFactorVerify)]
     [HttpPost("verify-2fa")]
     public async Task<IActionResult>
         Verify2FA(
             [FromBody]
-            Verify2FADto request)
+        Verify2FADto request)
     {
         var response =
             await _authService
@@ -303,13 +309,17 @@ public sealed class AuthController
 
     [HttpPost("enable-2fa")]
     public async Task<IActionResult>
-        Enable2FA()
+        Enable2FA(
+            [FromBody]
+        ChangeTwoFactorSettingDto request)
     {
         var userId =
             GetAuthenticatedUserId();
 
         await _authService
-            .Enable2FAAsync(userId);
+            .Enable2FAAsync(
+                userId,
+                request);
 
         return Ok(
             new
@@ -321,13 +331,17 @@ public sealed class AuthController
 
     [HttpPost("disable-2fa")]
     public async Task<IActionResult>
-        Disable2FA()
+        Disable2FA(
+            [FromBody]
+        ChangeTwoFactorSettingDto request)
     {
         var userId =
             GetAuthenticatedUserId();
 
         await _authService
-            .Disable2FAAsync(userId);
+            .Disable2FAAsync(
+                userId,
+                request);
 
         return Ok(
             new

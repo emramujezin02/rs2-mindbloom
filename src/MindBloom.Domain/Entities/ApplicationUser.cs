@@ -13,9 +13,7 @@ public class ApplicationUser : IdentityUser<int>
     public DateTime CreatedAtUtc { get; set; }
     public bool IsEmailVerified { get; set; }
     public bool TwoFactorEnabledCustom { get; set; }
-    public string? TwoFactorCode { get; set; }
     public bool IsBlocked { get; set; }
-    public DateTime? TwoFactorCodeExpiresAtUtc { get; set; }
     public UserSettings? Settings { get; set; }
     public DateTime? LastLoginAtUtc { get; set; }
 
@@ -24,6 +22,13 @@ public class ApplicationUser : IdentityUser<int>
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<UserAudit> ReceivedUserAudits { get; set; }
     = new List<UserAudit>();
+
+    public ICollection<TwoFactorLoginChallenge>
+    TwoFactorLoginChallenges
+    {
+        get;
+        set;
+    } = new List<TwoFactorLoginChallenge>();
 
     public ICollection<UserAudit> PerformedUserAudits { get; set; }
         = new List<UserAudit>();

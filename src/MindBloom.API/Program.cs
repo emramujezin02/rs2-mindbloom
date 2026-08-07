@@ -296,6 +296,107 @@ builder.Services.AddRateLimiter(
                                     AutoReplenishment =
                                         true
                                 }));
+
+        options.AddPolicy(
+    RateLimitPolicyConstants
+        .TwoFactorLogin,
+    httpContext =>
+        RateLimitPartition
+            .GetFixedWindowLimiter(
+                partitionKey:
+                    httpContext
+                        .Connection
+                        .RemoteIpAddress?
+                        .ToString()
+                    ?? "unknown",
+
+                factory:
+                    _ =>
+                        new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit =
+                                3,
+
+                            Window =
+                                TimeSpan
+                                    .FromMinutes(5),
+
+                            QueueLimit =
+                                0,
+
+                            AutoReplenishment =
+                                true
+                        }));
+
+        options.AddPolicy(
+            RateLimitPolicyConstants
+                .TwoFactorVerify,
+            httpContext =>
+                RateLimitPartition
+                    .GetFixedWindowLimiter(
+                        partitionKey:
+                            httpContext
+                                .Connection
+                                .RemoteIpAddress?
+                                .ToString()
+                            ?? "unknown",
+
+                        factory:
+                            _ =>
+                                new FixedWindowRateLimiterOptions
+                                {
+                                    PermitLimit =
+                                        10,
+
+                                    Window =
+                                        TimeSpan
+                                            .FromMinutes(5),
+
+                                    QueueLimit =
+                                        0,
+
+                                    AutoReplenishment =
+                                        true
+                                }));
+
+        options.AddPolicy(
+            RateLimitPolicyConstants
+                .TwoFactorSettings,
+            httpContext =>
+                RateLimitPartition
+                    .GetFixedWindowLimiter(
+                        partitionKey:
+                            httpContext.User
+                                .FindFirst(
+                                    System.Security.Claims
+                                        .ClaimTypes
+                                        .NameIdentifier)?
+                                .Value
+                            ??
+                            httpContext
+                                .Connection
+                                .RemoteIpAddress?
+                                .ToString()
+                            ??
+                            "unknown",
+
+                        factory:
+                            _ =>
+                                new FixedWindowRateLimiterOptions
+                                {
+                                    PermitLimit =
+                                        5,
+
+                                    Window =
+                                        TimeSpan
+                                            .FromMinutes(10),
+
+                                    QueueLimit =
+                                        0,
+
+                                    AutoReplenishment =
+                                        true
+                                }));
     });
 
 var app = builder.Build();

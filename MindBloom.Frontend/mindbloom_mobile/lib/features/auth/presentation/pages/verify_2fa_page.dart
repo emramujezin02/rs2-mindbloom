@@ -9,7 +9,16 @@ import '../viewmodels/auth_viewmodel.dart';
 class Verify2FAPage extends StatefulWidget {
   final String email;
 
-  const Verify2FAPage({super.key, required this.email});
+  final String challengeToken;
+
+  final DateTime? challengeExpiresAtUtc;
+
+  const Verify2FAPage({
+    super.key,
+    required this.email,
+    required this.challengeToken,
+    this.challengeExpiresAtUtc,
+  });
 
   @override
   State<Verify2FAPage> createState() => _Verify2FAPageState();
@@ -25,13 +34,16 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
   @override
   void initState() {
     super.initState();
+
     _viewModel.addListener(_refresh);
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_refresh);
+
     _viewModel.dispose();
+
     _codeController.dispose();
 
     super.dispose();
@@ -43,15 +55,37 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
     }
   }
 
+  bool get _challengeExpired {
+    final expiresAt = widget.challengeExpiresAtUtc;
+
+    if (expiresAt == null) {
+      return false;
+    }
+
+    return !DateTime.now().toUtc().isBefore(expiresAt.toUtc());
+  }
+
   Future<void> _verify() async {
     if (_viewModel.isLoading || !_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_challengeExpired) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'The verification code has expired. Please log in again.',
+          ),
+        ),
+      );
+
       return;
     }
 
     FocusScope.of(context).unfocus();
 
     final success = await _viewModel.verify2FA(
-      email: widget.email,
+      challengeToken: widget.challengeToken,
       code: _codeController.text.trim(),
     );
 
@@ -59,7 +93,13 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
       return;
     }
 
+    /*
+     * Tek nakon uspješnog verify endpointa
+     * AuthRepository sprema puni access
+     * i refresh token.
+     */
     final session = SessionScope.of(context);
+
     await session.initialize();
 
     if (!mounted) {
@@ -73,6 +113,8 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
 
   @override
   Widget build(BuildContext context) {
+    final expired = _challengeExpired;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Two-factor authentication')),
       body: Center(
@@ -86,21 +128,38 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Icon(Icons.security, size: 70),
+
                   const SizedBox(height: 20),
+
                   const Text(
                     'Enter the six-digit code sent to your email.',
                     textAlign: TextAlign.center,
                   ),
+
                   const SizedBox(height: 8),
+
                   Text(
                     widget.email,
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
+
+                  if (expired) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'This verification code has expired. Please return to login and request a new code.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 24),
+
                   TextFormField(
                     controller: _codeController,
-                    enabled: !_viewModel.isLoading,
+                    enabled: !_viewModel.isLoading && !expired,
                     keyboardType: TextInputType.number,
                     maxLength: 6,
                     textInputAction: TextInputAction.done,
@@ -123,9 +182,12 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
                       return null;
                     },
                     onFieldSubmitted: (_) {
-                      _verify();
+                      if (!expired) {
+                        _verify();
+                      }
                     },
                   ),
+
                   if (_viewModel.errorMessage != null) ...[
                     const SizedBox(height: 16),
                     AppInlineError(
@@ -134,9 +196,11 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
                       onRetry: _verify,
                     ),
                   ],
+
                   const SizedBox(height: 20),
+
                   ElevatedButton.icon(
-                    onPressed: _viewModel.isLoading ? null : _verify,
+                    onPressed: _viewModel.isLoading || expired ? null : _verify,
                     icon: _viewModel.isLoading
                         ? const SizedBox(
                             width: 22,
@@ -148,6 +212,19 @@ class _Verify2FAPageState extends State<Verify2FAPage> {
                       _viewModel.isLoading ? 'Verifying...' : 'Verify',
                     ),
                   ),
+
+                  if (expired) ...[
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pushNamedAndRemoveUntil(
+                          AppRouter.login,
+                          (route) => false,
+                        );
+                      },
+                      child: const Text('Return to login'),
+                    ),
+                  ],
                 ],
               ),
             ),
