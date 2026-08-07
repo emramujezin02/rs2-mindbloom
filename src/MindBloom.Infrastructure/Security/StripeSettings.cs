@@ -1,6 +1,13 @@
 ﻿namespace MindBloom.Infrastructure.Security;
 
-public class StripeSettings
+public sealed class StripeSettings
 {
-    public string SecretKey { get; set; } = null!;
+    public string SecretKey { get; set; } =
+        string.Empty;
+
+    public string WebhookSecret { get; set; } =
+        string.Empty;
+
+    public string Currency { get; set; } =
+        "usd";
 }

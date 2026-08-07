@@ -21,6 +21,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Therapist> Therapists => Set<Therapist>();
     public DbSet<TherapistAvailability> TherapistAvailabilities => Set<TherapistAvailability>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
+
+    public DbSet<StripeWebhookEvent>
+    StripeWebhookEvents =>
+        Set<StripeWebhookEvent>();
     public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<FcmDeviceToken>
     FcmDeviceTokens =>
@@ -161,6 +165,45 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             x.UserId,
             x.IsUsed,
             x.ExpiresAtUtc
+        });
+    });
+
+        builder.Entity<StripeWebhookEvent>(
+    entity =>
+    {
+        entity.Property(x =>
+                x.StripeEventId)
+            .IsRequired()
+            .HasMaxLength(255);
+
+        entity.Property(x =>
+                x.EventType)
+            .IsRequired()
+            .HasMaxLength(150);
+
+        entity.Property(x =>
+                x.StripePaymentIntentId)
+            .HasMaxLength(255);
+
+        entity.Property(x =>
+                x.ReceivedAtUtc)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.FailureReason)
+            .HasMaxLength(1000);
+
+        entity.HasIndex(x =>
+                x.StripeEventId)
+            .IsUnique();
+
+        entity.HasIndex(x =>
+                x.StripePaymentIntentId);
+
+        entity.HasIndex(x => new
+        {
+            x.IsProcessed,
+            x.ReceivedAtUtc
         });
     });
 

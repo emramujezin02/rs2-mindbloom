@@ -448,7 +448,48 @@ public static class DependencyInjection
                 });
         });
 
+        var stripeSecretKey =
+    Environment.GetEnvironmentVariable(
+        "STRIPE_SECRET_KEY");
+
+        var stripeWebhookSecret =
+            Environment.GetEnvironmentVariable(
+                "STRIPE_WEBHOOK_SECRET");
+
+        if (string.IsNullOrWhiteSpace(
+                stripeSecretKey))
+        {
+            throw new InvalidOperationException(
+                "Environment variable "
+                + "'STRIPE_SECRET_KEY' "
+                + "is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                stripeWebhookSecret))
+        {
+            throw new InvalidOperationException(
+                "Environment variable "
+                + "'STRIPE_WEBHOOK_SECRET' "
+                + "is required.");
+        }
+
+        services.Configure<StripeSettings>(
+            options =>
+            {
+                options.SecretKey =
+                    stripeSecretKey.Trim();
+
+                options.WebhookSecret =
+                    stripeWebhookSecret.Trim();
+
+                options.Currency =
+                    "usd";
+            });
+
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<
+    StripeWebhookService>();
 
         services.AddScoped<IAuthService, AuthService>();
 
