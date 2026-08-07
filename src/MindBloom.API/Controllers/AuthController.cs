@@ -42,7 +42,8 @@ public sealed class AuthController
 
     [AllowAnonymous]
     [EnableRateLimiting(
-    "registration")]
+    RateLimitPolicyConstants
+        .Registration)]
     [HttpPost("register-therapist")]
     public async Task<IActionResult>
     RegisterTherapist(
@@ -61,6 +62,8 @@ public sealed class AuthController
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+    RateLimitPolicyConstants.Login)]
     [HttpPost("login")]
     public async Task<IActionResult> Login(
         [FromBody]
@@ -155,6 +158,9 @@ public sealed class AuthController
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+    RateLimitPolicyConstants
+        .RefreshToken)]
     [HttpPost("refresh-token")]
     public async Task<IActionResult>
         RefreshToken(
@@ -307,6 +313,9 @@ public sealed class AuthController
             });
     }
 
+    [EnableRateLimiting(
+    RateLimitPolicyConstants
+        .TwoFactorSettings)]
     [HttpPost("enable-2fa")]
     public async Task<IActionResult>
         Enable2FA(
@@ -329,6 +338,9 @@ public sealed class AuthController
             });
     }
 
+    [EnableRateLimiting(
+    RateLimitPolicyConstants
+        .TwoFactorSettings)]
     [HttpPost("disable-2fa")]
     public async Task<IActionResult>
         Disable2FA(

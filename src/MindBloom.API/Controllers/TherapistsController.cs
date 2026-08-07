@@ -5,6 +5,7 @@ using MindBloom.Application.Features.Therapists.Interfaces;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using MindBloom.Shared.Constants;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace MindBloom.API.Controllers;
 
@@ -37,6 +38,9 @@ public class TherapistsController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+    RateLimitPolicyConstants
+        .PublicSearch)]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -72,6 +76,9 @@ public class TherapistsController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+    RateLimitPolicyConstants
+        .PublicSearch)]
     [HttpGet("search")]
     public async Task<IActionResult> Search(
         [FromQuery] SearchTherapistsDto request)
@@ -84,6 +91,9 @@ public class TherapistsController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+    RateLimitPolicyConstants
+        .PublicSearch)]
     [HttpPost("filter")]
     public async Task<IActionResult> Filter(
         [FromBody] TherapistFilterDto filter)
@@ -193,6 +203,8 @@ public class TherapistsController : ControllerBase
     }
 
     [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
+    [EnableRateLimiting(
+    RateLimitPolicyConstants.Uploads)]
     [HttpPost("documents")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(10 * 1024 * 1024)]
@@ -318,6 +330,8 @@ public class TherapistsController : ControllerBase
     [Authorize(
         Policy =
             AuthorizationPolicyConstants.TherapistOnly)]
+    [EnableRateLimiting(
+    RateLimitPolicyConstants.Uploads)]
     [HttpPost("profile/image")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5 * 1024 * 1024)]

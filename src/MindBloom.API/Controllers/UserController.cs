@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MindBloom.Application.Features.Users.DTOs;
 using MindBloom.Application.Features.Users.Interfaces;
 using MindBloom.Shared.Constants;
@@ -71,6 +72,8 @@ public class UsersController : ControllerBase
         return userId;
     }
 
+    [EnableRateLimiting(
+    RateLimitPolicyConstants.Uploads)]
     [HttpPost("me/profile-image")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5 * 1024 * 1024)]

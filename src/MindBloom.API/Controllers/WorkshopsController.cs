@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MindBloom.Application.Features.Workshops.DTOs;
 using MindBloom.Application.Features.Workshops.Interfaces;
 using MindBloom.Shared.Constants;
@@ -23,6 +24,9 @@ public class WorkshopsController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+    RateLimitPolicyConstants
+        .PublicSearch)]
     [HttpGet]
     public async Task<IActionResult>
         GetPublic(
@@ -310,6 +314,8 @@ public class WorkshopsController : ControllerBase
     [Authorize(
         Policy =
             AuthorizationPolicyConstants.AdminOrTherapist)]
+    [EnableRateLimiting(
+    RateLimitPolicyConstants.Uploads)]
     [HttpPost("image")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5 * 1024 * 1024)]

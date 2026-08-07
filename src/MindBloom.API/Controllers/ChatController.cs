@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Chat.DTOs;
 using MindBloom.Application.Features.Chat.Interfaces;
@@ -62,6 +63,9 @@ await _chatService.GetMessagesAsync(
         return Ok(result);
     }
 
+    [EnableRateLimiting(
+    RateLimitPolicyConstants
+        .ChatMessages)]
     [HttpPost("messages")]
     public async Task<IActionResult>
         SendMessage(

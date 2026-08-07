@@ -26,6 +26,7 @@ using MindBloom.Application.Features.Users.Interfaces;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using MindBloom.Shared.Constants;
+using System.Security.Claims;
 
 Env.Load("../../.env");
 
@@ -195,208 +196,174 @@ builder.Services.AddSwaggerGen(options =>
         });
 });
 
+var rateLimiting =
+    builder.Configuration
+        .GetSection(
+            RateLimitingOptions.SectionName)
+        .Get<RateLimitingOptions>()
+    ?? new RateLimitingOptions();
+
 builder.Services.AddRateLimiter(
     options =>
     {
         options.RejectionStatusCode =
-            StatusCodes
-                .Status429TooManyRequests;
+            StatusCodes.Status429TooManyRequests;
 
-        options.AddPolicy(
-    RateLimitPolicyConstants
-        .ForgotPassword,
-    httpContext =>
-        RateLimitPartition
-            .GetFixedWindowLimiter(
-                partitionKey:
-                    httpContext
-                        .Connection
+        options.OnRejected =
+            async (
+                rejectedContext,
+                cancellationToken) =>
+            {
+                var httpContext =
+                    rejectedContext.HttpContext;
+
+                var retryAfter =
+                    TimeSpan.FromSeconds(60);
+
+                if (rejectedContext.Lease
+                    .TryGetMetadata(
+                        MetadataName.RetryAfter,
+                        out var metadataRetryAfter))
+                {
+                    retryAfter =
+                        metadataRetryAfter;
+                }
+
+                var retryAfterSeconds =
+                    Math.Max(
+                        1,
+                        (int)Math.Ceiling(
+                            retryAfter.TotalSeconds));
+
+                httpContext.Response.StatusCode =
+                    StatusCodes
+                        .Status429TooManyRequests;
+
+                httpContext.Response.Headers
+                    .RetryAfter =
+                    retryAfterSeconds.ToString();
+
+                httpContext.Response.ContentType =
+                    "application/problem+json";
+
+                var loggerFactory =
+                    httpContext.RequestServices
+                        .GetRequiredService<
+                            ILoggerFactory>();
+
+                var logger =
+                    loggerFactory.CreateLogger(
+                        "RateLimiting");
+
+                var userId =
+                    httpContext.User
+                        .FindFirst(
+                            ClaimTypes
+                                .NameIdentifier)?
+                        .Value;
+
+                logger.LogWarning(
+                    "Rate limit exceeded. "
+                    + "Method: {Method}, "
+                    + "Path: {Path}, "
+                    + "UserId: {UserId}, "
+                    + "RemoteIp: {RemoteIp}, "
+                    + "RetryAfterSeconds: {RetryAfterSeconds}.",
+                    httpContext.Request.Method,
+                    httpContext.Request.Path.Value,
+                    userId ?? "anonymous",
+                    httpContext.Connection
                         .RemoteIpAddress?
                         .ToString()
-                    ?? "unknown",
+                        ?? "unknown",
+                    retryAfterSeconds);
 
-                factory:
-                    _ =>
-                        new FixedWindowRateLimiterOptions
-                        {
-                            PermitLimit =
-                                3,
+                var response =
+                    new ApiErrorResponse
+                    {
+                        StatusCode =
+                            StatusCodes
+                                .Status429TooManyRequests,
 
-                            Window =
-                                TimeSpan
-                                    .FromMinutes(
-                                        15),
+                        Title =
+                            "Too many requests",
 
-                            QueueLimit =
-                                0,
+                        Detail =
+                            "Too many requests were received. Please try again later."
+                    };
 
-                            AutoReplenishment =
-                                true
-                        }));
+                await httpContext.Response
+                    .WriteAsync(
+                        JsonSerializer.Serialize(
+                            response,
+                            new JsonSerializerOptions
+                            {
+                                PropertyNamingPolicy =
+                                    JsonNamingPolicy
+                                        .CamelCase
+                            }),
+                        cancellationToken);
+            };
 
-        options.AddPolicy(
-            RateLimitPolicyConstants
-                .ResetPassword,
-            httpContext =>
-                RateLimitPartition
-                    .GetFixedWindowLimiter(
-                        partitionKey:
-                            httpContext
-                                .Connection
-                                .RemoteIpAddress?
-                                .ToString()
-                            ?? "unknown",
+        AddIpPolicy(
+            options,
+            RateLimitPolicyConstants.Login,
+            rateLimiting.Login);
 
-                        factory:
-                            _ =>
-                                new FixedWindowRateLimiterOptions
-                                {
-                                    PermitLimit =
-                                        5,
-
-                                    Window =
-                                        TimeSpan
-                                            .FromMinutes(
-                                                15),
-
-                                    QueueLimit =
-                                        0,
-
-                                    AutoReplenishment =
-                                        true
-                                }));
-
-        options.AddPolicy(
+        AddIpPolicy(
+            options,
             RateLimitPolicyConstants.Registration,
-            httpContext =>
-                RateLimitPartition
-                    .GetFixedWindowLimiter(
-                        partitionKey:
-                            httpContext
-                                .Connection
-                                .RemoteIpAddress?
-                                .ToString()
-                            ?? "unknown",
+            rateLimiting.Registration);
 
-                        factory:
-                            _ =>
-                                new FixedWindowRateLimiterOptions
-                                {
-                                    PermitLimit =
-                                        5,
+        AddIpPolicy(
+            options,
+            RateLimitPolicyConstants.ForgotPassword,
+            rateLimiting.ForgotPassword);
 
-                                    Window =
-                                        TimeSpan
-                                            .FromMinutes(
-                                                10),
+        AddIpPolicy(
+            options,
+            RateLimitPolicyConstants.ResetPassword,
+            rateLimiting.ResetPassword);
 
-                                    QueueLimit =
-                                        0,
+        AddIpPolicy(
+            options,
+            RateLimitPolicyConstants.TwoFactorLogin,
+            rateLimiting.TwoFactorLogin);
 
-                                    AutoReplenishment =
-                                        true
-                                }));
+        AddIpPolicy(
+            options,
+            RateLimitPolicyConstants.TwoFactorVerify,
+            rateLimiting.TwoFactorVerify);
 
-        options.AddPolicy(
-    RateLimitPolicyConstants
-        .TwoFactorLogin,
-    httpContext =>
-        RateLimitPartition
-            .GetFixedWindowLimiter(
-                partitionKey:
-                    httpContext
-                        .Connection
-                        .RemoteIpAddress?
-                        .ToString()
-                    ?? "unknown",
+        AddUserPolicy(
+            options,
+            RateLimitPolicyConstants.TwoFactorSettings,
+            rateLimiting.TwoFactorSettings);
 
-                factory:
-                    _ =>
-                        new FixedWindowRateLimiterOptions
-                        {
-                            PermitLimit =
-                                3,
+        AddIpPolicy(
+            options,
+            RateLimitPolicyConstants.RefreshToken,
+            rateLimiting.RefreshToken);
 
-                            Window =
-                                TimeSpan
-                                    .FromMinutes(5),
+        AddUserPolicy(
+            options,
+            RateLimitPolicyConstants.ChatMessages,
+            rateLimiting.ChatMessages);
 
-                            QueueLimit =
-                                0,
+        AddUserPolicy(
+            options,
+            RateLimitPolicyConstants.Uploads,
+            rateLimiting.Uploads);
 
-                            AutoReplenishment =
-                                true
-                        }));
+        AddUserPolicy(
+            options,
+            RateLimitPolicyConstants.Recommendations,
+            rateLimiting.Recommendations);
 
-        options.AddPolicy(
-            RateLimitPolicyConstants
-                .TwoFactorVerify,
-            httpContext =>
-                RateLimitPartition
-                    .GetFixedWindowLimiter(
-                        partitionKey:
-                            httpContext
-                                .Connection
-                                .RemoteIpAddress?
-                                .ToString()
-                            ?? "unknown",
-
-                        factory:
-                            _ =>
-                                new FixedWindowRateLimiterOptions
-                                {
-                                    PermitLimit =
-                                        10,
-
-                                    Window =
-                                        TimeSpan
-                                            .FromMinutes(5),
-
-                                    QueueLimit =
-                                        0,
-
-                                    AutoReplenishment =
-                                        true
-                                }));
-
-        options.AddPolicy(
-            RateLimitPolicyConstants
-                .TwoFactorSettings,
-            httpContext =>
-                RateLimitPartition
-                    .GetFixedWindowLimiter(
-                        partitionKey:
-                            httpContext.User
-                                .FindFirst(
-                                    System.Security.Claims
-                                        .ClaimTypes
-                                        .NameIdentifier)?
-                                .Value
-                            ??
-                            httpContext
-                                .Connection
-                                .RemoteIpAddress?
-                                .ToString()
-                            ??
-                            "unknown",
-
-                        factory:
-                            _ =>
-                                new FixedWindowRateLimiterOptions
-                                {
-                                    PermitLimit =
-                                        5,
-
-                                    Window =
-                                        TimeSpan
-                                            .FromMinutes(10),
-
-                                    QueueLimit =
-                                        0,
-
-                                    AutoReplenishment =
-                                        true
-                                }));
+        AddIpPolicy(
+            options,
+            RateLimitPolicyConstants.PublicSearch,
+            rateLimiting.PublicSearch);
     });
 
 var app = builder.Build();
@@ -607,4 +574,95 @@ static string ToCamelCase(
         char.ToLowerInvariant(
             normalized[0])
         + normalized[1..];
+}
+
+static void AddIpPolicy(
+    RateLimiterOptions options,
+    string policyName,
+    RateLimitRuleOptions rule)
+{
+    options.AddPolicy(
+        policyName,
+        httpContext =>
+            RateLimitPartition
+                .GetFixedWindowLimiter(
+                    partitionKey:
+                        httpContext.Connection
+                            .RemoteIpAddress?
+                            .ToString()
+                        ?? "unknown",
+
+                    factory:
+                        _ =>
+                            CreateFixedWindowOptions(
+                                rule)));
+}
+
+static void AddUserPolicy(
+    RateLimiterOptions options,
+    string policyName,
+    RateLimitRuleOptions rule)
+{
+    options.AddPolicy(
+        policyName,
+        httpContext =>
+        {
+            var userId =
+                httpContext.User
+                    .FindFirst(
+                        ClaimTypes
+                            .NameIdentifier)?
+                    .Value;
+
+            var partitionKey =
+                !string.IsNullOrWhiteSpace(
+                    userId)
+                    ? $"user:{userId}"
+                    : $"ip:{httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+
+            return RateLimitPartition
+                .GetFixedWindowLimiter(
+                    partitionKey:
+                        partitionKey,
+
+                    factory:
+                        _ =>
+                            CreateFixedWindowOptions(
+                                rule));
+        });
+}
+
+static FixedWindowRateLimiterOptions
+    CreateFixedWindowOptions(
+        RateLimitRuleOptions rule)
+{
+    if (rule.PermitLimit <= 0)
+    {
+        throw new InvalidOperationException(
+            "Rate limit PermitLimit must be greater than zero.");
+    }
+
+    if (rule.WindowSeconds <= 0)
+    {
+        throw new InvalidOperationException(
+            "Rate limit WindowSeconds must be greater than zero.");
+    }
+
+    return new FixedWindowRateLimiterOptions
+    {
+        PermitLimit =
+            rule.PermitLimit,
+
+        Window =
+            TimeSpan.FromSeconds(
+                rule.WindowSeconds),
+
+        QueueLimit =
+            Math.Max(
+                0,
+                rule.QueueLimit),
+
+        AutoReplenishment =
+            true
+    };
 }

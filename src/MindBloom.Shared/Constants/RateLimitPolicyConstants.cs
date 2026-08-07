@@ -2,6 +2,9 @@
 
 public static class RateLimitPolicyConstants
 {
+    public const string Login =
+        "login";
+
     public const string Registration =
         "registration";
 
@@ -19,4 +22,19 @@ public static class RateLimitPolicyConstants
 
     public const string TwoFactorSettings =
         "two-factor-settings";
+
+    public const string RefreshToken =
+        "refresh-token";
+
+    public const string ChatMessages =
+        "chat-messages";
+
+    public const string Uploads =
+        "uploads";
+
+    public const string Recommendations =
+        "recommendations";
+
+    public const string PublicSearch =
+        "public-search";
 }

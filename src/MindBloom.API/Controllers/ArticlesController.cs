@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Articles.DTOs;
 using MindBloom.Application.Features.Articles.Interfaces;
@@ -24,6 +25,9 @@ public class ArticlesController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+    RateLimitPolicyConstants
+        .PublicSearch)]
     [HttpGet]
     public async Task<IActionResult>
         GetPublic(
@@ -209,6 +213,9 @@ public class ArticlesController : ControllerBase
         return Ok(result);
     }
 
+
+    [EnableRateLimiting(
+    RateLimitPolicyConstants.Uploads)]
     [HttpPost("image")]
     [Authorize(Policy = AuthorizationPolicyConstants.AdminOrTherapist)]
     [Consumes("multipart/form-data")]

@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MindBloom.Application.Recommendations.DTOs;
 using MindBloom.Application.Recommendations.Services;
 using MindBloom.Shared.Constants;
@@ -21,6 +22,9 @@ public sealed class RecommendationsController : ControllerBase
             recommendationService;
     }
 
+    [EnableRateLimiting(
+    RateLimitPolicyConstants
+        .Recommendations)]
     [HttpPost("therapists")]
     [ProducesResponseType(
         typeof(IReadOnlyList<TherapistRecommendationDto>),

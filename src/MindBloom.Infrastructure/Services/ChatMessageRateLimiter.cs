@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using Microsoft.Extensions.Configuration;
 using MindBloom.Application.Features.Chat.Interfaces;
-using MindBloom.Application.Features.Chat.Validators;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -11,6 +11,43 @@ public sealed class ChatMessageRateLimiter
         ChatRateLimitKey,
         ChatRateLimitState>
         _states = new();
+
+    private readonly int
+        _maximumMessagesPerWindow;
+
+    private readonly TimeSpan
+        _window;
+
+    public ChatMessageRateLimiter(
+        IConfiguration configuration)
+    {
+        var permitLimit =
+            configuration.GetValue<int>(
+                "RateLimiting:ChatMessages:PermitLimit");
+
+        var windowSeconds =
+            configuration.GetValue<int>(
+                "RateLimiting:ChatMessages:WindowSeconds");
+
+        if (permitLimit <= 0)
+        {
+            throw new InvalidOperationException(
+                "RateLimiting:ChatMessages:PermitLimit must be greater than zero.");
+        }
+
+        if (windowSeconds <= 0)
+        {
+            throw new InvalidOperationException(
+                "RateLimiting:ChatMessages:WindowSeconds must be greater than zero.");
+        }
+
+        _maximumMessagesPerWindow =
+            permitLimit;
+
+        _window =
+            TimeSpan.FromSeconds(
+                windowSeconds);
+    }
 
     public bool TryAcquire(
         int userId,
@@ -34,11 +71,6 @@ public sealed class ChatMessageRateLimiter
         var now =
             DateTime.UtcNow;
 
-        var window =
-            TimeSpan.FromSeconds(
-                ChatValidationRules
-                    .MessageRateLimitWindowSeconds);
-
         var key =
             new ChatRateLimitKey(
                 userId,
@@ -53,18 +85,19 @@ public sealed class ChatMessageRateLimiter
         lock (state.SyncRoot)
         {
             while (
-                state.MessageTimestamps.Count > 0 &&
+                state.MessageTimestamps.Count >
+                    0 &&
                 now -
-                state.MessageTimestamps.Peek() >=
-                window)
+                    state.MessageTimestamps
+                        .Peek() >=
+                _window)
             {
                 state.MessageTimestamps
                     .Dequeue();
             }
 
             if (state.MessageTimestamps.Count >=
-                ChatValidationRules
-                    .MaximumMessagesPerWindow)
+                _maximumMessagesPerWindow)
             {
                 var oldestTimestamp =
                     state.MessageTimestamps
@@ -72,7 +105,7 @@ public sealed class ChatMessageRateLimiter
 
                 var availableAt =
                     oldestTimestamp +
-                    window;
+                    _window;
 
                 retryAfter =
                     availableAt > now
