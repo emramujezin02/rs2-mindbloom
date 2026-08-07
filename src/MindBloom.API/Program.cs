@@ -138,18 +138,50 @@ builder.Services
         IClientOnboardingService,
         ClientOnboardingService>();
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(
-        "AllowAll",
-        policy =>
-        {
-            policy
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowAnyOrigin();
-        });
-});
+var corsSettings =
+    builder.Configuration
+        .GetSection(
+            CorsSettings.SectionName)
+        .Get<CorsSettings>()
+    ?? new CorsSettings();
+
+builder.Services.AddCors(
+    options =>
+    {
+        options.AddPolicy(
+            CorsPolicyConstants
+                .MindBloomClients,
+            policy =>
+            {
+                var allowedOrigins =
+                    corsSettings
+                        .AllowedOrigins
+                        .Where(origin =>
+                            !string.IsNullOrWhiteSpace(
+                                origin))
+                        .Select(origin =>
+                            origin.Trim())
+                        .Distinct(
+                            StringComparer
+                                .OrdinalIgnoreCase)
+                        .ToArray();
+
+                if (allowedOrigins.Length >
+                    0)
+                {
+                    policy.WithOrigins(
+                        allowedOrigins);
+                }
+
+                policy.WithMethods(
+                    corsSettings
+                        .AllowedMethods);
+
+                policy.WithHeaders(
+                    corsSettings
+                        .AllowedHeaders);
+            });
+    });
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -494,7 +526,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowAll");
+app.UseCors(
+    CorsPolicyConstants
+        .MindBloomClients);
 
 app.UseRateLimiter();
 
