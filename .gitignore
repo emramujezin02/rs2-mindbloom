@@ -21,12 +21,27 @@ obj/
 .pub/
 build/
 
-# Environment files
+# Environment files containing real secrets
 .env
 .env.*
-.env.production
-.env.production.*
-!.env-example
+**/.env
+**/.env.*
+
+# Safe configuration templates
+!.env.example
+!**/.env.example
+
+# Firebase / Google service-account credentials
+**/firebase-service-account*.json
+**/service-account*.json
+**/google-credentials*.json
+**/firebase-adminsdk*.json
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Logs
 *.log

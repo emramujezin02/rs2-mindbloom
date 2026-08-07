@@ -238,14 +238,6 @@ public static class DependencyInjection
                         .ExpirationInMinutes;
             });
 
-        services.Configure<JwtSettings>(options =>
-        {
-            options.SecretKey = jwtSettings.SecretKey;
-            options.Issuer = jwtSettings.Issuer;
-            options.Audience = jwtSettings.Audience;
-            options.ExpirationInMinutes = jwtSettings.ExpirationInMinutes;
-        });
-
 
         services.AddHttpClient<IGeocodingService, GoogleGeocodingService>(client =>
         {
