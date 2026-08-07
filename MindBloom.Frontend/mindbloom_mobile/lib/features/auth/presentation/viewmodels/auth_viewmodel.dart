@@ -325,6 +325,7 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> changePassword({
     required String currentPassword,
     required String newPassword,
+    required String confirmNewPassword,
   }) async {
     if (isLoading) {
       return false;
@@ -343,6 +344,7 @@ class AuthViewModel extends ChangeNotifier {
         ChangePasswordRequest(
           currentPassword: currentPassword,
           newPassword: newPassword,
+          confirmNewPassword: confirmNewPassword,
         ),
       );
 

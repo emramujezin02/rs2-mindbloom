@@ -63,6 +63,7 @@ class AdminSettingsApiService {
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
+    required String confirmNewPassword,
   }) async {
     await apiClient.post(
       '/api/Auth/change-password',

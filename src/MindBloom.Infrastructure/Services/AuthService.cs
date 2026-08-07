@@ -625,13 +625,6 @@ public class AuthService : IAuthService
                 .FindByEmailAsync(
                     normalizedEmail);
 
-        /*
-         * Namjerno vraćamo bez greške.
-         *
-         * Controller će zato dati potpuno isti
-         * generički odgovor bez obzira postoji
-         * li account sa ovim emailom.
-         */
         if (user == null)
         {
             return;
@@ -642,10 +635,6 @@ public class AuthService : IAuthService
                 .GeneratePasswordResetTokenAsync(
                     user);
 
-        /*
-         * Identity token može sadržavati znakove
-         * koji nisu pogodni za URL/transport.
-         */
         var encodedToken =
             WebEncoders.Base64UrlEncode(
                 Encoding.UTF8.GetBytes(
@@ -658,10 +647,6 @@ public class AuthService : IAuthService
         var now =
             DateTime.UtcNow;
 
-        /*
-         * Ranije aktivne zahtjeve za reset
-         * činimo nevažećim.
-         */
         var previousRequests =
             await _context.PasswordResetCodes
                 .Where(x =>
@@ -770,9 +755,6 @@ public class AuthService : IAuthService
                 .FindByEmailAsync(
                     normalizedEmail);
 
-        /*
-         * Ne otkrivamo da li account postoji.
-         */
         if (user == null)
         {
             throw new BadRequestException(
@@ -914,11 +896,30 @@ public class AuthService : IAuthService
                 "New password is required.");
         }
 
+        if (request.NewPassword !=
+            request.ConfirmNewPassword)
+        {
+            throw new BadRequestException(
+                "New password and confirmation do not match.");
+        }
+
         if (request.CurrentPassword ==
             request.NewPassword)
         {
             throw new BadRequestException(
                 "New password must be different from the current password.");
+        }
+
+        var currentPasswordValid =
+            await _userManager
+                .CheckPasswordAsync(
+                    user,
+                    request.CurrentPassword);
+
+        if (!currentPasswordValid)
+        {
+            throw new BadRequestException(
+                "Current password is incorrect.");
         }
 
         var result =

@@ -108,6 +108,7 @@ class AdminSettingsViewModel extends ChangeNotifier {
   Future<bool> changePassword({
     required String currentPassword,
     required String newPassword,
+    required String confirmNewPassword,
   }) async {
     if (isChangingPassword) {
       return false;
@@ -122,6 +123,7 @@ class AdminSettingsViewModel extends ChangeNotifier {
       await repository.changePassword(
         currentPassword: currentPassword,
         newPassword: newPassword,
+        confirmNewPassword: confirmNewPassword,
       );
 
       return true;

@@ -226,7 +226,8 @@ public sealed class ChangePasswordDtoValidator
     public ChangePasswordDtoValidator()
     {
         RuleFor(x => x.CurrentPassword)
-            .Cascade(CascadeMode.Stop)
+            .Cascade(
+                CascadeMode.Stop)
             .NotEmpty()
             .WithMessage(
                 "Current password is required.")
@@ -245,6 +246,18 @@ public sealed class ChangePasswordDtoValidator
                 x.CurrentPassword)
             .WithMessage(
                 "New password must be different from the current password.");
+
+        RuleFor(x =>
+                x.ConfirmNewPassword)
+            .Cascade(
+                CascadeMode.Stop)
+            .NotEmpty()
+            .WithMessage(
+                "New password confirmation is required.")
+            .Equal(x =>
+                x.NewPassword)
+            .WithMessage(
+                "New password and confirmation do not match.");
     }
 }
 

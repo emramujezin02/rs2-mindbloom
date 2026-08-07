@@ -39,10 +39,15 @@ class AuthApiService {
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
+    required String confirmNewPassword,
   }) async {
     await apiClient.post(
       '/Auth/change-password',
-      body: {'currentPassword': currentPassword, 'newPassword': newPassword},
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+        'confirmNewPassword': confirmNewPassword,
+      },
     );
   }
 

@@ -18,6 +18,7 @@ public static class AdminAuditDataSanitizer
                 "currentPassword",
                 "newPassword",
                 "confirmPassword",
+                "confirmNewPassword",
                 "token",
                 "accessToken",
                 "refreshToken",

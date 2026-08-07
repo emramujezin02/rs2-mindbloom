@@ -32,10 +32,12 @@ class AdminSettingsRepository {
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
+    required String confirmNewPassword,
   }) {
     return apiService.changePassword(
       currentPassword: currentPassword,
       newPassword: newPassword,
+      confirmNewPassword: confirmNewPassword,
     );
   }
 

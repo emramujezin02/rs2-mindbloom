@@ -138,6 +138,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final success = await _viewModel.changePassword(
       currentPassword: _currentPasswordController.text,
       newPassword: _newPasswordController.text,
+      confirmNewPassword: _confirmPasswordController.text,
     );
 
     if (!mounted) {

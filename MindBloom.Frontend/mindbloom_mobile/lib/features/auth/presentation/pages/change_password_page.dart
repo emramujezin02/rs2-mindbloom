@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../../../../app/router/app_router.dart';
+import '../../../session/presentation/viewmodels/session_scope.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -63,19 +65,36 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     final success = await _viewModel.changePassword(
       currentPassword: _currentPasswordController.text,
       newPassword: _newPasswordController.text,
+      confirmNewPassword: _confirmPasswordController.text,
     );
 
     if (!mounted) {
       return;
     }
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password changed successfully.')),
-      );
-
-      Navigator.of(context).pop();
+    if (!success) {
+      return;
     }
+
+    /*
+   * Backend nakon uspješne promjene
+   * lozinke opoziva sve refresh sesije.
+   *
+   * Zato završavamo i trenutnu lokalnu
+   * sesiju, gasimo SignalR konekcije
+   * i brišemo korisnički state.
+   */
+    final session = SessionScope.of(context);
+
+    await session.logout();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(AppRouter.login, (route) => false);
   }
 
   @override
@@ -153,8 +172,24 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     return 'New password is required.';
                   }
 
-                  if (value.length < 6) {
-                    return 'Password must contain at least 6 characters.';
+                  if (value.length < 8) {
+                    return 'Password must contain at least 8 characters.';
+                  }
+
+                  if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                    return 'Password must contain an uppercase letter.';
+                  }
+
+                  if (!RegExp(r'[a-z]').hasMatch(value)) {
+                    return 'Password must contain a lowercase letter.';
+                  }
+
+                  if (!RegExp(r'[0-9]').hasMatch(value)) {
+                    return 'Password must contain a number.';
+                  }
+
+                  if (!RegExp(r'[^a-zA-Z0-9]').hasMatch(value)) {
+                    return 'Password must contain a special character.';
                   }
 
                   if (value == _currentPasswordController.text) {
