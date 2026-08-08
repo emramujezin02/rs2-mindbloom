@@ -1604,9 +1604,22 @@ public class AuthService : IAuthService
     }
 
     public async Task DeleteAccountAsync(
-    int userId,
-    DeleteAccountRequestDto request)
+     int userId,
+     DeleteAccountRequestDto request)
     {
+        if (request == null)
+        {
+            throw new BadRequestException(
+                "Account deletion request is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                request.Password))
+        {
+            throw new BadRequestException(
+                "Current password is required.");
+        }
+
         var user =
             await _userManager.Users
                 .FirstOrDefaultAsync(x =>
@@ -1614,57 +1627,699 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            throw new NotFoundException("User not found.");
+            throw new NotFoundException(
+                "User not found.");
         }
 
-        var isPasswordCorrect =
-            await _userManager.CheckPasswordAsync(
-                user,
-                request.Password);
-
-        if (!isPasswordCorrect)
+        if (!user.IsActive ||
+            user.IsBlocked)
         {
-            throw new Exception("Invalid password.");
+            throw new BadRequestException(
+                "Account is not available.");
         }
 
-        var refreshTokens =
-            await _context.RefreshTokens
-                .Where(x => x.UserId == user.Id)
-                .ToListAsync();
+        var passwordValid =
+            await _userManager
+                .CheckPasswordAsync(
+                    user,
+                    request.Password);
 
-        _context.RefreshTokens.RemoveRange(
-            refreshTokens);
-
-        var therapist =
-            await _context.Therapists
-                .FirstOrDefaultAsync(x =>
-                    x.UserId == user.Id);
-
-        if (therapist != null)
+        if (!passwordValid)
         {
-            _context.Therapists.Remove(therapist);
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "AccountDeletionFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "IdentityConfirmationFailed",
+
+                        ResourceType =
+                            "Account",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
+            throw new UnauthorizedException(
+                "Account deletion could not be confirmed.");
         }
 
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == user.Id);
+                    x.UserId == user.Id &&
+                    !x.IsDeleted);
+
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == user.Id &&
+                    !x.IsDeleted);
 
         if (client != null)
         {
-            _context.Clients.Remove(client);
+            var hasActiveClientAppointments =
+                await _context.Appointments
+                    .AsNoTracking()
+                    .AnyAsync(x =>
+                        x.ClientId ==
+                            client.Id &&
+                        !x.IsDeleted &&
+                        (
+                            x.Status ==
+                                AppointmentStatus
+                                    .Pending ||
+                            x.Status ==
+                                AppointmentStatus
+                                    .Accepted
+                        ));
+
+            if (hasActiveClientAppointments)
+            {
+                await _securityAuditService
+                    .WriteAsync(
+                        new SecurityAuditWriteDto
+                        {
+                            UserId =
+                                user.Id,
+
+                            EventType =
+                                "AccountDeletionFailed",
+
+                            IsSuccessful =
+                                false,
+
+                            FailureReason =
+                                "ActiveAppointmentsExist",
+
+                            ResourceType =
+                                "Account",
+
+                            ResourceId =
+                                user.Id.ToString()
+                        });
+
+                throw new BusinessException(
+                    "Account cannot be deleted while active appointments exist. Cancel pending or accepted appointments first.");
+            }
         }
 
-        await _context.SaveChangesAsync();
-
-        var result =
-            await _userManager.DeleteAsync(user);
-
-        if (!result.Succeeded)
+        if (therapist != null)
         {
-            throw new Exception(
-                "Failed to delete account.");
+            var hasActiveTherapistAppointments =
+                await _context.Appointments
+                    .AsNoTracking()
+                    .AnyAsync(x =>
+                        x.TherapistId ==
+                            therapist.Id &&
+                        !x.IsDeleted &&
+                        (
+                            x.Status ==
+                                AppointmentStatus
+                                    .Pending ||
+                            x.Status ==
+                                AppointmentStatus
+                                    .Accepted
+                        ));
+
+            if (hasActiveTherapistAppointments)
+            {
+                await _securityAuditService
+                    .WriteAsync(
+                        new SecurityAuditWriteDto
+                        {
+                            UserId =
+                                user.Id,
+
+                            EventType =
+                                "AccountDeletionFailed",
+
+                            IsSuccessful =
+                                false,
+
+                            FailureReason =
+                                "ActiveAppointmentsExist",
+
+                            ResourceType =
+                                "Account",
+
+                            ResourceId =
+                                user.Id.ToString()
+                        });
+
+                throw new BusinessException(
+                    "Account cannot be deleted while active appointments exist.");
+            }
         }
+
+        if (therapist != null)
+        {
+            var therapistDocumentIds =
+                await _context
+                    .TherapistDocuments
+                    .AsNoTracking()
+                    .Where(x =>
+                        x.TherapistId ==
+                            therapist.Id &&
+                        !x.IsDeleted)
+                    .Select(x => x.Id)
+                    .ToListAsync();
+
+            foreach (var documentId
+                     in therapistDocumentIds)
+            {
+                await _therapistService
+                    .DeleteDocumentAsync(
+                        user.Id,
+                        documentId);
+            }
+        }
+
+        var now =
+            DateTime.UtcNow;
+
+        await using var transaction =
+            await _context.Database
+                .BeginTransactionAsync();
+
+        try
+        {
+            var activeRefreshTokens =
+                await _context.RefreshTokens
+                    .Where(x =>
+                        x.UserId ==
+                            user.Id &&
+                        x.RevokedAtUtc ==
+                            null)
+                    .ToListAsync();
+
+            foreach (var refreshToken
+                     in activeRefreshTokens)
+            {
+                refreshToken.RevokedAtUtc =
+                    now;
+            }
+
+            var fcmTokens =
+                await _context.FcmDeviceTokens
+                    .Where(x =>
+                        x.UserId == user.Id)
+                    .ToListAsync();
+
+            _context.FcmDeviceTokens
+                .RemoveRange(
+                    fcmTokens);
+
+            var twoFactorChallenges =
+                await _context
+                    .TwoFactorLoginChallenges
+                    .Where(x =>
+                        x.UserId == user.Id &&
+                        !x.IsUsed)
+                    .ToListAsync();
+
+            foreach (var challenge
+                     in twoFactorChallenges)
+            {
+                challenge.IsUsed =
+                    true;
+
+                challenge.UsedAtUtc =
+                    now;
+            }
+
+            var verificationCodes =
+                await _context
+                    .EmailVerificationCodes
+                    .Where(x =>
+                        x.UserId == user.Id)
+                    .ToListAsync();
+
+            _context.EmailVerificationCodes
+                .RemoveRange(
+                    verificationCodes);
+
+            var originalEmail =
+                user.Email?
+                    .Trim()
+                    .ToLowerInvariant();
+
+            if (!string.IsNullOrWhiteSpace(
+                    originalEmail))
+            {
+                var resetCodes =
+                    await _context
+                        .PasswordResetCodes
+                        .Where(x =>
+                            x.Email
+                                .ToLower() ==
+                            originalEmail)
+                        .ToListAsync();
+
+                _context.PasswordResetCodes
+                    .RemoveRange(
+                        resetCodes);
+            }
+
+            if (client != null)
+            {
+                var privateJournalEntries =
+                    await _context
+                        .PrivateJournalEntries
+                        .Where(x =>
+                            x.ClientId ==
+                                client.Id)
+                        .ToListAsync();
+
+                _context.PrivateJournalEntries
+                    .RemoveRange(
+                        privateJournalEntries);
+
+                var moodEntries =
+                    await _context.MoodEntries
+                        .Where(x =>
+                            x.ClientId ==
+                                client.Id)
+                        .ToListAsync();
+
+                _context.MoodEntries
+                    .RemoveRange(
+                        moodEntries);
+
+                var clientAppointmentIds =
+                    await _context.Appointments
+                        .Where(x =>
+                            x.ClientId == client.Id)
+                        .Select(x => x.Id)
+                        .ToListAsync();
+
+                if (clientAppointmentIds.Count > 0)
+                {
+                    var appointmentNotes =
+                        await _context.AppointmentNotes
+                            .Where(x =>
+                                clientAppointmentIds
+                                    .Contains(
+                                        x.AppointmentId))
+                            .ToListAsync();
+
+                    _context.AppointmentNotes
+                        .RemoveRange(
+                            appointmentNotes);
+                }
+
+                client.Location =
+                    null;
+
+                client.PreferredTherapistGender =
+                    null;
+
+                client.PreferredSessionType =
+                    null;
+
+                client.MinimumPricePerSession =
+                    null;
+
+                client.MaximumPricePerSession =
+                    null;
+
+                client.PreferredLanguages =
+                    null;
+
+                client.AssessmentFocusAreas =
+                    null;
+
+                client.PreferredDays =
+                    null;
+
+                client.HasCompletedOnboarding =
+                    false;
+
+                client.OnboardingCompletedAtUtc =
+                    null;
+
+                var therapyPreferences =
+                    await _context
+                        .ClientTherapyApproaches
+                        .Where(x =>
+                            x.ClientId ==
+                                client.Id)
+                        .ToListAsync();
+
+                _context.ClientTherapyApproaches
+                    .RemoveRange(
+                        therapyPreferences);
+            }
+
+
+            var appointmentStatusAudits =
+                await _context.AppointmentStatusAudits
+                    .Where(x =>
+                        x.ChangedByUserId ==
+                            user.Id)
+                    .ToListAsync();
+
+            foreach (var audit
+                     in appointmentStatusAudits)
+            {
+                audit.Reason =
+                    null;
+            }
+
+            var settings =
+                await _context.UserSettings
+                    .Where(x =>
+                        x.UserId == user.Id)
+                    .ToListAsync();
+
+            _context.UserSettings
+                .RemoveRange(
+                    settings);
+
+            var consents =
+                await _context.UserConsents
+                    .Where(x =>
+                        x.UserId == user.Id)
+                    .ToListAsync();
+
+            _context.UserConsents
+                .RemoveRange(
+                    consents);
+
+            var notifications =
+                await _context.Notifications
+                    .Where(x =>
+                        x.UserId == user.Id)
+                    .ToListAsync();
+
+            _context.Notifications
+                .RemoveRange(
+                    notifications);
+
+            var chatMessages =
+                await _context.ChatMessages
+                    .Where(x =>
+                        x.SenderUserId ==
+                            user.Id)
+                    .ToListAsync();
+
+            foreach (var message
+                     in chatMessages)
+            {
+                message.Content =
+                    "[Message removed]";
+
+                message.IsEdited =
+                    false;
+
+                message.EditedAtUtc =
+                    null;
+
+                message.ClientMessageId =
+                    null;
+            }
+
+            var conversationParticipants =
+                await _context
+                    .ConversationParticipants
+                    .Where(x =>
+                        x.UserId ==
+                            user.Id)
+                    .ToListAsync();
+
+            foreach (var participant
+                     in conversationParticipants)
+            {
+                participant.IsActive =
+                    false;
+
+                participant.LastReadAtUtc =
+                    null;
+            }
+
+            if (client != null)
+            {
+                var reviews =
+                    await _context.Reviews
+                        .Where(x =>
+                            x.ClientId ==
+                                client.Id)
+                        .ToListAsync();
+
+                foreach (var review
+                         in reviews)
+                {
+                    review.Comment =
+                        string.Empty;
+                }
+            }
+
+            if (client != null)
+            {
+                var activeMemberships =
+                    await _context
+                        .ClientMemberships
+                        .Where(x =>
+                            x.ClientId ==
+                                client.Id &&
+                            x.IsActive)
+                        .ToListAsync();
+
+                foreach (var membership
+                         in activeMemberships)
+                {
+                    membership.IsActive =
+                        false;
+
+                    membership.RemainingSessions =
+                        0;
+
+                    membership.UpdatedAtUtc =
+                        now;
+                }
+            }
+
+            /*
+             * 11. THERAPIST PROFILE
+             */
+            if (therapist != null)
+            {
+                therapist.Biography =
+                    string.Empty;
+
+                therapist.Specialization =
+                    "Deleted account";
+
+                therapist.SpecializationId =
+                    null;
+
+                therapist.VerificationNotes =
+                    null;
+
+                therapist.ProfileImagePath =
+                    null;
+
+                therapist.Location =
+                    null;
+
+                therapist.Country =
+                    string.Empty;
+
+                therapist.City =
+                    string.Empty;
+
+                therapist.Address =
+                    string.Empty;
+
+                therapist.Latitude =
+                    null;
+
+                therapist.Longitude =
+                    null;
+
+                therapist.OffersOnline =
+                    false;
+
+                therapist.OffersInPerson =
+                    false;
+
+                therapist.Languages =
+                    null;
+
+                therapist.Education =
+                    string.Empty;
+
+                therapist.IsDeleted =
+                    true;
+
+                therapist.UpdatedAtUtc =
+                    now;
+
+                var therapistApproaches =
+                    await _context
+                        .TherapistTherapyApproaches
+                        .Where(x =>
+                            x.TherapistId ==
+                                therapist.Id)
+                        .ToListAsync();
+
+                _context
+                    .TherapistTherapyApproaches
+                    .RemoveRange(
+                        therapistApproaches);
+
+                var availabilities =
+                    await _context
+                        .TherapistAvailabilities
+                        .Where(x =>
+                            x.TherapistId ==
+                                therapist.Id)
+                        .ToListAsync();
+
+                _context
+                    .TherapistAvailabilities
+                    .RemoveRange(
+                        availabilities);
+
+                var unavailableDates =
+                    await _context
+                        .TherapistUnavailableDates
+                        .Where(x =>
+                            x.TherapistId ==
+                                therapist.Id)
+                        .ToListAsync();
+
+                _context
+                    .TherapistUnavailableDates
+                    .RemoveRange(
+                        unavailableDates);
+            }
+
+            /*
+             * 12. ANONYMIZE IDENTITY
+             */
+            var anonymizedEmail =
+                $"deleted-{user.Id}-"
+                + $"{Guid.NewGuid():N}"
+                + "@deleted.mindbloom.invalid";
+
+            var anonymizedUsername =
+                $"deleted-user-{user.Id}-"
+                + Guid.NewGuid()
+                    .ToString("N");
+
+            user.FirstName =
+                "Deleted";
+
+            user.LastName =
+                "User";
+
+            user.Email =
+                anonymizedEmail;
+
+            user.NormalizedEmail =
+                anonymizedEmail
+                    .ToUpperInvariant();
+
+            user.UserName =
+                anonymizedUsername;
+
+            user.NormalizedUserName =
+                anonymizedUsername
+                    .ToUpperInvariant();
+
+            user.PhoneNumber =
+                null;
+
+            user.ProfileImageUrl =
+                null;
+
+            user.Gender =
+                null;
+
+            user.DateOfBirth =
+                DateTime.UnixEpoch;
+
+            user.EmailConfirmed =
+                false;
+
+            user.IsEmailVerified =
+                false;
+
+            user.TwoFactorEnabled =
+                false;
+
+            user.TwoFactorEnabledCustom =
+                false;
+
+            user.IsActive =
+                false;
+
+            user.IsBlocked =
+                true;
+
+            user.LastLoginAtUtc =
+                null;
+
+            /*
+             * Security stamp promjena dodatno
+             * invalidira Identity security state.
+             */
+            user.SecurityStamp =
+                Guid.NewGuid()
+                    .ToString("N");
+
+            /*
+             * Ne brišemo user/client/therapist
+             * red jer finansijski, appointment
+             * i audit FK-ovi moraju ostati
+             * konzistentni.
+             */
+            await _context
+                .SaveChangesAsync();
+
+            await transaction
+                .CommitAsync();
+        }
+        catch
+        {
+            await transaction
+                .RollbackAsync();
+
+            throw;
+        }
+
+        await _securityAuditService
+            .WriteAsync(
+                new SecurityAuditWriteDto
+                {
+                    UserId =
+                        null,
+
+                    EventType =
+                        "AccountDeleted",
+
+                    IsSuccessful =
+                        true,
+
+                    FailureReason =
+                        null,
+
+                    ResourceType =
+                        "Account",
+
+                    ResourceId =
+                        null
+                });
     }
 
     public async Task<Login2FAResponseDto>

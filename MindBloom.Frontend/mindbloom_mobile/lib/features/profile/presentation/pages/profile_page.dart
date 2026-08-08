@@ -154,6 +154,169 @@ class _ProfilePageState extends State<ProfilePage> {
         .toString();
   }
 
+  Future<void> _deleteAccount() async {
+    final passwordController = TextEditingController();
+
+    var obscurePassword = true;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Delete account'),
+              content: SingleChildScrollView(
+                child: SizedBox(
+                  width: 420,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'This action is permanent. '
+                        'Your private account data will be deleted '
+                        'or anonymized and you will no longer be '
+                        'able to sign in.',
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      const Text(
+                        'Financial and audit records that must '
+                        'remain for system integrity may be '
+                        'retained in anonymized form.',
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      const Text(
+                        'If you have pending or accepted '
+                        'appointments, cancel them before '
+                        'deleting your account.',
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      TextField(
+                        controller: passwordController,
+                        obscureText: obscurePassword,
+                        autofocus: true,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        decoration: InputDecoration(
+                          labelText: 'Current password',
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            tooltip: obscurePassword
+                                ? 'Show password'
+                                : 'Hide password',
+                            onPressed: () {
+                              setDialogState(() {
+                                obscurePassword = !obscurePassword;
+                              });
+                            },
+                            icon: Icon(
+                              obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(false);
+                  },
+                  child: const Text('Cancel'),
+                ),
+
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    foregroundColor: Theme.of(context).colorScheme.onError,
+                  ),
+                  onPressed: () {
+                    if (passwordController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Enter your current password.'),
+                        ),
+                      );
+
+                      return;
+                    }
+
+                    Navigator.of(dialogContext).pop(true);
+                  },
+                  icon: const Icon(Icons.delete_forever_outlined),
+                  label: const Text('Delete account'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      passwordController.dispose();
+
+      return;
+    }
+
+    /*
+   * Važno:
+   * ne trimujemo stvarnu lozinku.
+   */
+    final password = passwordController.text;
+
+    passwordController.dispose();
+
+    final authViewModel = AppInjection.createAuthViewModel();
+
+    try {
+      final success = await authViewModel.deleteAccount(password: password);
+
+      if (!mounted) {
+        return;
+      }
+
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              authViewModel.errorMessage ?? 'Account could not be deleted.',
+            ),
+          ),
+        );
+
+        return;
+      }
+
+      /*
+     * AuthRepository je nakon uspješnog
+     * backend deletiona uklonio lokalne
+     * tokene.
+     *
+     * Uklanjamo cijeli navigation stack
+     * kako se korisnik ne bi mogao vratiti
+     * Back dugmetom na privatne ekrane.
+     */
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(AppRouter.login, (route) => false);
+    } finally {
+      authViewModel.dispose();
+    }
+  }
+
   Future<void> _logout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -636,6 +799,21 @@ class _ProfilePageState extends State<ProfilePage> {
                 },
                 icon: const Icon(Icons.reviews),
                 label: const Text('My reviews'),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                  side: BorderSide(color: Theme.of(context).colorScheme.error),
+                ),
+                onPressed: _deleteAccount,
+                icon: const Icon(Icons.delete_forever_outlined),
+                label: const Text('Delete account'),
               ),
             ),
 

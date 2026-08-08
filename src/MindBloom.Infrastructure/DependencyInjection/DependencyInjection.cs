@@ -380,45 +380,92 @@ public static class DependencyInjection
                         };
 
                     options.Events =
-                        new JwtBearerEvents
-                        {
-                            OnMessageReceived =
-                                context =>
-                                {
-                                    var accessToken =
-                                        context.Request
-                                            .Query[
-                                                "access_token"]
-                                            .FirstOrDefault();
+    new JwtBearerEvents
+    {
+        OnMessageReceived =
+            context =>
+            {
+                var accessToken =
+                    context.Request
+                        .Query[
+                            "access_token"]
+                        .FirstOrDefault();
 
-                                    var requestPath =
-                                        context
-                                            .HttpContext
-                                            .Request
-                                            .Path;
+                var requestPath =
+                    context
+                        .HttpContext
+                        .Request
+                        .Path;
 
-                                    var isSignalRHub =
-                                        requestPath
-                                            .StartsWithSegments(
-                                                "/hubs/notifications")
-                                        ||
-                                        requestPath
-                                            .StartsWithSegments(
-                                                "/hubs/chat");
+                var isSignalRHub =
+                    requestPath
+                        .StartsWithSegments(
+                            "/hubs/notifications")
+                    ||
+                    requestPath
+                        .StartsWithSegments(
+                            "/hubs/chat");
 
-                                    if (!string
-                                            .IsNullOrWhiteSpace(
-                                                accessToken) &&
-                                        isSignalRHub)
-                                    {
-                                        context.Token =
-                                            accessToken;
-                                    }
+                if (!string
+                        .IsNullOrWhiteSpace(
+                            accessToken) &&
+                    isSignalRHub)
+                {
+                    context.Token =
+                        accessToken;
+                }
 
-                                    return Task
-                                        .CompletedTask;
-                                }
-                        };
+                return Task.CompletedTask;
+            },
+
+        OnTokenValidated =
+            async context =>
+            {
+                var userIdValue =
+                    context.Principal?
+                        .FindFirst(
+                            ClaimTypes
+                                .NameIdentifier)?
+                        .Value;
+
+                if (!int.TryParse(
+                        userIdValue,
+                        out var userId))
+                {
+                    context.Fail(
+                        "Invalid authenticated user.");
+
+                    return;
+                }
+
+                var dbContext =
+                    context.HttpContext
+                        .RequestServices
+                        .GetRequiredService<
+                            ApplicationDbContext>();
+
+                var userState =
+                    await dbContext.Users
+                        .AsNoTracking()
+                        .Where(user =>
+                            user.Id == userId)
+                        .Select(user =>
+                            new
+                            {
+                                user.IsActive,
+                                user.IsBlocked
+                            })
+                        .FirstOrDefaultAsync();
+
+                if (userState == null ||
+                    !userState.IsActive ||
+                    userState.IsBlocked)
+                {
+                    context.Fail(
+                        "User session is no longer valid.");
+                }
+            }
+    };
                 });
 
         services.AddAuthorization(options =>

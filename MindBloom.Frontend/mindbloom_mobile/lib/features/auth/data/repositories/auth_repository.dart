@@ -11,6 +11,7 @@ import '../services/auth_api_service.dart';
 import '../models/send_email_verification_code_request.dart';
 import '../models/verify_email_code_request.dart';
 import '../models/current_consent_versions.dart';
+import '../models/delete_account_request.dart';
 
 class AuthRepository {
   final AuthApiService authApiService;
@@ -118,5 +119,12 @@ class AuthRepository {
 
   Future<CurrentConsentVersions> getCurrentConsentVersions() {
     return authApiService.getCurrentConsentVersions();
+  }
+
+  Future<void> deleteAccount({required String password}) async {
+    await authApiService.deleteAccount(
+      DeleteAccountRequest(password: password),
+    );
+    await sessionStorage.clearSession();
   }
 }

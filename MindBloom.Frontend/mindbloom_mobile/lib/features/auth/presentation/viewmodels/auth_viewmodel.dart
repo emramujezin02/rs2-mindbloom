@@ -15,6 +15,7 @@ class AuthViewModel extends ChangeNotifier {
   AuthViewModel({required this.authRepository});
 
   bool isLoading = false;
+  bool isDeletingAccount = false;
 
   String? errorMessage;
 
@@ -580,6 +581,44 @@ class AuthViewModel extends ChangeNotifier {
       }
     } finally {
       isLoadingConsentVersions = false;
+
+      notifyListeners();
+    }
+  }
+
+  Future<bool> deleteAccount({required String password}) async {
+    if (isDeletingAccount) {
+      return false;
+    }
+
+    if (password.trim().isEmpty) {
+      errorMessage = 'Enter your current password to confirm account deletion.';
+
+      notifyListeners();
+
+      return false;
+    }
+
+    isDeletingAccount = true;
+
+    _clearErrors();
+
+    successMessage = null;
+
+    notifyListeners();
+
+    try {
+      await authRepository.deleteAccount(password: password);
+
+      successMessage = 'Account deleted successfully.';
+
+      return true;
+    } catch (error) {
+      _setError(error, fallback: 'Account could not be deleted.');
+
+      return false;
+    } finally {
+      isDeletingAccount = false;
 
       notifyListeners();
     }

@@ -10,6 +10,7 @@ import '../models/verify_2fa_request.dart';
 import '../models/send_email_verification_code_request.dart';
 import '../models/verify_email_code_request.dart';
 import '../models/current_consent_versions.dart';
+import '../models/delete_account_request.dart';
 
 class AuthApiService {
   final ApiClient apiClient;
@@ -129,5 +130,9 @@ class AuthApiService {
     }
 
     return result;
+  }
+
+  Future<void> deleteAccount(DeleteAccountRequest request) async {
+    await apiClient.delete('/Auth/delete-account', body: request.toJson());
   }
 }

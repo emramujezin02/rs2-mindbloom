@@ -77,6 +77,161 @@ class _TherapistSettingsPageState extends State<TherapistSettingsPage> {
     );
   }
 
+  Future<void> _deleteAccount() async {
+    final passwordController = TextEditingController();
+
+    var obscurePassword = true;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Delete account'),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'This action is permanent. '
+                      'Your private data will be deleted or anonymized '
+                      'and you will no longer be able to sign in.',
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    const Text(
+                      'Financial and audit records that must remain '
+                      'for system integrity may be retained in anonymized form.',
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    TextField(
+                      controller: passwordController,
+                      obscureText: obscurePassword,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        labelText: 'Current password',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setDialogState(() {
+                              obscurePassword = !obscurePassword;
+                            });
+                          },
+                          icon: Icon(
+                            obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(false);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    foregroundColor: Theme.of(context).colorScheme.onError,
+                  ),
+                  onPressed: () {
+                    if (passwordController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Enter your current password.'),
+                        ),
+                      );
+
+                      return;
+                    }
+
+                    Navigator.of(dialogContext).pop(true);
+                  },
+                  child: const Text('Delete account'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      passwordController.dispose();
+
+      return;
+    }
+
+    final password = passwordController.text;
+
+    passwordController.dispose();
+
+    final authViewModel = AppInjection.createAuthViewModel();
+
+    try {
+      final success = await authViewModel.deleteAccount(password: password);
+
+      if (!mounted) {
+        return;
+      }
+
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              authViewModel.errorMessage ?? 'Account could not be deleted.',
+            ),
+          ),
+        );
+
+        return;
+      }
+
+      /*
+     * Backend je već opozvao sesije,
+     * a repository je očistio lokalni
+     * token storage.
+     *
+     * Gasimo i lokalne notification
+     * konekcije prije odlaska na login.
+     */
+      final notifications = NotificationScope.of(context);
+
+      await notifications.stop();
+
+      if (!mounted) {
+        return;
+      }
+
+      final preferences = await SharedPreferences.getInstance();
+
+      await preferences.remove(_activeTabKey);
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(AppRouter.login, (route) => false);
+    } finally {
+      authViewModel.dispose();
+    }
+  }
+
   Future<void> _logout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -239,6 +394,29 @@ class _TherapistSettingsPageState extends State<TherapistSettingsPage> {
                   const SizedBox(height: 28),
 
                   const _SectionTitle(title: 'Account'),
+
+                  Card(
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.delete_forever_outlined,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      title: Text(
+                        'Delete account',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Permanently delete and anonymize your account data.',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: _deleteAccount,
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
 
                   Card(
                     child: ListTile(
