@@ -11,6 +11,8 @@ using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.Interfaces;
 using System.Threading;
 using MindBloom.Application.Common.Pagination;
+using MindBloom.Application.Features.Security.DTOs;
+using MindBloom.Application.Features.Security.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -19,6 +21,8 @@ public class TherapistService : ITherapistService
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _environment;
     private readonly ITherapistClientAccessService _therapistClientAccessService;
+    private readonly ISecurityAuditService
+    _securityAuditService;
 
     private const long MaximumDocumentSize =
     10 * 1024 * 1024;
@@ -47,10 +51,13 @@ public class TherapistService : ITherapistService
     public TherapistService(
         ApplicationDbContext context, 
         IWebHostEnvironment environment, 
-        IGeocodingService geocodingService, 
+        IGeocodingService geocodingService,
+        ISecurityAuditService securityAuditService,
         ITherapistClientAccessService therapistClientAccessService)
     {
         _context = context;
+        _securityAuditService =
+    securityAuditService;
         _environment = environment;
         _geocodingService = geocodingService;
         _therapistClientAccessService = therapistClientAccessService;
@@ -2111,10 +2118,24 @@ public class TherapistService : ITherapistService
             .ToListAsync();
     }
 
-    public async Task<TherapistDocumentDownloadDto>
-    DownloadDocumentAsync(
-        int documentId)
+    public async Task<
+      TherapistDocumentDownloadDto>
+      DownloadDocumentAsync(
+          int authenticatedUserId,
+          int documentId)
     {
+        if (authenticatedUserId <= 0)
+        {
+            throw new UnauthorizedAccessException(
+                "Authenticated user identifier is invalid.");
+        }
+
+        if (documentId <= 0)
+        {
+            throw new BadRequestException(
+                "Document identifier is invalid.");
+        }
+
         var document =
             await _context
                 .TherapistDocuments
@@ -2126,6 +2147,29 @@ public class TherapistService : ITherapistService
 
         if (document == null)
         {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            authenticatedUserId,
+
+                        EventType =
+                            "SensitiveDocumentAccessFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "DocumentNotFound",
+
+                        ResourceType =
+                            "TherapistDocument",
+
+                        ResourceId =
+                            documentId.ToString()
+                    });
+
             throw new NotFoundException(
                 "Document not found.");
         }
@@ -2133,7 +2177,8 @@ public class TherapistService : ITherapistService
         var privateRoot =
             Path.GetFullPath(
                 Path.Combine(
-                    Directory.GetCurrentDirectory(),
+                    Directory
+                        .GetCurrentDirectory(),
                     "private-storage"));
 
         var physicalPath =
@@ -2148,6 +2193,29 @@ public class TherapistService : ITherapistService
                 StringComparison
                     .OrdinalIgnoreCase))
         {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            authenticatedUserId,
+
+                        EventType =
+                            "SensitiveDocumentAccessFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "InvalidStoragePath",
+
+                        ResourceType =
+                            "TherapistDocument",
+
+                        ResourceId =
+                            document.Id.ToString()
+                    });
+
             throw new UnauthorizedAccessException(
                 "Invalid document storage path.");
         }
@@ -2155,6 +2223,29 @@ public class TherapistService : ITherapistService
         if (!File.Exists(
                 physicalPath))
         {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            authenticatedUserId,
+
+                        EventType =
+                            "SensitiveDocumentAccessFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "PhysicalFileNotFound",
+
+                        ResourceType =
+                            "TherapistDocument",
+
+                        ResourceId =
+                            document.Id.ToString()
+                    });
+
             throw new NotFoundException(
                 "Document file was not found.");
         }
@@ -2162,6 +2253,29 @@ public class TherapistService : ITherapistService
         var content =
             await File.ReadAllBytesAsync(
                 physicalPath);
+
+        await _securityAuditService
+            .WriteAsync(
+                new SecurityAuditWriteDto
+                {
+                    UserId =
+                        authenticatedUserId,
+
+                    EventType =
+                        "SensitiveDocumentAccessed",
+
+                    IsSuccessful =
+                        true,
+
+                    FailureReason =
+                        null,
+
+                    ResourceType =
+                        "TherapistDocument",
+
+                    ResourceId =
+                        document.Id.ToString()
+                });
 
         return new TherapistDocumentDownloadDto
         {

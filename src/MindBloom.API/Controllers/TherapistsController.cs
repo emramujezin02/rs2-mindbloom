@@ -283,15 +283,23 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
-    [HttpGet("documents/{documentId:int}/download")]
+    [Authorize(
+        Policy =
+            AuthorizationPolicyConstants
+                .AdminOnly)]
+    [HttpGet(
+        "documents/{documentId:int}/download")]
     public async Task<IActionResult>
-    DownloadDocument(
-        int documentId)
+        DownloadDocument(
+            int documentId)
     {
+        var userId =
+            GetCurrentUserId();
+
         var document =
             await _therapistService
                 .DownloadDocumentAsync(
+                    userId,
                     documentId);
 
         return File(

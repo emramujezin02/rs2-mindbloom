@@ -63,6 +63,29 @@ public class AdminAuditController
         return Ok(result);
     }
 
+    [HttpGet("security")]
+    [ProducesResponseType(
+    typeof(
+        PagedResponse<
+            SecurityAuditLogDto>),
+    StatusCodes.Status200OK)]
+    public async Task<ActionResult<
+    PagedResponse<SecurityAuditLogDto>>>
+    GetSecurityAuditLogs(
+        [FromQuery]
+        SearchSecurityAuditLogsDto request,
+        CancellationToken cancellationToken)
+    {
+        var result =
+            await _auditService
+                .GetSecurityAuditLogsAsync(
+                    request,
+                    cancellationToken);
+
+        return Ok(result);
+    }
+
+
     [HttpPost]
     [HttpPut]
     [HttpPatch]

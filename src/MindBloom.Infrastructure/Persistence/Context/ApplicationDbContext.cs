@@ -22,6 +22,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<TherapistAvailability> TherapistAvailabilities => Set<TherapistAvailability>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
 
+    public DbSet<SecurityAuditLog> SecurityAuditLogs =>
+    Set<SecurityAuditLog>();
+
     public DbSet<StripeWebhookEvent>
     StripeWebhookEvents =>
         Set<StripeWebhookEvent>();
@@ -113,6 +116,67 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany(x => x.Appointments)
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<SecurityAuditLog>(
+    entity =>
+    {
+        entity.Property(x =>
+                x.EventType)
+            .IsRequired()
+            .HasMaxLength(150);
+
+        entity.Property(x =>
+                x.FailureReason)
+            .HasMaxLength(500);
+
+        entity.Property(x =>
+                x.ResourceType)
+            .HasMaxLength(150);
+
+        entity.Property(x =>
+                x.ResourceId)
+            .HasMaxLength(100);
+
+        entity.Property(x =>
+                x.IpAddress)
+            .HasMaxLength(100);
+
+        entity.Property(x =>
+                x.UserAgent)
+            .HasMaxLength(500);
+
+        entity.Property(x =>
+                x.CorrelationId)
+            .HasMaxLength(100);
+
+        entity.Property(x =>
+                x.OccurredAtUtc)
+            .IsRequired();
+
+        entity.HasOne(x =>
+                x.User)
+            .WithMany()
+            .HasForeignKey(x =>
+                x.UserId)
+            .OnDelete(
+                DeleteBehavior.SetNull);
+
+        entity.HasIndex(x =>
+            x.EventType);
+
+        entity.HasIndex(x =>
+            x.UserId);
+
+        entity.HasIndex(x =>
+            x.OccurredAtUtc);
+
+        entity.HasIndex(x => new
+        {
+            x.EventType,
+            x.IsSuccessful,
+            x.OccurredAtUtc
+        });
+    });
 
         builder.Entity<TwoFactorLoginChallenge>(
     entity =>

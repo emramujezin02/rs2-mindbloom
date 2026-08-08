@@ -28,6 +28,7 @@ public interface ITherapistService
 
     Task<TherapistDocumentDownloadDto>
     DownloadDocumentAsync(
+        int authenticatedUserId,
         int documentId);
 
     Task DeleteAvailabilityAsync(int therapistUserId,int availabilityId);

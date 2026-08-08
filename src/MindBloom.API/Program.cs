@@ -563,6 +563,9 @@ app.UseRateLimiter();
 
 app.UseAuthentication();
 
+app.UseMiddleware<
+    SecurityAuditMiddleware>();
+
 app.UseAuthorization();
 
 app.MapControllers();

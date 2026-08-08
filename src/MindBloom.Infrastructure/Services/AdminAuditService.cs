@@ -279,6 +279,186 @@ public class AdminAuditService
         };
     }
 
+    public async Task<
+    PagedResponse<SecurityAuditLogDto>>
+    GetSecurityAuditLogsAsync(
+        SearchSecurityAuditLogsDto request,
+        CancellationToken cancellationToken =
+            default)
+    {
+        var pagination =
+            PaginationHelper.Normalize(
+                request.PageNumber,
+                request.PageSize);
+
+        var query =
+            _context.SecurityAuditLogs
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted)
+                .AsQueryable();
+
+        if (request.UserId.HasValue)
+        {
+            query =
+                query.Where(x =>
+                    x.UserId ==
+                    request.UserId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.EventType))
+        {
+            var eventType =
+                request.EventType.Trim();
+
+            query =
+                query.Where(x =>
+                    x.EventType ==
+                    eventType);
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.ResourceType))
+        {
+            var resourceType =
+                request.ResourceType.Trim();
+
+            query =
+                query.Where(x =>
+                    x.ResourceType ==
+                    resourceType);
+        }
+
+        if (request.IsSuccessful.HasValue)
+        {
+            query =
+                query.Where(x =>
+                    x.IsSuccessful ==
+                    request.IsSuccessful.Value);
+        }
+
+        if (request.FromUtc.HasValue)
+        {
+            query =
+                query.Where(x =>
+                    x.OccurredAtUtc >=
+                    request.FromUtc.Value);
+        }
+
+        if (request.ToUtc.HasValue)
+        {
+            query =
+                query.Where(x =>
+                    x.OccurredAtUtc <=
+                    request.ToUtc.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.Search))
+        {
+            var search =
+                request.Search
+                    .Trim()
+                    .ToLower();
+
+            query =
+                query.Where(x =>
+                    x.EventType
+                        .ToLower()
+                        .Contains(search)
+                    ||
+                    (
+                        x.FailureReason
+                        ?? string.Empty
+                    )
+                    .ToLower()
+                    .Contains(search)
+                    ||
+                    (
+                        x.ResourceType
+                        ?? string.Empty
+                    )
+                    .ToLower()
+                    .Contains(search)
+                    ||
+                    (
+                        x.ResourceId
+                        ?? string.Empty
+                    )
+                    .ToLower()
+                    .Contains(search)
+                    ||
+                    (
+                        x.CorrelationId
+                        ?? string.Empty
+                    )
+                    .ToLower()
+                    .Contains(search));
+        }
+
+        var totalCount =
+            await query.CountAsync(
+                cancellationToken);
+
+        var items =
+            await query
+                .OrderByDescending(x =>
+                    x.OccurredAtUtc)
+                .ThenByDescending(x =>
+                    x.Id)
+                .Skip(
+                    pagination.Skip)
+                .Take(
+                    pagination.PageSize)
+                .Select(x =>
+                    new SecurityAuditLogDto
+                    {
+                        Id =
+                            x.Id,
+
+                        UserId =
+                            x.UserId,
+
+                        EventType =
+                            x.EventType,
+
+                        IsSuccessful =
+                            x.IsSuccessful,
+
+                        FailureReason =
+                            x.FailureReason,
+
+                        ResourceType =
+                            x.ResourceType,
+
+                        ResourceId =
+                            x.ResourceId,
+
+                        IpAddress =
+                            x.IpAddress,
+
+                        UserAgent =
+                            x.UserAgent,
+
+                        CorrelationId =
+                            x.CorrelationId,
+
+                        OccurredAtUtc =
+                            x.OccurredAtUtc
+                    })
+                .ToListAsync(
+                    cancellationToken);
+
+        return PagedResponse<
+                SecurityAuditLogDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
+    }
+
     public async Task WriteAsync(
         AdminAuditWriteDto request,
         CancellationToken cancellationToken =

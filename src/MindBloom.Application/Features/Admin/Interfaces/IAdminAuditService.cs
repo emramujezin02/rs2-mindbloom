@@ -20,4 +20,10 @@ public interface IAdminAuditService
         AdminAuditWriteDto request,
         CancellationToken cancellationToken =
             default);
+
+    Task<PagedResponse<SecurityAuditLogDto>>
+    GetSecurityAuditLogsAsync(
+        SearchSecurityAuditLogsDto request,
+        CancellationToken cancellationToken =
+            default);
 }

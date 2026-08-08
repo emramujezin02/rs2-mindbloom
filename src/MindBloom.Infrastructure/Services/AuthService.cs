@@ -15,6 +15,8 @@ using MindBloom.Application.Features.Therapists.Interfaces;
 using MindBloom.Domain.Enums;
 using System.Text;
 using Microsoft.AspNetCore.WebUtilities;
+using MindBloom.Application.Features.Security.DTOs;
+using MindBloom.Application.Features.Security.Interfaces;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -23,33 +25,30 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
 
     private readonly IJwtTokenService _jwtTokenService;
-    private readonly ITherapistService
-    _therapistService;
+    private readonly ITherapistService _therapistService;
+    private readonly ISecurityAuditService _securityAuditService;
     private readonly ApplicationDbContext _context;
+    private readonly INotificationPublisher _notificationPublisher;
 
-    private readonly INotificationPublisher
-        _notificationPublisher;
     public AuthService(
         UserManager<ApplicationUser> userManager,
-        IJwtTokenService jwtTokenService,
         ApplicationDbContext context,
+        IJwtTokenService jwtTokenService,
         ITherapistService therapistService,
-        INotificationPublisher notificationPublisher)
+        INotificationPublisher notificationPublisher,
+        ISecurityAuditService securityAuditService)
     {
-        _userManager =
-            userManager;
+        _userManager = userManager;
 
-        _jwtTokenService =
-            jwtTokenService;
+        _jwtTokenService = jwtTokenService;
 
-        _context =
-            context;
+        _context = context;
 
-        _therapistService =
-    therapistService;
+        _therapistService = therapistService;
 
-        _notificationPublisher =
-            notificationPublisher;
+        _notificationPublisher = notificationPublisher;
+
+        _securityAuditService = securityAuditService;
     }
 
     private bool IsDemoAccount(string email)
@@ -487,30 +486,102 @@ public class AuthService : IAuthService
     }
 
     public async Task<AuthResponseDto> LoginAsync(
-    LoginRequestDto request)
+     LoginRequestDto request)
     {
+        var normalizedEmail =
+            request.Email
+                .Trim()
+                .ToLowerInvariant();
+
         var user =
             await _userManager
                 .FindByEmailAsync(
-                    request.Email);
+                    normalizedEmail);
 
         if (user == null)
         {
-            throw new Exception(
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            null,
+
+                        EventType =
+                            "LoginFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "InvalidCredentials",
+
+                        ResourceType =
+                            "Authentication"
+                    });
+
+            throw new UnauthorizedException(
                 "Invalid credentials.");
         }
 
-        if (user.IsBlocked)
+        if (user.IsBlocked ||
+            !user.IsActive)
         {
-            throw new Exception(
-                "Your account is blocked.");
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "LoginFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "AccountUnavailable",
+
+                        ResourceType =
+                            "Authentication",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
+            throw new UnauthorizedException(
+                "Invalid credentials.");
         }
 
         if (!user.IsEmailVerified &&
             !IsDemoAccount(
                 user.Email!))
         {
-            throw new Exception(
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "LoginFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "EmailNotVerified",
+
+                        ResourceType =
+                            "Authentication",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
+            throw new UnauthorizedException(
                 "Email is not verified.");
         }
 
@@ -522,7 +593,30 @@ public class AuthService : IAuthService
 
         if (!isPasswordValid)
         {
-            throw new Exception(
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "LoginFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "InvalidCredentials",
+
+                        ResourceType =
+                            "Authentication",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
+            throw new UnauthorizedException(
                 "Invalid credentials.");
         }
 
@@ -533,6 +627,29 @@ public class AuthService : IAuthService
 
         if (roles.Count == 0)
         {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "LoginFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "MissingRole",
+
+                        ResourceType =
+                            "Authentication",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
             throw new InvalidOperationException(
                 "User does not have an assigned role.");
         }
@@ -586,6 +703,29 @@ public class AuthService : IAuthService
 
         await _context
             .SaveChangesAsync();
+
+        await _securityAuditService
+            .WriteAsync(
+                new SecurityAuditWriteDto
+                {
+                    UserId =
+                        user.Id,
+
+                    EventType =
+                        "LoginSucceeded",
+
+                    IsSuccessful =
+                        true,
+
+                    FailureReason =
+                        null,
+
+                    ResourceType =
+                        "Authentication",
+
+                    ResourceId =
+                        user.Id.ToString()
+                });
 
         return new AuthResponseDto
         {
@@ -814,13 +954,6 @@ public class AuthService : IAuthService
 
         if (!result.Succeeded)
         {
-            /*
-             * Ne vraćamo detalj da li je token
-             * invalidan, istekao ili već iskorišten.
-             *
-             * Validacija lozinke se svakako izvršava
-             * server-side prije dolaska ovdje.
-             */
             throw new BadRequestException(
                 safeErrorMessage);
         }
@@ -918,6 +1051,29 @@ public class AuthService : IAuthService
 
         if (!currentPasswordValid)
         {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "PasswordChangeFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "CurrentPasswordIncorrect",
+
+                        ResourceType =
+                            "Account",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
             throw new BadRequestException(
                 "Current password is incorrect.");
         }
@@ -931,6 +1087,29 @@ public class AuthService : IAuthService
 
         if (!result.Succeeded)
         {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "PasswordChangeFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "IdentityPasswordPolicyRejected",
+
+                        ResourceType =
+                            "Account",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
             var errorMessage =
                 result.Errors
                     .Select(x =>
@@ -944,9 +1123,35 @@ public class AuthService : IAuthService
                     : errorMessage);
         }
 
+        var now =
+            DateTime.UtcNow;
+
         await RevokeAllUserSessionsAsync(
             userId,
-            DateTime.UtcNow);
+            now);
+
+        await _securityAuditService
+            .WriteAsync(
+                new SecurityAuditWriteDto
+                {
+                    UserId =
+                        user.Id,
+
+                    EventType =
+                        "PasswordChanged",
+
+                    IsSuccessful =
+                        true,
+
+                    FailureReason =
+                        null,
+
+                    ResourceType =
+                        "Account",
+
+                    ResourceId =
+                        user.Id.ToString()
+                });
     }
 
     public async Task SendVerificationEmailAsync(
@@ -1274,6 +1479,25 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId = null,
+
+                        EventType =
+                            "LoginFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "InvalidCredentials",
+
+                        ResourceType =
+                            "Authentication"
+                    });
+
             throw new UnauthorizedException(
                 "Invalid credentials.");
         }
@@ -1281,6 +1505,31 @@ public class AuthService : IAuthService
         if (user.IsBlocked ||
             !user.IsActive)
         {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "LoginFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            user.IsBlocked
+                                ? "AccountBlocked"
+                                : "AccountInactive",
+
+                        ResourceType =
+                            "Authentication",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
             throw new UnauthorizedException(
                 "Invalid credentials.");
         }
@@ -1289,6 +1538,29 @@ public class AuthService : IAuthService
             !IsDemoAccount(
                 user.Email!))
         {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "LoginFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "EmailNotVerified",
+
+                        ResourceType =
+                            "Authentication",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
             throw new UnauthorizedException(
                 "Email is not verified.");
         }
@@ -1301,6 +1573,29 @@ public class AuthService : IAuthService
 
         if (!isPasswordValid)
         {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "LoginFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "InvalidCredentials",
+
+                        ResourceType =
+                            "Authentication",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
             throw new UnauthorizedException(
                 "Invalid credentials.");
         }
@@ -1335,10 +1630,6 @@ public class AuthService : IAuthService
         var now =
             DateTime.UtcNow;
 
-        /*
-         * Prethodni aktivni challenge-i više
-         * ne smiju biti upotrebljivi.
-         */
         var previousChallenges =
             await _context
                 .TwoFactorLoginChallenges
@@ -1358,10 +1649,6 @@ public class AuthService : IAuthService
                 now;
         }
 
-        /*
-         * Kriptografski siguran 6-cifreni
-         * jednokratni kod.
-         */
         var code =
             RandomNumberGenerator
                 .GetInt32(
@@ -1369,19 +1656,12 @@ public class AuthService : IAuthService
                     1000000)
                 .ToString();
 
-        /*
-         * Kod se NE sprema kao plaintext.
-         */
         var codeHash =
             _userManager.PasswordHasher
                 .HashPassword(
                     user,
                     code);
 
-        /*
-         * Challenge token je zaseban,
-         * kriptografski slučajan token.
-         */
         var challengeBytes =
             RandomNumberGenerator
                 .GetBytes(32);
@@ -1468,11 +1748,29 @@ public class AuthService : IAuthService
         await _context
             .SaveChangesAsync();
 
-        /*
-         * Kod postoji samo u memoriji dovoljno
-         * dugo da bude poslan Worker-u.
-         * U bazi ostaje samo hash.
-         */
+        await _securityAuditService
+    .WriteAsync(
+        new SecurityAuditWriteDto
+        {
+            UserId =
+                user.Id,
+
+            EventType =
+                "TwoFactorChallengeIssued",
+
+            IsSuccessful =
+                true,
+
+            FailureReason =
+                null,
+
+            ResourceType =
+                "Authentication",
+
+            ResourceId =
+                user.Id.ToString()
+        });
+
         await _notificationPublisher
             .PublishEmailAsync(
                 new EmailNotificationMessage
@@ -1564,19 +1862,12 @@ public class AuthService : IAuthService
         var now =
             DateTime.UtcNow;
 
-        /*
-         * Challenge je jednokratan.
-         */
         if (challenge.IsUsed)
         {
             throw new UnauthorizedException(
                 safeErrorMessage);
         }
 
-        /*
-         * Zaključan challenge se više
-         * ne može pokušavati.
-         */
         if (challenge.LockedAtUtc
             .HasValue)
         {
@@ -1584,9 +1875,6 @@ public class AuthService : IAuthService
                 safeErrorMessage);
         }
 
-        /*
-         * Istek challenge-a.
-         */
         if (challenge.ExpiresAtUtc <=
             now)
         {
@@ -1624,6 +1912,29 @@ public class AuthService : IAuthService
             await _context
                 .SaveChangesAsync();
 
+            await _securityAuditService
+    .WriteAsync(
+        new SecurityAuditWriteDto
+        {
+            UserId =
+                challenge.UserId,
+
+            EventType =
+                "TwoFactorVerificationFailed",
+
+            IsSuccessful =
+                false,
+
+            FailureReason =
+                "ChallengeExpired",
+
+            ResourceType =
+                "Authentication",
+
+            ResourceId =
+                challenge.UserId.ToString()
+        });
+
             throw new UnauthorizedException(
                 safeErrorMessage);
         }
@@ -1648,10 +1959,6 @@ public class AuthService : IAuthService
                 safeErrorMessage);
         }
 
-        /*
-         * Poređenje se radi sa hashom.
-         * Plaintext kod nije u bazi.
-         */
         var verificationResult =
             _userManager
                 .PasswordHasher
@@ -1665,9 +1972,6 @@ public class AuthService : IAuthService
         {
             challenge.FailedAttempts++;
 
-            /*
-             * Najviše 5 pogrešnih pokušaja.
-             */
             if (challenge.FailedAttempts >=
                 challenge.MaximumAttempts)
             {
@@ -1713,14 +2017,37 @@ public class AuthService : IAuthService
             await _context
                 .SaveChangesAsync();
 
+            await _securityAuditService
+    .WriteAsync(
+        new SecurityAuditWriteDto
+        {
+            UserId =
+                user.Id,
+
+            EventType =
+                challenge.IsUsed
+                    ? "TwoFactorVerificationLocked"
+                    : "TwoFactorVerificationFailed",
+
+            IsSuccessful =
+                false,
+
+            FailureReason =
+                challenge.IsUsed
+                    ? "MaximumAttemptsExceeded"
+                    : "InvalidVerificationCode",
+
+            ResourceType =
+                "Authentication",
+
+            ResourceId =
+                user.Id.ToString()
+        });
+
             throw new UnauthorizedException(
                 safeErrorMessage);
         }
 
-        /*
-         * Challenge se označava iskorištenim
-         * PRIJE izdavanja pune sesije.
-         */
         challenge.IsUsed =
             true;
 
@@ -1810,6 +2137,52 @@ public class AuthService : IAuthService
         await _context
             .SaveChangesAsync();
 
+        await _securityAuditService
+    .WriteAsync(
+        new SecurityAuditWriteDto
+        {
+            UserId =
+                user.Id,
+
+            EventType =
+                "TwoFactorVerificationSucceeded",
+
+            IsSuccessful =
+                true,
+
+            FailureReason =
+                null,
+
+            ResourceType =
+                "Authentication",
+
+            ResourceId =
+                user.Id.ToString()
+        });
+
+        await _securityAuditService
+            .WriteAsync(
+                new SecurityAuditWriteDto
+                {
+                    UserId =
+                        user.Id,
+
+                    EventType =
+                        "LoginSucceeded",
+
+                    IsSuccessful =
+                        true,
+
+                    FailureReason =
+                        null,
+
+                    ResourceType =
+                        "Authentication",
+
+                    ResourceId =
+                        user.Id.ToString()
+                });
+
         return new AuthResponseDto
         {
             Id =
@@ -1865,6 +2238,29 @@ public class AuthService : IAuthService
 
         if (!passwordValid)
         {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "TwoFactorEnableFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "CurrentPasswordIncorrect",
+
+                        ResourceType =
+                            "AccountSecurity",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
             throw new UnauthorizedException(
                 "Current password is incorrect.");
         }
@@ -1918,6 +2314,29 @@ public class AuthService : IAuthService
 
         await _context
             .SaveChangesAsync();
+
+        await _securityAuditService
+    .WriteAsync(
+        new SecurityAuditWriteDto
+        {
+            UserId =
+                user.Id,
+
+            EventType =
+                "TwoFactorEnabled",
+
+            IsSuccessful =
+                true,
+
+            FailureReason =
+                null,
+
+            ResourceType =
+                "AccountSecurity",
+
+            ResourceId =
+                user.Id.ToString()
+        });
     }
 
     public async Task Disable2FAAsync(
@@ -1950,6 +2369,29 @@ public class AuthService : IAuthService
 
         if (!passwordValid)
         {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "TwoFactorDisableFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "CurrentPasswordIncorrect",
+
+                        ResourceType =
+                            "AccountSecurity",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
             throw new UnauthorizedException(
                 "Current password is incorrect.");
         }
@@ -2022,6 +2464,29 @@ public class AuthService : IAuthService
 
         await _context
             .SaveChangesAsync();
+
+        await _securityAuditService
+    .WriteAsync(
+        new SecurityAuditWriteDto
+        {
+            UserId =
+                user.Id,
+
+            EventType =
+                "TwoFactorDisabled",
+
+            IsSuccessful =
+                true,
+
+            FailureReason =
+                null,
+
+            ResourceType =
+                "AccountSecurity",
+
+            ResourceId =
+                user.Id.ToString()
+        });
     }
 
     public async Task LogoutAsync(
@@ -2047,13 +2512,29 @@ public class AuthService : IAuthService
                     x.TokenHash ==
                         tokenHash);
 
-        if (token == null)
+        if (token == null ||
+            token.RevokedAtUtc.HasValue)
         {
-            return;
-        }
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            userId,
 
-        if (token.RevokedAtUtc.HasValue)
-        {
+                        EventType =
+                            "Logout",
+
+                        IsSuccessful =
+                            true,
+
+                        ResourceType =
+                            "Authentication",
+
+                        ResourceId =
+                            userId.ToString()
+                    });
+
             return;
         }
 
@@ -2061,6 +2542,26 @@ public class AuthService : IAuthService
             userId,
             token.SessionId,
             DateTime.UtcNow);
+
+        await _securityAuditService
+            .WriteAsync(
+                new SecurityAuditWriteDto
+                {
+                    UserId =
+                        userId,
+
+                    EventType =
+                        "Logout",
+
+                    IsSuccessful =
+                        true,
+
+                    ResourceType =
+                        "Authentication",
+
+                    ResourceId =
+                        userId.ToString()
+                });
     }
 
     public async Task<bool>
@@ -2322,7 +2823,7 @@ public class AuthService : IAuthService
     }
 
     public async Task LogoutAllAsync(
-    int userId)
+     int userId)
     {
         if (userId <= 0)
         {
@@ -2345,6 +2846,26 @@ public class AuthService : IAuthService
         await RevokeAllUserSessionsAsync(
             userId,
             DateTime.UtcNow);
+
+        await _securityAuditService
+            .WriteAsync(
+                new SecurityAuditWriteDto
+                {
+                    UserId =
+                        userId,
+
+                    EventType =
+                        "LogoutAllSessions",
+
+                    IsSuccessful =
+                        true,
+
+                    ResourceType =
+                        "Authentication",
+
+                    ResourceId =
+                        userId.ToString()
+                });
     }
 
     private static string HashPasswordResetToken(

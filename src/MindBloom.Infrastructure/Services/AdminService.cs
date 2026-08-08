@@ -3463,9 +3463,8 @@ public class AdminService : IAdminService
                         "FullRefundFailed",
 
                     Reason =
-                        normalizedReason
-                        + " | Provider error: "
-                        + exception.Message,
+    normalizedReason
+    + " | Payment provider processing failed.",
 
                     PerformedAtUtc =
                         DateTime.UtcNow

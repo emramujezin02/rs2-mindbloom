@@ -34,6 +34,7 @@ using MindBloom.Domain.Enums;
 using System.Security.Claims;
 using MindBloom.Shared.Constants;
 using MindBloom.Application.Features.Auth.Validators;
+using MindBloom.Application.Features.Security.Interfaces;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -534,6 +535,12 @@ public static class DependencyInjection
         services.AddSingleton<
     IChatMessageRateLimiter,
     ChatMessageRateLimiter>();
+
+        services.AddHttpContextAccessor();
+
+        services.AddScoped<
+            ISecurityAuditService,
+            SecurityAuditService>();
 
         services.AddScoped<
     IFcmDeviceTokenService,
