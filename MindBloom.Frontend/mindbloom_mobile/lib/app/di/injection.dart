@@ -84,6 +84,10 @@ import '../../features/recommendation/data/repositories/recommendation_repositor
 import '../../features/recommendation/data/services/recommendation_api_service.dart';
 import '../../features/recommendation/presentation/viewmodels/recommendation_viewmodel.dart';
 
+import '../../features/privacy/data/services/privacy_api_service.dart';
+import '../../features/privacy/data/repositories/privacy_repository.dart';
+import '../../features/privacy/presentation/viewmodels/privacy_consents_viewmodel.dart';
+
 import '../../features/therapist/presentation/viewmodels/therapist_clients_viewmodel.dart';
 import '../../features/therapist/presentation/viewmodels/therapist_client_details_viewmodel.dart';
 
@@ -536,5 +540,15 @@ class AppInjection {
 
       _activeChatDetailsViewModel = null;
     }
+  }
+
+  static PrivacyRepository createPrivacyRepository() {
+    return PrivacyRepository(
+      apiService: PrivacyApiService(apiClient: apiClient),
+    );
+  }
+
+  static PrivacyConsentsViewModel createPrivacyConsentsViewModel() {
+    return PrivacyConsentsViewModel(repository: createPrivacyRepository());
   }
 }

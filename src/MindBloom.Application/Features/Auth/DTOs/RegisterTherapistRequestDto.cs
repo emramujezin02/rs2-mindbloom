@@ -44,4 +44,28 @@ public sealed class RegisterTherapistRequestDto
     public bool OffersOnline { get; set; }
 
     public bool OffersInPerson { get; set; }
+
+    public bool AcceptPrivacyPolicy
+    {
+        get;
+        set;
+    }
+
+    public string PrivacyPolicyVersion
+    {
+        get;
+        set;
+    } = string.Empty;
+
+    public bool AcceptTermsOfService
+    {
+        get;
+        set;
+    }
+
+    public string TermsOfServiceVersion
+    {
+        get;
+        set;
+    } = string.Empty;
 }

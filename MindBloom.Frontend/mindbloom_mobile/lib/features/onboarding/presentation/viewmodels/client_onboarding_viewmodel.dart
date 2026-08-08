@@ -40,6 +40,14 @@ class ClientOnboardingViewModel extends ChangeNotifier {
   ClientOnboardingModel? onboarding;
 
   List<TherapyApproachModel> therapyApproaches = [];
+  bool get hasAcceptedCurrentSensitiveDataConsent =>
+      onboarding?.hasAcceptedCurrentSensitiveDataConsent ?? false;
+
+  String get currentSensitiveDataProcessingVersion =>
+      onboarding?.currentSensitiveDataProcessingVersion ?? '';
+
+  String get sensitiveDataUsageExplanation =>
+      onboarding?.sensitiveDataUsageExplanation ?? '';
 
   Future<void> load() async {
     if (isLoading) {

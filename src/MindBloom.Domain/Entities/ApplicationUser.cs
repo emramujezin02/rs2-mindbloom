@@ -23,6 +23,13 @@ public class ApplicationUser : IdentityUser<int>
     public ICollection<UserAudit> ReceivedUserAudits { get; set; }
     = new List<UserAudit>();
 
+    public ICollection<UserConsent>
+    Consents
+    {
+        get;
+        set;
+    } = new List<UserConsent>();
+
     public ICollection<TwoFactorLoginChallenge>
     TwoFactorLoginChallenges
     {

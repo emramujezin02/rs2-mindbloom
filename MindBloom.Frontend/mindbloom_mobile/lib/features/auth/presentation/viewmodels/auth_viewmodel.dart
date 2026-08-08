@@ -7,6 +7,7 @@ import '../../data/models/register_request.dart';
 import '../../data/models/reset_password_request.dart';
 import '../../data/models/verify_2fa_request.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../data/models/current_consent_versions.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final AuthRepository authRepository;
@@ -18,6 +19,15 @@ class AuthViewModel extends ChangeNotifier {
   String? errorMessage;
 
   String? successMessage;
+
+  CurrentConsentVersions? currentConsentVersions;
+
+  bool isLoadingConsentVersions = false;
+
+  String? consentVersionsError;
+
+  bool get hasRegistrationConsentVersions =>
+      currentConsentVersions?.hasRegistrationVersions ?? false;
 
   Map<String, List<String>> fieldErrors = {};
 
@@ -257,8 +267,29 @@ class AuthViewModel extends ChangeNotifier {
     required String email,
     required String password,
     required DateTime dateOfBirth,
+    required bool acceptPrivacyPolicy,
+    required bool acceptTermsOfService,
   }) async {
     if (isLoading) {
+      return false;
+    }
+
+    final consentVersions = currentConsentVersions;
+
+    if (consentVersions == null || !consentVersions.hasRegistrationVersions) {
+      errorMessage = 'Privacy documents could not be loaded. Please try again.';
+
+      notifyListeners();
+
+      return false;
+    }
+
+    if (!acceptPrivacyPolicy || !acceptTermsOfService) {
+      errorMessage =
+          'You must accept the Privacy Policy and Terms of Service to register.';
+
+      notifyListeners();
+
       return false;
     }
 
@@ -279,6 +310,10 @@ class AuthViewModel extends ChangeNotifier {
           email: email,
           password: password,
           dateOfBirth: dateOfBirth,
+          acceptPrivacyPolicy: acceptPrivacyPolicy,
+          privacyPolicyVersion: consentVersions.privacyPolicyVersion,
+          acceptTermsOfService: acceptTermsOfService,
+          termsOfServiceVersion: consentVersions.termsOfServiceVersion,
         ),
       );
 
@@ -513,5 +548,40 @@ class AuthViewModel extends ChangeNotifier {
     }
 
     return normalized;
+  }
+
+  Future<void> loadCurrentConsentVersions() async {
+    if (isLoadingConsentVersions) {
+      return;
+    }
+
+    isLoadingConsentVersions = true;
+    consentVersionsError = null;
+
+    notifyListeners();
+
+    try {
+      currentConsentVersions = await authRepository.getCurrentConsentVersions();
+    } catch (error) {
+      currentConsentVersions = null;
+
+      if (error is AppException) {
+        final message = error.message.trim();
+
+        consentVersionsError = message.isEmpty
+            ? 'Privacy documents could not be loaded.'
+            : message;
+      } else {
+        final message = error.toString().replaceFirst('Exception: ', '').trim();
+
+        consentVersionsError = message.isEmpty
+            ? 'Privacy documents could not be loaded.'
+            : message;
+      }
+    } finally {
+      isLoadingConsentVersions = false;
+
+      notifyListeners();
+    }
   }
 }

@@ -62,4 +62,16 @@ public sealed class SaveClientOnboardingDto
         get;
         set;
     } = true;
+
+    public bool AcceptSensitiveDataProcessing
+    {
+        get;
+        set;
+    }
+
+    public string SensitiveDataProcessingVersion
+    {
+        get;
+        set;
+    } = string.Empty;
 }

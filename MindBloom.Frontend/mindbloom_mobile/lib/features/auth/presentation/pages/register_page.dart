@@ -30,11 +30,22 @@ class _RegisterPageState extends State<RegisterPage> {
   DateTime? _dateOfBirth;
   bool _obscurePassword = true;
   String? _localError;
+  bool _acceptedPrivacyPolicy = false;
+  bool _acceptedTermsOfService = false;
 
   @override
   void initState() {
     super.initState();
+
     _viewModel.addListener(_onChanged);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      _viewModel.loadCurrentConsentVersions();
+    });
   }
 
   @override
@@ -91,6 +102,24 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    if (!_acceptedPrivacyPolicy || !_acceptedTermsOfService) {
+      setState(() {
+        _localError =
+            'You must accept the Privacy Policy and Terms of Service.';
+      });
+
+      return;
+    }
+
+    if (!_viewModel.hasRegistrationConsentVersions) {
+      setState(() {
+        _localError =
+            'Privacy documents are not available. Please refresh and try again.';
+      });
+
+      return;
+    }
+
     FocusScope.of(context).unfocus();
 
     setState(() {
@@ -106,6 +135,8 @@ class _RegisterPageState extends State<RegisterPage> {
       email: email,
       password: _passwordController.text,
       dateOfBirth: _dateOfBirth!,
+      acceptPrivacyPolicy: _acceptedPrivacyPolicy,
+      acceptTermsOfService: _acceptedTermsOfService,
     );
 
     if (!mounted || !success) {
@@ -275,8 +306,66 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ],
                   const SizedBox(height: 20),
+
+                  if (_viewModel.isLoadingConsentVersions)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (_viewModel.consentVersionsError != null) ...[
+                    AppInlineError(
+                      title: 'Privacy documents could not be loaded',
+                      error: _viewModel.consentVersionsError,
+                      onRetry: _viewModel.loadCurrentConsentVersions,
+                    ),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    CheckboxListTile(
+                      value: _acceptedPrivacyPolicy,
+                      onChanged: _viewModel.isLoading
+                          ? null
+                          : (value) {
+                              setState(() {
+                                _acceptedPrivacyPolicy = value ?? false;
+
+                                _localError = null;
+                              });
+                            },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('I accept the Privacy Policy'),
+                      subtitle: Text(
+                        'Version ${_viewModel.currentConsentVersions?.privacyPolicyVersion ?? ''}',
+                      ),
+                    ),
+
+                    CheckboxListTile(
+                      value: _acceptedTermsOfService,
+                      onChanged: _viewModel.isLoading
+                          ? null
+                          : (value) {
+                              setState(() {
+                                _acceptedTermsOfService = value ?? false;
+
+                                _localError = null;
+                              });
+                            },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('I accept the Terms of Service'),
+                      subtitle: Text(
+                        'Version ${_viewModel.currentConsentVersions?.termsOfServiceVersion ?? ''}',
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: _viewModel.isLoading ? null : _register,
+                    onPressed:
+                        _viewModel.isLoading ||
+                            _viewModel.isLoadingConsentVersions ||
+                            !_viewModel.hasRegistrationConsentVersions
+                        ? null
+                        : _register,
                     child: _viewModel.isLoading
                         ? const SizedBox(
                             width: 22,

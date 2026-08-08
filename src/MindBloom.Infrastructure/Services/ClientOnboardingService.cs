@@ -7,6 +7,8 @@ using MindBloom.Application
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure
     .Persistence.Context;
+using MindBloom.Domain.Enums;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -41,7 +43,43 @@ public sealed class ClientOnboardingService
                 "Client profile not found.");
         }
 
-        return MapToDto(client);
+        var dto =
+    MapToDto(client);
+
+        var sensitiveConsent =
+            await _context.UserConsents
+                .AsNoTracking()
+                .Where(x =>
+                    x.UserId == userId &&
+                    x.ConsentType ==
+                        UserConsentType
+                            .SensitiveDataProcessing &&
+                    x.IsAccepted &&
+                    !x.IsDeleted)
+                .OrderByDescending(x =>
+                    x.AcceptedAtUtc)
+                .FirstOrDefaultAsync();
+
+        dto.HasAcceptedSensitiveDataProcessing =
+            sensitiveConsent != null;
+
+        dto.SensitiveDataProcessingVersion =
+            sensitiveConsent?
+                .DocumentVersion;
+
+        dto.SensitiveDataProcessingAcceptedAtUtc =
+            sensitiveConsent?
+                .AcceptedAtUtc;
+
+        dto.SensitiveDataUsageExplanation =
+            ConsentDocumentConstants
+                .SensitiveDataUsageExplanation;
+
+        dto.CurrentSensitiveDataProcessingVersion =
+    ConsentDocumentConstants
+        .SensitiveDataProcessingVersion;
+
+        return dto;
     }
 
     public async Task<ClientOnboardingDto>
@@ -61,6 +99,50 @@ public sealed class ClientOnboardingService
         {
             throw new NotFoundException(
                 "Client profile not found.");
+        }
+
+        var containsSensitiveAssessmentData =
+            request.AssessmentFocusAreas != null &&
+            request.AssessmentFocusAreas
+                .Any(x =>
+                    !string.IsNullOrWhiteSpace(
+                        x));
+
+        var currentSensitiveConsent =
+            await _context.UserConsents
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == userId &&
+                    x.ConsentType ==
+                        UserConsentType
+                            .SensitiveDataProcessing &&
+                    x.DocumentVersion ==
+                        ConsentDocumentConstants
+                            .SensitiveDataProcessingVersion &&
+                    x.IsAccepted &&
+                    !x.IsDeleted);
+
+        var alreadyAcceptedCurrentConsent =
+            currentSensitiveConsent != null;
+
+        if (containsSensitiveAssessmentData &&
+            !alreadyAcceptedCurrentConsent)
+        {
+            if (!request.AcceptSensitiveDataProcessing)
+            {
+                throw new BadRequestException(
+                    "Consent for processing sensitive assessment data is required.");
+            }
+
+            if (!string.Equals(
+                    request.SensitiveDataProcessingVersion,
+                    ConsentDocumentConstants
+                        .SensitiveDataProcessingVersion,
+                    StringComparison.Ordinal))
+            {
+                throw new BadRequestException(
+                    "The sensitive data processing consent version is no longer current.");
+            }
         }
 
         var therapyApproachIds =
@@ -173,6 +255,31 @@ public sealed class ClientOnboardingService
                         TherapyApproachId =
                             approachId
                     });
+        }
+
+        if (containsSensitiveAssessmentData &&
+     !alreadyAcceptedCurrentConsent)
+        {
+            _context.UserConsents.Add(
+                new UserConsent
+                {
+                    UserId =
+                        userId,
+
+                    ConsentType =
+                        UserConsentType
+                            .SensitiveDataProcessing,
+
+                    DocumentVersion =
+                        ConsentDocumentConstants
+                            .SensitiveDataProcessingVersion,
+
+                    IsAccepted =
+                        true,
+
+                    AcceptedAtUtc =
+                        DateTime.UtcNow
+                });
         }
 
         await _context.SaveChangesAsync();

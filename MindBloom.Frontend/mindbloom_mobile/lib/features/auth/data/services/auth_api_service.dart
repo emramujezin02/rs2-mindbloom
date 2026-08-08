@@ -9,6 +9,7 @@ import '../models/reset_password_request.dart';
 import '../models/verify_2fa_request.dart';
 import '../models/send_email_verification_code_request.dart';
 import '../models/verify_email_code_request.dart';
+import '../models/current_consent_versions.dart';
 
 class AuthApiService {
   final ApiClient apiClient;
@@ -109,5 +110,24 @@ class AuthApiService {
       body: request.toJson(),
       requiresAuth: false,
     );
+  }
+
+  Future<CurrentConsentVersions> getCurrentConsentVersions() async {
+    final response = await apiClient.get(
+      '/privacy/current-versions',
+      requiresAuth: false,
+    );
+
+    if (response is! Map<String, dynamic>) {
+      throw Exception('The server returned invalid privacy configuration.');
+    }
+
+    final result = CurrentConsentVersions.fromJson(response);
+
+    if (!result.hasRegistrationVersions) {
+      throw Exception('Privacy consent configuration is incomplete.');
+    }
+
+    return result;
   }
 }

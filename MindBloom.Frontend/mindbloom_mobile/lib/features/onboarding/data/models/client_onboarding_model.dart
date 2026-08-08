@@ -1,15 +1,32 @@
 class ClientOnboardingModel {
   final bool hasCompletedOnboarding;
   final DateTime? completedAtUtc;
+
   final List<String> assessmentFocusAreas;
+
   final String? preferredTherapistGender;
   final String? preferredSessionType;
+
   final List<String> preferredLanguages;
+
   final double? minimumPricePerSession;
   final double? maximumPricePerSession;
+
   final String? location;
+
   final List<int> preferredDays;
+
   final List<int> preferredTherapyApproachIds;
+
+  final bool hasAcceptedSensitiveDataProcessing;
+
+  final String? sensitiveDataProcessingVersion;
+
+  final DateTime? sensitiveDataProcessingAcceptedAtUtc;
+
+  final String sensitiveDataUsageExplanation;
+
+  final String currentSensitiveDataProcessingVersion;
 
   const ClientOnboardingModel({
     required this.hasCompletedOnboarding,
@@ -23,28 +40,73 @@ class ClientOnboardingModel {
     required this.location,
     required this.preferredDays,
     required this.preferredTherapyApproachIds,
+    required this.hasAcceptedSensitiveDataProcessing,
+    required this.sensitiveDataProcessingVersion,
+    required this.sensitiveDataProcessingAcceptedAtUtc,
+    required this.sensitiveDataUsageExplanation,
+    required this.currentSensitiveDataProcessingVersion,
   });
 
   factory ClientOnboardingModel.fromJson(Map<String, dynamic> json) {
     return ClientOnboardingModel(
       hasCompletedOnboarding: json['hasCompletedOnboarding'] == true,
+
       completedAtUtc: DateTime.tryParse(
         json['completedAtUtc']?.toString() ?? '',
       ),
+
       assessmentFocusAreas: _stringList(json['assessmentFocusAreas']),
+
       preferredTherapistGender: _nullableString(
         json['preferredTherapistGender'],
       ),
+
       preferredSessionType: _nullableString(json['preferredSessionType']),
+
       preferredLanguages: _stringList(json['preferredLanguages']),
+
       minimumPricePerSession: _nullableDouble(json['minimumPricePerSession']),
+
       maximumPricePerSession: _nullableDouble(json['maximumPricePerSession']),
+
       location: _nullableString(json['location']),
+
       preferredDays: _intList(json['preferredDays']),
+
       preferredTherapyApproachIds: _intList(
         json['preferredTherapyApproachIds'],
       ),
+
+      hasAcceptedSensitiveDataProcessing:
+          json['hasAcceptedSensitiveDataProcessing'] == true,
+
+      sensitiveDataProcessingVersion: _nullableString(
+        json['sensitiveDataProcessingVersion'],
+      ),
+
+      sensitiveDataProcessingAcceptedAtUtc: DateTime.tryParse(
+        json['sensitiveDataProcessingAcceptedAtUtc']?.toString() ?? '',
+      ),
+
+      sensitiveDataUsageExplanation:
+          json['sensitiveDataUsageExplanation']?.toString().trim() ?? '',
+
+      currentSensitiveDataProcessingVersion:
+          json['currentSensitiveDataProcessingVersion']?.toString().trim() ??
+          '',
     );
+  }
+
+  bool get hasAcceptedCurrentSensitiveDataConsent {
+    if (!hasAcceptedSensitiveDataProcessing) {
+      return false;
+    }
+
+    final accepted = sensitiveDataProcessingVersion?.trim() ?? '';
+
+    final current = currentSensitiveDataProcessingVersion.trim();
+
+    return accepted.isNotEmpty && current.isNotEmpty && accepted == current;
   }
 
   static List<String> _stringList(dynamic value) {

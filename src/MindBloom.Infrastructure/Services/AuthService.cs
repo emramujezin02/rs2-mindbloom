@@ -69,6 +69,30 @@ public class AuthService : IAuthService
     {
         const string clientRole = RoleConstants.Client;
 
+        BusinessRuleGuard.Against(
+    !request.AcceptPrivacyPolicy,
+    "Privacy policy must be accepted.");
+
+        BusinessRuleGuard.Against(
+            !string.Equals(
+                request.PrivacyPolicyVersion,
+                ConsentDocumentConstants
+                    .PrivacyPolicyVersion,
+                StringComparison.Ordinal),
+            "The privacy policy version is no longer current.");
+
+        BusinessRuleGuard.Against(
+            !request.AcceptTermsOfService,
+            "Terms of service must be accepted.");
+
+        BusinessRuleGuard.Against(
+            !string.Equals(
+                request.TermsOfServiceVersion,
+                ConsentDocumentConstants
+                    .TermsOfServiceVersion,
+                StringComparison.Ordinal),
+            "The terms of service version is no longer current.");
+
         var normalizedEmail =
             request.Email
                 .Trim()
@@ -192,6 +216,50 @@ public class AuthService : IAuthService
         _context.Clients.Add(
             client);
 
+        var consentAcceptedAtUtc =
+    DateTime.UtcNow;
+
+        _context.UserConsents.AddRange(
+            new UserConsent
+            {
+                UserId =
+                    user.Id,
+
+                ConsentType =
+                    UserConsentType
+                        .PrivacyPolicy,
+
+                DocumentVersion =
+                    ConsentDocumentConstants
+                        .PrivacyPolicyVersion,
+
+                IsAccepted =
+                    true,
+
+                AcceptedAtUtc =
+                    consentAcceptedAtUtc
+            },
+
+            new UserConsent
+            {
+                UserId =
+                    user.Id,
+
+                ConsentType =
+                    UserConsentType
+                        .TermsOfService,
+
+                DocumentVersion =
+                    ConsentDocumentConstants
+                        .TermsOfServiceVersion,
+
+                IsAccepted =
+                    true,
+
+                AcceptedAtUtc =
+                    consentAcceptedAtUtc
+            });
+
         try
         {
             await _context
@@ -287,6 +355,31 @@ public class AuthService : IAuthService
     RegisterTherapistAsync(
         RegisterTherapistRequestDto request)
     {
+
+        BusinessRuleGuard.Against(
+    !request.AcceptPrivacyPolicy,
+    "Privacy policy must be accepted.");
+
+        BusinessRuleGuard.Against(
+            !string.Equals(
+                request.PrivacyPolicyVersion,
+                ConsentDocumentConstants
+                    .PrivacyPolicyVersion,
+                StringComparison.Ordinal),
+            "The privacy policy version is no longer current.");
+
+        BusinessRuleGuard.Against(
+            !request.AcceptTermsOfService,
+            "Terms of service must be accepted.");
+
+        BusinessRuleGuard.Against(
+            !string.Equals(
+                request.TermsOfServiceVersion,
+                ConsentDocumentConstants
+                    .TermsOfServiceVersion,
+                StringComparison.Ordinal),
+            "The terms of service version is no longer current.");
+
         var normalizedEmail =
             request.Email
                 .Trim()
@@ -447,6 +540,53 @@ public class AuthService : IAuthService
                                 request
                                     .OffersInPerson
                         });
+
+            var consentAcceptedAtUtc =
+    DateTime.UtcNow;
+
+            _context.UserConsents.AddRange(
+                new UserConsent
+                {
+                    UserId =
+                        user.Id,
+
+                    ConsentType =
+                        UserConsentType
+                            .PrivacyPolicy,
+
+                    DocumentVersion =
+                        ConsentDocumentConstants
+                            .PrivacyPolicyVersion,
+
+                    IsAccepted =
+                        true,
+
+                    AcceptedAtUtc =
+                        consentAcceptedAtUtc
+                },
+
+                new UserConsent
+                {
+                    UserId =
+                        user.Id,
+
+                    ConsentType =
+                        UserConsentType
+                            .TermsOfService,
+
+                    DocumentVersion =
+                        ConsentDocumentConstants
+                            .TermsOfServiceVersion,
+
+                    IsAccepted =
+                        true,
+
+                    AcceptedAtUtc =
+                        consentAcceptedAtUtc
+                });
+
+            await _context
+                .SaveChangesAsync();
 
             if (!IsDemoAccount(
                     normalizedEmail))

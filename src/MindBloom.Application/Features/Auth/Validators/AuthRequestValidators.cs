@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using MindBloom.Shared.Constants;
 using MindBloom.Application.Features.Auth.DTOs;
 
 namespace MindBloom.Application.Features.Auth.Validators;
@@ -196,6 +197,40 @@ public sealed class RegisterRequestDtoValidator
                 DateTime.UtcNow.Date.AddYears(-120))
             .WithMessage(
                 "Date of birth is not valid.");
+
+        RuleFor(x =>
+        x.AcceptPrivacyPolicy)
+    .Equal(true)
+    .WithMessage(
+        "Privacy policy must be accepted.");
+
+        RuleFor(x =>
+                x.PrivacyPolicyVersion)
+            .NotEmpty()
+            .WithMessage(
+                "Privacy policy version is required.")
+            .Equal(
+                ConsentDocumentConstants
+                    .PrivacyPolicyVersion)
+            .WithMessage(
+                "The privacy policy version is no longer current.");
+
+        RuleFor(x =>
+                x.AcceptTermsOfService)
+            .Equal(true)
+            .WithMessage(
+                "Terms of service must be accepted.");
+
+        RuleFor(x =>
+                x.TermsOfServiceVersion)
+            .NotEmpty()
+            .WithMessage(
+                "Terms of service version is required.")
+            .Equal(
+                ConsentDocumentConstants
+                    .TermsOfServiceVersion)
+            .WithMessage(
+                "The terms of service version is no longer current.");
     }
 }
 

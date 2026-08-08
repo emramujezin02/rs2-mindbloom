@@ -39,6 +39,12 @@ public sealed class ClientOnboardingDto
         set;
     } = [];
 
+    public string CurrentSensitiveDataProcessingVersion
+    {
+        get;
+        set;
+    } = string.Empty;
+
     public decimal? MinimumPricePerSession
     {
         get;
@@ -68,4 +74,28 @@ public sealed class ClientOnboardingDto
         get;
         set;
     } = [];
+
+    public bool HasAcceptedSensitiveDataProcessing
+    {
+        get;
+        set;
+    }
+
+    public string? SensitiveDataProcessingVersion
+    {
+        get;
+        set;
+    }
+
+    public DateTime? SensitiveDataProcessingAcceptedAtUtc
+    {
+        get;
+        set;
+    }
+
+    public string SensitiveDataUsageExplanation
+    {
+        get;
+        set;
+    } = string.Empty;
 }

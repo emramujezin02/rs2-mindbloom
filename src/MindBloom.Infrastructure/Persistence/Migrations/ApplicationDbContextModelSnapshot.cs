@@ -2444,6 +2444,50 @@ namespace MindBloom.Infrastructure.Migrations
                     b.ToTable("UserAudits");
                 });
 
+            modelBuilder.Entity("MindBloom.Domain.Entities.UserConsent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AcceptedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ConsentType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DocumentVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsAccepted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcceptedAtUtc");
+
+                    b.HasIndex("UserId", "ConsentType", "DocumentVersion")
+                        .IsUnique();
+
+                    b.ToTable("UserConsents");
+                });
+
             modelBuilder.Entity("MindBloom.Domain.Entities.UserSettings", b =>
                 {
                     b.Property<int>("Id")
@@ -3231,6 +3275,17 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Navigation("TargetUser");
                 });
 
+            modelBuilder.Entity("MindBloom.Domain.Entities.UserConsent", b =>
+                {
+                    b.HasOne("MindBloom.Domain.Entities.ApplicationUser", "User")
+                        .WithMany("Consents")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MindBloom.Domain.Entities.UserSettings", b =>
                 {
                     b.HasOne("MindBloom.Domain.Entities.ApplicationUser", "User")
@@ -3291,6 +3346,8 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Navigation("AdminAuditLogs");
 
                     b.Navigation("ClientAppointments");
+
+                    b.Navigation("Consents");
 
                     b.Navigation("FcmDeviceTokens");
 

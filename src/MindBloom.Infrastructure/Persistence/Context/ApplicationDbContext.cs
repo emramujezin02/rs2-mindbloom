@@ -21,7 +21,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Therapist> Therapists => Set<Therapist>();
     public DbSet<TherapistAvailability> TherapistAvailabilities => Set<TherapistAvailability>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
-
+    public DbSet<UserConsent>
+    UserConsents =>
+        Set<UserConsent>();
     public DbSet<SecurityAuditLog> SecurityAuditLogs =>
     Set<SecurityAuditLog>();
 
@@ -110,6 +112,47 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany(x => x.Appointments)
             .HasForeignKey(x => x.ClientId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<UserConsent>(
+    entity =>
+    {
+        entity.Property(x =>
+                x.ConsentType)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.DocumentVersion)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        entity.Property(x =>
+                x.IsAccepted)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.AcceptedAtUtc)
+            .IsRequired();
+
+        entity.HasOne(x =>
+                x.User)
+            .WithMany(x =>
+                x.Consents)
+            .HasForeignKey(x =>
+                x.UserId)
+            .OnDelete(
+                DeleteBehavior.Cascade);
+
+        entity.HasIndex(x => new
+        {
+            x.UserId,
+            x.ConsentType,
+            x.DocumentVersion
+        })
+            .IsUnique();
+
+        entity.HasIndex(x =>
+            x.AcceptedAtUtc);
+    });
 
         builder.Entity<Appointment>()
             .HasOne(x => x.Therapist)

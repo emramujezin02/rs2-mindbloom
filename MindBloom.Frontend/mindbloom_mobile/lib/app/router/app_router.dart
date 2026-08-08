@@ -4,6 +4,8 @@ import 'package:mindbloom_mobile/features/private_journal/presentation/pages/pri
 import 'package:mindbloom_mobile/features/profile/presentation/pages/edit_profile_page.dart';
 import '../../screens/home_screen.dart';
 
+import '../../features/privacy/presentation/pages/privacy_consents_page.dart';
+
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
@@ -136,7 +138,7 @@ class AppRouter {
   static const String addPrivateJournalEntry = '/private-journal/add';
   static const String therapistSettings = '/therapist/settings';
   static const String privateJournalEntryDetails = '/private-journal/details';
-
+  static const String privacyConsents = '/privacy/consents';
   static const String editPrivateJournalEntry = '/private-journal/edit';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -432,6 +434,19 @@ class AppRouter {
           settings: settings,
         );
 
+      case therapistSettings:
+        return MaterialPageRoute(
+          builder: (_) => const TherapistSettingsPage(),
+          settings: settings,
+        );
+
+      case privacyConsents:
+        return MaterialPageRoute(
+          builder: (_) => const PrivacyConsentsPage(),
+          settings: settings,
+        );
+
+      case home:
       case privateJournal:
         return MaterialPageRoute(builder: (_) => const PrivateJournalPage());
 
@@ -459,15 +474,6 @@ class AppRouter {
           builder: (_) => const ClientOnboardingPage(),
           settings: settings,
         );
-
-      case therapistSettings:
-        return MaterialPageRoute(
-          builder: (_) => const TherapistSettingsPage(),
-          settings: settings,
-        );
-
-      case home:
-        return MaterialPageRoute(builder: (_) => const HomeScreen());
 
       default:
         return MaterialPageRoute(builder: (_) => const HomeScreen());

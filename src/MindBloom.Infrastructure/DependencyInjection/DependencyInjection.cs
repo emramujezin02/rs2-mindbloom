@@ -35,6 +35,7 @@ using System.Security.Claims;
 using MindBloom.Shared.Constants;
 using MindBloom.Application.Features.Auth.Validators;
 using MindBloom.Application.Features.Security.Interfaces;
+using MindBloom.Application.Features.Privacy.Interfaces;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -531,6 +532,10 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<
     StripeWebhookService>();
+
+        services.AddScoped<
+    IPrivacyConsentService,
+    PrivacyConsentService>();
 
         services.AddScoped<IAuthService, AuthService>();
 

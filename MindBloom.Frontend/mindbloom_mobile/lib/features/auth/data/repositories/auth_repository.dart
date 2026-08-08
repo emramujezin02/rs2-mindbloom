@@ -10,6 +10,7 @@ import '../models/verify_2fa_request.dart';
 import '../services/auth_api_service.dart';
 import '../models/send_email_verification_code_request.dart';
 import '../models/verify_email_code_request.dart';
+import '../models/current_consent_versions.dart';
 
 class AuthRepository {
   final AuthApiService authApiService;
@@ -113,5 +114,9 @@ class AuthRepository {
     return authApiService.verifyEmailCode(
       VerifyEmailCodeRequest(email: email, code: code),
     );
+  }
+
+  Future<CurrentConsentVersions> getCurrentConsentVersions() {
+    return authApiService.getCurrentConsentVersions();
   }
 }

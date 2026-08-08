@@ -619,6 +619,19 @@ class _ProfilePageState extends State<ProfilePage> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () {
+                  Navigator.of(context).pushNamed(AppRouter.privacyConsents);
+                },
+                icon: const Icon(Icons.privacy_tip_outlined),
+                label: const Text('Privacy & consents'),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
                   Navigator.of(context).pushNamed(AppRouter.myReviews);
                 },
                 icon: const Icon(Icons.reviews),

@@ -202,6 +202,24 @@ class _TherapistSettingsPageState extends State<TherapistSettingsPage> {
                     ),
                   ),
 
+                  const SizedBox(height: 12),
+
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.privacy_tip_outlined),
+                      title: const Text('Privacy & consents'),
+                      subtitle: const Text(
+                        'Review accepted privacy documents and consent versions.',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.of(
+                          context,
+                        ).pushNamed(AppRouter.privacyConsents);
+                      },
+                    ),
+                  ),
+
                   const SizedBox(height: 28),
 
                   FilledButton.icon(

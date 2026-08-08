@@ -63,6 +63,7 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
 
   int _currentStep = 0;
   bool _initializedValues = false;
+  bool _acceptedSensitiveDataProcessing = false;
 
   final Set<String> _focusAreas = {};
   final Set<String> _languages = {};
@@ -170,6 +171,21 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
         if (_therapyApproachIds.isEmpty) {
           message = 'Odaberite najmanje jedan terapijski pristup.';
         }
+        break;
+
+      case 6:
+        final hasAssessmentData = _focusAreas.isNotEmpty;
+
+        final alreadyAccepted =
+            _viewModel.hasAcceptedCurrentSensitiveDataConsent;
+
+        if (hasAssessmentData &&
+            !alreadyAccepted &&
+            !_acceptedSensitiveDataProcessing) {
+          message =
+              'Morate dati saglasnost za obradu assessment podataka prije spremanja.';
+        }
+
         break;
     }
 
@@ -280,17 +296,50 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
       _maximumPriceController.text,
     );
 
+    final alreadyAcceptedCurrentConsent =
+        _viewModel.hasAcceptedCurrentSensitiveDataConsent;
+
+    final currentConsentVersion = _viewModel
+        .currentSensitiveDataProcessingVersion
+        .trim();
+
+    if (_focusAreas.isNotEmpty &&
+        !alreadyAcceptedCurrentConsent &&
+        currentConsentVersion.isEmpty) {
+      _showValidationMessage(
+        'Verzija saglasnosti za obradu podataka nije dostupna. Pokušajte ponovo.',
+      );
+
+      return;
+    }
+
     final success = await _viewModel.save(
       SaveClientOnboardingRequest(
         assessmentFocusAreas: _focusAreas.toList(),
+
         preferredTherapistGender: _gender,
+
         preferredSessionType: _sessionType,
+
         preferredLanguages: _languages.toList(),
+
         minimumPricePerSession: minimumPrice,
+
         maximumPricePerSession: maximumPrice,
+
         location: _locationController.text.trim(),
+
         preferredDays: _preferredDays.toList(),
+
         preferredTherapyApproachIds: _therapyApproachIds.toList(),
+
+        acceptSensitiveDataProcessing: alreadyAcceptedCurrentConsent
+            ? false
+            : _acceptedSensitiveDataProcessing,
+
+        sensitiveDataProcessingVersion: alreadyAcceptedCurrentConsent
+            ? ''
+            : currentConsentVersion,
       ),
     );
 
@@ -625,15 +674,104 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Areas: ${_focusAreas.join(", ")}'),
+
                   const SizedBox(height: 8),
+
                   Text('Therapist gender: $_gender'),
+
                   const SizedBox(height: 8),
+
                   Text('Session type: $_sessionType'),
+
                   const SizedBox(height: 8),
+
                   Text('Languages: ${_languages.join(", ")}'),
+
+                  const SizedBox(height: 20),
+
+                  const Divider(),
+
                   const SizedBox(height: 12),
+
                   const Text(
-                    'By saving, these answers will be used to personalize therapist recommendations. They do not represent a medical diagnosis.',
+                    'Privacy and assessment data',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Text(
+                    _viewModel.sensitiveDataUsageExplanation.trim().isNotEmpty
+                        ? _viewModel.sensitiveDataUsageExplanation
+                        : 'Assessment information is used to personalize your onboarding and therapist recommendations.',
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  const Text(
+                    'The assessment does not represent a medical or psychological diagnosis.',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  if (_viewModel.hasAcceptedCurrentSensitiveDataConsent)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Theme.of(context).dividerColor,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.verified_user_outlined),
+
+                          const SizedBox(width: 12),
+
+                          Expanded(
+                            child: Text(
+                              'You have already accepted the current sensitive data processing consent '
+                              '(version ${_viewModel.currentSensitiveDataProcessingVersion}).',
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    CheckboxListTile(
+                      value: _acceptedSensitiveDataProcessing,
+
+                      onChanged: _viewModel.isSaving
+                          ? null
+                          : (value) {
+                              setState(() {
+                                _acceptedSensitiveDataProcessing =
+                                    value ?? false;
+                              });
+                            },
+
+                      controlAffinity: ListTileControlAffinity.leading,
+
+                      contentPadding: EdgeInsets.zero,
+
+                      title: const Text(
+                        'I consent to the processing of my assessment information for the purposes described above.',
+                      ),
+
+                      subtitle: Text(
+                        'Consent version: '
+                        '${_viewModel.currentSensitiveDataProcessingVersion}',
+                      ),
+                    ),
+
+                  const SizedBox(height: 12),
+
+                  const Text(
+                    'By saving, these answers will be used to personalize therapist recommendations.',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ],
