@@ -39,6 +39,16 @@ public static class AdminAuditDataSanitizer
                 "medicalNotes",
                 "healthData",
                 "diagnosis",
+                "assessmentFocusAreas",
+                "mood",
+                "moodScore",
+                "emotion",
+                "emotions",
+                "note",
+                "notes",
+                "mentalHealthData",
+                "assessmentResult",
+                "assessmentScore",
                 "twoFactorEnabled",
                 "twoFactorEnabledCustom",
                 "securityStamp",
@@ -48,16 +58,31 @@ public static class AdminAuditDataSanitizer
                 "cardNumber",
                 "cvv",
                 "cvc",
-                "iban"
+                "iban",
+                "assessmentFocusArea",
+                "focusAreas",
+                "mentalState",
+                "mentalHealth",
+                "symptoms",
+                "symptom",
+                "therapyGoals",
+                "personalNote",
+                "privateNote",
             };
 
     private static readonly string[]
         FullyExcludedPathSegments =
             [
                 "/privatejournal",
-                "/private-journal",
-                "/journalentries",
-                "/journal-entries"
+            "/private-journal",
+            "/privatejournalentries",
+            "/private-journal-entries",
+
+            "/journalentries",
+            "/journal-entries",
+
+            "/client-onboarding",
+            "/clientonboarding"
             ];
 
     public static string? SanitizeJson(

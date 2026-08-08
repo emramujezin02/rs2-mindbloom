@@ -10,6 +10,9 @@ namespace MindBloom.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
+[ResponseCache(
+    Location = ResponseCacheLocation.None,
+    NoStore = true)]
 public class JournalEntriesController
     : ControllerBase
 {

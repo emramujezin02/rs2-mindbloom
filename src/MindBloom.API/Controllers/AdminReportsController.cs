@@ -9,6 +9,9 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/admin/reports")]
+[ResponseCache(
+    Location = ResponseCacheLocation.None,
+    NoStore = true)]
 [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
 public class AdminReportsController : ControllerBase
 {

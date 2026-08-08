@@ -45,7 +45,9 @@ public class UserSettingsService
             return new UserSettingsDto
             {
                 NotificationsEnabled = true,
-                ShowProfilePublicly = true
+                ShowProfilePublicly = true,
+                ShareMoodAndEmotionsWithTherapists =
+                    false
             };
         }
 

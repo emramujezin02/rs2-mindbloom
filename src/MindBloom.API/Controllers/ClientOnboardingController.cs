@@ -11,6 +11,9 @@ namespace MindBloom.API.Controllers;
 [ApiController]
 [Route("api/client-onboarding")]
 [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
+[ResponseCache(
+    Location = ResponseCacheLocation.None,
+    NoStore = true)]
 public sealed class ClientOnboardingController
     : ControllerBase
 {

@@ -10,6 +10,9 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[ResponseCache(
+    Location = ResponseCacheLocation.None,
+    NoStore = true)]
 [Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
 public sealed class NotificationsController
     : ControllerBase

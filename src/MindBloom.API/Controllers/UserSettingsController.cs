@@ -9,6 +9,9 @@ namespace MindBloom.API.Controllers;
 
 [ApiController]
 [Route("api/user-settings")]
+[ResponseCache(
+    Location = ResponseCacheLocation.None,
+    NoStore = true)]
 [Authorize(Policy = AuthorizationPolicyConstants.AuthenticatedUser)]
 public class UserSettingsController : ControllerBase
 {

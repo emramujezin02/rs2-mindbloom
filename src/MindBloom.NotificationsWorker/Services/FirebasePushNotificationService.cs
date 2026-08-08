@@ -9,6 +9,28 @@ namespace MindBloom.NotificationsWorker.Services;
 public sealed class FirebasePushNotificationService
     : IPushNotificationService
 {
+    private const string SafePushTitle =
+    "MindBloom";
+
+    private const string SafePushMessage =
+        "You have a new notification.";
+
+    private static readonly string[]
+        SensitiveDataKeyFragments =
+        [
+            "journal",
+        "mood",
+        "emotion",
+        "assessment",
+        "diagnosis",
+        "health",
+        "medical",
+        "note",
+        "content",
+        "message",
+        "body"
+        ];
+
     private readonly ApplicationDbContext
         _context;
 
@@ -83,10 +105,6 @@ public sealed class FirebasePushNotificationService
                 nameof(message));
         }
 
-        /*
-         * Ako je korisnik ugasio notifikacije,
-         * push se ne šalje.
-         */
         var notificationsEnabled =
             await _context.UserSettings
                 .AsNoTracking()
@@ -147,11 +165,14 @@ public sealed class FirebasePushNotificationService
             cancellationToken
                 .ThrowIfCancellationRequested();
 
+            var safeData =
+                SanitizePushData(data);
+
             await SendBatchWithRetryAsync(
                 userId,
-                normalizedTitle,
-                normalizedMessage,
-                data,
+                SafePushTitle,
+                SafePushMessage,
+                safeData,
                 tokenBatch,
                 cancellationToken);
         }
@@ -455,5 +476,60 @@ public sealed class FirebasePushNotificationService
             token.InvalidatedAtUtc =
                 now;
         }
+    }
+
+    private static IReadOnlyDictionary<
+    string,
+    string>?
+    SanitizePushData(
+        IReadOnlyDictionary<
+            string,
+            string>? data)
+    {
+        if (data == null ||
+            data.Count == 0)
+        {
+            return data;
+        }
+
+        var safeData =
+            new Dictionary<
+                string,
+                string>(
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in data)
+        {
+            if (IsSensitivePushDataKey(
+                    item.Key))
+            {
+                continue;
+            }
+
+            safeData[item.Key] =
+                item.Value;
+        }
+
+        return safeData.Count == 0
+            ? null
+            : safeData;
+    }
+
+    private static bool
+        IsSensitivePushDataKey(
+            string key)
+    {
+        if (string.IsNullOrWhiteSpace(
+                key))
+        {
+            return true;
+        }
+
+        return SensitiveDataKeyFragments
+            .Any(fragment =>
+                key.Contains(
+                    fragment,
+                    StringComparison
+                        .OrdinalIgnoreCase));
     }
 }
