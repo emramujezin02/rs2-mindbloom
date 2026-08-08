@@ -28,9 +28,22 @@ using Microsoft.AspNetCore.RateLimiting;
 using MindBloom.Shared.Constants;
 using System.Security.Claims;
 
-Env.Load("../../.env");
+var bootstrapEnvironment =
+    Environment.GetEnvironmentVariable(
+        "ASPNETCORE_ENVIRONMENT")
+    ??
+    Environment.GetEnvironmentVariable(
+        "DOTNET_ENVIRONMENT");
 
-Env.TraversePath().Load();
+if (!string.Equals(
+        bootstrapEnvironment,
+        "Testing",
+        StringComparison.OrdinalIgnoreCase))
+{
+    Env.Load("../../.env");
+
+    Env.TraversePath().Load();
+}
 
 var builder =
     WebApplication.CreateBuilder(args);
@@ -582,9 +595,12 @@ app.MapHub<ChatHub>(
         "/hubs/chat")
     .RequireAuthorization();
 
-using (var scope =
-       app.Services.CreateScope())
+if (!app.Environment.IsEnvironment(
+        "Testing"))
 {
+    using var scope =
+        app.Services.CreateScope();
+
     var services =
         scope.ServiceProvider;
 
@@ -598,14 +614,12 @@ using (var scope =
 
     var roleManager =
         services.GetRequiredService<
-            RoleManager<
-                IdentityRole<int>>>();
+            RoleManager<IdentityRole<int>>>();
 
-    await ApplicationDbSeeder
-        .SeedAsync(
-            context,
-            userManager,
-            roleManager);
+    await ApplicationDbSeeder.SeedAsync(
+        context,
+        userManager,
+        roleManager);
 }
 
 app.Run();
@@ -731,4 +745,8 @@ static FixedWindowRateLimiterOptions
         AutoReplenishment =
             true
     };
+}
+
+public partial class Program
+{
 }

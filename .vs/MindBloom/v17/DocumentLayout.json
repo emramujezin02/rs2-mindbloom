@@ -1,12 +1,71 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\",
-  "Documents": [],
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\authentication\\loginsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\authentication\\loginsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\infrastructure\\mindbloomwebapplicationfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\infrastructure\\mindbloomwebapplicationfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\mindbloom.securitytests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\mindbloom.securitytests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": []
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "LoginSecurityTests.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Authentication\\LoginSecurityTests.cs",
+              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Authentication\\LoginSecurityTests.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Authentication\\LoginSecurityTests.cs",
+              "RelativeToolTip": "MindBloom.SecurityTests\\Authentication\\LoginSecurityTests.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAeAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-08T19:03:46.87Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "MindBloomWebApplicationFactory.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Infrastructure\\MindBloomWebApplicationFactory.cs",
+              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Infrastructure\\MindBloomWebApplicationFactory.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Infrastructure\\MindBloomWebApplicationFactory.cs",
+              "RelativeToolTip": "MindBloom.SecurityTests\\Infrastructure\\MindBloomWebApplicationFactory.cs",
+              "ViewState": "AgIAAAQDAAAAAAAAAAAuwCgDAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-08T18:34:34.346Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "MindBloom.SecurityTests",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj",
+              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj",
+              "RelativeToolTip": "MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj",
+              "ViewState": "AgIAABoAAAAAAAAAAAAYwCUAAAAKAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-08-08T18:22:19.39Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
     }
   ]
 }

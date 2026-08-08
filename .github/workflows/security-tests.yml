@@ -1,0 +1,63 @@
+name: MindBloom Security Tests
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  security-tests:
+    runs-on: ubuntu-latest
+
+    env:
+      ASPNETCORE_ENVIRONMENT: Testing
+      DOTNET_ENVIRONMENT: Testing
+
+      JWT_SECRET: test-jwt-secret-key-with-at-least-32-characters
+      JWT_ISSUER: MindBloom.SecurityTests
+      JWT_AUDIENCE: MindBloom.SecurityTests.Client
+      JWT_EXPIRATION_MINUTES: 60
+
+      STRIPE_SECRET_KEY: sk_test_security_tests_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_security_tests_placeholder
+
+      EMAIL_USERNAME: security-tests@example.com
+      EMAIL_PASSWORD: security-tests-placeholder
+
+      RABBITMQ_HOST: localhost
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: security-tests
+      RABBITMQ_PASSWORD: security-tests-placeholder
+      RABBITMQ_VIRTUAL_HOST: /
+
+      GOOGLE_MAPS_API_KEY: security-tests-placeholder
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run security tests
+        run: >
+dotnet test ./tests/MindBloom.SecurityTests/MindBloom.SecurityTests.csproj
+          --no-build
+          --configuration Release
+          --logger "console;verbosity=normal"
