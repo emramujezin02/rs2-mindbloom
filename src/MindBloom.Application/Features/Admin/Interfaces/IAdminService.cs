@@ -14,6 +14,10 @@ public interface IAdminService
         int userId,
         UpdateUserStatusDto request);
 
+    Task UnlockUserAsync(
+    int authenticatedAdminUserId,
+    int userId);
+
     Task<PagedResponse<TherapistVerificationListDto>>
         GetPendingTherapistsAsync(
             SearchTherapistVerificationDto request);

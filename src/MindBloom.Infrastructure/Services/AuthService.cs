@@ -554,6 +554,36 @@ public class AuthService : IAuthService
                 "Invalid credentials.");
         }
 
+        if (await _userManager
+        .IsLockedOutAsync(user))
+        {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "LoginFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "AccountTemporarilyLocked",
+
+                        ResourceType =
+                            "Authentication",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
+            throw new UnauthorizedException(
+                "Invalid credentials.");
+        }
+
         if (!user.IsEmailVerified &&
             !IsDemoAccount(
                 user.Email!))
@@ -593,6 +623,22 @@ public class AuthService : IAuthService
 
         if (!isPasswordValid)
         {
+            var accessFailedResult =
+                await _userManager
+                    .AccessFailedAsync(
+                        user);
+
+            if (!accessFailedResult.Succeeded)
+            {
+                throw new UnauthorizedException(
+                    "Invalid credentials.");
+            }
+
+            var isNowLockedOut =
+                await _userManager
+                    .IsLockedOutAsync(
+                        user);
+
             await _securityAuditService
                 .WriteAsync(
                     new SecurityAuditWriteDto
@@ -601,13 +647,17 @@ public class AuthService : IAuthService
                             user.Id,
 
                         EventType =
-                            "LoginFailed",
+                            isNowLockedOut
+                                ? "AccountTemporarilyLocked"
+                                : "LoginFailed",
 
                         IsSuccessful =
                             false,
 
                         FailureReason =
-                            "InvalidCredentials",
+                            isNowLockedOut
+                                ? "MaximumFailedLoginAttemptsExceeded"
+                                : "InvalidCredentials",
 
                         ResourceType =
                             "Authentication",
@@ -618,6 +668,20 @@ public class AuthService : IAuthService
 
             throw new UnauthorizedException(
                 "Invalid credentials.");
+        }
+
+        if (user.AccessFailedCount > 0)
+        {
+            var resetFailedResult =
+                await _userManager
+                    .ResetAccessFailedCountAsync(
+                        user);
+
+            if (!resetFailedResult.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    "Login state could not be updated.");
+            }
         }
 
         var roles =
@@ -1534,6 +1598,37 @@ public class AuthService : IAuthService
                 "Invalid credentials.");
         }
 
+        if (await _userManager
+        .IsLockedOutAsync(
+            user))
+        {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            user.Id,
+
+                        EventType =
+                            "LoginFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "AccountTemporarilyLocked",
+
+                        ResourceType =
+                            "Authentication",
+
+                        ResourceId =
+                            user.Id.ToString()
+                    });
+
+            throw new UnauthorizedException(
+                "Invalid credentials.");
+        }
+
         if (!user.IsEmailVerified &&
             !IsDemoAccount(
                 user.Email!))
@@ -1570,9 +1665,24 @@ public class AuthService : IAuthService
                 .CheckPasswordAsync(
                     user,
                     request.Password);
-
         if (!isPasswordValid)
         {
+            var accessFailedResult =
+                await _userManager
+                    .AccessFailedAsync(
+                        user);
+
+            if (!accessFailedResult.Succeeded)
+            {
+                throw new UnauthorizedException(
+                    "Invalid credentials.");
+            }
+
+            var isNowLockedOut =
+                await _userManager
+                    .IsLockedOutAsync(
+                        user);
+
             await _securityAuditService
                 .WriteAsync(
                     new SecurityAuditWriteDto
@@ -1581,13 +1691,17 @@ public class AuthService : IAuthService
                             user.Id,
 
                         EventType =
-                            "LoginFailed",
+                            isNowLockedOut
+                                ? "AccountTemporarilyLocked"
+                                : "LoginFailed",
 
                         IsSuccessful =
                             false,
 
                         FailureReason =
-                            "InvalidCredentials",
+                            isNowLockedOut
+                                ? "MaximumFailedLoginAttemptsExceeded"
+                                : "InvalidCredentials",
 
                         ResourceType =
                             "Authentication",
@@ -2053,6 +2167,20 @@ public class AuthService : IAuthService
 
         challenge.UsedAtUtc =
             now;
+
+        if (user.AccessFailedCount > 0)
+        {
+            var resetFailedResult =
+                await _userManager
+                    .ResetAccessFailedCountAsync(
+                        user);
+
+            if (!resetFailedResult.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    "Login state could not be updated.");
+            }
+        }
 
         var roles =
             await _userManager

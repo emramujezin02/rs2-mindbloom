@@ -72,6 +72,39 @@ public static class DependencyInjection
 
         services.AddSignalR();
 
+        var accountLockoutSettings =
+    configuration
+        .GetSection(
+            AccountLockoutSettings
+                .SectionName)
+        .Get<AccountLockoutSettings>();
+
+        if (accountLockoutSettings == null)
+        {
+            throw new InvalidOperationException(
+                "AccountLockout configuration is required.");
+        }
+
+        if (accountLockoutSettings
+                .MaxFailedAccessAttempts <= 0)
+        {
+            throw new InvalidOperationException(
+                "AccountLockout:MaxFailedAccessAttempts must be greater than 0.");
+        }
+
+        if (accountLockoutSettings
+                .LockoutMinutes <= 0)
+        {
+            throw new InvalidOperationException(
+                "AccountLockout:LockoutMinutes must be greater than 0.");
+        }
+
+        services.Configure<
+            AccountLockoutSettings>(
+            configuration.GetSection(
+                AccountLockoutSettings
+                    .SectionName));
+
         services
             .AddIdentity<
                 ApplicationUser,
@@ -110,6 +143,21 @@ public static class DependencyInjection
                     options.SignIn
                         .RequireConfirmedEmail =
                         false;
+
+                    options.Lockout
+    .AllowedForNewUsers =
+    true;
+
+                    options.Lockout
+                        .MaxFailedAccessAttempts =
+                        accountLockoutSettings
+                            .MaxFailedAccessAttempts;
+
+                    options.Lockout
+                        .DefaultLockoutTimeSpan =
+                        TimeSpan.FromMinutes(
+                            accountLockoutSettings
+                                .LockoutMinutes);
                 })
             .AddEntityFrameworkStores<
                 ApplicationDbContext>()

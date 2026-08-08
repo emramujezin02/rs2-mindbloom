@@ -477,6 +477,131 @@ public class AdminService : IAdminService
         await _context.SaveChangesAsync();
     }
 
+    public async Task UnlockUserAsync(
+    int authenticatedAdminUserId,
+    int userId)
+    {
+        if (authenticatedAdminUserId <= 0)
+        {
+            throw new UnauthorizedException(
+                "Authenticated administrator identifier is invalid.");
+        }
+
+        if (userId <= 0)
+        {
+            throw new BadRequestException(
+                "User identifier is invalid.");
+        }
+
+        var user =
+            await _userManager
+                .FindByIdAsync(
+                    userId.ToString());
+
+        if (user == null)
+        {
+            throw new NotFoundException(
+                "User not found.");
+        }
+
+        var previousLockoutEnd =
+            user.LockoutEnd;
+
+        var previousAccessFailedCount =
+            user.AccessFailedCount;
+
+        /*
+         * Ako nema Identity lockouta niti
+         * failed pokušaja, nema šta resetovati.
+         *
+         * IsBlocked se ovdje namjerno ne dira.
+         */
+        if (!previousLockoutEnd.HasValue &&
+            previousAccessFailedCount == 0)
+        {
+            return;
+        }
+
+        var clearLockoutResult =
+            await _userManager
+                .SetLockoutEndDateAsync(
+                    user,
+                    null);
+
+        if (!clearLockoutResult.Succeeded)
+        {
+            var errorMessage =
+                string.Join(
+                    ", ",
+                    clearLockoutResult.Errors
+                        .Select(x =>
+                            x.Description));
+
+            throw new BadRequestException(
+                string.IsNullOrWhiteSpace(
+                    errorMessage)
+                    ? "User lockout could not be cleared."
+                    : errorMessage);
+        }
+
+        var resetFailedCountResult =
+            await _userManager
+                .ResetAccessFailedCountAsync(
+                    user);
+
+        if (!resetFailedCountResult.Succeeded)
+        {
+            var errorMessage =
+                string.Join(
+                    ", ",
+                    resetFailedCountResult.Errors
+                        .Select(x =>
+                            x.Description));
+
+            throw new BadRequestException(
+                string.IsNullOrWhiteSpace(
+                    errorMessage)
+                    ? "User failed login count could not be reset."
+                    : errorMessage);
+        }
+
+        AddUserAudit(
+            targetUserId:
+                user.Id,
+
+            changedByUserId:
+                authenticatedAdminUserId,
+
+            action:
+                "AccountLockoutClearedByAdmin",
+
+            previousValues:
+                new
+                {
+                    LockoutEnd =
+                        previousLockoutEnd,
+
+                    AccessFailedCount =
+                        previousAccessFailedCount
+                },
+
+            newValues:
+                new
+                {
+                    LockoutEnd =
+                        user.LockoutEnd,
+
+                    AccessFailedCount =
+                        user.AccessFailedCount
+                },
+
+            reason:
+                "Temporary login lockout cleared by administrator.");
+
+        await _context
+            .SaveChangesAsync();
+    }
+
     public async Task
      UpdateTherapistVerificationAsync(
          int authenticatedAdminUserId,

@@ -60,6 +60,28 @@ public class AdminController : ControllerBase
         });
     }
 
+    [HttpPost(
+    "users/{userId:int}/unlock")]
+    public async Task<IActionResult>
+    UnlockUser(
+        int userId)
+    {
+        var authenticatedAdminUserId =
+            GetAuthenticatedUserId();
+
+        await _adminService
+            .UnlockUserAsync(
+                authenticatedAdminUserId,
+                userId);
+
+        return Ok(
+            new
+            {
+                message =
+                    "Temporary account lockout cleared successfully."
+            });
+    }
+
     [HttpDelete("users/{userId}")]
     public IActionResult
         DeleteUser(
