@@ -36,6 +36,7 @@ using MindBloom.Shared.Constants;
 using MindBloom.Application.Features.Auth.Validators;
 using MindBloom.Application.Features.Security.Interfaces;
 using MindBloom.Application.Features.Privacy.Interfaces;
+using MindBloom.Infrastructure.Configuration;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -105,6 +106,43 @@ public static class DependencyInjection
             configuration.GetSection(
                 AccountLockoutSettings
                     .SectionName));
+
+        services
+    .AddOptions<UploadSettings>()
+    .Configure(options =>
+    {
+        options.MaximumImageSizeMb =
+            GetPositiveInt(
+                configuration,
+                "UPLOAD_MAX_IMAGE_SIZE_MB",
+                5);
+
+        options.MaximumDocumentSizeMb =
+            GetPositiveInt(
+                configuration,
+                "UPLOAD_MAX_DOCUMENT_SIZE_MB",
+                10);
+
+        options.RootFolder =
+            configuration[
+                "UPLOAD_ROOT_PATH"]?
+                .Trim()
+            ?? "uploads";
+    })
+    .Validate(
+        options =>
+            options.MaximumImageSizeMb > 0,
+        "UPLOAD_MAX_IMAGE_SIZE_MB must be greater than zero.")
+    .Validate(
+        options =>
+            options.MaximumDocumentSizeMb > 0,
+        "UPLOAD_MAX_DOCUMENT_SIZE_MB must be greater than zero.")
+    .Validate(
+        options =>
+            !string.IsNullOrWhiteSpace(
+                options.RootFolder),
+        "UPLOAD_ROOT_PATH is required.")
+    .ValidateOnStart();
 
         services
             .AddIdentity<
@@ -649,5 +687,32 @@ public static class DependencyInjection
         services.AddScoped<IUserSettingsService, UserSettingsService>();
 
         return services;
+    }
+
+    private static int GetPositiveInt(
+    IConfiguration configuration,
+    string key,
+    int defaultValue)
+    {
+        var value =
+            configuration[key];
+
+        if (string.IsNullOrWhiteSpace(
+                value))
+        {
+            return defaultValue;
+        }
+
+        if (!int.TryParse(
+                value,
+                out var parsedValue) ||
+            parsedValue <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Environment variable '{key}' "
+                + "must be a positive integer.");
+        }
+
+        return parsedValue;
     }
 }

@@ -7,15 +7,16 @@ using MindBloom.Application.Features.Users.Interfaces;
 using MindBloom.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using MindBloom.Infrastructure.Persistence.Context;
+using Microsoft.Extensions.Options;
+using MindBloom.Infrastructure.Configuration;
 
 namespace MindBloom.Infrastructure.Services;
 
 public class UserProfileService : IUserProfileService
 {
 
-    private const long MaximumProfileImageSize =
-        5 * 1024 * 1024;
-
+    private readonly UploadSettings
+    _uploadSettings;
 
 
     private static readonly HashSet<string>
@@ -45,11 +46,14 @@ public class UserProfileService : IUserProfileService
     public UserProfileService(
         UserManager<ApplicationUser> userManager,
         IWebHostEnvironment environment,
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+        IOptions<UploadSettings> uploadSettings)
     {
         _userManager = userManager;
         _environment = environment;
         _context = context;
+        _uploadSettings =
+    uploadSettings.Value;
     }
 
     public async Task<UserProfileDto>
@@ -114,15 +118,6 @@ public class UserProfileService : IUserProfileService
         user.DateOfBirth =
             request.DateOfBirth.Date;
 
-        /*
-         * Client-specific preferences are updated
-         * only when the authenticated user actually
-         * has a Client profile.
-         *
-         * Administrator and therapist accounts can
-         * still update their basic ApplicationUser
-         * profile without requiring a Client entity.
-         */
         if (client != null)
         {
             client.Location =
@@ -211,7 +206,7 @@ public class UserProfileService : IUserProfileService
         var uploadFolder =
             Path.Combine(
                 webRootPath,
-                "uploads",
+                _uploadSettings.RootFolder,
                 "profile-images");
 
         Directory.CreateDirectory(
@@ -276,7 +271,7 @@ public class UserProfileService : IUserProfileService
         return MapToDto(user, client);
     }
 
-    private static async Task
+    private async Task
         ValidateProfileImageAsync(
             IFormFile file)
     {
@@ -288,10 +283,11 @@ public class UserProfileService : IUserProfileService
         }
 
         if (file.Length >
-            MaximumProfileImageSize)
+            _uploadSettings.MaximumImageSizeBytes)
         {
             throw new BadRequestException(
-                "Profile image may not exceed 5 MB.");
+                $"Profile image may not exceed "
++ $"{_uploadSettings.MaximumImageSizeMb} MB.");
         }
 
         var extension =

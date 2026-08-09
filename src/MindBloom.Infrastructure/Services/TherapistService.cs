@@ -13,6 +13,8 @@ using System.Threading;
 using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Features.Security.DTOs;
 using MindBloom.Application.Features.Security.Interfaces;
+using Microsoft.Extensions.Options;
+using MindBloom.Infrastructure.Configuration;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -24,8 +26,8 @@ public class TherapistService : ITherapistService
     private readonly ISecurityAuditService
     _securityAuditService;
 
-    private const long MaximumDocumentSize =
-    10 * 1024 * 1024;
+    private readonly UploadSettings
+    _uploadSettings;
 
     private static readonly HashSet<string>
         AllowedDocumentExtensions =
@@ -49,16 +51,19 @@ public class TherapistService : ITherapistService
     private readonly IGeocodingService _geocodingService;
 
     public TherapistService(
-        ApplicationDbContext context, 
-        IWebHostEnvironment environment, 
+        ApplicationDbContext context,
+        IWebHostEnvironment environment,
         IGeocodingService geocodingService,
         ISecurityAuditService securityAuditService,
-        ITherapistClientAccessService therapistClientAccessService)
+        ITherapistClientAccessService therapistClientAccessService,
+        IOptions<UploadSettings> uploadSettings)
     {
         _context = context;
         _securityAuditService =
     securityAuditService;
         _environment = environment;
+        _uploadSettings =
+    uploadSettings.Value;
         _geocodingService = geocodingService;
         _therapistClientAccessService = therapistClientAccessService;
 
@@ -2007,12 +2012,6 @@ public class TherapistService : ITherapistService
         await ValidateDocumentAsync(
             file);
 
-        /*
-         * Dokumenti terapeuta su privatni.
-         * Ne smiju biti smješteni unutar wwwroot,
-         * jer bi ih StaticFiles middleware mogao
-         * servirati bez authorization provjere.
-         */
         var privateRoot =
             Path.Combine(
                 Directory.GetCurrentDirectory(),
@@ -2843,7 +2842,7 @@ public class TherapistService : ITherapistService
             webRootPath);
     }
 
-    private static async Task
+    private async Task
     ValidateTherapistProfileImageAsync(
         IFormFile file)
     {
@@ -2854,14 +2853,15 @@ public class TherapistService : ITherapistService
                 "Profile image is required.");
         }
 
-        const long maximumFileSize =
-            5 * 1024 * 1024;
+        var maximumFileSize =
+            _uploadSettings.MaximumImageSizeBytes;
 
         if (file.Length >
-            maximumFileSize)
+            _uploadSettings.MaximumDocumentSizeBytes)
         {
             throw new BadRequestException(
-                "Profile image cannot be larger than 5 MB.");
+                $"Maximum profile image size is "
++ $"{_uploadSettings.MaximumDocumentSizeMb} MB.");
         }
 
         var extension =
@@ -2993,7 +2993,7 @@ public class TherapistService : ITherapistService
         }
     }
 
-    private static async Task
+    private async Task
      ValidateDocumentAsync(
          IFormFile file)
     {
@@ -3005,10 +3005,11 @@ public class TherapistService : ITherapistService
         }
 
         if (file.Length >
-            MaximumDocumentSize)
+            _uploadSettings.MaximumDocumentSizeBytes)
         {
             throw new BadRequestException(
-                "Maximum document size is 10 MB.");
+                $"Maximum document size is "
++ $"{_uploadSettings.MaximumDocumentSizeMb} MB.");
         }
 
         var extension =

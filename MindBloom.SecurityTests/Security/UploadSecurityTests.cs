@@ -7,6 +7,8 @@ using MindBloom.Application.Common.Exceptions;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Services;
+using Microsoft.Extensions.Options;
+using MindBloom.Infrastructure.Configuration;
 
 namespace MindBloom.Tests.Security;
 
@@ -167,10 +169,10 @@ public class UploadSecurityTests
     }
 
     private static UserProfileService
-        CreateUserProfileService(
-            out ApplicationDbContext context,
-            out Mock<UserManager<ApplicationUser>>
-                userManager)
+     CreateUserProfileService(
+         out ApplicationDbContext context,
+         out Mock<UserManager<ApplicationUser>>
+             userManager)
     {
         var options =
             new DbContextOptionsBuilder<
@@ -208,10 +210,28 @@ public class UploadSecurityTests
                     "MindBloomSecurityTests",
                     Guid.NewGuid().ToString()));
 
+        environment
+            .SetupGet(x => x.ContentRootPath)
+            .Returns(
+                Path.Combine(
+                    Path.GetTempPath(),
+                    "MindBloomSecurityTests",
+                    Guid.NewGuid().ToString()));
+
+        var uploadSettings =
+            Options.Create(
+                new UploadSettings
+                {
+                    MaximumImageSizeMb = 5,
+                    MaximumDocumentSizeMb = 10,
+                    RootFolder = "uploads"
+                });
+
         return new UserProfileService(
             userManager.Object,
             environment.Object,
-            context);
+            context,
+            uploadSettings);
     }
 
     private static ApplicationUser CreateUser()

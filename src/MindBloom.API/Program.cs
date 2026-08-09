@@ -43,9 +43,8 @@ if (!string.Equals(
         "Testing",
         StringComparison.OrdinalIgnoreCase))
 {
-    Env.Load("../../.env");
-
-    Env.TraversePath().Load();
+    Env.TraversePath()
+        .Load();
 }
 
 var builder =
@@ -60,6 +59,15 @@ builder.WebHost.ConfigureKestrel(
 
 builder.Configuration
     .AddEnvironmentVariables();
+
+if (!builder.Environment
+        .IsEnvironment(
+            "Testing"))
+{
+    EnvironmentConfigurationValidator
+        .ValidateApi(
+            builder.Configuration);
+}
 
 builder.Services.Configure<RequestTimingOptions>(
     builder.Configuration.GetSection(

@@ -9,6 +9,8 @@ using MindBloom.Infrastructure.Persistence.Context;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using System;
+using Microsoft.Extensions.Options;
+using MindBloom.Infrastructure.Configuration;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -16,13 +18,22 @@ public class ArticleService : IArticleService
 {
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _environment;
+    private readonly UploadSettings
+    _uploadSettings;
 
     public ArticleService(
         ApplicationDbContext context,
-            IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        IOptions<UploadSettings> uploadSettings)
     {
-        _context = context;
-        _environment= environment;
+        _context =
+            context;
+
+        _environment =
+            environment;
+
+        _uploadSettings =
+            uploadSettings.Value;
     }
 
     public async Task<PagedResponse<ArticleResponseDto>>
@@ -618,14 +629,15 @@ public class ArticleService : IArticleService
                 "Article image is required.");
         }
 
-        const long maximumFileSize =
-            5 * 1024 * 1024;
+        var maximumFileSize =
+            _uploadSettings.MaximumImageSizeBytes;
 
         if (file.Length >
             maximumFileSize)
         {
             throw new BadRequestException(
-                "Article image may not exceed 5 MB.");
+                $"Article image may not exceed "
++ $"{_uploadSettings.MaximumImageSizeMb} MB.");
         }
 
         var extension =
@@ -763,7 +775,7 @@ public class ArticleService : IArticleService
         }
 
         var webRootPath =
-            _environment.WebRootPath;
+     _environment.WebRootPath;
 
         if (string.IsNullOrWhiteSpace(
                 webRootPath))
@@ -778,7 +790,7 @@ public class ArticleService : IArticleService
             Path.GetFullPath(
                 Path.Combine(
                     webRootPath,
-                    "uploads",
+                    _uploadSettings.RootFolder,
                     "articles"));
 
         Directory.CreateDirectory(

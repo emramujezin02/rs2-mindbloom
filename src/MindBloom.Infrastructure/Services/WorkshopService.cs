@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using MindBloom.Messaging.Contracts.Common;
 using MindBloom.Messaging.Contracts.Workshops;
+using Microsoft.Extensions.Options;
+using MindBloom.Infrastructure.Configuration;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -21,6 +23,9 @@ public class WorkshopService : IWorkshopService
 {
     private readonly ApplicationDbContext
         _context;
+
+    private readonly UploadSettings
+    _uploadSettings;
 
     private readonly IBusinessNotificationService
         _businessNotificationService;
@@ -36,6 +41,7 @@ public class WorkshopService : IWorkshopService
         IBusinessNotificationService
             businessNotificationService,
         IWebHostEnvironment environment,
+        IOptions<UploadSettings> uploadSettings,
         IIntegrationEventPublisher
             integrationEventPublisher)
     {
@@ -44,6 +50,9 @@ public class WorkshopService : IWorkshopService
 
         _businessNotificationService =
             businessNotificationService;
+
+        _uploadSettings =
+    uploadSettings.Value;
 
         _environment =
             environment;
@@ -1616,8 +1625,8 @@ public class WorkshopService : IWorkshopService
                 "Workshop image is required.");
         }
 
-        const long maximumFileSize =
-            5 * 1024 * 1024;
+        var maximumFileSize =
+            _uploadSettings.MaximumImageSizeBytes;
 
         if (file.Length >
             maximumFileSize)
@@ -1776,7 +1785,7 @@ public class WorkshopService : IWorkshopService
             Path.GetFullPath(
                 Path.Combine(
                     webRootPath,
-                    "uploads",
+                    _uploadSettings.RootFolder,
                     "workshops"));
 
         Directory.CreateDirectory(

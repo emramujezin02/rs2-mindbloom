@@ -46,6 +46,10 @@ var builder =
 builder.Configuration
     .AddEnvironmentVariables();
 
+WorkerEnvironmentConfigurationValidator
+    .Validate(
+        builder.Configuration);
+
 builder.Services
     .AddHealthChecks()
 
