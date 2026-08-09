@@ -48,17 +48,21 @@ builder.Configuration
 
 builder.Services
     .AddHealthChecks()
+
     .AddDbContextCheck<
         ApplicationDbContext>(
-        name: "database",
+        name:
+            "database",
         failureStatus:
             HealthStatus.Unhealthy,
         tags:
             new[]
             {
                 "worker",
+                "ready",
                 "database"
             })
+
     .AddCheck<RabbitMqHealthCheck>(
         name:
             "rabbitmq",
@@ -68,8 +72,10 @@ builder.Services
             new[]
             {
                 "worker",
+                "ready",
                 "rabbitmq"
             })
+
     .AddCheck<EmailProviderHealthCheck>(
         name:
             "email-provider",
@@ -79,8 +85,10 @@ builder.Services
             new[]
             {
                 "worker",
+                "ready",
                 "email"
             })
+
     .AddCheck<FirebaseHealthCheck>(
         name:
             "firebase",
@@ -90,6 +98,7 @@ builder.Services
             new[]
             {
                 "worker",
+                "ready",
                 "firebase"
             });
 
@@ -372,9 +381,23 @@ lifetime.ApplicationStopped.Register(
     });
 
 app.MapHealthChecks(
-    "/health",
+    "/health/live",
     new HealthCheckOptions
     {
+        Predicate =
+            _ => false
+    });
+
+app.MapHealthChecks(
+    "/health/ready",
+    new HealthCheckOptions
+    {
+        Predicate =
+            registration =>
+                registration.Tags
+                    .Contains(
+                        "ready"),
+
         ResponseWriter =
             async (
                 context,

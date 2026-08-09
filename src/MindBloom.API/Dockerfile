@@ -65,7 +65,7 @@ HEALTHCHECK \
     --timeout=5s \
     --start-period=20s \
     --retries=3 \
-    CMD curl --fail --silent http://localhost:8080/health || exit 1
+CMD curl --fail --silent http://localhost:8080/health/ready || exit 1
 
 # .NET Linux images podržavaju ugrađenog non-root korisnika.
 USER $APP_UID

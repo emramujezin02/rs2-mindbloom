@@ -64,7 +64,7 @@ HEALTHCHECK \
     --timeout=5s \
     --start-period=30s \
     --retries=3 \
-    CMD curl --fail --silent http://localhost:8080/health || exit 1
+CMD curl --fail --silent http://localhost:8080/health/ready || exit 1
 
 USER $APP_UID
 

@@ -27,6 +27,9 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using MindBloom.Shared.Constants;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using MindBloom.API.Health;
 
 var bootstrapEnvironment =
     Environment.GetEnvironmentVariable(
@@ -135,7 +138,32 @@ builder.Services
             };
     });
 
-builder.Services.AddHealthChecks();
+builder.Services
+    .AddHealthChecks()
+
+    .AddCheck<DatabaseHealthCheck>(
+        name:
+            "database",
+        failureStatus:
+            HealthStatus.Unhealthy,
+        tags:
+            new[]
+            {
+                "ready",
+                "database"
+            })
+
+    .AddCheck<RabbitMqHealthCheck>(
+        name:
+            "rabbitmq",
+        failureStatus:
+            HealthStatus.Unhealthy,
+        tags:
+            new[]
+            {
+                "ready",
+                "rabbitmq"
+            });
 
 builder.Services
     .AddNotificationMessaging(
@@ -584,7 +612,24 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.MapHealthChecks(
-        "/health")
+        "/health/live",
+        new HealthCheckOptions
+        {
+            Predicate =
+                _ => false
+        })
+    .AllowAnonymous();
+
+app.MapHealthChecks(
+        "/health/ready",
+        new HealthCheckOptions
+        {
+            Predicate =
+                registration =>
+                    registration.Tags
+                        .Contains(
+                            "ready")
+        })
     .AllowAnonymous();
 
 app.MapHub<NotificationHub>(
