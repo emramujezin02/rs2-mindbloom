@@ -47,8 +47,7 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         var connectionString =
-            Environment.GetEnvironmentVariable(
-                "DB_CONNECTION");
+    configuration["DB_CONNECTION"];
 
         if (string.IsNullOrWhiteSpace(
                 connectionString))
@@ -56,6 +55,29 @@ public static class DependencyInjection
             throw new InvalidOperationException(
                 "The DB_CONNECTION environment variable is not configured.");
         }
+
+        var databaseRetryOptions =
+            configuration
+                .GetSection(
+                    DatabaseRetryOptions.SectionName)
+                .Get<DatabaseRetryOptions>()
+            ?? new DatabaseRetryOptions();
+
+        if (databaseRetryOptions.MaxRetryCount < 0)
+        {
+            throw new InvalidOperationException(
+                "DatabaseRetry:MaxRetryCount cannot be negative.");
+        }
+
+        if (databaseRetryOptions.MaxRetryDelaySeconds <= 0)
+        {
+            throw new InvalidOperationException(
+                "DatabaseRetry:MaxRetryDelaySeconds must be greater than zero.");
+        }
+
+        services.Configure<DatabaseRetryOptions>(
+            configuration.GetSection(
+                DatabaseRetryOptions.SectionName));
 
         services.AddDbContext<ApplicationDbContext>(
             options =>
@@ -65,10 +87,17 @@ public static class DependencyInjection
                     sqlServerOptions =>
                     {
                         sqlServerOptions.EnableRetryOnFailure(
-                            maxRetryCount: 5,
+                            maxRetryCount:
+                                databaseRetryOptions
+                                    .MaxRetryCount,
+
                             maxRetryDelay:
-                                TimeSpan.FromSeconds(10),
-                            errorNumbersToAdd: null);
+                                TimeSpan.FromSeconds(
+                                    databaseRetryOptions
+                                        .MaxRetryDelaySeconds),
+
+                            errorNumbersToAdd:
+                                null);
                     });
             });
 
@@ -326,29 +355,50 @@ public static class DependencyInjection
                         .ExpirationInMinutes;
             });
 
-
-        services.AddHttpClient<IGeocodingService, GoogleGeocodingService>(client =>
-        {
-            client.BaseAddress =
-                new Uri("https://maps.googleapis.com/maps/api/geocode/");
-
-            client.Timeout = TimeSpan.FromSeconds(10);
-        });
-
         var environmentName =
-    Environment.GetEnvironmentVariable(
-        "ASPNETCORE_ENVIRONMENT")
-    ??
-    Environment.GetEnvironmentVariable(
-        "DOTNET_ENVIRONMENT")
-    ??
-    "Production";
+Environment.GetEnvironmentVariable(
+"ASPNETCORE_ENVIRONMENT")
+??
+Environment.GetEnvironmentVariable(
+"DOTNET_ENVIRONMENT")
+??
+"Production";
+
+        var isTesting =
+    string.Equals(
+        environmentName,
+        "Testing",
+        StringComparison.OrdinalIgnoreCase);
 
         var isDevelopment =
             string.Equals(
                 environmentName,
                 "Development",
                 StringComparison.OrdinalIgnoreCase);
+
+        if (isTesting)
+        {
+            services.AddScoped<
+                IGeocodingService,
+                TestGeocodingService>();
+        }
+        else
+        {
+            services.AddHttpClient<
+                IGeocodingService,
+                GoogleGeocodingService>(
+                client =>
+                {
+                    client.BaseAddress =
+                        new Uri(
+                            "https://maps.googleapis.com/maps/api/geocode/");
+
+                    client.Timeout =
+                        TimeSpan.FromSeconds(10);
+                });
+        }
+
+
 
         var key =
       Encoding.UTF8.GetBytes(
@@ -639,7 +689,18 @@ public static class DependencyInjection
 
         services.AddScoped<IFavoriteService, FavoriteService>();
 
-        services.AddScoped<IEmailService, EmailService>();
+        if (isTesting)
+        {
+            services.AddScoped<
+                IEmailService,
+                NoOpEmailService>();
+        }
+        else
+        {
+            services.AddScoped<
+                IEmailService,
+                EmailService>();
+        }
 
         services.AddHostedService<AppointmentReminderService>();
 

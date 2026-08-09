@@ -470,7 +470,7 @@ builder.Services.AddHsts(
 
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsProduction())
 {
     app.UseHsts();
 }
@@ -648,8 +648,13 @@ app.MapHub<ChatHub>(
         "/hubs/chat")
     .RequireAuthorization();
 
-if (!app.Environment.IsEnvironment(
-        "Testing"))
+var seedEnabled =
+    app.Configuration
+        .GetValue<bool>(
+            "Seed:Enabled");
+
+if (app.Environment.IsDevelopment() &&
+    seedEnabled)
 {
     using var scope =
         app.Services.CreateScope();

@@ -46,65 +46,79 @@ var builder =
 builder.Configuration
     .AddEnvironmentVariables();
 
-WorkerEnvironmentConfigurationValidator
-    .Validate(
-        builder.Configuration);
+if (!builder.Environment
+    .IsEnvironment(
+        "Testing"))
+{
+    WorkerEnvironmentConfigurationValidator
+        .Validate(
+            builder.Configuration);
+}
 
-builder.Services
-    .AddHealthChecks()
+var healthChecks =
+    builder.Services
+        .AddHealthChecks()
 
-    .AddDbContextCheck<
-        ApplicationDbContext>(
-        name:
-            "database",
-        failureStatus:
-            HealthStatus.Unhealthy,
-        tags:
-            new[]
-            {
-                "worker",
-                "ready",
-                "database"
-            })
+        .AddDbContextCheck<
+            ApplicationDbContext>(
+            name:
+                "database",
+            failureStatus:
+                HealthStatus.Unhealthy,
+            tags:
+                new[]
+                {
+                    "worker",
+                    "ready",
+                    "database"
+                })
 
-    .AddCheck<RabbitMqHealthCheck>(
-        name:
-            "rabbitmq",
-        failureStatus:
-            HealthStatus.Unhealthy,
-        tags:
-            new[]
-            {
-                "worker",
-                "ready",
-                "rabbitmq"
-            })
+        .AddCheck<RabbitMqHealthCheck>(
+            name:
+                "rabbitmq",
+            failureStatus:
+                HealthStatus.Unhealthy,
+            tags:
+                new[]
+                {
+                    "worker",
+                    "ready",
+                    "rabbitmq"
+                });
 
-    .AddCheck<EmailProviderHealthCheck>(
-        name:
-            "email-provider",
-        failureStatus:
-            HealthStatus.Unhealthy,
-        tags:
-            new[]
-            {
-                "worker",
-                "ready",
-                "email"
-            })
+if (!builder.Environment
+    .IsEnvironment(
+        "Testing"))
+{
+    healthChecks
+        .AddCheck<
+            EmailProviderHealthCheck>(
+            name:
+                "email-provider",
+            failureStatus:
+                HealthStatus.Unhealthy,
+            tags:
+                new[]
+                {
+                    "worker",
+                    "ready",
+                    "email"
+                })
 
-    .AddCheck<FirebaseHealthCheck>(
-        name:
-            "firebase",
-        failureStatus:
-            HealthStatus.Unhealthy,
-        tags:
-            new[]
-            {
-                "worker",
-                "ready",
-                "firebase"
-            });
+        .AddCheck<
+            FirebaseHealthCheck>(
+            name:
+                "firebase",
+            failureStatus:
+                HealthStatus.Unhealthy,
+            tags:
+                new[]
+                {
+                    "worker",
+                    "ready",
+                    "firebase"
+                });
+}
 
 builder.Services
     .AddOptions<FirebasePushOptions>()
@@ -177,9 +191,20 @@ builder.Services
     .AddStandardRabbitMqConfiguration(
         builder.Configuration);
 
-builder.Services.AddSingleton<
-    IEmailService,
-    EmailService>();
+if (builder.Environment
+    .IsEnvironment(
+        "Testing"))
+{
+    builder.Services.AddSingleton<
+        IEmailService,
+        NoOpEmailService>();
+}
+else
+{
+    builder.Services.AddSingleton<
+        IEmailService,
+        EmailService>();
+}
 
 builder.Services.AddSingleton<
     RabbitMqConsumerOperations>();
@@ -239,9 +264,20 @@ builder.Services.AddScoped<
         ChatMessageCreatedEvent>,
     ChatMessageCreatedEventHandler>();
 
-builder.Services.AddScoped<
-    IPushNotificationService,
-    FirebasePushNotificationService>();
+if (builder.Environment
+    .IsEnvironment(
+        "Testing"))
+{
+    builder.Services.AddScoped<
+        IPushNotificationService,
+        NoOpPushNotificationService>();
+}
+else
+{
+    builder.Services.AddScoped<
+        IPushNotificationService,
+        FirebasePushNotificationService>();
+}
 
 builder.Services.AddScoped<
     IIntegrationEventHandler<
@@ -299,54 +335,60 @@ builder.Services.AddScoped<
 builder.Services.AddSingleton<
     RabbitMqMonitoringMetrics>();
 
-builder.Services.AddSingleton(
-    serviceProvider =>
-    {
-        var options =
-            serviceProvider
-                .GetRequiredService<
-                    IOptions<
-                        FirebasePushOptions>>()
-                .Value;
-
-        if (string.IsNullOrWhiteSpace(
-                options.CredentialsPath))
+if (!builder.Environment
+    .IsEnvironment(
+        "Testing"))
+{
+    builder.Services.AddSingleton(
+        serviceProvider =>
         {
-            throw new InvalidOperationException(
-                "FIREBASE_CREDENTIALS_PATH is not configured.");
-        }
+            var options =
+                serviceProvider
+                    .GetRequiredService<
+                        IOptions<
+                            FirebasePushOptions>>()
+                    .Value;
 
-        if (!File.Exists(
-                options.CredentialsPath))
-        {
-            throw new InvalidOperationException(
-                $"Firebase credentials file was not found at '{options.CredentialsPath}'.");
-        }
-
-        var credential =
-            GoogleCredential.FromFile(
-                options.CredentialsPath);
-
-        return FirebaseApp.Create(
-            new AppOptions
+            if (string.IsNullOrWhiteSpace(
+                    options.CredentialsPath))
             {
-                Credential =
-                    credential
-            });
-    });
+                throw new InvalidOperationException(
+                    "FIREBASE_CREDENTIALS_PATH is not configured.");
+            }
 
-builder.Services.AddSingleton(
-    serviceProvider =>
-    {
-        var firebaseApp =
-            serviceProvider
-                .GetRequiredService<
-                    FirebaseApp>();
+            if (!File.Exists(
+                    options.CredentialsPath))
+            {
+                throw new InvalidOperationException(
+                    $"Firebase credentials file was not found at "
+                    + $"'{options.CredentialsPath}'.");
+            }
 
-        return FirebaseMessaging
-            .GetMessaging(
-                firebaseApp);
-    });
+            var credential =
+                GoogleCredential.FromFile(
+                    options.CredentialsPath);
+
+            return FirebaseApp.Create(
+                new AppOptions
+                {
+                    Credential =
+                        credential
+                });
+        });
+
+    builder.Services.AddSingleton(
+        serviceProvider =>
+        {
+            var firebaseApp =
+                serviceProvider
+                    .GetRequiredService<
+                        FirebaseApp>();
+
+            return FirebaseMessaging
+                .GetMessaging(
+                    firebaseApp);
+        });
+}
 
 var app =
     builder.Build();
