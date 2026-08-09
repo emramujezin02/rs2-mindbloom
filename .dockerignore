@@ -1,189 +1,97 @@
-name: mindbloom
-
-services:
-  sql-server:
-    image: mcr.microsoft.com/mssql/server:2022-CU23-ubuntu-22.04
-    container_name: mindbloom-sql-server
-    restart: unless-stopped
-
-    environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_PID: "Developer"
-      MSSQL_SA_PASSWORD: "${SQL_SERVER_PASSWORD}"
-
-    ports:
-      - "${SQL_SERVER_PORT}:1433"
-
-    volumes:
-      - mindbloom-sql-data:/var/opt/mssql
-
-    networks:
-      - mindbloom-network
-
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q \"SELECT 1\" -b -o /dev/null"
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-
-
-  rabbitmq:
-    image: rabbitmq:4.3.2-management
-    container_name: mindbloom-rabbitmq
-    hostname: mindbloom-rabbitmq
-    restart: unless-stopped
-
-    environment:
-      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USERNAME}"
-      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
-      RABBITMQ_DEFAULT_VHOST: "${RABBITMQ_VIRTUAL_HOST}"
-
-    ports:
-      - "${RABBITMQ_PORT}:5672"
-      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
-
-    volumes:
-      - mindbloom-rabbitmq-data:/var/lib/rabbitmq
-
-    networks:
-      - mindbloom-network
-
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-
-
-  api:
-    image: mindbloom-api:1.0.0
-    container_name: mindbloom-api
-    restart: unless-stopped
-
-    build:
-      context: .
-      dockerfile: src/MindBloom.API/Dockerfile
-
-    environment:
-      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT}"
-      ASPNETCORE_URLS: "http://+:8080"
-
-      ConnectionStrings__DefaultConnection: "Server=sql-server,1433;Database=${SQL_SERVER_DATABASE};User Id=sa;Password=${SQL_SERVER_PASSWORD};TrustServerCertificate=True;Encrypt=False;"
-
-      JWT_SECRET: "${JWT_SECRET}"
-      JWT_ISSUER: "${JWT_ISSUER}"
-      JWT_AUDIENCE: "${JWT_AUDIENCE}"
-      JWT_EXPIRATION_MINUTES: "${JWT_EXPIRATION_MINUTES}"
-
-      RABBITMQ_HOST: "rabbitmq"
-      RABBITMQ_PORT: "5672"
-      RABBITMQ_USERNAME: "${RABBITMQ_USERNAME}"
-      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD}"
-      RABBITMQ_VIRTUAL_HOST: "${RABBITMQ_VIRTUAL_HOST}"
-      RABBITMQ_EXCHANGE: "${RABBITMQ_EXCHANGE}"
-      RABBITMQ_EMAIL_ROUTING_KEY: "${RABBITMQ_EMAIL_ROUTING_KEY}"
-
-    ports:
-      - "${API_PORT}:8080"
-
-    depends_on:
-      sql-server:
-        condition: service_healthy
-
-      rabbitmq:
-        condition: service_healthy
-
-    networks:
-      - mindbloom-network
-
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-
-  worker:
-    image: mindbloom-notifications-worker:1.0.0
-    container_name: mindbloom-notifications-worker
-    restart: unless-stopped
-
-    build:
-      context: .
-      dockerfile: src/MindBloom.NotificationsWorker/Dockerfile
-
-    environment:
-      DOTNET_ENVIRONMENT: "${DOTNET_ENVIRONMENT}"
-
-      EMAIL_USERNAME: "${EMAIL_USERNAME}"
-      EMAIL_PASSWORD: "${EMAIL_PASSWORD}"
-
-      RABBITMQ_HOST: "rabbitmq"
-      RABBITMQ_PORT: "5672"
-      RABBITMQ_USERNAME: "${RABBITMQ_USERNAME}"
-      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD}"
-      RABBITMQ_VIRTUAL_HOST: "${RABBITMQ_VIRTUAL_HOST}"
-
-      RABBITMQ_EXCHANGE: "${RABBITMQ_EXCHANGE}"
-      RABBITMQ_EMAIL_QUEUE: "${RABBITMQ_EMAIL_QUEUE}"
-      RABBITMQ_EMAIL_ROUTING_KEY: "${RABBITMQ_EMAIL_ROUTING_KEY}"
-
-      RABBITMQ_RETRY_EXCHANGE: "${RABBITMQ_RETRY_EXCHANGE}"
-      RABBITMQ_DEAD_LETTER_EXCHANGE: "${RABBITMQ_DEAD_LETTER_EXCHANGE}"
-      RABBITMQ_EMAIL_DEAD_LETTER_QUEUE: "${RABBITMQ_EMAIL_DEAD_LETTER_QUEUE}"
-      RABBITMQ_EMAIL_DEAD_LETTER_ROUTING_KEY: "${RABBITMQ_EMAIL_DEAD_LETTER_ROUTING_KEY}"
-      RABBITMQ_MAXIMUM_RETRY_COUNT: "${RABBITMQ_MAXIMUM_RETRY_COUNT}"
-
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-
-    networks:
-      - mindbloom-network
-
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "test -r /proc/1/cmdline && grep -aq 'MindBloom.NotificationsWorker.dll' /proc/1/cmdline"
-        ]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
-
-volumes:
-  mindbloom-sql-data:
-    name: mindbloom-sql-data
-
-  mindbloom-rabbitmq-data:
-    name: mindbloom-rabbitmq-data
-
-
-networks:
-  mindbloom-network:
-    name: mindbloom-network
-    driver: bridge
-
-**/bin/
-**/obj/
-
-**/.vs/
-**/.vscode/
+# =========================================================
+# Git
+# =========================================================
 
 .git
 .gitignore
+.github
+
+
+# =========================================================
+# Visual Studio / IDE
+# =========================================================
+
+.vs
+.vscode
+.idea
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+
+# =========================================================
+# .NET build output
+# =========================================================
+
+**/bin
+**/obj
+**/TestResults
+**/coverage
+**/coverage.*
+**/*.trx
+
+
+# =========================================================
+# Tests
+# =========================================================
+
+MindBloom.SecurityTests
+tests
+
+
+# =========================================================
+# Frontend
+# =========================================================
+
+MindBloom.Frontend
+clients
+lib
+
+**/node_modules
+**/.dart_tool
+**/build
+
+
+# =========================================================
+# Environment / secrets
+# =========================================================
 
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
+**/appsettings.Local.json
+**/appsettings.*.Local.json
+
+secrets
+**/secrets
+
+
+# =========================================================
+# Logs / temporary files
+# =========================================================
+
+*.log
+logs
+tmp
+temp
+
+*.tmp
+*.temp
+
+
+# =========================================================
+# OS files
+# =========================================================
+
+.DS_Store
+Thumbs.db
+
+
+# =========================================================
+# Docker files not required in build context
+# =========================================================
+
+docker-compose*.yml
 README.md

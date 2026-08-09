@@ -3,48 +3,16 @@
   "WorkspaceRootPath": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\security\\uploadsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\security\\uploadsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\realtime\\chathubsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\realtime\\chathubsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\authentication\\refreshtokensecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\authentication\\refreshtokensecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\authentication\\passwordresetsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\authentication\\passwordresetsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\authentication\\loginsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\authentication\\loginsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\authentication\\jwtsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\authentication\\jwtsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\authorization\\therapistclientaccesssecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\authorization\\therapistclientaccesssecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\ownership\\ownershipsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\ownership\\ownershipsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\infrastructure\\mindbloomwebapplicationfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\infrastructure\\mindbloomwebapplicationfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\ratelimiting\\ratelimitingsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\ratelimiting\\ratelimitingsecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\stripe\\stripewebhooksecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\stripe\\stripewebhooksecuritytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\mindbloom.securitytests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\mindbloom.securitytests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     }
   ],
   "DocumentGroupContainers": [
@@ -59,144 +27,40 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "UploadSecurityTests.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Security\\UploadSecurityTests.cs",
-              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Security\\UploadSecurityTests.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Security\\UploadSecurityTests.cs",
-              "RelativeToolTip": "MindBloom.SecurityTests\\Security\\UploadSecurityTests.cs",
-              "ViewState": "AgIAAJkAAAAAAAAAAAAAwJ0AAAAUAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-08T14:35:45.518Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "ChatHubSecurityTests.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Realtime\\ChatHubSecurityTests.cs",
-              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Realtime\\ChatHubSecurityTests.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Realtime\\ChatHubSecurityTests.cs",
-              "RelativeToolTip": "MindBloom.SecurityTests\\Realtime\\ChatHubSecurityTests.cs",
-              "ViewState": "AgIAAGEAAAAAAAAAAAAQwG4AAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-08T14:22:08.022Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "RefreshTokenSecurityTests.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Authentication\\RefreshTokenSecurityTests.cs",
-              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Authentication\\RefreshTokenSecurityTests.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Authentication\\RefreshTokenSecurityTests.cs",
-              "RelativeToolTip": "MindBloom.SecurityTests\\Authentication\\RefreshTokenSecurityTests.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-08T14:29:46.195Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "PasswordResetSecurityTests.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Authentication\\PasswordResetSecurityTests.cs",
-              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Authentication\\PasswordResetSecurityTests.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Authentication\\PasswordResetSecurityTests.cs",
-              "RelativeToolTip": "MindBloom.SecurityTests\\Authentication\\PasswordResetSecurityTests.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-08T14:29:44.505Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
               "Title": "LoginSecurityTests.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Authentication\\LoginSecurityTests.cs",
               "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Authentication\\LoginSecurityTests.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Authentication\\LoginSecurityTests.cs",
               "RelativeToolTip": "MindBloom.SecurityTests\\Authentication\\LoginSecurityTests.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAMkAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-08T14:24:39.506Z",
+              "WhenOpened": "2026-08-08T19:03:46.87Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "JwtSecurityTests.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Authentication\\JwtSecurityTests.cs",
-              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Authentication\\JwtSecurityTests.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Authentication\\JwtSecurityTests.cs",
-              "RelativeToolTip": "MindBloom.SecurityTests\\Authentication\\JwtSecurityTests.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-08T14:29:37.005Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "TherapistClientAccessSecurityTests.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Authorization\\TherapistClientAccessSecurityTests.cs",
-              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Authorization\\TherapistClientAccessSecurityTests.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Authorization\\TherapistClientAccessSecurityTests.cs",
-              "RelativeToolTip": "MindBloom.SecurityTests\\Authorization\\TherapistClientAccessSecurityTests.cs",
-              "ViewState": "AgIAAGgAAAAAAAAAAAAAwIkAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-08T14:28:48.643Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "OwnershipSecurityTests.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Ownership\\OwnershipSecurityTests.cs",
-              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Ownership\\OwnershipSecurityTests.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Ownership\\OwnershipSecurityTests.cs",
-              "RelativeToolTip": "MindBloom.SecurityTests\\Ownership\\OwnershipSecurityTests.cs",
-              "ViewState": "AgIAADUAAAAAAAAAAAAAwFYAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-08T14:27:58.858Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 1,
               "Title": "MindBloomWebApplicationFactory.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Infrastructure\\MindBloomWebApplicationFactory.cs",
               "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Infrastructure\\MindBloomWebApplicationFactory.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Infrastructure\\MindBloomWebApplicationFactory.cs",
               "RelativeToolTip": "MindBloom.SecurityTests\\Infrastructure\\MindBloomWebApplicationFactory.cs",
-              "ViewState": "AgIAAMICAAAAAAAAAAAQwOECAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAQDAAAAAAAAAAAuwCgDAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-08T14:27:06.409Z",
+              "WhenOpened": "2026-08-08T18:34:34.346Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "RateLimitingSecurityTests.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\RateLimiting\\RateLimitingSecurityTests.cs",
-              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\RateLimiting\\RateLimitingSecurityTests.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\RateLimiting\\RateLimitingSecurityTests.cs",
-              "RelativeToolTip": "MindBloom.SecurityTests\\RateLimiting\\RateLimitingSecurityTests.cs",
-              "ViewState": "AgIAAFoAAAAAAAAAAAAAwHsAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-08T14:25:01.02Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "StripeWebhookSecurityTests.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Stripe\\StripeWebhookSecurityTests.cs",
-              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Stripe\\StripeWebhookSecurityTests.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Stripe\\StripeWebhookSecurityTests.cs",
-              "RelativeToolTip": "MindBloom.SecurityTests\\Stripe\\StripeWebhookSecurityTests.cs",
-              "ViewState": "AgIAAGIAAAAAAAAAAAAAwIMAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-08T14:22:28.223Z",
+              "DocumentIndex": 2,
+              "Title": "MindBloom.SecurityTests",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj",
+              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj",
+              "RelativeToolTip": "MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj",
+              "ViewState": "AgIAABoAAAAAAAAAAAAYwCUAAAAKAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-08-08T18:22:19.39Z",
               "EditorCaption": ""
             }
           ]
