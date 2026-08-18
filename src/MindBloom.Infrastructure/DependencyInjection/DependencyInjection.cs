@@ -75,6 +75,78 @@ public static class DependencyInjection
                 "DatabaseRetry:MaxRetryDelaySeconds must be greater than zero.");
         }
 
+        var externalServices =
+    configuration
+        .GetSection(
+            ExternalServicesOptions.SectionName)
+        .Get<ExternalServicesOptions>()
+    ?? new ExternalServicesOptions();
+
+        services
+            .AddOptions<ExternalServicesOptions>()
+            .Bind(
+                configuration.GetSection(
+                    ExternalServicesOptions.SectionName))
+            .ValidateOnStart();
+
+        services
+    .AddOptions<SmtpSettings>()
+    .Configure(options =>
+    {
+        options.Host =
+            configuration[
+                "SMTP_HOST"]?
+                .Trim()
+            ?? "smtp.gmail.com";
+
+        options.Port =
+            GetPositiveInt(
+                configuration,
+                "SMTP_PORT",
+                587);
+
+        options.EnableSsl =
+            GetBoolValue(
+                configuration,
+                "SMTP_ENABLE_SSL",
+                true);
+
+        options.Username =
+            configuration[
+                "EMAIL_USERNAME"]?
+                .Trim()
+            ?? string.Empty;
+
+        options.Password =
+            configuration[
+                "EMAIL_PASSWORD"]
+            ?? string.Empty;
+    })
+    .Validate(
+        options =>
+            !externalServices.EmailEnabled ||
+            !string.IsNullOrWhiteSpace(
+                options.Host),
+        "SMTP_HOST is required when email is enabled.")
+    .Validate(
+        options =>
+            !externalServices.EmailEnabled ||
+            options.Port is > 0 and <= 65535,
+        "SMTP_PORT must be between 1 and 65535 when email is enabled.")
+    .Validate(
+        options =>
+            !externalServices.EmailEnabled ||
+            !string.IsNullOrWhiteSpace(
+                options.Username),
+        "EMAIL_USERNAME is required when email is enabled.")
+    .Validate(
+        options =>
+            !externalServices.EmailEnabled ||
+            !string.IsNullOrWhiteSpace(
+                options.Password),
+        "EMAIL_PASSWORD is required when email is enabled.")
+    .ValidateOnStart();
+
         services.Configure<DatabaseRetryOptions>(
             configuration.GetSection(
                 DatabaseRetryOptions.SectionName));
@@ -171,6 +243,23 @@ public static class DependencyInjection
             !string.IsNullOrWhiteSpace(
                 options.RootFolder),
         "UPLOAD_ROOT_PATH is required.")
+    .Validate(
+    options =>
+        !Path.IsPathRooted(
+            options.RootFolder),
+    "UPLOAD_ROOT_PATH must be a relative application path.")
+.Validate(
+    options =>
+        !options.RootFolder
+            .Replace(
+                '\\',
+                '/')
+            .Split(
+                '/',
+                StringSplitOptions.RemoveEmptyEntries)
+            .Any(segment =>
+                segment == ".."),
+    "UPLOAD_ROOT_PATH cannot contain parent-directory traversal segments.")
     .ValidateOnStart();
 
         services
@@ -338,8 +427,9 @@ public static class DependencyInjection
                     jwtExpirationMinutes
             };
 
-        services.Configure<JwtSettings>(
-            options =>
+        services
+            .AddOptions<JwtSettings>()
+            .Configure(options =>
             {
                 options.SecretKey =
                     jwtSettings.SecretKey;
@@ -353,7 +443,39 @@ public static class DependencyInjection
                 options.ExpirationInMinutes =
                     jwtSettings
                         .ExpirationInMinutes;
-            });
+            })
+            .Validate(
+                options =>
+                    !string.IsNullOrWhiteSpace(
+                        options.SecretKey),
+                "JWT_SECRET is required.")
+            .Validate(
+                options =>
+                    System.Text.Encoding.UTF8
+                        .GetByteCount(
+                            options.SecretKey) >=
+                    JwtSettings.MinimumSecretLength,
+                "JWT_SECRET does not meet the minimum required length.")
+            .Validate(
+                options =>
+                    !string.IsNullOrWhiteSpace(
+                        options.Issuer),
+                "JWT_ISSUER is required.")
+            .Validate(
+                options =>
+                    !string.IsNullOrWhiteSpace(
+                        options.Audience),
+                "JWT_AUDIENCE is required.")
+            .Validate(
+                options =>
+                    options.ExpirationInMinutes >=
+                        JwtSettings
+                            .MinimumExpirationMinutes &&
+                    options.ExpirationInMinutes <=
+                        JwtSettings
+                            .MaximumExpirationMinutes,
+                "JWT_EXPIRATION_MINUTES is outside the allowed range.")
+            .ValidateOnStart();
 
         var environmentName =
 Environment.GetEnvironmentVariable(
@@ -626,43 +748,43 @@ Environment.GetEnvironmentVariable(
         });
 
         var stripeSecretKey =
-    Environment.GetEnvironmentVariable(
-        "STRIPE_SECRET_KEY");
+    configuration[
+        "STRIPE_SECRET_KEY"];
 
         var stripeWebhookSecret =
-            Environment.GetEnvironmentVariable(
-                "STRIPE_WEBHOOK_SECRET");
+            configuration[
+                "STRIPE_WEBHOOK_SECRET"];
 
-        if (string.IsNullOrWhiteSpace(
-                stripeSecretKey))
-        {
-            throw new InvalidOperationException(
-                "Environment variable "
-                + "'STRIPE_SECRET_KEY' "
-                + "is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(
-                stripeWebhookSecret))
-        {
-            throw new InvalidOperationException(
-                "Environment variable "
-                + "'STRIPE_WEBHOOK_SECRET' "
-                + "is required.");
-        }
-
-        services.Configure<StripeSettings>(
-            options =>
+        services
+            .AddOptions<StripeSettings>()
+            .Configure(options =>
             {
                 options.SecretKey =
-                    stripeSecretKey.Trim();
+                    stripeSecretKey?
+                        .Trim()
+                    ?? string.Empty;
 
                 options.WebhookSecret =
-                    stripeWebhookSecret.Trim();
+                    stripeWebhookSecret?
+                        .Trim()
+                    ?? string.Empty;
 
                 options.Currency =
                     "usd";
-            });
+            })
+            .Validate(
+                options =>
+                    !externalServices.PaymentsEnabled ||
+                    !string.IsNullOrWhiteSpace(
+                        options.SecretKey),
+                "STRIPE_SECRET_KEY is required when payments are enabled.")
+            .Validate(
+                options =>
+                    !externalServices.PaymentsEnabled ||
+                    !string.IsNullOrWhiteSpace(
+                        options.WebhookSecret),
+                "STRIPE_WEBHOOK_SECRET is required when payments are enabled.")
+            .ValidateOnStart();
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<
@@ -772,6 +894,32 @@ Environment.GetEnvironmentVariable(
             throw new InvalidOperationException(
                 $"Environment variable '{key}' "
                 + "must be a positive integer.");
+        }
+
+        return parsedValue;
+    }
+
+    private static bool GetBoolValue(
+    IConfiguration configuration,
+    string key,
+    bool defaultValue)
+    {
+        var value =
+            configuration[key];
+
+        if (string.IsNullOrWhiteSpace(
+                value))
+        {
+            return defaultValue;
+        }
+
+        if (!bool.TryParse(
+                value,
+                out var parsedValue))
+        {
+            throw new InvalidOperationException(
+                $"Configuration value '{key}' "
+                + "must be true or false.");
         }
 
         return parsedValue;

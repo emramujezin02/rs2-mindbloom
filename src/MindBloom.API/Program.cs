@@ -30,6 +30,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MindBloom.API.Health;
+using Microsoft.Extensions.Options;
 
 var bootstrapEnvironment =
     Environment.GetEnvironmentVariable(
@@ -56,6 +57,17 @@ builder.WebHost.ConfigureKestrel(
         options.AddServerHeader =
             false;
     });
+
+builder.Services
+    .AddOptions<CorsSettings>()
+    .Bind(
+        builder.Configuration.GetSection(
+            CorsSettings.SectionName))
+    .ValidateOnStart();
+
+builder.Services.AddSingleton<
+    IValidateOptions<CorsSettings>,
+    CorsSettingsValidator>();
 
 builder.Configuration
     .AddEnvironmentVariables();

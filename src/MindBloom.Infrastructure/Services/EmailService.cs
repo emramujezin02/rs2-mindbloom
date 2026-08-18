@@ -1,11 +1,23 @@
 ﻿using System.Net;
 using System.Net.Mail;
+using Microsoft.Extensions.Options;
 using MindBloom.Application.Common.Interfaces;
+using MindBloom.Infrastructure.Configuration;
 
 namespace MindBloom.Infrastructure.Services;
 
 public sealed class EmailService : IEmailService
 {
+    private readonly SmtpSettings
+        _settings;
+
+    public EmailService(
+        IOptions<SmtpSettings> settings)
+    {
+        _settings =
+            settings.Value;
+    }
+
     public async Task SendAsync(
         string to,
         string subject,
@@ -32,47 +44,40 @@ public sealed class EmailService : IEmailService
                 nameof(body));
         }
 
-        var emailUsername =
-            Environment.GetEnvironmentVariable(
-                "EMAIL_USERNAME");
+        using var smtpClient =
+            new SmtpClient(
+                _settings.Host,
+                _settings.Port)
+            {
+                Credentials =
+                    new NetworkCredential(
+                        _settings.Username,
+                        _settings.Password),
 
-        var emailPassword =
-            Environment.GetEnvironmentVariable(
-                "EMAIL_PASSWORD");
+                EnableSsl =
+                    _settings.EnableSsl
+            };
 
-        if (string.IsNullOrWhiteSpace(emailUsername))
-        {
-            throw new InvalidOperationException(
-                "Environment variable 'EMAIL_USERNAME' is required.");
-        }
+        using var mailMessage =
+            new MailMessage
+            {
+                From =
+                    new MailAddress(
+                        _settings.Username),
 
-        if (string.IsNullOrWhiteSpace(emailPassword))
-        {
-            throw new InvalidOperationException(
-                "Environment variable 'EMAIL_PASSWORD' is required.");
-        }
+                Subject =
+                    subject,
 
-        using var smtpClient = new SmtpClient(
-            "smtp.gmail.com",
-            587)
-        {
-            Credentials = new NetworkCredential(
-                emailUsername,
-                emailPassword),
+                Body =
+                    body,
 
-            EnableSsl = true
-        };
-
-        using var mailMessage = new MailMessage
-        {
-            From = new MailAddress(emailUsername),
-            Subject = subject,
-            Body = body,
-            IsBodyHtml = false
-        };
+                IsBodyHtml =
+                    false
+            };
 
         mailMessage.To.Add(to);
 
-        await smtpClient.SendMailAsync(mailMessage);
+        await smtpClient
+            .SendMailAsync(mailMessage);
     }
 }
