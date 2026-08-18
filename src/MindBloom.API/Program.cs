@@ -31,6 +31,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MindBloom.API.Health;
 using Microsoft.Extensions.Options;
+using MindBloom.Infrastructure.Persistence.Migration;
 
 var bootstrapEnvironment =
     Environment.GetEnvironmentVariable(
@@ -659,6 +660,12 @@ app.MapHub<NotificationHub>(
 app.MapHub<ChatHub>(
         "/hubs/chat")
     .RequireAuthorization();
+
+if (app.Environment.IsDevelopment())
+{
+    await DevelopmentDatabaseMigrator.MigrateAsync(
+        app.Services);
+}
 
 var seedEnabled =
     app.Configuration

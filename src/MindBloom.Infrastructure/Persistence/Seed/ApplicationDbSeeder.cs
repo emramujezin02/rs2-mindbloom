@@ -14,7 +14,6 @@ public static class ApplicationDbSeeder
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole<int>> roleManager)
     {
-        await context.Database.MigrateAsync();
 
         if (!await context.TherapistSpecializations.AnyAsync())
         {
