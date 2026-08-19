@@ -10,6 +10,9 @@ public sealed class ApiErrorResponse
     public string Detail { get; init; } =
         string.Empty;
 
+    public string ErrorCode { get; init; } =
+        string.Empty;
+
     public string TraceId { get; init; } =
         string.Empty;
 

@@ -156,6 +156,9 @@ builder.Services
                         ValidationErrors =
                             errors,
 
+                        ErrorCode =
+    "validation_error",
+
                         TraceId =
     context.HttpContext
         .TraceIdentifier,
@@ -401,6 +404,8 @@ builder.Services.AddRateLimiter(
                         Title =
                             "Too many requests",
 
+                        ErrorCode =
+    "rate_limit_exceeded",
                         Detail =
                             "Too many requests were received. Please try again later.",
 
@@ -548,9 +553,15 @@ app.UseStatusCodePages(
                         StatusCode =
                             StatusCodes
                                 .Status400BadRequest,
-                        Title = "Bad request",
+
+                        Title =
+                            "Bad request",
+
                         Detail =
-                            "The request is invalid."
+                            "The request is invalid.",
+
+                        ErrorCode =
+                            "bad_request"
                     },
 
                 StatusCodes.Status401Unauthorized =>
@@ -559,9 +570,15 @@ app.UseStatusCodePages(
                         StatusCode =
                             StatusCodes
                                 .Status401Unauthorized,
-                        Title = "Unauthorized",
+
+                        Title =
+                            "Unauthorized",
+
                         Detail =
-                            "Authentication is required."
+                            "Authentication is required.",
+
+                        ErrorCode =
+                            "unauthorized"
                     },
 
                 StatusCodes.Status403Forbidden =>
@@ -570,9 +587,15 @@ app.UseStatusCodePages(
                         StatusCode =
                             StatusCodes
                                 .Status403Forbidden,
-                        Title = "Forbidden",
+
+                        Title =
+                            "Forbidden",
+
                         Detail =
-                            "You do not have permission to access this resource."
+                            "You do not have permission to access this resource.",
+
+                        ErrorCode =
+                            "forbidden"
                     },
 
                 StatusCodes.Status404NotFound =>
@@ -581,10 +604,15 @@ app.UseStatusCodePages(
                         StatusCode =
                             StatusCodes
                                 .Status404NotFound,
+
                         Title =
                             "Resource not found",
+
                         Detail =
-                            "The requested resource was not found."
+                            "The requested resource was not found.",
+
+                        ErrorCode =
+                            "not_found"
                     },
 
                 StatusCodes.Status405MethodNotAllowed =>
@@ -593,10 +621,15 @@ app.UseStatusCodePages(
                         StatusCode =
                             StatusCodes
                                 .Status405MethodNotAllowed,
+
                         Title =
                             "Method not allowed",
+
                         Detail =
-                            "The HTTP method is not allowed for this endpoint."
+                            "The HTTP method is not allowed for this endpoint.",
+
+                        ErrorCode =
+                            "method_not_allowed"
                     },
 
                 _ =>
@@ -604,10 +637,15 @@ app.UseStatusCodePages(
                     {
                         StatusCode =
                             response.StatusCode,
+
                         Title =
                             "Request failed",
+
                         Detail =
-                            "The request could not be completed."
+                            "The request could not be completed.",
+
+                        ErrorCode =
+                            "request_failed"
                     }
             };
 
@@ -622,6 +660,9 @@ app.UseStatusCodePages(
 
         Detail =
             error.Detail,
+
+        ErrorCode =
+    error.ErrorCode,
 
         TraceId =
             statusCodeContext

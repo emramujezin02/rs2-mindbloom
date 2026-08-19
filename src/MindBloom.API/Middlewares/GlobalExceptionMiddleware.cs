@@ -102,29 +102,38 @@ public sealed class GlobalExceptionMiddleware
             context);
 
         var response =
-            new ApiErrorResponse
-            {
-                StatusCode =
-                    errorDefinition.StatusCode,
+     new ApiErrorResponse
+     {
+         StatusCode =
+             errorDefinition.StatusCode,
 
-                Title =
-                    errorDefinition.Title,
+         Title =
+             errorDefinition.Title,
 
-                Detail =
-                    GetDetail(
-                        exception,
-                        errorDefinition),
+         Detail =
+             GetDetail(
+                 exception,
+                 errorDefinition),
 
-                TraceId =
-                    context.TraceIdentifier,
+         ErrorCode =
+             errorDefinition.ErrorCode,
 
-                ValidationErrors =
-                    errorDefinition.ValidationErrors,
+         TraceId =
+             context.TraceIdentifier,
 
-                ExceptionType = null,
+         ValidationErrors =
+             errorDefinition.ValidationErrors,
 
-                StackTrace = null
-            };
+         ExceptionType =
+             _environment.IsDevelopment()
+                 ? exception.GetType().Name
+                 : null,
+
+         StackTrace =
+             _environment.IsDevelopment()
+                 ? exception.StackTrace
+                 : null
+     };
 
         context.Response.Clear();
 
@@ -145,7 +154,7 @@ public sealed class GlobalExceptionMiddleware
     }
 
     private static ErrorDefinition MapException(
-        Exception exception)
+     Exception exception)
     {
         return exception switch
         {
@@ -155,6 +164,7 @@ public sealed class GlobalExceptionMiddleware
                         StatusCodes.Status400BadRequest,
                         "Validation failed",
                         "One or more validation errors occurred.",
+                        "validation_error",
                         CreateValidationErrors(
                             validationException)),
 
@@ -162,71 +172,116 @@ public sealed class GlobalExceptionMiddleware
                 new ErrorDefinition(
                     StatusCodes.Status400BadRequest,
                     "Bad request",
-                    exception.Message),
+                    exception.Message,
+                    "bad_request"),
 
-            NotFoundException =>
+            UnauthorizedException =>
                 new ErrorDefinition(
-                    StatusCodes.Status404NotFound,
-                    "Resource not found",
-                    exception.Message),
-
-            BusinessException =>
-                new ErrorDefinition(
-                    StatusCodes.Status409Conflict,
-                    "Business rule violation",
-                    exception.Message),
+                    StatusCodes.Status401Unauthorized,
+                    "Unauthorized",
+                    string.IsNullOrWhiteSpace(
+                            exception.Message)
+                        ? "Authentication is required."
+                        : exception.Message,
+                    "unauthorized"),
 
             UnauthorizedAccessException =>
                 new ErrorDefinition(
                     StatusCodes.Status401Unauthorized,
                     "Unauthorized",
                     string.IsNullOrWhiteSpace(
-                        exception.Message)
+                            exception.Message)
                         ? "Authentication is required."
-                        : exception.Message),
+                        : exception.Message,
+                    "unauthorized"),
 
-            ArgumentNullException =>
+            ForbiddenException =>
                 new ErrorDefinition(
-                    StatusCodes.Status400BadRequest,
-                    "Bad request",
-                    exception.Message),
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    string.IsNullOrWhiteSpace(
+                            exception.Message)
+                        ? "You do not have permission to perform this action."
+                        : exception.Message,
+                    "forbidden"),
 
-            ArgumentOutOfRangeException =>
+            NotFoundException =>
                 new ErrorDefinition(
-                    StatusCodes.Status400BadRequest,
-                    "Bad request",
-                    exception.Message),
-
-            ArgumentException =>
-                new ErrorDefinition(
-                    StatusCodes.Status400BadRequest,
-                    "Bad request",
-                    exception.Message),
+                    StatusCodes.Status404NotFound,
+                    "Resource not found",
+                    exception.Message,
+                    "not_found"),
 
             KeyNotFoundException =>
                 new ErrorDefinition(
                     StatusCodes.Status404NotFound,
                     "Resource not found",
-                    exception.Message),
+                    exception.Message,
+                    "not_found"),
+
+            BusinessException =>
+                new ErrorDefinition(
+                    StatusCodes.Status409Conflict,
+                    "Business rule violation",
+                    exception.Message,
+                    "business_rule_violation"),
 
             InvalidOperationException =>
                 new ErrorDefinition(
                     StatusCodes.Status409Conflict,
-                    "Invalid operation",
-                    exception.Message),
+                    "Conflict",
+                    exception.Message,
+                    "conflict"),
+
+            ArgumentNullException =>
+                new ErrorDefinition(
+                    StatusCodes.Status400BadRequest,
+                    "Bad request",
+                    exception.Message,
+                    "invalid_argument"),
+
+            ArgumentOutOfRangeException =>
+                new ErrorDefinition(
+                    StatusCodes.Status400BadRequest,
+                    "Bad request",
+                    exception.Message,
+                    "invalid_argument"),
+
+            ArgumentException =>
+                new ErrorDefinition(
+                    StatusCodes.Status400BadRequest,
+                    "Bad request",
+                    exception.Message,
+                    "invalid_argument"),
+
+            HttpRequestException =>
+                new ErrorDefinition(
+                    StatusCodes.Status503ServiceUnavailable,
+                    "External service unavailable",
+                    "An external service is currently unavailable.",
+                    "external_provider_failure"),
+
+            TimeoutException =>
+                new ErrorDefinition(
+                    StatusCodes.Status503ServiceUnavailable,
+                    "External service unavailable",
+                    "An external service did not respond in time.",
+                    "external_provider_timeout"),
 
             OperationCanceledException =>
                 new ErrorDefinition(
                     StatusCodes.Status499ClientClosedRequest,
                     "Request cancelled",
-                    "The request was cancelled."),
+                    "The request was cancelled.",
+                    "request_cancelled"),
 
             _ =>
                 new ErrorDefinition(
                     StatusCodes
                         .Status500InternalServerError,
                     "Internal server error",
-                    "An unexpected server error occurred.")
+                    "An unexpected server error occurred.",
+                    "internal_server_error")
         };
     }
 
@@ -234,18 +289,21 @@ public sealed class GlobalExceptionMiddleware
         Exception exception,
         ErrorDefinition errorDefinition)
     {
-        if (errorDefinition.StatusCode !=
-            StatusCodes.Status500InternalServerError)
+        if (!_environment.IsDevelopment())
         {
             return errorDefinition.Detail;
         }
 
-        if (_environment.IsDevelopment())
+        if (errorDefinition.StatusCode >=
+            StatusCodes.Status500InternalServerError)
         {
-            return exception.Message;
+            return string.IsNullOrWhiteSpace(
+                    exception.Message)
+                ? errorDefinition.Detail
+                : exception.Message;
         }
 
-        return "An unexpected server error occurred.";
+        return errorDefinition.Detail;
     }
 
     private void LogException(
@@ -383,6 +441,7 @@ public sealed class GlobalExceptionMiddleware
         int StatusCode,
         string Title,
         string Detail,
+        string ErrorCode,
         IDictionary<string, string[]>?
             ValidationErrors = null);
 }
