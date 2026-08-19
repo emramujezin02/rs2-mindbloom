@@ -19,6 +19,8 @@ public class PaymentService : IPaymentService
     private const string PaymentCurrency = "usd";
 
     private readonly ApplicationDbContext _context;
+    private readonly StripeClientProvider
+    _stripeClientProvider;
 
     private readonly StripeVerificationService _stripeVerificationService;
 
@@ -26,16 +28,20 @@ public class PaymentService : IPaymentService
     private readonly IIntegrationEventPublisher
     _integrationEventPublisher;
     public PaymentService(
-      ApplicationDbContext context,
-      StripeVerificationService
-          stripeVerificationService,
-      IBusinessNotificationService
-          businessNotificationService,
-      IIntegrationEventPublisher
-          integrationEventPublisher)
+        ApplicationDbContext context,
+        StripeVerificationService
+            stripeVerificationService,
+        StripeClientProvider
+            stripeClientProvider,
+        IBusinessNotificationService
+            businessNotificationService,
+        IIntegrationEventPublisher
+            integrationEventPublisher)
     {
         _context =
             context;
+        _stripeClientProvider =
+    stripeClientProvider;
 
         _stripeVerificationService =
             stripeVerificationService;
@@ -227,19 +233,6 @@ public class PaymentService : IPaymentService
                 "Appointment amount is invalid.");
         }
 
-        var secretKey =
-            Environment.GetEnvironmentVariable(
-                "STRIPE_SECRET_KEY");
-
-        if (string.IsNullOrWhiteSpace(secretKey))
-        {
-            throw new Exception(
-                "Stripe configuration is missing.");
-        }
-
-        StripeConfiguration.ApiKey =
-            secretKey;
-
         var options =
             new PaymentIntentCreateOptions
             {
@@ -273,7 +266,8 @@ public class PaymentService : IPaymentService
             };
 
         var paymentIntentService =
-            new PaymentIntentService();
+            new PaymentIntentService(
+                _stripeClientProvider.Client);
 
         var idempotencySource =
     existingPayment == null
@@ -945,7 +939,8 @@ public class PaymentService : IPaymentService
                     payment.StripeRefundId))
             {
                 var existingRefundService =
-                    new RefundService();
+                    new RefundService(
+                        _stripeClientProvider.Client);
 
                 Refund existingRefund;
 
@@ -1092,19 +1087,7 @@ public class PaymentService : IPaymentService
                 "Stripe charged amount does not match the recorded payment amount.");
         }
 
-        var secretKey =
-            Environment.GetEnvironmentVariable(
-                "STRIPE_SECRET_KEY");
-
-        if (string.IsNullOrWhiteSpace(
-                secretKey))
-        {
-            throw new Exception(
-                "Stripe configuration is missing.");
-        }
-
-        StripeConfiguration.ApiKey =
-            secretKey;
+      
 
         payment.Status =
             PaymentStatus.RefundPending;
@@ -1121,7 +1104,8 @@ public class PaymentService : IPaymentService
         await _context.SaveChangesAsync();
 
         var refundService =
-            new RefundService();
+            new RefundService(
+                _stripeClientProvider.Client);
 
         var refundOptions =
             new RefundCreateOptions

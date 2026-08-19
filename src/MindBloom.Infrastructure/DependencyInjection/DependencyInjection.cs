@@ -33,12 +33,18 @@ using MindBloom.Infrastructure.Services.Geocoding;
 using Microsoft.AspNetCore.Authorization;
 using MindBloom.Domain.Enums;
 using System.Security.Claims;
+using Microsoft.Extensions.Http.Resilience;
+using Polly;
+using Polly.CircuitBreaker;
+using Polly.Retry;
+using Polly.Timeout;
 using MindBloom.Shared.Constants;
 using MindBloom.Application.Features.Auth.Validators;
 using MindBloom.Application.Features.Security.Interfaces;
 using MindBloom.Application.Features.Privacy.Interfaces;
 using MindBloom.Infrastructure.Configuration;
 using MindBloom.Infrastructure.Observability;
+using Microsoft.Extensions.Logging;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -83,6 +89,68 @@ public static class DependencyInjection
             ExternalServicesOptions.SectionName)
         .Get<ExternalServicesOptions>()
     ?? new ExternalServicesOptions();
+
+        var externalServiceResilience =
+    configuration
+        .GetSection(
+            ExternalServiceResilienceOptions
+                .SectionName)
+        .Get<ExternalServiceResilienceOptions>()
+    ?? new ExternalServiceResilienceOptions();
+
+        services
+    .AddOptions<
+        ExternalServiceResilienceOptions>()
+    .Bind(
+        configuration.GetSection(
+            ExternalServiceResilienceOptions
+                .SectionName))
+    .Validate(
+        options =>
+            options.HttpTimeoutSeconds > 0,
+        "ExternalServiceResilience:HttpTimeoutSeconds must be greater than zero.")
+    .Validate(
+        options =>
+            options.HttpRetryCount >= 0,
+        "ExternalServiceResilience:HttpRetryCount cannot be negative.")
+    .Validate(
+        options =>
+            options
+                .HttpRetryBaseDelayMilliseconds >
+            0,
+        "ExternalServiceResilience:HttpRetryBaseDelayMilliseconds must be greater than zero.")
+    .Validate(
+        options =>
+            options.CircuitBreakerFailureRatio
+                is > 0 and <= 1,
+        "ExternalServiceResilience:CircuitBreakerFailureRatio must be between 0 and 1.")
+    .Validate(
+        options =>
+            options
+                .CircuitBreakerMinimumThroughput >
+            0,
+        "ExternalServiceResilience:CircuitBreakerMinimumThroughput must be greater than zero.")
+    .Validate(
+        options =>
+            options
+                .CircuitBreakerSamplingDurationSeconds >
+            0,
+        "ExternalServiceResilience:CircuitBreakerSamplingDurationSeconds must be greater than zero.")
+    .Validate(
+        options =>
+            options
+                .CircuitBreakerBreakDurationSeconds >
+            0,
+        "ExternalServiceResilience:CircuitBreakerBreakDurationSeconds must be greater than zero.")
+    .Validate(
+        options =>
+            options.StripeTimeoutSeconds > 0,
+        "ExternalServiceResilience:StripeTimeoutSeconds must be greater than zero.")
+    .Validate(
+        options =>
+            options.StripeMaxNetworkRetries >= 0,
+        "ExternalServiceResilience:StripeMaxNetworkRetries cannot be negative.")
+    .ValidateOnStart();
 
         services
             .AddOptions<ExternalServicesOptions>()
@@ -508,20 +576,127 @@ Environment.GetEnvironmentVariable(
         }
         else
         {
-            services.AddHttpClient<
-                IGeocodingService,
-                GoogleGeocodingService>(
-                client =>
-                {
-                    client.BaseAddress =
-                        new Uri(
-                            "https://maps.googleapis.com/maps/api/geocode/");
+            services
+                .AddHttpClient<
+                    IGeocodingService,
+                    GoogleGeocodingService>(
+                    client =>
+                    {
+                        client.BaseAddress =
+                            new Uri(
+                                "https://maps.googleapis.com/maps/api/geocode/");
 
-                    client.Timeout =
-                        TimeSpan.FromSeconds(10);
-                })
+                        client.Timeout =
+                            TimeSpan.FromSeconds(
+                                externalServiceResilience
+                                    .HttpTimeoutSeconds);
+                    })
                 .AddHttpMessageHandler<
-                    CorrelationIdDelegatingHandler>();
+                    CorrelationIdDelegatingHandler>()
+                .AddResilienceHandler(
+                    "google-geocoding",
+                    (
+                        pipelineBuilder,
+                        resilienceContext) =>
+                    {
+                        var loggerFactory =
+                            resilienceContext
+                                .ServiceProvider
+                                .GetRequiredService<
+                                    ILoggerFactory>();
+
+                        var logger =
+                            loggerFactory.CreateLogger(
+                                "ExternalServiceRetry");
+
+                        var retryOptions =
+     new HttpRetryStrategyOptions
+     {
+         MaxRetryAttempts =
+             externalServiceResilience
+                 .HttpRetryCount,
+
+         Delay =
+             TimeSpan.FromMilliseconds(
+                 externalServiceResilience
+                     .HttpRetryBaseDelayMilliseconds),
+
+         BackoffType =
+             DelayBackoffType
+                 .Exponential,
+
+         UseJitter =
+             true,
+
+         ShouldRetryAfterHeader =
+             true,
+
+         OnRetry =
+             retryArguments =>
+             {
+                 var statusCode =
+                     retryArguments
+                         .Outcome
+                         .Result?
+                         .StatusCode;
+
+                 var exceptionType =
+                     retryArguments
+                         .Outcome
+                         .Exception?
+                         .GetType()
+                         .Name;
+
+                 logger.LogWarning(
+                     "External HTTP retry scheduled. Module: {Module}, Provider: {Provider}, Attempt: {Attempt}, RetryDelayMs: {RetryDelayMs}, StatusCode: {StatusCode}, FailureType: {FailureType}.",
+                     "ExternalServices",
+                     "GoogleGeocoding",
+                     retryArguments
+                         .AttemptNumber +
+                     1,
+                     retryArguments
+                         .RetryDelay
+                         .TotalMilliseconds,
+                     statusCode.HasValue
+                         ? (int)statusCode.Value
+                         : null,
+                     exceptionType);
+
+                 return default;
+             }
+     };
+
+
+                        pipelineBuilder.AddRetry(
+                            retryOptions);
+
+                        pipelineBuilder.AddCircuitBreaker(
+                            new HttpCircuitBreakerStrategyOptions
+                            {
+                                FailureRatio =
+                                    externalServiceResilience
+                                        .CircuitBreakerFailureRatio,
+
+                                MinimumThroughput =
+                                    externalServiceResilience
+                                        .CircuitBreakerMinimumThroughput,
+
+                                SamplingDuration =
+                                    TimeSpan.FromSeconds(
+                                        externalServiceResilience
+                                            .CircuitBreakerSamplingDurationSeconds),
+
+                                BreakDuration =
+                                    TimeSpan.FromSeconds(
+                                        externalServiceResilience
+                                            .CircuitBreakerBreakDurationSeconds)
+                            });
+
+                        pipelineBuilder.AddTimeout(
+                            TimeSpan.FromSeconds(
+                                externalServiceResilience
+                                    .HttpTimeoutSeconds));
+                    });
         }
 
 
@@ -790,6 +965,20 @@ Environment.GetEnvironmentVariable(
                 "STRIPE_WEBHOOK_SECRET is required when payments are enabled.")
             .ValidateOnStart();
 
+        services.AddHttpClient(
+    "Stripe",
+    client =>
+    {
+        client.BaseAddress =
+            new Uri(
+                "https://api.stripe.com");
+
+        client.Timeout =
+            TimeSpan.FromSeconds(
+                externalServiceResilience
+                    .StripeTimeoutSeconds);
+    });
+
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<
     StripeWebhookService>();
@@ -831,6 +1020,15 @@ Environment.GetEnvironmentVariable(
         services.AddHostedService<AppointmentReminderService>();
 
         services.AddScoped<IAdminService,AdminService>();
+
+        services.AddSingleton<
+    StripeClientProvider>();
+
+        services.AddSingleton<
+    StripeClientProvider>();
+
+        services.AddScoped<
+            StripeVerificationService>();
 
         services.AddScoped<IMembershipService, MembershipService>();
 

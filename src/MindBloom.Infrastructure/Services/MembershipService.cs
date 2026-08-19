@@ -23,7 +23,8 @@ public class MembershipService : IMembershipService
     private const int MembershipDurationMonths = 6;
 
     private readonly ApplicationDbContext _context;
-
+    private readonly StripeClientProvider
+    _stripeClientProvider;
     private readonly StripeVerificationService _stripeVerificationService;
     private readonly IIntegrationEventPublisher
     _integrationEventPublisher;
@@ -33,11 +34,16 @@ public class MembershipService : IMembershipService
         ApplicationDbContext context,
         StripeVerificationService
             stripeVerificationService,
+        StripeClientProvider
+            stripeClientProvider,
         IIntegrationEventPublisher
             integrationEventPublisher)
     {
         _context =
             context;
+
+        _stripeClientProvider =
+    stripeClientProvider;
 
         _stripeVerificationService =
             stripeVerificationService;
@@ -326,23 +332,7 @@ public class MembershipService : IMembershipService
 
         await _context.SaveChangesAsync();
 
-        var secretKey =
-            Environment.GetEnvironmentVariable(
-                "STRIPE_SECRET_KEY");
-
-        if (string.IsNullOrWhiteSpace(
-                secretKey))
-        {
-            membership.IsDeleted = true;
-
-            await _context.SaveChangesAsync();
-
-            throw new Exception(
-                "Stripe configuration is missing.");
-        }
-
-        StripeConfiguration.ApiKey =
-            secretKey;
+       
 
         var paymentIntentOptions =
             new PaymentIntentCreateOptions
@@ -404,7 +394,8 @@ public class MembershipService : IMembershipService
         try
         {
             var paymentIntentService =
-                new PaymentIntentService();
+                new PaymentIntentService(
+                    _stripeClientProvider.Client);
 
             stripePaymentIntent =
                 await paymentIntentService

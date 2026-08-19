@@ -7,24 +7,13 @@ public class StripeVerificationService
     private readonly PaymentIntentService
         _paymentIntentService;
 
-    public StripeVerificationService()
+    public StripeVerificationService(
+        StripeClientProvider
+            stripeClientProvider)
     {
-        var secretKey =
-            Environment.GetEnvironmentVariable(
-                "STRIPE_SECRET_KEY");
-
-        if (string.IsNullOrWhiteSpace(
-                secretKey))
-        {
-            throw new InvalidOperationException(
-                "STRIPE_SECRET_KEY is not configured.");
-        }
-
-        StripeConfiguration.ApiKey =
-            secretKey;
-
         _paymentIntentService =
-            new PaymentIntentService();
+            new PaymentIntentService(
+                stripeClientProvider.Client);
     }
 
     public async Task<PaymentIntent>
