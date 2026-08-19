@@ -8,6 +8,78 @@ public sealed class DeadLetterQueueMonitor
     : BackgroundService,
       IAsyncDisposable
 {
+    private static readonly EventId
+    MonitoringStartedEvent =
+        new(
+            4900,
+            "DeadLetterQueueMonitoringStarted");
+
+    private static readonly EventId
+        MonitoringStoppingEvent =
+            new(
+                4901,
+                "DeadLetterQueueMonitoringStopping");
+
+    private static readonly EventId
+        MonitoringFailedEvent =
+            new(
+                4902,
+                "DeadLetterQueueMonitoringFailed");
+
+    private static readonly EventId
+        ConnectionAttemptEvent =
+            new(
+                4910,
+                "DeadLetterQueueConnectionAttempt");
+
+    private static readonly EventId
+        ConnectionEstablishedEvent =
+            new(
+                4911,
+                "DeadLetterQueueConnectionEstablished");
+
+    private static readonly EventId
+        ConnectionAttemptFailedEvent =
+            new(
+                4912,
+                "DeadLetterQueueConnectionAttemptFailed");
+
+    private static readonly EventId
+        MonitoringSkippedEvent =
+            new(
+                4920,
+                "DeadLetterQueueMonitoringSkipped");
+
+    private static readonly EventId
+        MessagesDetectedEvent =
+            new(
+                4921,
+                "DeadLetterQueueMessagesDetected");
+
+    private static readonly EventId
+        HealthCheckCompletedEvent =
+            new(
+                4922,
+                "DeadLetterQueueHealthCheckCompleted");
+
+    private static readonly EventId
+        MonitoringStopRequestedEvent =
+            new(
+                4930,
+                "DeadLetterQueueMonitoringStopRequested");
+
+    private static readonly EventId
+        ChannelCloseFailedEvent =
+            new(
+                4940,
+                "DeadLetterQueueChannelCloseFailed");
+
+    private static readonly EventId
+        ConnectionCloseFailedEvent =
+            new(
+                4941,
+                "DeadLetterQueueConnectionCloseFailed");
+
     private readonly RabbitMqOptions
         _options;
 
@@ -50,10 +122,9 @@ public sealed class DeadLetterQueueMonitor
                 stoppingToken);
 
             _logger.LogInformation(
-                "RabbitMQ DLQ monitoring started. "
-                + "Email DLQ: {EmailDlq}, "
-                + "integration event DLQ: {IntegrationDlq}, "
-                + "interval: {IntervalSeconds} seconds.",
+                MonitoringStartedEvent,
+                "RabbitMQ DLQ monitoring started. Module: {Module}, EmailDlq: {EmailDlq}, IntegrationDlq: {IntegrationDlq}, IntervalSeconds: {IntervalSeconds}.",
+                "DeadLetterQueueMonitoring",
                 _options.DeadLetterQueue,
                 _options
                     .IntegrationEventDeadLetterQueue,
@@ -78,13 +149,17 @@ public sealed class DeadLetterQueueMonitor
                 .IsCancellationRequested)
         {
             _logger.LogInformation(
-                "RabbitMQ DLQ monitoring is stopping.");
+                MonitoringStoppingEvent,
+                "RabbitMQ DLQ monitoring is stopping. Module: {Module}.",
+                "DeadLetterQueueMonitoring");
         }
         catch (Exception exception)
         {
             _logger.LogCritical(
-                exception,
-                "RabbitMQ DLQ monitoring stopped unexpectedly.");
+                MonitoringFailedEvent,
+                "RabbitMQ DLQ monitoring stopped unexpectedly. Module: {Module}, FailureType: {FailureType}.",
+                "DeadLetterQueueMonitoring",
+                exception.GetType().Name);
 
             throw;
         }
@@ -93,9 +168,12 @@ public sealed class DeadLetterQueueMonitor
     private async Task InitializeAsync(
         CancellationToken cancellationToken)
     {
+        var clientName =
+            $"{_options.ConsumerClientName}-dlq-monitor";
+
         var factory =
             _connectionFactory.Create(
-                $"{_options.ConsumerClientName}-dlq-monitor",
+                clientName,
                 consumerDispatchConcurrency: 1);
 
         Exception? lastException =
@@ -112,15 +190,19 @@ public sealed class DeadLetterQueueMonitor
             try
             {
                 _logger.LogInformation(
-                    "Connecting DLQ monitor to RabbitMQ. "
-                    + "Attempt {Attempt}/{MaximumAttempts}.",
+                    ConnectionAttemptEvent,
+                    "Connecting DLQ monitor to RabbitMQ. Module: {Module}, Client: {Client}, Host: {HostName}, Port: {Port}, Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
+                    "DeadLetterQueueMonitoring",
+                    clientName,
+                    _options.HostName,
+                    _options.Port,
                     attempt,
                     _options.ConnectionRetryCount);
 
                 _connection =
                     await factory
                         .CreateConnectionAsync(
-                            $"{_options.ConsumerClientName}-dlq-monitor",
+                            clientName,
                             cancellationToken);
 
                 _channel =
@@ -130,7 +212,10 @@ public sealed class DeadLetterQueueMonitor
                                 cancellationToken);
 
                 _logger.LogInformation(
-                    "RabbitMQ DLQ monitor connected successfully.");
+                    ConnectionEstablishedEvent,
+                    "RabbitMQ DLQ monitor connected successfully. Module: {Module}, Client: {Client}.",
+                    "DeadLetterQueueMonitoring",
+                    clientName);
 
                 return;
             }
@@ -146,11 +231,13 @@ public sealed class DeadLetterQueueMonitor
                     exception;
 
                 _logger.LogWarning(
-                    exception,
-                    "DLQ monitor RabbitMQ connection "
-                    + "attempt {Attempt}/{MaximumAttempts} failed.",
+                    ConnectionAttemptFailedEvent,
+                    "DLQ monitor RabbitMQ connection attempt failed. Module: {Module}, Client: {Client}, Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}, FailureType: {FailureType}.",
+                    "DeadLetterQueueMonitoring",
+                    clientName,
                     attempt,
-                    _options.ConnectionRetryCount);
+                    _options.ConnectionRetryCount,
+                    exception.GetType().Name);
 
                 if (attempt >=
                     _options.ConnectionRetryCount)
@@ -179,8 +266,9 @@ public sealed class DeadLetterQueueMonitor
             !_channel.IsOpen)
         {
             _logger.LogWarning(
-                "DLQ monitoring skipped because "
-                + "the RabbitMQ channel is not open.");
+                MonitoringSkippedEvent,
+                "DLQ monitoring skipped because the RabbitMQ channel is not open. Module: {Module}.",
+                "DeadLetterQueueMonitoring");
 
             return;
         }
@@ -220,11 +308,9 @@ public sealed class DeadLetterQueueMonitor
             messageCount > 0)
         {
             _logger.LogWarning(
-                "RabbitMQ DLQ contains messages. "
-                + "QueueType: {QueueType}, "
-                + "Queue: {Queue}, "
-                + "MessageCount: {MessageCount}, "
-                + "ConsumerCount: {ConsumerCount}.",
+                MessagesDetectedEvent,
+                "RabbitMQ DLQ contains messages. Module: {Module}, QueueType: {QueueType}, Queue: {Queue}, MessageCount: {MessageCount}, ConsumerCount: {ConsumerCount}.",
+                "DeadLetterQueueMonitoring",
                 queueType,
                 queueName,
                 messageCount,
@@ -234,10 +320,9 @@ public sealed class DeadLetterQueueMonitor
         }
 
         _logger.LogDebug(
-            "RabbitMQ DLQ health check completed. "
-            + "QueueType: {QueueType}, "
-            + "Queue: {Queue}, "
-            + "MessageCount: {MessageCount}.",
+            HealthCheckCompletedEvent,
+            "RabbitMQ DLQ health check completed. Module: {Module}, QueueType: {QueueType}, Queue: {Queue}, MessageCount: {MessageCount}.",
+            "DeadLetterQueueMonitoring",
             queueType,
             queueName,
             messageCount);
@@ -247,7 +332,9 @@ public sealed class DeadLetterQueueMonitor
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Stopping RabbitMQ DLQ monitor.");
+            MonitoringStopRequestedEvent,
+            "Stopping RabbitMQ DLQ monitor. Module: {Module}.",
+            "DeadLetterQueueMonitoring");
 
         await base.StopAsync(
             cancellationToken);
@@ -272,9 +359,10 @@ public sealed class DeadLetterQueueMonitor
             catch (Exception exception)
             {
                 _logger.LogWarning(
+                    ChannelCloseFailedEvent,
                     exception,
-                    "DLQ monitoring channel could not "
-                    + "be closed cleanly.");
+                    "DLQ monitoring channel could not be closed cleanly. Module: {Module}.",
+                    "DeadLetterQueueMonitoring");
             }
 
             await _channel.DisposeAsync();
@@ -297,9 +385,10 @@ public sealed class DeadLetterQueueMonitor
             catch (Exception exception)
             {
                 _logger.LogWarning(
+                    ConnectionCloseFailedEvent,
                     exception,
-                    "DLQ monitoring connection could not "
-                    + "be closed cleanly.");
+                    "DLQ monitoring connection could not be closed cleanly. Module: {Module}.",
+                    "DeadLetterQueueMonitoring");
             }
 
             await _connection.DisposeAsync();

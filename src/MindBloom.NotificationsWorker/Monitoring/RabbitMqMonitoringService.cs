@@ -8,6 +8,102 @@ public sealed class RabbitMqMonitoringService
     : BackgroundService,
       IAsyncDisposable
 {
+    private static readonly EventId
+    MonitoringStartedEvent =
+        new(
+            4600,
+            "RabbitMqMonitoringStarted");
+
+    private static readonly EventId
+        MonitoringStoppingEvent =
+            new(
+                4601,
+                "RabbitMqMonitoringStopping");
+
+    private static readonly EventId
+        MonitoringFailedEvent =
+            new(
+                4602,
+                "RabbitMqMonitoringFailed");
+
+    private static readonly EventId
+        ConnectionAttemptEvent =
+            new(
+                4610,
+                "RabbitMqMonitoringConnectionAttempt");
+
+    private static readonly EventId
+        ConnectionEstablishedEvent =
+            new(
+                4611,
+                "RabbitMqMonitoringConnectionEstablished");
+
+    private static readonly EventId
+        ConnectionAttemptFailedEvent =
+            new(
+                4612,
+                "RabbitMqMonitoringConnectionAttemptFailed");
+
+    private static readonly EventId
+        MonitoringSkippedEvent =
+            new(
+                4620,
+                "RabbitMqMonitoringSkipped");
+
+    private static readonly EventId
+        MonitoringSnapshotEvent =
+            new(
+                4621,
+                "RabbitMqMonitoringSnapshot");
+
+    private static readonly EventId
+        DeadLetterMessagesDetectedEvent =
+            new(
+                4622,
+                "RabbitMqDeadLetterMessagesDetected");
+
+    private static readonly EventId
+        RetryMessagesDetectedEvent =
+            new(
+                4623,
+                "RabbitMqRetryMessagesDetected");
+
+    private static readonly EventId
+        EmailConsumersMissingEvent =
+            new(
+                4624,
+                "RabbitMqEmailConsumersMissing");
+
+    private static readonly EventId
+        IntegrationConsumersMissingEvent =
+            new(
+                4625,
+                "RabbitMqIntegrationConsumersMissing");
+
+    private static readonly EventId
+        MonitoringStopRequestedEvent =
+            new(
+                4630,
+                "RabbitMqMonitoringStopRequested");
+
+    private static readonly EventId
+        MonitoringStoppedEvent =
+            new(
+                4631,
+                "RabbitMqMonitoringStopped");
+
+    private static readonly EventId
+        ChannelCloseFailedEvent =
+            new(
+                4640,
+                "RabbitMqMonitoringChannelCloseFailed");
+
+    private static readonly EventId
+        ConnectionCloseFailedEvent =
+            new(
+                4641,
+                "RabbitMqMonitoringConnectionCloseFailed");
+
     private readonly RabbitMqOptions
         _options;
 
@@ -69,8 +165,9 @@ public sealed class RabbitMqMonitoringService
                 stoppingToken);
 
             _logger.LogInformation(
-                "RabbitMQ monitoring started. "
-                + "Interval: {IntervalSeconds} seconds.",
+                MonitoringStartedEvent,
+                "RabbitMQ monitoring started. Module: {Module}, IntervalSeconds: {IntervalSeconds}.",
+                "RabbitMQMonitoring",
                 _options
                     .MonitoringIntervalSeconds);
 
@@ -92,13 +189,17 @@ public sealed class RabbitMqMonitoringService
                 .IsCancellationRequested)
         {
             _logger.LogInformation(
-                "RabbitMQ monitoring is stopping.");
+                MonitoringStoppingEvent,
+                "RabbitMQ monitoring is stopping. Module: {Module}.",
+                "RabbitMQMonitoring");
         }
         catch (Exception exception)
         {
             _logger.LogCritical(
-                exception,
-                "RabbitMQ monitoring stopped unexpectedly.");
+                MonitoringFailedEvent,
+                "RabbitMQ monitoring stopped unexpectedly. Module: {Module}, FailureType: {FailureType}.",
+                "RabbitMQMonitoring",
+                exception.GetType().Name);
 
             throw;
         }
@@ -129,8 +230,12 @@ public sealed class RabbitMqMonitoringService
             try
             {
                 _logger.LogInformation(
-                    "Connecting RabbitMQ monitoring service. "
-                    + "Attempt {Attempt}/{MaximumAttempts}.",
+                    ConnectionAttemptEvent,
+                    "RabbitMQ monitoring connection attempt. Module: {Module}, Client: {Client}, Host: {HostName}, Port: {Port}, Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
+                    "RabbitMQMonitoring",
+                    clientName,
+                    _options.HostName,
+                    _options.Port,
                     attempt,
                     _options.ConnectionRetryCount);
 
@@ -147,7 +252,10 @@ public sealed class RabbitMqMonitoringService
                                 cancellationToken);
 
                 _logger.LogInformation(
-                    "RabbitMQ monitoring connection established successfully.");
+    ConnectionEstablishedEvent,
+    "RabbitMQ monitoring connection established successfully. Module: {Module}, Client: {Client}.",
+    "RabbitMQMonitoring",
+    clientName);
 
                 return;
             }
@@ -163,11 +271,13 @@ public sealed class RabbitMqMonitoringService
                     exception;
 
                 _logger.LogWarning(
-                    exception,
-                    "RabbitMQ monitoring connection "
-                    + "attempt {Attempt}/{MaximumAttempts} failed.",
+                    ConnectionAttemptFailedEvent,
+                    "RabbitMQ monitoring connection attempt failed. Module: {Module}, Client: {Client}, Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}, FailureType: {FailureType}.",
+                    "RabbitMQMonitoring",
+                    clientName,
                     attempt,
-                    _options.ConnectionRetryCount);
+                    _options.ConnectionRetryCount,
+                    exception.GetType().Name);
 
                 if (attempt >=
                     _options.ConnectionRetryCount)
@@ -195,7 +305,9 @@ public sealed class RabbitMqMonitoringService
             !_channel.IsOpen)
         {
             _logger.LogWarning(
-                "RabbitMQ monitoring skipped because the channel is not open.");
+                MonitoringSkippedEvent,
+                "RabbitMQ monitoring skipped because the channel is not open. Module: {Module}.",
+                "RabbitMQMonitoring");
 
             return;
         }
@@ -266,19 +378,9 @@ public sealed class RabbitMqMonitoringService
             integrationRetryMessages;
 
         _logger.LogInformation(
-            "RabbitMQ monitoring snapshot. "
-            + "EmailQueueLength: {EmailQueueLength}, "
-            + "EmailConsumers: {EmailConsumers}, "
-            + "IntegrationQueueLength: {IntegrationQueueLength}, "
-            + "IntegrationConsumers: {IntegrationConsumers}, "
-            + "EmailRetryQueueMessages: {EmailRetryQueueMessages}, "
-            + "IntegrationRetryQueueMessages: {IntegrationRetryQueueMessages}, "
-            + "EmailDlqMessages: {EmailDlqMessages}, "
-            + "IntegrationDlqMessages: {IntegrationDlqMessages}, "
-            + "FailedMessagesTotal: {FailedMessagesTotal}, "
-            + "RetryCountTotal: {RetryCountTotal}, "
-            + "SuccessCountTotal: {SuccessCountTotal}, "
-            + "ThroughputPerMinute: {ThroughputPerMinute:F2}.",
+            MonitoringSnapshotEvent,
+            "RabbitMQ monitoring snapshot. Module: {Module}, EmailQueueLength: {EmailQueueLength}, EmailConsumers: {EmailConsumers}, IntegrationQueueLength: {IntegrationQueueLength}, IntegrationConsumers: {IntegrationConsumers}, EmailRetryQueueMessages: {EmailRetryQueueMessages}, IntegrationRetryQueueMessages: {IntegrationRetryQueueMessages}, EmailDlqMessages: {EmailDlqMessages}, IntegrationDlqMessages: {IntegrationDlqMessages}, FailedMessagesTotal: {FailedMessagesTotal}, RetryCountTotal: {RetryCountTotal}, SuccessCountTotal: {SuccessCountTotal}, ThroughputPerMinute: {ThroughputPerMinute}.",
+            "RabbitMQMonitoring",
             emailQueue.MessageCount,
             emailQueue.ConsumerCount,
             integrationQueue.MessageCount,
@@ -290,34 +392,43 @@ public sealed class RabbitMqMonitoringService
             _metrics.FailedMessages,
             _metrics.RetryCount,
             _metrics.SuccessfulMessages,
-            throughputPerMinute);
+            Math.Round(
+                throughputPerMinute,
+                2));
 
         if (failedMessagesInQueues > 0)
         {
             _logger.LogWarning(
-                "RabbitMQ contains failed messages in DLQ. "
-                + "Total DLQ messages: {FailedMessagesInQueues}.",
+                DeadLetterMessagesDetectedEvent,
+                "RabbitMQ contains failed messages in DLQ. Module: {Module}, FailedMessagesInQueues: {FailedMessagesInQueues}.",
+                "RabbitMQMonitoring",
                 failedMessagesInQueues);
         }
 
         if (totalRetryMessagesInQueues > 0)
         {
             _logger.LogWarning(
-                "RabbitMQ currently contains {RetryMessages} message(s) waiting in retry queues.",
+                RetryMessagesDetectedEvent,
+                "RabbitMQ currently contains messages waiting in retry queues. Module: {Module}, RetryMessages: {RetryMessages}.",
+                "RabbitMQMonitoring",
                 totalRetryMessagesInQueues);
         }
 
         if (emailQueue.ConsumerCount == 0)
         {
             _logger.LogWarning(
-                "RabbitMQ email queue {Queue} currently has no active consumers.",
+                EmailConsumersMissingEvent,
+                "RabbitMQ email queue currently has no active consumers. Module: {Module}, Queue: {Queue}.",
+                "RabbitMQMonitoring",
                 _options.EmailQueue);
         }
 
         if (integrationQueue.ConsumerCount == 0)
         {
             _logger.LogWarning(
-                "RabbitMQ integration event queue {Queue} currently has no active consumers.",
+                IntegrationConsumersMissingEvent,
+                "RabbitMQ integration event queue currently has no active consumers. Module: {Module}, Queue: {Queue}.",
+                "RabbitMQMonitoring",
                 _options.IntegrationEventQueue);
         }
     }
@@ -413,7 +524,9 @@ public sealed class RabbitMqMonitoringService
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Stopping RabbitMQ monitoring service.");
+            MonitoringStopRequestedEvent,
+            "Stopping RabbitMQ monitoring service. Module: {Module}.",
+            "RabbitMQMonitoring");
 
         await base.StopAsync(
             cancellationToken);
@@ -421,7 +534,9 @@ public sealed class RabbitMqMonitoringService
         await DisposeRabbitMqResourcesAsync();
 
         _logger.LogInformation(
-            "RabbitMQ monitoring service stopped successfully.");
+            MonitoringStoppedEvent,
+            "RabbitMQ monitoring service stopped successfully. Module: {Module}.",
+            "RabbitMQMonitoring");
     }
 
     private async Task
@@ -441,8 +556,10 @@ public sealed class RabbitMqMonitoringService
             catch (Exception exception)
             {
                 _logger.LogWarning(
-                    exception,
-                    "RabbitMQ monitoring channel could not be closed cleanly.");
+    ChannelCloseFailedEvent,
+    exception,
+    "RabbitMQ monitoring channel could not be closed cleanly. Module: {Module}.",
+    "RabbitMQMonitoring");
             }
 
             await _channel.DisposeAsync();
@@ -465,8 +582,10 @@ public sealed class RabbitMqMonitoringService
             catch (Exception exception)
             {
                 _logger.LogWarning(
-                    exception,
-                    "RabbitMQ monitoring connection could not be closed cleanly.");
+     ConnectionCloseFailedEvent,
+     exception,
+     "RabbitMQ monitoring connection could not be closed cleanly. Module: {Module}.",
+     "RabbitMQMonitoring");
             }
 
             await _connection.DisposeAsync();

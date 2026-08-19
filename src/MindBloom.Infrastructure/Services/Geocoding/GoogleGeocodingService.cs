@@ -7,6 +7,42 @@ namespace MindBloom.Infrastructure.Services.Geocoding;
 
 public sealed class GoogleGeocodingService : IGeocodingService
 {
+    private static readonly EventId
+    ApiKeyMissingEvent =
+        new(
+            5000,
+            "GeocodingApiKeyMissing");
+
+    private static readonly EventId
+        HttpStatusFailureEvent =
+            new(
+                5001,
+                "GeocodingHttpStatusFailure");
+
+    private static readonly EventId
+        ApiStatusFailureEvent =
+            new(
+                5002,
+                "GeocodingApiStatusFailure");
+
+    private static readonly EventId
+        RequestTimeoutEvent =
+            new(
+                5003,
+                "GeocodingRequestTimeout");
+
+    private static readonly EventId
+        HttpRequestFailedEvent =
+            new(
+                5004,
+                "GeocodingHttpRequestFailed");
+
+    private static readonly EventId
+        UnexpectedFailureEvent =
+            new(
+                5005,
+                "GeocodingUnexpectedFailure");
+
     private readonly HttpClient _httpClient;
     private readonly ILogger<GoogleGeocodingService> _logger;
 
@@ -30,7 +66,9 @@ public sealed class GoogleGeocodingService : IGeocodingService
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             _logger.LogWarning(
-                "Google Maps API key is not configured. Geocoding was skipped.");
+                ApiKeyMissingEvent,
+                "Google Maps API key is not configured. Geocoding was skipped. Module: {Module}.",
+                "Geocoding");
 
             return GeocodingResult.Failure(
                 "Google Maps API key is not configured.");
@@ -78,8 +116,10 @@ public sealed class GoogleGeocodingService : IGeocodingService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning(
-                    "Google Geocoding API returned HTTP status {StatusCode}.",
-                    response.StatusCode);
+                    HttpStatusFailureEvent,
+                    "Google Geocoding API returned unsuccessful HTTP status. Module: {Module}, StatusCode: {StatusCode}.",
+                    "Geocoding",
+                    (int)response.StatusCode);
 
                 return GeocodingResult.Failure(
                     "Geocoding service is currently unavailable.");
@@ -106,7 +146,9 @@ public sealed class GoogleGeocodingService : IGeocodingService
                     : geocodingResponse.ErrorMessage;
 
                 _logger.LogWarning(
-                    "Google Geocoding request failed with status {Status}.",
+                    ApiStatusFailureEvent,
+                    "Google Geocoding request failed. Module: {Module}, GeocodingStatus: {GeocodingStatus}.",
+                    "Geocoding",
                     geocodingResponse.Status);
 
                 return GeocodingResult.Failure(message);
@@ -129,7 +171,9 @@ public sealed class GoogleGeocodingService : IGeocodingService
             when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(
-                "Google Geocoding request timed out.");
+                RequestTimeoutEvent,
+                "Google Geocoding request timed out. Module: {Module}.",
+                "Geocoding");
 
             return GeocodingResult.Failure(
                 "The geocoding request timed out.");
@@ -137,8 +181,13 @@ public sealed class GoogleGeocodingService : IGeocodingService
         catch (HttpRequestException exception)
         {
             _logger.LogError(
-                exception,
-                "Google Geocoding HTTP request failed.");
+                HttpRequestFailedEvent,
+                "Google Geocoding HTTP request failed. Module: {Module}, FailureType: {FailureType}, StatusCode: {StatusCode}.",
+                "Geocoding",
+                exception.GetType().Name,
+                exception.StatusCode.HasValue
+                    ? (int)exception.StatusCode.Value
+                    : null);
 
             return GeocodingResult.Failure(
                 "The geocoding service could not be reached.");
@@ -146,8 +195,10 @@ public sealed class GoogleGeocodingService : IGeocodingService
         catch (Exception exception)
         {
             _logger.LogError(
-                exception,
-                "Unexpected geocoding error.");
+                UnexpectedFailureEvent,
+                "Unexpected geocoding error. Module: {Module}, FailureType: {FailureType}.",
+                "Geocoding",
+                exception.GetType().Name);
 
             return GeocodingResult.Failure(
                 "An unexpected geocoding error occurred.");

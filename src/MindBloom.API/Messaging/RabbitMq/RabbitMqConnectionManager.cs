@@ -8,6 +8,42 @@ namespace MindBloom.API.Messaging.RabbitMq;
 public sealed class RabbitMqConnectionManager
     : IAsyncDisposable
 {
+    private static readonly EventId
+    ConnectionAttemptEvent =
+        new(
+            3000,
+            "RabbitMqConnectionAttempt");
+
+    private static readonly EventId
+        ConnectionEstablishedEvent =
+            new(
+                3001,
+                "RabbitMqConnectionEstablished");
+
+    private static readonly EventId
+        ConnectionAttemptFailedEvent =
+            new(
+                3002,
+                "RabbitMqConnectionAttemptFailed");
+
+    private static readonly EventId
+        ConnectionShutdownEvent =
+            new(
+                3003,
+                "RabbitMqConnectionShutdown");
+
+    private static readonly EventId
+        ConnectionRecoveryFailedEvent =
+            new(
+                3004,
+                "RabbitMqConnectionRecoveryFailed");
+
+    private static readonly EventId
+        ConnectionRecoverySucceededEvent =
+            new(
+                3005,
+                "RabbitMqConnectionRecoverySucceeded");
+
     private readonly RabbitMqOptions
         _options;
 
@@ -107,7 +143,16 @@ public sealed class RabbitMqConnectionManager
             try
             {
                 _logger.LogInformation(
-                    "Connecting API publisher to RabbitMQ at {HostName}:{Port}. Attempt {Attempt}/{MaximumAttempts}.",
+                    ConnectionAttemptEvent,
+                    "RabbitMQ connection attempt. "
+                    + "Module: {Module}, "
+                    + "Client: {Client}, "
+                    + "Host: {HostName}, "
+                    + "Port: {Port}, "
+                    + "Attempt: {Attempt}, "
+                    + "MaximumAttempts: {MaximumAttempts}.",
+                    "RabbitMQ",
+                    _options.PublisherClientName,
                     _options.HostName,
                     _options.Port,
                     attempt,
@@ -136,8 +181,15 @@ public sealed class RabbitMqConnectionManager
                     exception;
 
                 _logger.LogWarning(
+                    ConnectionAttemptFailedEvent,
                     exception,
-                    "RabbitMQ connection attempt {Attempt}/{MaximumAttempts} failed.",
+                    "RabbitMQ connection attempt failed. "
+                    + "Module: {Module}, "
+                    + "Client: {Client}, "
+                    + "Attempt: {Attempt}, "
+                    + "MaximumAttempts: {MaximumAttempts}.",
+                    "RabbitMQ",
+                    _options.PublisherClientName,
                     attempt,
                     _options.ConnectionRetryCount);
 
@@ -178,7 +230,14 @@ public sealed class RabbitMqConnectionManager
         ShutdownEventArgs eventArgs)
     {
         _logger.LogWarning(
-            "RabbitMQ connection was shut down. Reply code: {ReplyCode}. Reason: {Reason}.",
+            ConnectionShutdownEvent,
+            "RabbitMQ connection was shut down. "
+            + "Module: {Module}, "
+            + "Client: {Client}, "
+            + "ReplyCode: {ReplyCode}, "
+            + "Reason: {Reason}.",
+            "RabbitMQ",
+            _options.PublisherClientName,
             eventArgs.ReplyCode,
             eventArgs.ReplyText);
 
@@ -190,8 +249,13 @@ public sealed class RabbitMqConnectionManager
         ConnectionRecoveryErrorEventArgs eventArgs)
     {
         _logger.LogError(
+            ConnectionRecoveryFailedEvent,
             eventArgs.Exception,
-            "RabbitMQ automatic connection recovery failed.");
+            "RabbitMQ automatic connection recovery failed. "
+            + "Module: {Module}, "
+            + "Client: {Client}.",
+            "RabbitMQ",
+            _options.PublisherClientName);
 
         return Task.CompletedTask;
     }
@@ -201,7 +265,12 @@ public sealed class RabbitMqConnectionManager
         AsyncEventArgs eventArgs)
     {
         _logger.LogInformation(
-            "RabbitMQ connection recovery completed successfully.");
+            ConnectionRecoverySucceededEvent,
+            "RabbitMQ connection recovery completed successfully. "
+            + "Module: {Module}, "
+            + "Client: {Client}.",
+            "RabbitMQ",
+            _options.PublisherClientName);
 
         return Task.CompletedTask;
     }

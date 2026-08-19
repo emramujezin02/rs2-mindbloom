@@ -3,19 +3,33 @@ using System.Net.Mail;
 using Microsoft.Extensions.Options;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Infrastructure.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace MindBloom.Infrastructure.Services;
 
 public sealed class EmailService : IEmailService
 {
+    private static readonly EventId
+    EmailSentEvent =
+        new(
+            3700,
+            "EmailSent");
+
     private readonly SmtpSettings
         _settings;
 
+    private readonly ILogger<EmailService>
+        _logger;
+
     public EmailService(
-        IOptions<SmtpSettings> settings)
+        IOptions<SmtpSettings> settings,
+        ILogger<EmailService> logger)
     {
         _settings =
             settings.Value;
+
+        _logger =
+            logger;
     }
 
     public async Task SendAsync(
@@ -79,5 +93,13 @@ public sealed class EmailService : IEmailService
 
         await smtpClient
             .SendMailAsync(mailMessage);
+
+        _logger.LogInformation(
+    EmailSentEvent,
+    "Email sent successfully. Module: {Module}, Provider: {Provider}, Port: {Port}, SslEnabled: {SslEnabled}.",
+    "Email",
+    "SMTP",
+    _settings.Port,
+    _settings.EnableSsl);
     }
 }

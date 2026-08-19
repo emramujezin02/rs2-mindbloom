@@ -9,6 +9,66 @@ namespace MindBloom.NotificationsWorker.Services;
 public sealed class FirebasePushNotificationService
     : IPushNotificationService
 {
+    private static readonly EventId
+    NotificationDisabledEvent =
+        new(
+            3600,
+            "FirebaseNotificationDisabled");
+
+    private static readonly EventId
+        NoActiveTokensEvent =
+            new(
+                3601,
+                "FirebaseNoActiveTokens");
+
+    private static readonly EventId
+        PushStartedEvent =
+            new(
+                3602,
+                "FirebasePushStarted");
+
+    private static readonly EventId
+        PermanentTokenFailureEvent =
+            new(
+                3603,
+                "FirebasePermanentTokenFailure");
+
+    private static readonly EventId
+        InvalidTokensEvent =
+            new(
+                3604,
+                "FirebaseInvalidTokens");
+
+    private static readonly EventId
+        BatchProcessedEvent =
+            new(
+                3605,
+                "FirebaseBatchProcessed");
+
+    private static readonly EventId
+        RetryExhaustedEvent =
+            new(
+                3606,
+                "FirebaseRetryExhausted");
+
+    private static readonly EventId
+        RetryScheduledEvent =
+            new(
+                3607,
+                "FirebaseRetryScheduled");
+
+    private static readonly EventId
+        BatchRetryExhaustedEvent =
+            new(
+                3608,
+                "FirebaseBatchRetryExhausted");
+
+    private static readonly EventId
+        TransientBatchFailureEvent =
+            new(
+                3609,
+                "FirebaseTransientBatchFailure");
+
     private const string SafePushTitle =
     "MindBloom";
 
@@ -120,7 +180,9 @@ public sealed class FirebasePushNotificationService
         if (notificationsEnabled == false)
         {
             _logger.LogInformation(
-                "Push notification skipped because notifications are disabled for user {UserId}.",
+                NotificationDisabledEvent,
+                "Push notification skipped because notifications are disabled. Module: {Module}, UserId: {UserId}.",
+                "PushNotifications",
                 userId);
 
             return;
@@ -141,14 +203,18 @@ public sealed class FirebasePushNotificationService
         if (deviceTokens.Count == 0)
         {
             _logger.LogDebug(
-                "Push notification skipped because user {UserId} has no active FCM tokens.",
+                NoActiveTokensEvent,
+                "Push notification skipped because user has no active FCM tokens. Module: {Module}, UserId: {UserId}.",
+                "PushNotifications",
                 userId);
 
             return;
         }
 
         _logger.LogInformation(
-            "Starting Firebase push notification for user {UserId}. Active token count: {TokenCount}.",
+            PushStartedEvent,
+            "Starting Firebase push notification. Module: {Module}, UserId: {UserId}, TokenCount: {TokenCount}.",
+            "PushNotifications",
             userId,
             deviceTokens.Count);
 
@@ -294,8 +360,10 @@ public sealed class FirebasePushNotificationService
                     }
 
                     _logger.LogError(
+                        PermanentTokenFailureEvent,
                         exception,
-                        "Firebase push notification permanently failed for user {UserId}. Token ID: {TokenId}.",
+                        "Firebase push notification permanently failed. Module: {Module}, UserId: {UserId}, TokenId: {TokenId}.",
+                        "PushNotifications",
                         userId,
                         deviceToken.Id);
                 }
@@ -306,21 +374,20 @@ public sealed class FirebasePushNotificationService
                         invalidTokens);
 
                     _logger.LogWarning(
-                        "Firebase reported {InvalidTokenCount} invalid tokens for user {UserId}. Tokens were deactivated.",
-                        invalidTokens.Count,
-                        userId);
+                        InvalidTokensEvent,
+                        "Firebase reported invalid tokens. Module: {Module}, UserId: {UserId}, InvalidTokenCount: {InvalidTokenCount}. Tokens were deactivated.",
+                        "PushNotifications",
+                        userId,
+                        invalidTokens.Count);
                 }
 
                 await _context.SaveChangesAsync(
                     cancellationToken);
 
                 _logger.LogInformation(
-                    "Firebase push batch processed for user {UserId}. "
-                    + "Success: {SuccessCount}, "
-                    + "Failure: {FailureCount}, "
-                    + "invalid tokens: {InvalidTokenCount}, "
-                    + "transient failures: {TransientFailureCount}, "
-                    + "attempt: {Attempt}.",
+                    BatchProcessedEvent,
+                    "Firebase push batch processed. Module: {Module}, UserId: {UserId}, SuccessCount: {SuccessCount}, FailureCount: {FailureCount}, InvalidTokenCount: {InvalidTokenCount}, TransientFailureCount: {TransientFailureCount}, Attempt: {Attempt}.",
+                    "PushNotifications",
                     userId,
                     response.SuccessCount,
                     response.FailureCount,
@@ -337,9 +404,13 @@ public sealed class FirebasePushNotificationService
                     _options.RetryCount + 1)
                 {
                     _logger.LogError(
-                        "Firebase push notification exhausted retry attempts for user {UserId}. Remaining transient failures: {FailureCount}.",
+                        RetryExhaustedEvent,
+                        "Firebase push notification exhausted retry attempts. Module: {Module}, UserId: {UserId}, RemainingFailureCount: {RemainingFailureCount}, Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
+                        "PushNotifications",
                         userId,
-                        transientFailures.Count);
+                        transientFailures.Count,
+                        attempt,
+                        _options.RetryCount + 1);
 
                     return;
                 }
@@ -352,9 +423,11 @@ public sealed class FirebasePushNotificationService
                         attempt);
 
                 _logger.LogWarning(
-                    "Firebase push notification will retry {TokenCount} transient failures for user {UserId} after {RetryDelaySeconds} seconds. Attempt {Attempt}/{MaximumAttempts}.",
-                    pendingTokens.Count,
+                    RetryScheduledEvent,
+                    "Firebase push notification retry scheduled. Module: {Module}, UserId: {UserId}, TokenCount: {TokenCount}, RetryDelaySeconds: {RetryDelaySeconds}, Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
+                    "PushNotifications",
                     userId,
+                    pendingTokens.Count,
                     retryDelay.TotalSeconds,
                     attempt + 1,
                     _options.RetryCount + 1);
@@ -378,9 +451,13 @@ public sealed class FirebasePushNotificationService
                     _options.RetryCount + 1)
                 {
                     _logger.LogError(
-                        exception,
-                        "Firebase batch sending exhausted all retry attempts for user {UserId}.",
-                        userId);
+                        BatchRetryExhaustedEvent,
+                        "Firebase batch sending exhausted all retry attempts. Module: {Module}, UserId: {UserId}, FailureType: {FailureType}, Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
+                        "PushNotifications",
+                        userId,
+                        exception.GetType().Name,
+                        attempt,
+                        _options.RetryCount + 1);
 
                     throw;
                 }
@@ -390,9 +467,11 @@ public sealed class FirebasePushNotificationService
                         attempt);
 
                 _logger.LogWarning(
-                    exception,
-                    "Transient Firebase batch error for user {UserId}. Retry in {RetryDelaySeconds} seconds. Attempt {Attempt}/{MaximumAttempts}.",
+                    TransientBatchFailureEvent,
+                    "Transient Firebase batch error. Module: {Module}, UserId: {UserId}, FailureType: {FailureType}, RetryDelaySeconds: {RetryDelaySeconds}, Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
+                    "PushNotifications",
                     userId,
+                    exception.GetType().Name,
                     retryDelay.TotalSeconds,
                     attempt + 1,
                     _options.RetryCount + 1);
@@ -407,12 +486,6 @@ public sealed class FirebasePushNotificationService
     private TimeSpan CalculateRetryDelay(
         int attempt)
     {
-        /*
-         * Exponential backoff:
-         *
-         * base 2s:
-         * 2s -> 4s -> 8s ...
-         */
         var multiplier =
             Math.Pow(
                 2,

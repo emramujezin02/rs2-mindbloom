@@ -13,6 +13,48 @@ namespace MindBloom.Infrastructure.Payments;
 
 public sealed class StripeWebhookService
 {
+    private static readonly EventId
+    DuplicateWebhookIgnoredEvent =
+        new(
+            3200,
+            "StripeDuplicateWebhookIgnored");
+
+    private static readonly EventId
+        WebhookTypeIgnoredEvent =
+            new(
+                3201,
+                "StripeWebhookTypeIgnored");
+
+    private static readonly EventId
+        ConcurrentDuplicateWebhookIgnoredEvent =
+            new(
+                3202,
+                "StripeConcurrentDuplicateWebhookIgnored");
+
+    private static readonly EventId
+        RefundPaymentNotFoundEvent =
+            new(
+                3203,
+                "StripeRefundPaymentNotFound");
+
+    private static readonly EventId
+        UnsupportedRefundStatusEvent =
+            new(
+                3204,
+                "StripeUnsupportedRefundStatus");
+
+    private static readonly EventId
+        RefundedChargePaymentNotFoundEvent =
+            new(
+                3205,
+                "StripeRefundedChargePaymentNotFound");
+
+    private static readonly EventId
+        WebhookProcessingFailedEvent =
+            new(
+                3206,
+                "StripeWebhookProcessingFailed");
+
     private const string PaymentCurrency =
         "usd";
 
@@ -75,7 +117,9 @@ public sealed class StripeWebhookService
             true)
         {
             _logger.LogInformation(
-                "Duplicate Stripe webhook event ignored. EventId: {EventId}, EventType: {EventType}.",
+                DuplicateWebhookIgnoredEvent,
+                "Duplicate Stripe webhook event ignored. Module: {Module}, StripeEventId: {StripeEventId}, StripeEventType: {StripeEventType}.",
+                "Payments",
                 stripeEvent.Id,
                 stripeEvent.Type);
 
@@ -173,7 +217,9 @@ public sealed class StripeWebhookService
 
                 default:
                     _logger.LogInformation(
-                        "Stripe webhook event type ignored. EventId: {EventId}, EventType: {EventType}.",
+                        WebhookTypeIgnoredEvent,
+                        "Stripe webhook event type ignored. Module: {Module}, StripeEventId: {StripeEventId}, StripeEventType: {StripeEventType}.",
+                        "Payments",
                         stripeEvent.Id,
                         stripeEvent.Type);
 
@@ -203,13 +249,6 @@ public sealed class StripeWebhookService
                 .RollbackAsync(
                     cancellationToken);
 
-            /*
-             * Possible concurrent delivery of
-             * exactly the same Stripe event.
-             *
-             * The unique StripeEventId index is
-             * the final protection against races.
-             */
             _context.ChangeTracker.Clear();
 
             var duplicate =
@@ -225,7 +264,9 @@ public sealed class StripeWebhookService
             if (duplicate != null)
             {
                 _logger.LogInformation(
-                    "Concurrent duplicate Stripe webhook event ignored. EventId: {EventId}, EventType: {EventType}.",
+                    ConcurrentDuplicateWebhookIgnoredEvent,
+                    "Concurrent duplicate Stripe webhook event ignored. Module: {Module}, StripeEventId: {StripeEventId}, StripeEventType: {StripeEventType}.",
+                    "Payments",
                     stripeEvent.Id,
                     stripeEvent.Type);
 
@@ -252,12 +293,6 @@ public sealed class StripeWebhookService
                 exception,
                 cancellationToken);
 
-            /*
-             * Do not return HTTP 200 when processing
-             * of a supported event fails.
-             *
-             * Stripe should retry delivery.
-             */
             throw;
         }
     }
@@ -289,10 +324,6 @@ public sealed class StripeWebhookService
                 metadata,
                 "clientUserId");
 
-        /*
-         * Membership PaymentIntents are explicitly
-         * tagged by the existing creation flow.
-         */
         if (metadata.TryGetValue(
                 "purchaseType",
                 out var purchaseType) &&
@@ -313,10 +344,6 @@ public sealed class StripeWebhookService
             return;
         }
 
-        /*
-         * Appointment PaymentIntents contain
-         * appointmentId in their existing metadata.
-         */
         if (metadata.ContainsKey(
                 "appointmentId"))
         {
@@ -414,11 +441,6 @@ public sealed class StripeWebhookService
             paymentIntent,
             payment);
 
-        /*
-         * Never downgrade a final successful
-         * or refund state because of an
-         * out-of-order webhook.
-         */
         if (payment.Status is
             PaymentStatus.Paid or
             PaymentStatus.Refunded or
@@ -531,18 +553,12 @@ public sealed class StripeWebhookService
                         paymentIntentId,
                     cancellationToken);
 
-        /*
-         * Trenutni MindBloom refund flow postoji
-         * za appointment payments.
-         *
-         * Ako ovo nije appointment payment,
-         * ne smijemo naslijepo mijenjati drugi
-         * tip finansijskog resursa.
-         */
         if (payment == null)
         {
             _logger.LogInformation(
-                "Stripe refund event does not reference a MindBloom appointment payment. EventId: {EventId}, RefundId: {RefundId}.",
+                RefundPaymentNotFoundEvent,
+                "Stripe refund event does not reference a MindBloom appointment payment. Module: {Module}, StripeEventId: {StripeEventId}, RefundId: {RefundId}.",
+                "Payments",
                 stripeEvent.Id,
                 refund.Id);
 
@@ -608,12 +624,11 @@ public sealed class StripeWebhookService
                 break;
 
             default:
-                /*
-                 * Ne pretpostavljamo uspjeh za
-                 * nepoznat Stripe refund status.
-                 */
+
                 _logger.LogWarning(
-                    "Stripe refund has an unsupported status. RefundId: {RefundId}, Status: {Status}.",
+                    UnsupportedRefundStatusEvent,
+                    "Stripe refund has an unsupported status. Module: {Module}, RefundId: {RefundId}, RefundStatus: {RefundStatus}.",
+                    "Payments",
                     refund.Id,
                     refund.Status);
 
@@ -661,20 +676,15 @@ public sealed class StripeWebhookService
         if (payment == null)
         {
             _logger.LogInformation(
-                "Stripe refunded charge does not reference a MindBloom appointment payment. EventId: {EventId}, ChargeId: {ChargeId}.",
+                RefundedChargePaymentNotFoundEvent,
+                "Stripe refunded charge does not reference a MindBloom appointment payment. Module: {Module}, StripeEventId: {StripeEventId}, ChargeId: {ChargeId}.",
+                "Payments",
                 stripeEvent.Id,
                 charge.Id);
 
             return;
         }
 
-        /*
-         * charge.refunded predstavlja završno
-         * potvrđeno Stripe stanje.
-         *
-         * Ne koristimo frontend signal niti
-         * lokalni pending status kao dokaz.
-         */
         payment.Status =
             PaymentStatus.Refunded;
 
@@ -696,11 +706,7 @@ public sealed class StripeWebhookService
     ResolvePaymentIntentId(
         Refund refund)
     {
-        /*
-         * Stripe.NET može dati povezani
-         * PaymentIntent kroz expandani objekt
-         * ili kroz ID vrijednost.
-         */
+
         if (refund.PaymentIntent != null &&
             !string.IsNullOrWhiteSpace(
                 refund.PaymentIntent.Id))
@@ -739,13 +745,6 @@ public sealed class StripeWebhookService
             ConvertToMinorUnits(
                 payment.Amount);
 
-        /*
-         * Trenutni MindBloom flow radi puni
-         * refund appointment paymenta.
-         *
-         * Zato Stripe refund ne smije biti
-         * veći od originalne naplate.
-         */
         if (refund.Amount >
             expectedAmount)
         {
@@ -927,11 +926,6 @@ public sealed class StripeWebhookService
         Exception exception,
         CancellationToken cancellationToken)
     {
-        /*
-         * The failed transaction may still leave
-         * tracked entities in modified states.
-         * Clear them before writing the audit row.
-         */
         _context.ChangeTracker.Clear();
 
         var webhookEvent =
@@ -988,17 +982,16 @@ public sealed class StripeWebhookService
         }
         catch (DbUpdateException)
         {
-            /*
-             * Another concurrent delivery may
-             * already have created the audit row.
-             * Never expose DB details to Stripe.
-             */
+
         }
 
         _logger.LogWarning(
-            "Stripe webhook processing failed. EventId: {EventId}, EventType: {EventType}.",
+            WebhookProcessingFailedEvent,
+            "Stripe webhook processing failed and was recorded for retry. Module: {Module}, StripeEventId: {StripeEventId}, StripeEventType: {StripeEventType}, FailureType: {FailureType}.",
+            "Payments",
             stripeEvent.Id,
-            stripeEvent.Type);
+            stripeEvent.Type,
+            exception.GetType().Name);
     }
 
     private static string

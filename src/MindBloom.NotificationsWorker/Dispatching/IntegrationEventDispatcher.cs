@@ -15,6 +15,18 @@ namespace MindBloom.NotificationsWorker.Dispatching;
 public sealed class IntegrationEventDispatcher
     : IIntegrationEventDispatcher
 {
+    private static readonly EventId
+    DispatchStartedEvent =
+        new(
+            4400,
+            "IntegrationEventDispatchStarted");
+
+    private static readonly EventId
+        DispatchCompletedEvent =
+            new(
+                4401,
+                "IntegrationEventDispatchCompleted");
+
     private readonly IServiceScopeFactory
         _scopeFactory;
 
@@ -146,10 +158,9 @@ public sealed class IntegrationEventDispatcher
                         TEvent>>();
 
         _logger.LogInformation(
-            "Dispatching integration event "
-            + "{EventType}. Event ID: {EventId}, "
-            + "correlation ID: {CorrelationId}, "
-            + "version: {EventVersion}.",
+            DispatchStartedEvent,
+            "Dispatching integration event. Module: {Module}, EventType: {EventType}, IntegrationEventId: {IntegrationEventId}, CorrelationId: {CorrelationId}, EventVersion: {EventVersion}.",
+            "IntegrationEventDispatcher",
             typeof(TEvent).Name,
             integrationEvent.EventId,
             integrationEvent.CorrelationId,
@@ -160,10 +171,11 @@ public sealed class IntegrationEventDispatcher
             cancellationToken);
 
         _logger.LogInformation(
-            "Integration event {EventType} "
-            + "processed successfully. "
-            + "Event ID: {EventId}.",
+            DispatchCompletedEvent,
+            "Integration event processed successfully. Module: {Module}, EventType: {EventType}, IntegrationEventId: {IntegrationEventId}, CorrelationId: {CorrelationId}.",
+            "IntegrationEventDispatcher",
             typeof(TEvent).Name,
-            integrationEvent.EventId);
+            integrationEvent.EventId,
+            integrationEvent.CorrelationId);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 
 namespace MindBloom.API.Middlewares;
@@ -11,17 +12,34 @@ public sealed partial class CorrelationIdMiddleware
     private const int MaximumCorrelationIdLength =
         100;
 
+    private static readonly EventId
+        RequestStartedEvent =
+            new(
+                1000,
+                "RequestStarted");
+
+    private static readonly EventId
+        RequestCompletedEvent =
+            new(
+                1001,
+                "RequestCompleted");
+
     private readonly RequestDelegate _next;
 
     private readonly ILogger<CorrelationIdMiddleware>
         _logger;
 
+    private readonly IHostEnvironment
+        _environment;
+
     public CorrelationIdMiddleware(
         RequestDelegate next,
-        ILogger<CorrelationIdMiddleware> logger)
+        ILogger<CorrelationIdMiddleware> logger,
+        IHostEnvironment environment)
     {
         _next = next;
         _logger = logger;
+        _environment = environment;
     }
 
     public async Task InvokeAsync(
@@ -47,47 +65,61 @@ public sealed partial class CorrelationIdMiddleware
                 return Task.CompletedTask;
             });
 
-        using (_logger.BeginScope(
-                   new Dictionary<string, object>
-                   {
-                       ["CorrelationId"] =
-                           correlationId
-                   }))
-        {
-            _logger.LogInformation(
-                "Request started. Method: {RequestMethod}, Path: {RequestPath}.",
-                context.Request.Method,
-                context.Request.Path);
+        var userId =
+            context.User
+                .FindFirst(
+                    ClaimTypes.NameIdentifier)?
+                .Value;
 
-            try
-            {
-                await _next(context);
+        using var scope =
+            _logger.BeginScope(
+                new Dictionary<string, object?>
+                {
+                    ["CorrelationId"] =
+                        correlationId,
 
-                _logger.LogInformation(
-                    "Request completed. Method: {RequestMethod}, Path: {RequestPath}, StatusCode: {StatusCode}.",
-                    context.Request.Method,
-                    context.Request.Path,
-                    context.Response.StatusCode);
-            }
-            catch (Exception exception)
-            {
-                _logger.LogError(
-                    exception,
-                    "Request failed. Method: {RequestMethod}, Path: {RequestPath}.",
-                    context.Request.Method,
-                    context.Request.Path);
+                    ["RequestPath"] =
+                        context.Request.Path.Value
+                        ?? string.Empty,
 
-                throw;
-            }
-        }
+                    ["RequestMethod"] =
+                        context.Request.Method,
+
+                    ["Module"] =
+                        "API",
+
+                    ["Environment"] =
+                        _environment
+                            .EnvironmentName
+                });
+
+        _logger.LogInformation(
+            RequestStartedEvent,
+            "HTTP request started. "
+            + "Method: {RequestMethod}, "
+            + "Path: {RequestPath}.",
+            context.Request.Method,
+            context.Request.Path.Value);
+
+        await _next(context);
+
+        _logger.LogInformation(
+            RequestCompletedEvent,
+            "HTTP request completed. "
+            + "Method: {RequestMethod}, "
+            + "Path: {RequestPath}, "
+            + "StatusCode: {StatusCode}.",
+            context.Request.Method,
+            context.Request.Path.Value,
+            context.Response.StatusCode);
     }
 
     private static readonly Regex
-    CorrelationIdPattern =
-        new(
-            "^[A-Za-z0-9._-]+$",
-            RegexOptions.CultureInvariant |
-            RegexOptions.Compiled);
+        CorrelationIdPattern =
+            new(
+                "^[A-Za-z0-9._-]+$",
+                RegexOptions.CultureInvariant |
+                RegexOptions.Compiled);
 
     private static string ResolveCorrelationId(
         HttpContext context)
@@ -97,7 +129,8 @@ public sealed partial class CorrelationIdMiddleware
                 out var headerValues))
         {
             var providedCorrelationId =
-                headerValues.FirstOrDefault()
+                headerValues
+                    .FirstOrDefault()
                     ?.Trim();
 
             if (IsValidCorrelationId(
@@ -129,6 +162,4 @@ public sealed partial class CorrelationIdMiddleware
         return CorrelationIdPattern
             .IsMatch(correlationId);
     }
-
-
 }

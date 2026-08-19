@@ -9,6 +9,24 @@ namespace MindBloom.API.Middlewares;
 
 public sealed class AdminAuditMiddleware
 {
+    private static readonly EventId
+    PreviousSnapshotFailedEvent =
+        new(
+            2200,
+            "AdminAuditPreviousSnapshotFailed");
+
+    private static readonly EventId
+        NewSnapshotFailedEvent =
+            new(
+                2201,
+                "AdminAuditNewSnapshotFailed");
+
+    private static readonly EventId
+        AuditWriteFailedEvent =
+            new(
+                2202,
+                "AdminAuditWriteFailed");
+
     private const int MaximumRequestBodyLength =
         32_000;
 
@@ -72,8 +90,12 @@ public sealed class AdminAuditMiddleware
         catch (Exception exception)
         {
             _logger.LogWarning(
+                PreviousSnapshotFailedEvent,
                 exception,
-                "Previous admin audit snapshot could not be created. EntityType: {EntityType}, EntityId: {EntityId}, CorrelationId: {CorrelationId}.",
+                "Previous admin audit snapshot could not be created. "
+                + "EntityType: {EntityType}, "
+                + "EntityId: {EntityId}, "
+                + "CorrelationId: {CorrelationId}.",
                 entityType,
                 entityId,
                 context.TraceIdentifier);
@@ -125,23 +147,18 @@ public sealed class AdminAuditMiddleware
             catch (Exception exception)
             {
                 _logger.LogWarning(
+                    NewSnapshotFailedEvent,
                     exception,
-                    "New admin audit snapshot could not be created. EntityType: {EntityType}, EntityId: {EntityId}, CorrelationId: {CorrelationId}.",
+                    "New admin audit snapshot could not be created. "
+                    + "EntityType: {EntityType}, "
+                    + "EntityId: {EntityId}, "
+                    + "CorrelationId: {CorrelationId}.",
                     entityType,
                     entityId,
                     context.TraceIdentifier);
             }
         }
 
-        /*
-         * Kod create akcija često nema ID entiteta
-         * u ruti. U tom slučaju koristimo samo
-         * sanitizovani request kao sigurnu novu
-         * vrijednost.
-         *
-         * Također služi kao fallback ako snapshot
-         * nije dostupan.
-         */
         if (string.IsNullOrWhiteSpace(
                 newValues))
         {
@@ -152,12 +169,6 @@ public sealed class AdminAuditMiddleware
                         context.Request.Path);
         }
 
-        /*
-         * Snapshot Reader koristi isključivo
-         * whitelist polja, ali ga dodatno
-         * provlačimo kroz sanitizer kako bi
-         * zaštita ostala centralizovana.
-         */
         previousValues =
             AdminAuditDataSanitizer
                 .SanitizeJson(
@@ -229,15 +240,7 @@ public sealed class AdminAuditMiddleware
 
         try
         {
-            /*
-             * Ne koristimo RequestAborted za
-             * samo spremanje audita nakon što je
-             * glavni request završen.
-             *
-             * Ako je klijent zatvorio vezu nakon
-             * izvršene akcije, audit ipak treba
-             * pokušati sačuvati.
-             */
+
             await auditService.WriteAsync(
                 auditRequest,
                 CancellationToken.None);
@@ -245,8 +248,10 @@ public sealed class AdminAuditMiddleware
         catch (Exception exception)
         {
             _logger.LogError(
+                AuditWriteFailedEvent,
                 exception,
-                "Admin audit log could not be saved. CorrelationId: {CorrelationId}.",
+                "Admin audit log could not be saved. "
+                + "CorrelationId: {CorrelationId}.",
                 context.TraceIdentifier);
         }
     }

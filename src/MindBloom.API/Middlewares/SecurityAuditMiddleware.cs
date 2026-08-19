@@ -6,6 +6,12 @@ namespace MindBloom.API.Middlewares;
 
 public sealed class SecurityAuditMiddleware
 {
+    private static readonly EventId
+    SecurityAuditWriteFailedEvent =
+        new(
+            2300,
+            "SecurityAuditWriteFailed");
+
     private readonly RequestDelegate
         _next;
 
@@ -41,12 +47,6 @@ public sealed class SecurityAuditMiddleware
             return;
         }
 
-        /*
-         * Login endpoint sam pravi precizniji
-         * LoginFailed audit.
-         *
-         * Ne želimo dupli audit za login.
-         */
         if (IsAuthenticationEndpoint(
                 context.Request.Path))
         {
@@ -114,26 +114,23 @@ public sealed class SecurityAuditMiddleware
             when (context.RequestAborted
                 .IsCancellationRequested)
         {
-            /*
-             * Client je prekinuo request.
-             * Nema dodatne akcije.
-             */
+
         }
         catch (Exception exception)
         {
-            /*
-             * Audit failure ne smije promijeniti
-             * originalni 401/403 odgovor.
-             *
-             * Također ne logujemo Authorization
-             * header niti request body.
-             */
             _logger.LogError(
+                SecurityAuditWriteFailedEvent,
                 exception,
-                "Security audit could not be written for denied request. StatusCode: {StatusCode}, Method: {Method}, Path: {Path}, CorrelationId: {CorrelationId}.",
+                "Security audit could not be written for denied request. "
+                + "Module: {Module}, "
+                + "StatusCode: {StatusCode}, "
+                + "Method: {Method}, "
+                + "Path: {Path}, "
+                + "CorrelationId: {CorrelationId}.",
+                "SecurityAudit",
                 context.Response.StatusCode,
                 context.Request.Method,
-                context.Request.Path,
+                context.Request.Path.Value,
                 context.TraceIdentifier);
         }
     }

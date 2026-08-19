@@ -7,6 +7,31 @@ namespace MindBloom.API.Middlewares;
 
 public sealed class GlobalExceptionMiddleware
 {
+
+    private static readonly EventId
+    UnhandledExceptionEvent =
+        new(
+            2000,
+            "UnhandledException");
+
+    private static readonly EventId
+        AuthorizationExceptionEvent =
+            new(
+                2001,
+                "AuthorizationException");
+
+    private static readonly EventId
+        HandledApplicationExceptionEvent =
+            new(
+                2002,
+                "HandledApplicationException");
+
+    private static readonly EventId
+        ResponseAlreadyStartedEvent =
+            new(
+                2003,
+                "ResponseAlreadyStarted");
+
     private static readonly JsonSerializerOptions
         JsonOptions =
             new()
@@ -60,9 +85,10 @@ public sealed class GlobalExceptionMiddleware
         if (context.Response.HasStarted)
         {
             _logger.LogWarning(
-                exception,
-                "The response has already started. "
-                + "The exception middleware cannot write an error response.");
+    ResponseAlreadyStartedEvent,
+    exception,
+    "The response has already started. "
+    + "The exception middleware cannot write an error response.");
 
             throw exception;
         }
@@ -223,33 +249,39 @@ public sealed class GlobalExceptionMiddleware
     }
 
     private void LogException(
-        Exception exception,
-        int statusCode,
-        HttpContext context)
+     Exception exception,
+     int statusCode,
+     HttpContext context)
     {
         var requestPath =
-            context.Request.Path;
+            context.Request.Path.Value
+            ?? string.Empty;
 
         var requestMethod =
             context.Request.Method;
 
-        var traceId =
+        var correlationId =
             context.TraceIdentifier;
 
         if (statusCode >=
             StatusCodes.Status500InternalServerError)
         {
             _logger.LogError(
+                UnhandledExceptionEvent,
                 exception,
                 "Unhandled server exception. "
                 + "Method: {RequestMethod}, "
                 + "Path: {RequestPath}, "
-                + "TraceId: {TraceId}, "
-                + "StatusCode: {StatusCode}",
+                + "CorrelationId: {CorrelationId}, "
+                + "StatusCode: {StatusCode}, "
+                + "Module: {Module}, "
+                + "Environment: {Environment}.",
                 requestMethod,
                 requestPath,
-                traceId,
-                statusCode);
+                correlationId,
+                statusCode,
+                "API",
+                _environment.EnvironmentName);
 
             return;
         }
@@ -260,31 +292,35 @@ public sealed class GlobalExceptionMiddleware
                 StatusCodes.Status403Forbidden)
         {
             _logger.LogWarning(
-                exception,
-                "Authorization exception. "
+                AuthorizationExceptionEvent,
+                "Authorization request failed. "
                 + "Method: {RequestMethod}, "
                 + "Path: {RequestPath}, "
-                + "TraceId: {TraceId}, "
-                + "StatusCode: {StatusCode}",
+                + "CorrelationId: {CorrelationId}, "
+                + "StatusCode: {StatusCode}, "
+                + "ExceptionType: {ExceptionType}.",
                 requestMethod,
                 requestPath,
-                traceId,
-                statusCode);
+                correlationId,
+                statusCode,
+                exception.GetType().Name);
 
             return;
         }
 
         _logger.LogInformation(
-            exception,
+            HandledApplicationExceptionEvent,
             "Handled application exception. "
             + "Method: {RequestMethod}, "
             + "Path: {RequestPath}, "
-            + "TraceId: {TraceId}, "
-            + "StatusCode: {StatusCode}",
+            + "CorrelationId: {CorrelationId}, "
+            + "StatusCode: {StatusCode}, "
+            + "ExceptionType: {ExceptionType}.",
             requestMethod,
             requestPath,
-            traceId,
-            statusCode);
+            correlationId,
+            statusCode,
+            exception.GetType().Name);
     }
 
     private static IDictionary<string, string[]>

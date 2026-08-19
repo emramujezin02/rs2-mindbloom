@@ -11,6 +11,30 @@ public sealed class RabbitMqIntegrationEventPublisher
     : IIntegrationEventPublisher,
       IAsyncDisposable
 {
+    private static readonly EventId
+    PublishAttemptEvent =
+        new(
+            3100,
+            "IntegrationEventPublishAttempt");
+
+    private static readonly EventId
+        PublishSucceededEvent =
+            new(
+                3101,
+                "IntegrationEventPublishSucceeded");
+
+    private static readonly EventId
+        PublishRetryEvent =
+            new(
+                3102,
+                "IntegrationEventPublishRetry");
+
+    private static readonly EventId
+        PublishFailedEvent =
+            new(
+                3103,
+                "IntegrationEventPublishFailed");
+
     private const int MaximumPublishAttempts =
         3;
 
@@ -146,7 +170,17 @@ public sealed class RabbitMqIntegrationEventPublisher
                         integrationEvent);
 
                 _logger.LogInformation(
-                    "Publishing integration event {EventId}. Type: {EventType}, version: {EventVersion}, correlation ID: {CorrelationId}, routing key: {RoutingKey}, attempt: {Attempt}/{MaximumAttempts}.",
+                    PublishAttemptEvent,
+                    "Publishing integration event. "
+                    + "Module: {Module}, "
+                    + "EventId: {IntegrationEventId}, "
+                    + "EventType: {EventType}, "
+                    + "EventVersion: {EventVersion}, "
+                    + "CorrelationId: {CorrelationId}, "
+                    + "RoutingKey: {RoutingKey}, "
+                    + "Attempt: {Attempt}, "
+                    + "MaximumAttempts: {MaximumAttempts}.",
+                    "RabbitMQ",
                     integrationEvent.EventId,
                     integrationEvent
                         .GetType()
@@ -156,6 +190,7 @@ public sealed class RabbitMqIntegrationEventPublisher
                     routingKey,
                     attempt,
                     MaximumPublishAttempts);
+
 
                 await channel.BasicPublishAsync(
                     exchange:
@@ -178,12 +213,19 @@ public sealed class RabbitMqIntegrationEventPublisher
                         cancellationToken);
 
                 _logger.LogInformation(
-                    "Integration event {EventId} published and confirmed successfully. Type: {EventType}, correlation ID: {CorrelationId}.",
+                    PublishSucceededEvent,
+                    "Integration event published successfully. "
+                    + "Module: {Module}, "
+                    + "EventId: {IntegrationEventId}, "
+                    + "EventType: {EventType}, "
+                    + "CorrelationId: {CorrelationId}.",
+                    "RabbitMQ",
                     integrationEvent.EventId,
                     integrationEvent
                         .GetType()
                         .Name,
                     integrationEvent.CorrelationId);
+
 
                 return;
             }
@@ -199,11 +241,25 @@ public sealed class RabbitMqIntegrationEventPublisher
                     exception;
 
                 _logger.LogWarning(
-                    exception,
-                    "RabbitMQ integration event publish attempt {Attempt}/{MaximumAttempts} failed for event {EventId}.",
+                    PublishRetryEvent,
+                    "RabbitMQ integration event publish attempt failed. "
+                    + "Module: {Module}, "
+                    + "EventId: {IntegrationEventId}, "
+                    + "EventType: {EventType}, "
+                    + "CorrelationId: {CorrelationId}, "
+                    + "Attempt: {Attempt}, "
+                    + "MaximumAttempts: {MaximumAttempts}, "
+                    + "ExceptionType: {ExceptionType}.",
+                    "RabbitMQ",
+                    integrationEvent.EventId,
+                    integrationEvent
+                        .GetType()
+                        .Name,
+                    integrationEvent.CorrelationId,
                     attempt,
                     MaximumPublishAttempts,
-                    integrationEvent.EventId);
+                    exception.GetType().Name);
+
 
                 await ResetChannelAsync();
 
@@ -222,18 +278,6 @@ public sealed class RabbitMqIntegrationEventPublisher
                     cancellationToken);
             }
         }
-
-        _logger.LogError(
-            lastException,
-            "Integration event {EventId} could not be published after {MaximumAttempts} attempts. "
-            + "Type: {EventType}, correlation ID: {CorrelationId}, routing key: {RoutingKey}.",
-            integrationEvent.EventId,
-            MaximumPublishAttempts,
-            integrationEvent
-                .GetType()
-                .Name,
-            integrationEvent.CorrelationId,
-            routingKey);
 
         throw new InvalidOperationException(
             $"Integration event '{integrationEvent.EventId}' could not be published after {MaximumPublishAttempts} attempts.",

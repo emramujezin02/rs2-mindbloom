@@ -297,6 +297,11 @@ builder.Services.AddSwaggerGen(options =>
         });
 });
 
+var rateLimitExceededEvent =
+    new EventId(
+        1200,
+        "RateLimitExceeded");
+
 var rateLimiting =
     builder.Configuration
         .GetSection(
@@ -364,20 +369,23 @@ builder.Services.AddRateLimiter(
                         .Value;
 
                 logger.LogWarning(
-                    "Rate limit exceeded. "
-                    + "Method: {Method}, "
-                    + "Path: {Path}, "
-                    + "UserId: {UserId}, "
-                    + "RemoteIp: {RemoteIp}, "
-                    + "RetryAfterSeconds: {RetryAfterSeconds}.",
+                    rateLimitExceededEvent,
+                    "Rate limit exceeded. Method: {RequestMethod}, Path: {RequestPath}, UserId: {UserId}, RemoteIp: {RemoteIp}, RetryAfterSeconds: {RetryAfterSeconds}, Module: {Module}, Environment: {Environment}.",
                     httpContext.Request.Method,
-                    httpContext.Request.Path.Value,
-                    userId ?? "anonymous",
+                    httpContext.Request.Path.Value
+                        ?? string.Empty,
+                    string.IsNullOrWhiteSpace(
+                        userId)
+                        ? "anonymous"
+                        : userId,
                     httpContext.Connection
                         .RemoteIpAddress?
                         .ToString()
                         ?? "unknown",
-                    retryAfterSeconds);
+                    retryAfterSeconds,
+                    "RateLimiting",
+                    builder.Environment
+                        .EnvironmentName);
 
                 var response =
                     new ApiErrorResponse

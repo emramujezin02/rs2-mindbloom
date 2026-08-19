@@ -9,7 +9,6 @@ using MindBloom.NotificationsWorker.Services;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Microsoft.Extensions.DependencyInjection;
-using MindBloom.NotificationsWorker.Services;
 using MindBloom.NotificationsWorker.Monitoring;
 
 namespace MindBloom.NotificationsWorker.Workers;
@@ -18,6 +17,162 @@ public sealed class EmailNotificationConsumer :
     BackgroundService,
     IAsyncDisposable
 {
+    private static readonly EventId
+    ConsumerStartedEvent =
+        new(
+            4000,
+            "EmailConsumerStarted");
+
+    private static readonly EventId
+        ConsumerStoppingEvent =
+            new(
+                4001,
+                "EmailConsumerStopping");
+
+    private static readonly EventId
+        ConsumerInitializationFailedEvent =
+            new(
+                4002,
+                "EmailConsumerInitializationFailed");
+
+    private static readonly EventId
+        ConsumerInitializedEvent =
+            new(
+                4003,
+                "EmailConsumerInitialized");
+
+    private static readonly EventId
+        DeliveryIgnoredDuringShutdownEvent =
+            new(
+                4010,
+                "EmailDeliveryIgnoredDuringShutdown");
+
+    private static readonly EventId
+        ChannelUnavailableEvent =
+            new(
+                4011,
+                "EmailConsumerChannelUnavailable");
+
+    private static readonly EventId
+        DuplicateMessageEvent =
+            new(
+                4012,
+                "DuplicateEmailMessage");
+
+    private static readonly EventId
+        MessageProcessingStartedEvent =
+            new(
+                4013,
+                "EmailMessageProcessingStarted");
+
+    private static readonly EventId
+        MessageProcessedEvent =
+            new(
+                4014,
+                "EmailMessageProcessed");
+
+    private static readonly EventId
+        InvalidJsonEvent =
+            new(
+                4020,
+                "EmailMessageInvalidJson");
+
+    private static readonly EventId
+        InvalidMessageEvent =
+            new(
+                4021,
+                "EmailMessageInvalid");
+
+    private static readonly EventId
+        MessageCannotBeProcessedEvent =
+            new(
+                4022,
+                "EmailMessageCannotBeProcessed");
+
+    private static readonly EventId
+        RetryExhaustedEvent =
+            new(
+                4030,
+                "EmailRetryExhausted");
+
+    private static readonly EventId
+        RetryScheduledEvent =
+            new(
+                4031,
+                "EmailRetryScheduled");
+
+    private static readonly EventId
+        RetryPublishFailedEvent =
+            new(
+                4032,
+                "EmailRetryPublishFailed");
+
+    private static readonly EventId
+        MovedToDeadLetterQueueEvent =
+            new(
+                4040,
+                "EmailMovedToDeadLetterQueue");
+
+    private static readonly EventId
+        DeadLetterPublishFailedEvent =
+            new(
+                4041,
+                "EmailDeadLetterPublishFailed");
+
+    private static readonly EventId
+        GracefulShutdownStartedEvent =
+            new(
+                4050,
+                "EmailConsumerGracefulShutdownStarted");
+
+    private static readonly EventId
+        ConsumerCancelledEvent =
+            new(
+                4051,
+                "EmailConsumerCancelled");
+
+    private static readonly EventId
+        ConsumerCancelFailedEvent =
+            new(
+                4052,
+                "EmailConsumerCancelFailed");
+
+    private static readonly EventId
+        WaitingForMessagesEvent =
+            new(
+                4053,
+                "EmailConsumerWaitingForMessages");
+
+    private static readonly EventId
+        MessagesDrainedEvent =
+            new(
+                4054,
+                "EmailConsumerMessagesDrained");
+
+    private static readonly EventId
+        ShutdownTimeoutEvent =
+            new(
+                4055,
+                "EmailConsumerShutdownTimeout");
+
+    private static readonly EventId
+        ConsumerStoppedEvent =
+            new(
+                4056,
+                "EmailConsumerStopped");
+
+    private static readonly EventId
+        ChannelCloseFailedEvent =
+            new(
+                4060,
+                "EmailConsumerChannelCloseFailed");
+
+    private static readonly EventId
+        ConnectionCloseFailedEvent =
+            new(
+                4061,
+                "EmailConsumerConnectionCloseFailed");
+
     private static readonly JsonSerializerOptions
         JsonOptions =
             new(JsonSerializerDefaults.Web)
@@ -136,7 +291,9 @@ public sealed class EmailNotificationConsumer :
                             stoppingToken);
 
             _logger.LogInformation(
-                "Notifications worker started consuming queue {Queue}. Consumer tag: {ConsumerTag}. Maximum retries: {MaximumRetryCount}.",
+                ConsumerStartedEvent,
+                "Notifications worker started consuming email queue. Module: {Module}, Queue: {Queue}, ConsumerTag: {ConsumerTag}, MaximumRetryCount: {MaximumRetryCount}.",
+                "EmailConsumer",
                 _options.EmailQueue,
                 _consumerTag,
                 _options.MaximumRetryCount);
@@ -150,14 +307,17 @@ public sealed class EmailNotificationConsumer :
                 .IsCancellationRequested)
         {
             _logger.LogInformation(
-                "Notifications worker is stopping.");
+                ConsumerStoppingEvent,
+                "Notifications worker email consumer is stopping. Module: {Module}.",
+                "EmailConsumer");
         }
         catch (Exception exception)
         {
             _logger.LogCritical(
-                exception,
-                "Notifications worker stopped because consumer initialization failed.");
-
+                ConsumerInitializationFailedEvent,
+                "Notifications worker stopped because email consumer initialization failed. Module: {Module}, FailureType: {FailureType}.",
+                "EmailConsumer",
+                exception.GetType().Name);
             throw;
         }
     }
@@ -197,19 +357,14 @@ public sealed class EmailNotificationConsumer :
                 cancellationToken);
 
         _logger.LogInformation(
-            "RabbitMQ consumer initialized. "
-            + "Consumer: {Consumer}, "
-            + "queue: {Queue}, "
-            + "prefetch count: {PrefetchCount}.",
+            ConsumerInitializedEvent,
+            "RabbitMQ email consumer initialized. Module: {Module}, Consumer: {Consumer}, Queue: {Queue}, PrefetchCount: {PrefetchCount}.",
+            "EmailConsumer",
             nameof(
                 EmailNotificationConsumer),
             _options.EmailQueue,
             _options.PrefetchCount);
     }
-
-   
-
-
 
     private async Task HandleMessageAsync(
      object sender,
@@ -218,9 +373,9 @@ public sealed class EmailNotificationConsumer :
         if (_isStopping)
         {
             _logger.LogInformation(
-                "Email notification delivery {DeliveryTag} "
-                + "was received while consumer is stopping "
-                + "and will not start processing.",
+                DeliveryIgnoredDuringShutdownEvent,
+                "Email notification delivery received while consumer is stopping and will not start processing. Module: {Module}, DeliveryTag: {DeliveryTag}.",
+                "EmailConsumer",
                 eventArgs.DeliveryTag);
 
             return;
@@ -234,7 +389,9 @@ public sealed class EmailNotificationConsumer :
                 !_channel.IsOpen)
             {
                 _logger.LogError(
-                    "RabbitMQ channel is unavailable for delivery {DeliveryTag}.",
+                    ChannelUnavailableEvent,
+                    "RabbitMQ channel is unavailable for email delivery. Module: {Module}, DeliveryTag: {DeliveryTag}.",
+                    "EmailConsumer",
                     eventArgs.DeliveryTag);
 
                 return;
@@ -268,6 +425,24 @@ public sealed class EmailNotificationConsumer :
                 ValidateMessage(
                     message);
 
+                using var messageLogScope =
+    _logger.BeginScope(
+        new Dictionary<string, object?>
+        {
+            ["CorrelationId"] =
+                message.CorrelationId,
+
+            ["MessageId"] =
+                message.MessageId,
+
+            ["EventType"] =
+                message.EventType.ToString(),
+
+            ["Module"] =
+                "EmailConsumer"
+        });
+
+
                 var consumerName =
                     nameof(
                         EmailNotificationConsumer);
@@ -291,11 +466,8 @@ public sealed class EmailNotificationConsumer :
                 if (alreadyProcessed)
                 {
                     _logger.LogWarning(
-                        "Duplicate email notification detected. "
-                        + "Message ID: {MessageId}, "
-                        + "event type: {EventType}, "
-                        + "correlation ID: {CorrelationId}. "
-                        + "Message will be acknowledged without sending the email again.",
+                        DuplicateMessageEvent,
+                        "Duplicate email notification detected and will be acknowledged without sending again. MessageId: {MessageId}, EventType: {EventType}, CorrelationId: {CorrelationId}.",
                         message.MessageId,
                         message.EventType,
                         message.CorrelationId);
@@ -318,13 +490,10 @@ public sealed class EmailNotificationConsumer :
                         .MaximumRetryCount + 1;
 
                 _logger.LogInformation(
-                    "Processing email notification {MessageId}. "
-                    + "Attempt {CurrentAttempt}/{MaximumAttempts}. "
-                    + "Correlation ID: {CorrelationId}.",
-                    message.MessageId,
+                    MessageProcessingStartedEvent,
+                    "Processing email notification. CurrentAttempt: {CurrentAttempt}, MaximumAttempts: {MaximumAttempts}.",
                     currentAttempt,
-                    maximumAttempts,
-                    message.CorrelationId);
+                    maximumAttempts);
 
                 var emailBody =
                     _bodyBuilder.Build(
@@ -356,18 +525,17 @@ public sealed class EmailNotificationConsumer :
     .RecordSuccess();
 
                 _logger.LogInformation(
-                    "Email notification {MessageId} sent successfully, "
-                    + "marked as processed and acknowledged. "
-                    + "Attempt: {Attempt}, correlation ID: {CorrelationId}.",
-                    message.MessageId,
-                    currentAttempt,
-                    message.CorrelationId);
+                    MessageProcessedEvent,
+                    "Email notification sent successfully, marked as processed and acknowledged. Attempt: {Attempt}.",
+                    currentAttempt);
             }
             catch (JsonException exception)
             {
                 _logger.LogError(
+                    InvalidJsonEvent,
                     exception,
-                    "Delivery {DeliveryTag} contains invalid JSON and will be moved directly to the dead-letter queue.",
+                    "Email delivery contains invalid JSON and will be moved directly to the dead-letter queue. Module: {Module}, DeliveryTag: {DeliveryTag}.",
+                    "EmailConsumer",
                     eventArgs.DeliveryTag);
 
                 await MoveToDeadLetterQueueAsync(
@@ -379,9 +547,11 @@ public sealed class EmailNotificationConsumer :
             catch (ArgumentException exception)
             {
                 _logger.LogError(
-                    exception,
-                    "Email notification {MessageId} contains invalid data and will be moved directly to the dead-letter queue.",
-                    message?.MessageId);
+                    InvalidMessageEvent,
+                    "Email notification contains invalid data and will be moved directly to the dead-letter queue. Module: {Module}, MessageId: {MessageId}, FailureType: {FailureType}.",
+                    "EmailConsumer",
+                    message?.MessageId,
+                    exception.GetType().Name);
 
                 await MoveToDeadLetterQueueAsync(
                     eventArgs,
@@ -392,9 +562,11 @@ public sealed class EmailNotificationConsumer :
             catch (InvalidOperationException exception)
             {
                 _logger.LogError(
-                    exception,
-                    "Email notification {MessageId} cannot be processed and will be moved directly to the dead-letter queue.",
-                    message?.MessageId);
+                    MessageCannotBeProcessedEvent,
+                    "Email notification cannot be processed and will be moved directly to the dead-letter queue. Module: {Module}, MessageId: {MessageId}, FailureType: {FailureType}.",
+                    "EmailConsumer",
+                    message?.MessageId,
+                    exception.GetType().Name);
 
                 await MoveToDeadLetterQueueAsync(
                     eventArgs,
@@ -404,12 +576,6 @@ public sealed class EmailNotificationConsumer :
             }
             catch (Exception exception)
             {
-                _logger.LogError(
-                    exception,
-                    "Sending email notification {MessageId} failed on attempt {Attempt}.",
-                    message?.MessageId,
-                    retryCount + 1);
-
                 await HandleTransientFailureAsync(
                     eventArgs,
                     retryCount,
@@ -471,9 +637,12 @@ public sealed class EmailNotificationConsumer :
             _options.MaximumRetryCount)
         {
             _logger.LogError(
-                "Email notification {MessageId} exhausted all {MaximumAttempts} attempts and will be moved to DLQ.",
+                RetryExhaustedEvent,
+                "Email notification exhausted all delivery attempts and will be moved to DLQ. Module: {Module}, MessageId: {MessageId}, MaximumAttempts: {MaximumAttempts}, FailureType: {FailureType}.",
+                "EmailConsumer",
                 messageId,
-                _options.MaximumRetryCount + 1);
+                _options.MaximumRetryCount + 1,
+                exception.GetType().Name);
 
             await MoveToDeadLetterQueueAsync(
                 eventArgs,
@@ -533,17 +702,22 @@ public sealed class EmailNotificationConsumer :
     .RecordRetry();
 
             _logger.LogWarning(
-                "Email notification {MessageId} scheduled for retry {RetryCount}/{MaximumRetryCount} after {DelayMilliseconds} ms.",
+                RetryScheduledEvent,
+                "Email notification scheduled for retry. Module: {Module}, MessageId: {MessageId}, RetryCount: {RetryCount}, MaximumRetryCount: {MaximumRetryCount}, DelayMilliseconds: {DelayMilliseconds}, FailureType: {FailureType}.",
+                "EmailConsumer",
                 messageId,
                 nextRetryCount,
                 _options.MaximumRetryCount,
-                delayMilliseconds);
+                delayMilliseconds,
+                exception.GetType().Name);
         }
         catch (Exception publishException)
         {
             _logger.LogCritical(
+                RetryPublishFailedEvent,
                 publishException,
-                "Email notification {MessageId} could not be published to retry exchange. Original delivery will be requeued.",
+                "Email notification could not be published to retry exchange. Original delivery will be requeued. Module: {Module}, MessageId: {MessageId}.",
+                "EmailConsumer",
                 messageId);
 
             await _consumerOperations
@@ -601,26 +775,22 @@ public sealed class EmailNotificationConsumer :
     .RecordFailure();
 
             _logger.LogError(
-                "Email notification moved to DLQ. "
-                + "MessageId: {MessageId}, "
-                + "CorrelationId: {CorrelationId}, "
-                + "Queue: {DeadLetterQueue}, "
-                + "RetryCount: {RetryCount}, "
-                + "FailureReason: {FailureReason}.",
+                MovedToDeadLetterQueueEvent,
+                "Email notification moved to DLQ. Module: {Module}, MessageId: {MessageId}, CorrelationId: {CorrelationId}, Queue: {DeadLetterQueue}, RetryCount: {RetryCount}.",
+                "EmailConsumer",
                 messageId,
                 eventArgs.BasicProperties
                     .CorrelationId,
                 _options.DeadLetterQueue,
-                retryCount,
-                RabbitMqMessageHelper.Truncate(
-                    failureReason,
-                    500));
+                retryCount);
         }
         catch (Exception exception)
         {
             _logger.LogCritical(
+                DeadLetterPublishFailedEvent,
                 exception,
-                "Email notification {MessageId} could not be moved to DLQ. Original delivery will be requeued.",
+                "Email notification could not be moved to DLQ. Original delivery will be requeued. Module: {Module}, MessageId: {MessageId}.",
+                "EmailConsumer",
                 messageId);
 
             await _consumerOperations
@@ -692,8 +862,9 @@ public sealed class EmailNotificationConsumer :
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Graceful shutdown started for email notification consumer. "
-            + "Active messages: {ActiveMessageCount}.",
+            GracefulShutdownStartedEvent,
+            "Graceful shutdown started for email notification consumer. Module: {Module}, ActiveMessageCount: {ActiveMessageCount}.",
+            "EmailConsumer",
             Volatile.Read(
                 ref _activeMessageCount));
 
@@ -713,15 +884,18 @@ public sealed class EmailNotificationConsumer :
                             CancellationToken.None);
 
                 _logger.LogInformation(
-                    "Email notification RabbitMQ consumer {ConsumerTag} cancelled. "
-                    + "No new deliveries will be accepted.",
+                    ConsumerCancelledEvent,
+                    "Email notification RabbitMQ consumer cancelled. Module: {Module}, ConsumerTag: {ConsumerTag}. No new deliveries will be accepted.",
+                    "EmailConsumer",
                     _consumerTag);
             }
             catch (Exception exception)
             {
                 _logger.LogWarning(
-                    exception,
-                    "Email notification RabbitMQ consumer could not be cancelled cleanly.");
+   ConsumerCancelFailedEvent,
+   exception,
+   "Email notification RabbitMQ consumer could not be cancelled cleanly. Module: {Module}.",
+   "EmailConsumer");
             }
         }
 
@@ -729,7 +903,9 @@ public sealed class EmailNotificationConsumer :
                 ref _activeMessageCount) > 0)
         {
             _logger.LogInformation(
-                "Waiting for {ActiveMessageCount} active email notification message(s) to finish.",
+                WaitingForMessagesEvent,
+                "Waiting for active email notification messages to finish. Module: {Module}, ActiveMessageCount: {ActiveMessageCount}.",
+                "EmailConsumer",
                 Volatile.Read(
                     ref _activeMessageCount));
 
@@ -741,14 +917,18 @@ public sealed class EmailNotificationConsumer :
                         cancellationToken);
 
                 _logger.LogInformation(
-                    "All active email notification messages completed successfully.");
+    MessagesDrainedEvent,
+    "All active email notification messages completed successfully. Module: {Module}.",
+    "EmailConsumer");
             }
             catch (OperationCanceledException)
                 when (cancellationToken
                     .IsCancellationRequested)
             {
                 _logger.LogWarning(
-                    "Graceful shutdown timeout reached while waiting for email notification processing to finish.");
+    ShutdownTimeoutEvent,
+    "Graceful shutdown timeout reached while waiting for email notification processing to finish. Module: {Module}.",
+    "EmailConsumer");
             }
         }
 
@@ -758,7 +938,9 @@ public sealed class EmailNotificationConsumer :
         await DisposeRabbitMqResourcesAsync();
 
         _logger.LogInformation(
-            "Email notification consumer stopped successfully.");
+    ConsumerStoppedEvent,
+    "Email notification consumer stopped successfully. Module: {Module}.",
+    "EmailConsumer");
     }
 
     private async Task
@@ -778,8 +960,10 @@ public sealed class EmailNotificationConsumer :
             catch (Exception exception)
             {
                 _logger.LogWarning(
+                    ChannelCloseFailedEvent,
                     exception,
-                    "RabbitMQ channel could not be closed cleanly.");
+                    "RabbitMQ email consumer channel could not be closed cleanly. Module: {Module}.",
+                    "EmailConsumer");
             }
 
             await _channel.DisposeAsync();
@@ -801,8 +985,10 @@ public sealed class EmailNotificationConsumer :
             catch (Exception exception)
             {
                 _logger.LogWarning(
+                    ConnectionCloseFailedEvent,
                     exception,
-                    "RabbitMQ connection could not be closed cleanly.");
+                    "RabbitMQ email consumer connection could not be closed cleanly. Module: {Module}.",
+                    "EmailConsumer");
             }
 
             await _connection.DisposeAsync();

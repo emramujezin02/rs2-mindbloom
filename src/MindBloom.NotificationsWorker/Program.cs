@@ -390,6 +390,21 @@ if (!builder.Environment
         });
 }
 
+var workerStartedEvent =
+    new EventId(
+        4000,
+        "WorkerStarted");
+
+var workerStoppingEvent =
+    new EventId(
+        4001,
+        "WorkerStopping");
+
+var workerStoppedEvent =
+    new EventId(
+        4002,
+        "WorkerStopped");
+
 var app =
     builder.Build();
 
@@ -409,21 +424,36 @@ lifetime.ApplicationStarted.Register(
     () =>
     {
         logger.LogInformation(
-            "MindBloom Notifications Worker started successfully.");
+    workerStartedEvent,
+    "Worker started. "
+    + "Module: {Module}, "
+    + "Environment: {Environment}.",
+    "NotificationsWorker",
+    app.Environment.EnvironmentName);
     });
 
 lifetime.ApplicationStopping.Register(
     () =>
     {
         logger.LogInformation(
-            "MindBloom Notifications Worker is stopping.");
+            workerStoppingEvent,
+            "Worker is stopping. "
+            + "Module: {Module}, "
+            + "Environment: {Environment}.",
+            "NotificationsWorker",
+            app.Environment.EnvironmentName);
     });
 
 lifetime.ApplicationStopped.Register(
     () =>
     {
         logger.LogInformation(
-            "MindBloom Notifications Worker stopped successfully.");
+    workerStoppedEvent,
+    "Worker stopped. "
+    + "Module: {Module}, "
+    + "Environment: {Environment}.",
+    "NotificationsWorker",
+    app.Environment.EnvironmentName);
     });
 
 app.MapHealthChecks(

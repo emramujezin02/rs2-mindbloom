@@ -10,6 +10,24 @@ namespace MindBloom.Infrastructure.Services;
 public sealed class FcmDeviceTokenService
     : IFcmDeviceTokenService
 {
+    private static readonly EventId
+    TokenRefreshedEvent =
+        new(
+            3500,
+            "FcmTokenRefreshed");
+
+    private static readonly EventId
+        TokenRegisteredEvent =
+            new(
+                3501,
+                "FcmTokenRegistered");
+
+    private static readonly EventId
+        TokenUnregisteredEvent =
+            new(
+                3502,
+                "FcmTokenUnregistered");
+
     private readonly ApplicationDbContext
         _context;
 
@@ -71,13 +89,6 @@ public sealed class FcmDeviceTokenService
                 "Device platform is required.");
         }
 
-        /*
-         * FCM token je globalno jedinstven.
-         *
-         * Ako je isti token ranije pripadao
-         * drugom useru, prebacujemo ownership
-         * na trenutno prijavljenog korisnika.
-         */
         var existingToken =
             await _context
                 .FcmDeviceTokens
@@ -117,7 +128,9 @@ public sealed class FcmDeviceTokenService
                 cancellationToken);
 
             _logger.LogInformation(
-                "FCM token {TokenId} refreshed for user {UserId}. Platform: {Platform}.",
+                TokenRefreshedEvent,
+                "FCM token refreshed. Module: {Module}, TokenId: {TokenId}, UserId: {UserId}, Platform: {Platform}.",
+                "Notifications",
                 existingToken.Id,
                 userId,
                 platform);
@@ -157,7 +170,9 @@ public sealed class FcmDeviceTokenService
             cancellationToken);
 
         _logger.LogInformation(
-            "FCM token {TokenId} registered for user {UserId}. Platform: {Platform}.",
+            TokenRegisteredEvent,
+            "FCM token registered. Module: {Module}, TokenId: {TokenId}, UserId: {UserId}, Platform: {Platform}.",
+            "Notifications",
             fcmToken.Id,
             userId,
             platform);
@@ -222,7 +237,9 @@ public sealed class FcmDeviceTokenService
             cancellationToken);
 
         _logger.LogInformation(
-            "FCM token {TokenId} unregistered for user {UserId}.",
+            TokenUnregisteredEvent,
+            "FCM token unregistered. Module: {Module}, TokenId: {TokenId}, UserId: {UserId}.",
+            "Notifications",
             existingToken.Id,
             userId);
     }

@@ -6,6 +6,18 @@ namespace MindBloom.NotificationsWorker.Services;
 
 public sealed class ProcessedMessageService
 {
+    private static readonly EventId
+    MessageAlreadyProcessedEvent =
+        new(
+            4700,
+            "MessageAlreadyProcessed");
+
+    private static readonly EventId
+        MessageMarkedAsProcessedEvent =
+            new(
+                4701,
+                "MessageMarkedAsProcessed");
+
     private readonly ApplicationDbContext
         _context;
 
@@ -80,10 +92,13 @@ public sealed class ProcessedMessageService
         if (alreadyProcessed)
         {
             _logger.LogInformation(
-                "Message {MessageId} was already marked "
-                + "as processed by consumer {ConsumerName}.",
+                MessageAlreadyProcessedEvent,
+                "Message was already marked as processed. Module: {Module}, MessageId: {MessageId}, ConsumerName: {ConsumerName}, MessageType: {MessageType}, CorrelationId: {CorrelationId}.",
+                "ProcessedMessages",
                 messageId,
-                consumerName);
+                consumerName,
+                normalizedMessageType,
+                correlationId);
 
             return;
         }
@@ -114,12 +129,13 @@ public sealed class ProcessedMessageService
             cancellationToken);
 
         _logger.LogInformation(
-            "Message {MessageId} marked as processed. "
-            + "Consumer: {ConsumerName}, "
-            + "message type: {MessageType}.",
+            MessageMarkedAsProcessedEvent,
+            "Message marked as processed. Module: {Module}, MessageId: {MessageId}, ConsumerName: {ConsumerName}, MessageType: {MessageType}, CorrelationId: {CorrelationId}.",
+            "ProcessedMessages",
             messageId,
             consumerName,
-            normalizedMessageType);
+            normalizedMessageType,
+            correlationId);
     }
 
     private static void Validate(

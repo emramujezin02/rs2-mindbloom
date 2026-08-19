@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Features.Notifications.DTOs;
@@ -11,13 +12,34 @@ namespace MindBloom.Infrastructure.Services;
 public sealed class NotificationService
     : INotificationService
 {
+    private static readonly EventId
+    NotificationMarkedAsReadEvent =
+        new(
+            3510,
+            "NotificationMarkedAsRead");
+
+    private static readonly EventId
+        AllNotificationsMarkedAsReadEvent =
+            new(
+                3511,
+                "AllNotificationsMarkedAsRead");
+
     private readonly ApplicationDbContext
         _context;
 
+    private readonly ILogger<
+        NotificationService>
+        _logger;
+
     public NotificationService(
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+        ILogger<NotificationService> logger)
     {
-        _context = context;
+        _context =
+            context;
+
+        _logger =
+            logger;
     }
 
     public async Task<NotificationPageResponseDto>
@@ -165,6 +187,13 @@ public sealed class NotificationService
         notification.IsRead = true;
 
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation(
+    NotificationMarkedAsReadEvent,
+    "Notification marked as read. Module: {Module}, UserId: {UserId}, NotificationId: {NotificationId}.",
+    "Notifications",
+    userId,
+    notificationId);
     }
 
     public async Task MarkAllAsReadAsync(
@@ -190,6 +219,13 @@ public sealed class NotificationService
         }
 
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation(
+            AllNotificationsMarkedAsReadEvent,
+            "All unread notifications marked as read. Module: {Module}, UserId: {UserId}, NotificationCount: {NotificationCount}.",
+            "Notifications",
+            userId,
+            notifications.Count);
     }
 
     private async Task

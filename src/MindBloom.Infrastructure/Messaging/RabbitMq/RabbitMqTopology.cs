@@ -8,6 +8,24 @@ using RoutingKeys = MindBloom.Messaging.Contracts.Common.IntegrationEventRouting
 namespace MindBloom.Infrastructure.Messaging.RabbitMq;
 public sealed class RabbitMqTopology
 {
+    private static readonly EventId
+    TopologyDeclaredEvent =
+        new(
+            3100,
+            "RabbitMqTopologyDeclared");
+
+    private static readonly EventId
+        IntegrationRetryQueuesDeclaredEvent =
+            new(
+                3101,
+                "RabbitMqIntegrationRetryQueuesDeclared");
+
+    private static readonly EventId
+        IntegrationQueueBoundEvent =
+            new(
+                3102,
+                "RabbitMqIntegrationQueueBound");
+
     private static readonly int[]
         RetryDelaysMilliseconds =
         [
@@ -146,7 +164,9 @@ public sealed class RabbitMqTopology
             cancellationToken);
 
         _logger.LogInformation(
-            "RabbitMQ topology declared. Exchange: {Exchange}, email queue: {EmailQueue}, integration queue: {IntegrationQueue}, email DLQ: {EmailDeadLetterQueue}, integration DLQ: {IntegrationDeadLetterQueue}.",
+            TopologyDeclaredEvent,
+            "RabbitMQ topology declared. Module: {Module}, Exchange: {Exchange}, EmailQueue: {EmailQueue}, IntegrationQueue: {IntegrationQueue}, EmailDeadLetterQueue: {EmailDeadLetterQueue}, IntegrationDeadLetterQueue: {IntegrationDeadLetterQueue}.",
+            "RabbitMQ",
             _options.NotificationExchange,
             _options.EmailQueue,
             _options.IntegrationEventQueue,
@@ -266,14 +286,6 @@ public sealed class RabbitMqTopology
                         sourceRoutingKey,
                         delayMilliseconds);
 
-                /*
-                 * Svaki integration event routing key
-                 * dobija vlastiti retry queue.
-                 *
-                 * To je važno zato što RabbitMQ nakon
-                 * isteka TTL-a mora vratiti poruku na
-                 * originalni routing key.
-                 */
                 var arguments =
                     new Dictionary<string, object?>
                     {
@@ -317,7 +329,9 @@ public sealed class RabbitMqTopology
         }
 
         _logger.LogInformation(
-            "RabbitMQ integration event retry queues declared. Routing keys: {RoutingKeyCount}, retry levels: {RetryLevelCount}.",
+            IntegrationRetryQueuesDeclaredEvent,
+            "RabbitMQ integration event retry queues declared. Module: {Module}, RoutingKeyCount: {RoutingKeyCount}, RetryLevelCount: {RetryLevelCount}.",
+            "RabbitMQ",
             IntegrationEventRoutingKeys.Length,
             RetryDelaysMilliseconds.Length);
     }
@@ -369,7 +383,9 @@ public sealed class RabbitMqTopology
         }
 
         _logger.LogInformation(
-            "RabbitMQ integration event queue {Queue} bound to {RoutingKeyCount} routing keys.",
+            IntegrationQueueBoundEvent,
+            "RabbitMQ integration event queue bound. Module: {Module}, Queue: {Queue}, RoutingKeyCount: {RoutingKeyCount}.",
+            "RabbitMQ",
             _options.IntegrationEventQueue,
             IntegrationEventRoutingKeys.Length);
     }

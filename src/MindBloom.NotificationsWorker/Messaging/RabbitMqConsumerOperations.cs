@@ -4,6 +4,24 @@ namespace MindBloom.NotificationsWorker.Messaging;
 
 public sealed class RabbitMqConsumerOperations
 {
+    private static readonly EventId
+    MessageAcknowledgedEvent =
+        new(
+            4100,
+            "RabbitMqMessageAcknowledged");
+
+    private static readonly EventId
+        MessageNegativeAcknowledgedEvent =
+            new(
+                4101,
+                "RabbitMqMessageNegativeAcknowledged");
+
+    private static readonly EventId
+        MessageForwardedEvent =
+            new(
+                4102,
+                "RabbitMqMessageForwarded");
+
     private readonly ILogger<
         RabbitMqConsumerOperations>
         _logger;
@@ -39,9 +57,9 @@ public sealed class RabbitMqConsumerOperations
                 CancellationToken.None);
 
         _logger.LogDebug(
-            "RabbitMQ message acknowledged. "
-            + "Consumer: {Consumer}, "
-            + "delivery tag: {DeliveryTag}.",
+            MessageAcknowledgedEvent,
+            "RabbitMQ message acknowledged. Module: {Module}, Consumer: {Consumer}, DeliveryTag: {DeliveryTag}.",
+            "RabbitMQ",
             consumerName,
             deliveryTag);
     }
@@ -72,10 +90,9 @@ public sealed class RabbitMqConsumerOperations
                 CancellationToken.None);
 
         _logger.LogWarning(
-            "RabbitMQ message negatively acknowledged. "
-            + "Consumer: {Consumer}, "
-            + "delivery tag: {DeliveryTag}, "
-            + "requeue: {Requeue}.",
+            MessageNegativeAcknowledgedEvent,
+            "RabbitMQ message negatively acknowledged. Module: {Module}, Consumer: {Consumer}, DeliveryTag: {DeliveryTag}, Requeue: {Requeue}.",
+            "RabbitMQ",
             consumerName,
             deliveryTag,
             requeue);
@@ -125,11 +142,9 @@ public sealed class RabbitMqConsumerOperations
                 CancellationToken.None);
 
         _logger.LogDebug(
-            "RabbitMQ message forwarded. "
-            + "Consumer: {Consumer}, "
-            + "exchange: {Exchange}, "
-            + "routing key: {RoutingKey}, "
-            + "retry count: {RetryCount}.",
+            MessageForwardedEvent,
+            "RabbitMQ message forwarded. Module: {Module}, Consumer: {Consumer}, Exchange: {Exchange}, RoutingKey: {RoutingKey}, RetryCount: {RetryCount}.",
+            "RabbitMQ",
             consumerName,
             exchange,
             routingKey,

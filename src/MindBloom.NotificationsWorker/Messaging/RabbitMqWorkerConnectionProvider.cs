@@ -7,6 +7,42 @@ namespace MindBloom.NotificationsWorker.Messaging;
 
 public sealed class RabbitMqWorkerConnectionProvider
 {
+    private static readonly EventId
+    ConnectionAttemptEvent =
+        new(
+            4200,
+            "RabbitMqWorkerConnectionAttempt");
+
+    private static readonly EventId
+        ConnectionEstablishedEvent =
+            new(
+                4201,
+                "RabbitMqWorkerConnectionEstablished");
+
+    private static readonly EventId
+        ConnectionAttemptFailedEvent =
+            new(
+                4202,
+                "RabbitMqWorkerConnectionAttemptFailed");
+
+    private static readonly EventId
+        ConnectionShutdownEvent =
+            new(
+                4203,
+                "RabbitMqWorkerConnectionShutdown");
+
+    private static readonly EventId
+        ConnectionRecoveryFailedEvent =
+            new(
+                4204,
+                "RabbitMqWorkerConnectionRecoveryFailed");
+
+    private static readonly EventId
+        ConnectionRecoverySucceededEvent =
+            new(
+                4205,
+                "RabbitMqWorkerConnectionRecoverySucceeded");
+
     private readonly RabbitMqOptions
         _options;
 
@@ -83,9 +119,11 @@ public sealed class RabbitMqWorkerConnectionProvider
             try
             {
                 _logger.LogInformation(
-                    "RabbitMQ component {Component} is connecting to {HostName}:{Port}. "
-                    + "Attempt {Attempt}/{MaximumAttempts}.",
+                    ConnectionAttemptEvent,
+                    "RabbitMQ worker connection attempt. Module: {Module}, Component: {Component}, Client: {Client}, Host: {HostName}, Port: {Port}, Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
+                    "RabbitMQ",
                     normalizedComponentName,
+                    normalizedClientName,
                     _options.HostName,
                     _options.Port,
                     attempt,
@@ -102,8 +140,9 @@ public sealed class RabbitMqWorkerConnectionProvider
                     normalizedComponentName);
 
                 _logger.LogInformation(
-                    "RabbitMQ connection established successfully. "
-                    + "Component: {Component}, client: {ClientName}.",
+                    ConnectionEstablishedEvent,
+                    "RabbitMQ worker connection established successfully. Module: {Module}, Component: {Component}, Client: {Client}.",
+                    "RabbitMQ",
                     normalizedComponentName,
                     normalizedClientName);
 
@@ -121,13 +160,14 @@ public sealed class RabbitMqWorkerConnectionProvider
                     exception;
 
                 _logger.LogWarning(
-                    exception,
-                    "RabbitMQ connection attempt failed. "
-                    + "Component: {Component}, "
-                    + "attempt: {Attempt}/{MaximumAttempts}.",
+                    ConnectionAttemptFailedEvent,
+                    "RabbitMQ worker connection attempt failed. Module: {Module}, Component: {Component}, Client: {Client}, Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}, FailureType: {FailureType}.",
+                    "RabbitMQ",
                     normalizedComponentName,
+                    normalizedClientName,
                     attempt,
-                    _options.ConnectionRetryCount);
+                    _options.ConnectionRetryCount,
+                    exception.GetType().Name);
 
                 if (attempt >=
                     _options.ConnectionRetryCount)
@@ -159,10 +199,9 @@ public sealed class RabbitMqWorkerConnectionProvider
                 eventArgs) =>
             {
                 _logger.LogWarning(
-                    "RabbitMQ connection shut down. "
-                    + "Component: {Component}, "
-                    + "reply code: {ReplyCode}, "
-                    + "reason: {Reason}.",
+                    ConnectionShutdownEvent,
+                    "RabbitMQ worker connection shut down. Module: {Module}, Component: {Component}, ReplyCode: {ReplyCode}, Reason: {Reason}.",
+                    "RabbitMQ",
                     componentName,
                     eventArgs.ReplyCode,
                     eventArgs.ReplyText);
@@ -176,9 +215,10 @@ public sealed class RabbitMqWorkerConnectionProvider
                 eventArgs) =>
             {
                 _logger.LogError(
+                    ConnectionRecoveryFailedEvent,
                     eventArgs.Exception,
-                    "RabbitMQ connection recovery failed. "
-                    + "Component: {Component}.",
+                    "RabbitMQ worker connection recovery failed. Module: {Module}, Component: {Component}.",
+                    "RabbitMQ",
                     componentName);
 
                 return Task.CompletedTask;
@@ -190,8 +230,9 @@ public sealed class RabbitMqWorkerConnectionProvider
                 eventArgs) =>
             {
                 _logger.LogInformation(
-                    "RabbitMQ connection recovery succeeded. "
-                    + "Component: {Component}.",
+                    ConnectionRecoverySucceededEvent,
+                    "RabbitMQ worker connection recovery succeeded. Module: {Module}, Component: {Component}.",
+                    "RabbitMQ",
                     componentName);
 
                 return Task.CompletedTask;

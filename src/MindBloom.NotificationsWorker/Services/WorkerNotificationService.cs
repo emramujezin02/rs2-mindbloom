@@ -8,6 +8,18 @@ namespace MindBloom.NotificationsWorker.Services;
 
 public sealed class WorkerNotificationService
 {
+    private static readonly EventId
+    NotificationCreatedEvent =
+        new(
+            4800,
+            "WorkerNotificationCreated");
+
+    private static readonly EventId
+        EmailSkippedEvent =
+            new(
+                4801,
+                "WorkerNotificationEmailSkipped");
+
     private readonly ApplicationDbContext
         _context;
 
@@ -116,9 +128,14 @@ public sealed class WorkerNotificationService
             cancellationToken);
 
         _logger.LogInformation(
-            "In-app notification {NotificationId} created for user {UserId}.",
+            NotificationCreatedEvent,
+            "In-app notification created. Module: {Module}, NotificationId: {NotificationId}, UserId: {UserId}, ActionType: {ActionType}, AppointmentId: {AppointmentId}, ResourceId: {ResourceId}.",
+            "NotificationsWorker",
             notification.Id,
-            userId);
+            userId,
+            actionType.ToString(),
+            appointmentId,
+            resourceId);
     }
 
     public async Task SendEmailAsync(
@@ -147,7 +164,9 @@ public sealed class WorkerNotificationService
                 user.Email))
         {
             _logger.LogWarning(
-                "Email notification was skipped because user {UserId} does not have an email address.",
+                EmailSkippedEvent,
+                "Email notification was skipped because user does not have an email address. Module: {Module}, UserId: {UserId}.",
+                "NotificationsWorker",
                 userId);
 
             return;

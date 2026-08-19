@@ -11,6 +11,18 @@ public sealed class NotificationRequestedEventHandler
     : IIntegrationEventHandler<
         NotificationRequestedEvent>
 {
+    private static readonly EventId
+    DuplicateNotificationSkippedEvent =
+        new(
+            4500,
+            "DuplicateNotificationSkipped");
+
+    private static readonly EventId
+        NotificationProcessedEvent =
+            new(
+                4501,
+                "NotificationProcessed");
+
     private readonly ApplicationDbContext
         _context;
 
@@ -88,10 +100,13 @@ public sealed class NotificationRequestedEventHandler
             if (alreadyExists)
             {
                 _logger.LogInformation(
-                    "Notification request {EventId} skipped because notification {NotificationId} already exists.",
+                    DuplicateNotificationSkippedEvent,
+                    "Notification request skipped because notification already exists. Module: {Module}, IntegrationEventId: {IntegrationEventId}, NotificationId: {NotificationId}, UserId: {UserId}, CorrelationId: {CorrelationId}.",
+                    "NotificationsWorker",
                     integrationEvent.EventId,
-                    integrationEvent
-                        .NotificationId);
+                    integrationEvent.NotificationId,
+                    integrationEvent.UserId,
+                    integrationEvent.CorrelationId);
 
                 return;
             }
@@ -123,13 +138,14 @@ public sealed class NotificationRequestedEventHandler
                     cancellationToken);
 
         _logger.LogInformation(
-            "Notification request processed by worker. "
-            + "User ID: {UserId}, "
-            + "event ID: {EventId}, "
-            + "correlation ID: {CorrelationId}.",
+            NotificationProcessedEvent,
+            "Notification request processed by worker. Module: {Module}, UserId: {UserId}, IntegrationEventId: {IntegrationEventId}, CorrelationId: {CorrelationId}, SendEmail: {SendEmail}, SendPush: {SendPush}.",
+            "NotificationsWorker",
             integrationEvent.UserId,
             integrationEvent.EventId,
-            integrationEvent.CorrelationId);
+            integrationEvent.CorrelationId,
+            integrationEvent.SendEmail,
+            integrationEvent.SendPush);
     }
 
     private static NotificationActionType

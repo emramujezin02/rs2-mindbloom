@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MindBloom.Infrastructure.Persistence.Context;
 
@@ -8,6 +9,84 @@ namespace MindBloom.Infrastructure.Persistence.Migration;
 
 public static class DevelopmentDatabaseMigrator
 {
+    private static readonly EventId
+    MigrationStartedEvent =
+        new(
+            3300,
+            "DatabaseMigrationStarted");
+
+    private static readonly EventId
+        DatabaseUpToDateEvent =
+            new(
+                3301,
+                "DatabaseAlreadyUpToDate");
+
+    private static readonly EventId
+        PendingMigrationsEvent =
+            new(
+                3302,
+                "PendingDatabaseMigrations");
+
+    private static readonly EventId
+        MigrationCompletedEvent =
+            new(
+                3303,
+                "DatabaseMigrationCompleted");
+
+    private static readonly EventId
+        MigrationCancelledEvent =
+            new(
+                3304,
+                "DatabaseMigrationCancelled");
+
+    private static readonly EventId
+        MigrationFailedEvent =
+            new(
+                3305,
+                "DatabaseMigrationFailed");
+
+    private static readonly EventId
+        DatabaseAvailabilityCheckEvent =
+            new(
+                3310,
+                "DatabaseAvailabilityCheck");
+
+    private static readonly EventId
+        DatabaseAvailableEvent =
+            new(
+                3311,
+                "DatabaseAvailable");
+
+    private static readonly EventId
+        DatabaseUnavailableEvent =
+            new(
+                3312,
+                "DatabaseUnavailable");
+
+    private static readonly EventId
+        DatabaseConnectionAttemptFailedEvent =
+            new(
+                3313,
+                "DatabaseConnectionAttemptFailed");
+
+    private static readonly EventId
+        MigrationLockAcquiredEvent =
+            new(
+                3320,
+                "DatabaseMigrationLockAcquired");
+
+    private static readonly EventId
+        MigrationLockReleasedEvent =
+            new(
+                3321,
+                "DatabaseMigrationLockReleased");
+
+    private static readonly EventId
+        MigrationLockReleaseFailedEvent =
+            new(
+                3322,
+                "DatabaseMigrationLockReleaseFailed");
+
     private const string MigrationLockResource =
         "MindBloom.DatabaseMigration";
 
@@ -31,7 +110,24 @@ public static class DevelopmentDatabaseMigrator
                 .GetRequiredService<
                     ILogger<ApplicationDbContext>>();
 
+        var environment =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    IHostEnvironment>();
+
+        using var logScope =
+            logger.BeginScope(
+                new Dictionary<string, object?>
+                {
+                    ["Module"] =
+                        "DatabaseMigration",
+
+                    ["Environment"] =
+                        environment.EnvironmentName
+                });
+
         logger.LogInformation(
+            MigrationStartedEvent,
             "Development database migration startup process started.");
 
         try
@@ -65,14 +161,15 @@ public static class DevelopmentDatabaseMigrator
                 if (pendingMigrations.Count == 0)
                 {
                     logger.LogInformation(
-                        "Database is already up to date. "
-                        + "No pending EF Core migrations were found.");
+                        DatabaseUpToDateEvent,
+                        "Database is already up to date. No pending EF Core migrations were found.");
 
                     return;
                 }
 
                 logger.LogInformation(
-                    "Applying {MigrationCount} pending EF Core migration(s): {Migrations}.",
+                    PendingMigrationsEvent,
+                    "Applying pending EF Core migrations. MigrationCount: {MigrationCount}, Migrations: {Migrations}.",
                     pendingMigrations.Count,
                     string.Join(
                         ", ",
@@ -83,7 +180,8 @@ public static class DevelopmentDatabaseMigrator
                         cancellationToken);
 
                 logger.LogInformation(
-                    "Development database migrations completed successfully.");
+    MigrationCompletedEvent,
+    "Development database migrations completed successfully.");
             }
             finally
             {
@@ -104,6 +202,7 @@ public static class DevelopmentDatabaseMigrator
                 .IsCancellationRequested)
         {
             logger.LogWarning(
+                MigrationCancelledEvent,
                 "Development database migration was cancelled.");
 
             throw;
@@ -111,14 +210,13 @@ public static class DevelopmentDatabaseMigrator
         catch (Exception exception)
         {
             logger.LogCritical(
-                exception,
-                "Development database migration failed. "
-                + "Application startup will be stopped.");
+                MigrationFailedEvent,
+                "Development database migration failed. Application startup will be stopped. FailureType: {FailureType}.",
+                exception.GetType().Name);
 
             throw new InvalidOperationException(
                 "Development database migration failed. "
-                + "Application startup cannot continue. "
-                + "See the preceding database migration log for details.",
+                + "Application startup cannot continue.",
                 exception);
         }
     }
@@ -146,8 +244,8 @@ public static class DevelopmentDatabaseMigrator
             try
             {
                 logger.LogInformation(
-                    "Checking database availability. "
-                    + "Attempt {Attempt}/{MaximumAttempts}.",
+                    DatabaseAvailabilityCheckEvent,
+                    "Checking database availability. Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
                     attempt,
                     maximumAttempts);
 
@@ -156,14 +254,15 @@ public static class DevelopmentDatabaseMigrator
                             cancellationToken))
                 {
                     logger.LogInformation(
+                        DatabaseAvailableEvent,
                         "Database connection is available.");
 
                     return;
                 }
 
                 logger.LogWarning(
-                    "Database is not available yet. "
-                    + "Attempt {Attempt}/{MaximumAttempts}.",
+                    DatabaseUnavailableEvent,
+                    "Database is not available yet. Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
                     attempt,
                     maximumAttempts);
             }
@@ -173,11 +272,11 @@ public static class DevelopmentDatabaseMigrator
                     exception;
 
                 logger.LogWarning(
-                    exception,
-                    "Database connection attempt "
-                    + "{Attempt}/{MaximumAttempts} failed.",
+                    DatabaseConnectionAttemptFailedEvent,
+                    "Database connection attempt failed. Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}, FailureType: {FailureType}.",
                     attempt,
-                    maximumAttempts);
+                    maximumAttempts,
+                    exception.GetType().Name);
             }
 
             if (attempt <
@@ -265,7 +364,9 @@ public static class DevelopmentDatabaseMigrator
         }
 
         logger.LogInformation(
-            "SQL Server migration lock acquired successfully.");
+            MigrationLockAcquiredEvent,
+            "SQL Server migration lock acquired successfully. LockResource: {LockResource}.",
+            MigrationLockResource);
     }
 
     private static async Task
@@ -307,16 +408,17 @@ public static class DevelopmentDatabaseMigrator
                 cancellationToken);
 
             logger.LogInformation(
-                "SQL Server migration lock released.");
+                MigrationLockReleasedEvent,
+                "SQL Server migration lock released. LockResource: {LockResource}.",
+                MigrationLockResource);
         }
         catch (Exception exception)
         {
             logger.LogWarning(
+                MigrationLockReleaseFailedEvent,
                 exception,
-                "Failed to explicitly release the "
-                + "SQL Server migration lock. "
-                + "The lock will be released when "
-                + "the database connection closes.");
+                "Failed to explicitly release the SQL Server migration lock. The lock will be released when the database connection closes. LockResource: {LockResource}.",
+                MigrationLockResource);
         }
     }
 }

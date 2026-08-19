@@ -14,6 +14,156 @@ public sealed class IntegrationEventConsumer
     : BackgroundService,
       IAsyncDisposable
 {
+    private static readonly EventId
+    ConsumerStartedEvent =
+        new(
+            4300,
+            "IntegrationEventConsumerStarted");
+
+    private static readonly EventId
+        ConsumerStoppingEvent =
+            new(
+                4301,
+                "IntegrationEventConsumerStopping");
+
+    private static readonly EventId
+        ConsumerInitializationFailedEvent =
+            new(
+                4302,
+                "IntegrationEventConsumerInitializationFailed");
+
+    private static readonly EventId
+        ConsumerInitializedEvent =
+            new(
+                4303,
+                "IntegrationEventConsumerInitialized");
+
+    private static readonly EventId
+        DeliveryIgnoredDuringShutdownEvent =
+            new(
+                4310,
+                "IntegrationEventDeliveryIgnoredDuringShutdown");
+
+    private static readonly EventId
+        ChannelUnavailableEvent =
+            new(
+                4311,
+                "IntegrationEventChannelUnavailable");
+
+    private static readonly EventId
+        DuplicateEventDetectedEvent =
+            new(
+                4312,
+                "DuplicateIntegrationEventDetected");
+
+    private static readonly EventId
+        EventProcessingStartedEvent =
+            new(
+                4313,
+                "IntegrationEventProcessingStarted");
+
+    private static readonly EventId
+        UnsupportedEventEvent =
+            new(
+                4320,
+                "UnsupportedIntegrationEvent");
+
+    private static readonly EventId
+        InvalidJsonEvent =
+            new(
+                4321,
+                "InvalidIntegrationEventJson");
+
+    private static readonly EventId
+        InvalidEventDataEvent =
+            new(
+                4322,
+                "InvalidIntegrationEventData");
+
+    private static readonly EventId
+        RetryExhaustedEvent =
+            new(
+                4330,
+                "IntegrationEventRetryExhausted");
+
+    private static readonly EventId
+        RetryScheduledEvent =
+            new(
+                4331,
+                "IntegrationEventRetryScheduled");
+
+    private static readonly EventId
+        RetryPublishFailedEvent =
+            new(
+                4332,
+                "IntegrationEventRetryPublishFailed");
+
+    private static readonly EventId
+        MovedToDeadLetterQueueEvent =
+            new(
+                4340,
+                "IntegrationEventMovedToDeadLetterQueue");
+
+    private static readonly EventId
+        DeadLetterPublishFailedEvent =
+            new(
+                4341,
+                "IntegrationEventDeadLetterPublishFailed");
+
+    private static readonly EventId
+        GracefulShutdownStartedEvent =
+            new(
+                4350,
+                "IntegrationEventGracefulShutdownStarted");
+
+    private static readonly EventId
+        ConsumerCancelledEvent =
+            new(
+                4351,
+                "IntegrationEventConsumerCancelled");
+
+    private static readonly EventId
+        ConsumerCancelFailedEvent =
+            new(
+                4352,
+                "IntegrationEventConsumerCancelFailed");
+
+    private static readonly EventId
+        WaitingForMessagesEvent =
+            new(
+                4353,
+                "IntegrationEventWaitingForMessages");
+
+    private static readonly EventId
+        MessagesDrainedEvent =
+            new(
+                4354,
+                "IntegrationEventMessagesDrained");
+
+    private static readonly EventId
+        ShutdownTimeoutEvent =
+            new(
+                4355,
+                "IntegrationEventShutdownTimeout");
+
+    private static readonly EventId
+        ConsumerStoppedEvent =
+            new(
+                4356,
+                "IntegrationEventConsumerStopped");
+
+    private static readonly EventId
+        ChannelCloseFailedEvent =
+            new(
+                4360,
+                "IntegrationEventChannelCloseFailed");
+
+    private static readonly EventId
+        ConnectionCloseFailedEvent =
+            new(
+                4361,
+                "IntegrationEventConnectionCloseFailed");
+
     private readonly RabbitMqOptions
         _options;
 
@@ -131,9 +281,9 @@ public sealed class IntegrationEventConsumer
                             stoppingToken);
 
             _logger.LogInformation(
-                "Integration event consumer started. "
-                + "Queue: {Queue}, consumer tag: "
-                + "{ConsumerTag}.",
+                ConsumerStartedEvent,
+                "Integration event consumer started. Module: {Module}, Queue: {Queue}, ConsumerTag: {ConsumerTag}.",
+                "IntegrationEventConsumer",
                 _options.IntegrationEventQueue,
                 _consumerTag);
 
@@ -146,15 +296,17 @@ public sealed class IntegrationEventConsumer
                 .IsCancellationRequested)
         {
             _logger.LogInformation(
-                "Integration event consumer "
-                + "is stopping.");
+                ConsumerStoppingEvent,
+                "Integration event consumer is stopping. Module: {Module}.",
+                "IntegrationEventConsumer");
         }
         catch (Exception exception)
         {
             _logger.LogCritical(
-                exception,
-                "Integration event consumer "
-                + "could not be started.");
+                ConsumerInitializationFailedEvent,
+                "Integration event consumer could not be started. Module: {Module}, FailureType: {FailureType}.",
+                "IntegrationEventConsumer",
+                exception.GetType().Name);
 
             throw;
         }
@@ -195,19 +347,14 @@ public sealed class IntegrationEventConsumer
                 cancellationToken);
 
         _logger.LogInformation(
-            "RabbitMQ consumer initialized. "
-            + "Consumer: {Consumer}, "
-            + "queue: {Queue}, "
-            + "prefetch count: {PrefetchCount}.",
+            ConsumerInitializedEvent,
+            "RabbitMQ integration event consumer initialized. Module: {Module}, Consumer: {Consumer}, Queue: {Queue}, PrefetchCount: {PrefetchCount}.",
+            "IntegrationEventConsumer",
             nameof(
                 IntegrationEventConsumer),
             _options.IntegrationEventQueue,
             _options.PrefetchCount);
     }
-
-   
-
-
 
     private async Task HandleMessageAsync(
      object sender,
@@ -216,9 +363,9 @@ public sealed class IntegrationEventConsumer
         if (_isStopping)
         {
             _logger.LogInformation(
-                "Integration event delivery {DeliveryTag} "
-                + "was received while consumer is stopping "
-                + "and will not start processing.",
+                DeliveryIgnoredDuringShutdownEvent,
+                "Integration event delivery received while consumer is stopping and will not start processing. Module: {Module}, DeliveryTag: {DeliveryTag}.",
+                "IntegrationEventConsumer",
                 eventArgs.DeliveryTag);
 
             return;
@@ -232,9 +379,9 @@ public sealed class IntegrationEventConsumer
                 !_channel.IsOpen)
             {
                 _logger.LogError(
-                    "RabbitMQ channel is unavailable "
-                    + "for integration event delivery "
-                    + "{DeliveryTag}.",
+                    ChannelUnavailableEvent,
+                    "RabbitMQ channel is unavailable for integration event delivery. Module: {Module}, DeliveryTag: {DeliveryTag}.",
+                    "IntegrationEventConsumer",
                     eventArgs.DeliveryTag);
 
                 return;
@@ -253,6 +400,30 @@ public sealed class IntegrationEventConsumer
                     _deserializer.Deserialize(
                         eventArgs.RoutingKey,
                         eventArgs.Body);
+
+                using var messageLogScope =
+    _logger.BeginScope(
+        new Dictionary<string, object?>
+        {
+            ["CorrelationId"] =
+                integrationEvent
+                    .CorrelationId,
+
+            ["IntegrationEventId"] =
+                integrationEvent
+                    .EventId,
+
+            ["EventType"] =
+                integrationEvent
+                    .GetType()
+                    .Name,
+
+            ["RoutingKey"] =
+                eventArgs.RoutingKey,
+
+            ["Module"] =
+                "IntegrationEventConsumer"
+        });
 
                 var consumerName =
                     nameof(IntegrationEventConsumer);
@@ -275,16 +446,8 @@ public sealed class IntegrationEventConsumer
                 if (alreadyProcessed)
                 {
                     _logger.LogWarning(
-                        "Duplicate integration event detected. "
-                        + "Event ID: {EventId}, "
-                        + "event type: {EventType}, "
-                        + "routing key: {RoutingKey}. "
-                        + "Message will be acknowledged without processing.",
-                        integrationEvent.EventId,
-                        integrationEvent
-                            .GetType()
-                            .Name,
-                        eventArgs.RoutingKey);
+                        DuplicateEventDetectedEvent,
+                        "Duplicate integration event detected and will be acknowledged without processing.");
 
                     await _consumerOperations
                         .AcknowledgeAsync(
@@ -297,18 +460,10 @@ public sealed class IntegrationEventConsumer
                 }
 
                 _logger.LogInformation(
-                    "Processing integration event "
-                    + "{EventType}. Routing key: "
-                    + "{RoutingKey}, attempt: "
-                    + "{Attempt}/{MaximumAttempts}. "
-                    + "Event ID: {EventId}.",
-                    integrationEvent
-                        .GetType()
-                        .Name,
-                    eventArgs.RoutingKey,
+                    EventProcessingStartedEvent,
+                    "Processing integration event. Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
                     retryCount + 1,
-                    _options.MaximumRetryCount + 1,
-                    integrationEvent.EventId);
+                    _options.MaximumRetryCount + 1);
 
                 await _dispatcher.DispatchAsync(
                     integrationEvent,
@@ -336,10 +491,10 @@ public sealed class IntegrationEventConsumer
             catch (NotSupportedException exception)
             {
                 _logger.LogError(
+                    UnsupportedEventEvent,
                     exception,
-                    "Unsupported integration event "
-                    + "with routing key {RoutingKey} "
-                    + "will be moved to DLQ.",
+                    "Unsupported integration event will be moved to DLQ. Module: {Module}, RoutingKey: {RoutingKey}.",
+                    "IntegrationEventConsumer",
                     eventArgs.RoutingKey);
 
                 await MoveToDeadLetterQueueAsync(
@@ -351,10 +506,10 @@ public sealed class IntegrationEventConsumer
                    exception)
             {
                 _logger.LogError(
+                    InvalidJsonEvent,
                     exception,
-                    "Invalid integration event "
-                    + "with routing key {RoutingKey} "
-                    + "will be moved to DLQ.",
+                    "Invalid integration event JSON will be moved to DLQ. Module: {Module}, RoutingKey: {RoutingKey}.",
+                    "IntegrationEventConsumer",
                     eventArgs.RoutingKey);
 
                 await MoveToDeadLetterQueueAsync(
@@ -365,11 +520,11 @@ public sealed class IntegrationEventConsumer
             catch (ArgumentException exception)
             {
                 _logger.LogError(
-                    exception,
-                    "Invalid integration event data "
-                    + "for routing key {RoutingKey} "
-                    + "will be moved to DLQ.",
-                    eventArgs.RoutingKey);
+                    InvalidEventDataEvent,
+                    "Invalid integration event data will be moved to DLQ. Module: {Module}, RoutingKey: {RoutingKey}, FailureType: {FailureType}.",
+                    "IntegrationEventConsumer",
+                    eventArgs.RoutingKey,
+                    exception.GetType().Name);
 
                 await MoveToDeadLetterQueueAsync(
                     eventArgs,
@@ -378,15 +533,6 @@ public sealed class IntegrationEventConsumer
             }
             catch (Exception exception)
             {
-                _logger.LogError(
-                    exception,
-                    "Integration event processing "
-                    + "failed. Routing key: "
-                    + "{RoutingKey}, attempt: "
-                    + "{Attempt}.",
-                    eventArgs.RoutingKey,
-                    retryCount + 1);
-
                 await HandleTransientFailureAsync(
                     eventArgs,
                     retryCount,
@@ -408,9 +554,12 @@ public sealed class IntegrationEventConsumer
             _options.MaximumRetryCount)
         {
             _logger.LogError(
-                "Integration event with routing key {RoutingKey} exhausted all {MaximumAttempts} attempts and will be moved to DLQ.",
+                RetryExhaustedEvent,
+                "Integration event exhausted all delivery attempts and will be moved to DLQ. Module: {Module}, RoutingKey: {RoutingKey}, MaximumAttempts: {MaximumAttempts}, FailureType: {FailureType}.",
+                "IntegrationEventConsumer",
                 eventArgs.RoutingKey,
-                _options.MaximumRetryCount + 1);
+                _options.MaximumRetryCount + 1,
+                exception.GetType().Name);
 
             await MoveToDeadLetterQueueAsync(
                 eventArgs,
@@ -464,18 +613,24 @@ public sealed class IntegrationEventConsumer
     .RecordRetry();
 
             _logger.LogWarning(
-                "Integration event with routing key {RoutingKey} scheduled for retry {RetryCount}/{MaximumRetryCount} after {DelayMilliseconds} ms.",
+                RetryScheduledEvent,
+                "Integration event scheduled for retry. Module: {Module}, RoutingKey: {RoutingKey}, RetryCount: {RetryCount}, MaximumRetryCount: {MaximumRetryCount}, DelayMilliseconds: {DelayMilliseconds}, FailureType: {FailureType}.",
+                "IntegrationEventConsumer",
                 eventArgs.RoutingKey,
                 nextRetryCount,
                 _options.MaximumRetryCount,
-                delayMilliseconds);
+                delayMilliseconds,
+                exception.GetType().Name);
         }
         catch (Exception publishException)
         {
             _logger.LogCritical(
+                RetryPublishFailedEvent,
                 publishException,
-                "Integration event with routing key {RoutingKey} could not be published to retry exchange. Original delivery will be requeued.",
+                "Integration event could not be published to retry exchange. Original delivery will be requeued. Module: {Module}, RoutingKey: {RoutingKey}.",
+                "IntegrationEventConsumer",
                 eventArgs.RoutingKey);
+
             await _consumerOperations
                 .NegativeAcknowledgeAsync(
                     _channel!,
@@ -537,33 +692,27 @@ public sealed class IntegrationEventConsumer
     .RecordFailure();
 
             _logger.LogError(
-                "Integration event moved to DLQ. "
-                + "RoutingKey: {RoutingKey}, "
-                + "MessageId: {MessageId}, "
-                + "CorrelationId: {CorrelationId}, "
-                + "Queue: {DeadLetterQueue}, "
-                + "RetryCount: {RetryCount}, "
-                + "FailureReason: {FailureReason}.",
-                eventArgs.RoutingKey,
-                eventArgs.BasicProperties
-                    .MessageId,
-                eventArgs.BasicProperties
-                    .CorrelationId,
-                _options
-                    .IntegrationEventDeadLetterQueue,
-                retryCount,
-RabbitMqMessageHelper
-    .Truncate(
-        failureReason,
-        500));
+     MovedToDeadLetterQueueEvent,
+     "Integration event moved to DLQ. Module: {Module}, RoutingKey: {RoutingKey}, MessageId: {MessageId}, CorrelationId: {CorrelationId}, Queue: {DeadLetterQueue}, RetryCount: {RetryCount}.",
+     "IntegrationEventConsumer",
+     eventArgs.RoutingKey,
+     eventArgs.BasicProperties
+         .MessageId,
+     eventArgs.BasicProperties
+         .CorrelationId,
+     _options
+         .IntegrationEventDeadLetterQueue,
+     retryCount);
+
         }
         catch (Exception exception)
         {
             _logger.LogCritical(
+                DeadLetterPublishFailedEvent,
                 exception,
-                "Integration event could not be "
-                + "moved to DLQ. Original message "
-                + "will be requeued.");
+                "Integration event could not be moved to DLQ. Original message will be requeued. Module: {Module}, RoutingKey: {RoutingKey}.",
+                "IntegrationEventConsumer",
+                eventArgs.RoutingKey);
 
             await _consumerOperations
                 .NegativeAcknowledgeAsync(
@@ -602,8 +751,9 @@ RabbitMqMessageHelper
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Graceful shutdown started for integration event consumer. "
-            + "Active messages: {ActiveMessageCount}.",
+            GracefulShutdownStartedEvent,
+            "Graceful shutdown started for integration event consumer. Module: {Module}, ActiveMessageCount: {ActiveMessageCount}.",
+            "IntegrationEventConsumer",
             Volatile.Read(
                 ref _activeMessageCount));
 
@@ -623,15 +773,18 @@ RabbitMqMessageHelper
                             CancellationToken.None);
 
                 _logger.LogInformation(
-                    "Integration event RabbitMQ consumer {ConsumerTag} cancelled. "
-                    + "No new deliveries will be accepted.",
+                    ConsumerCancelledEvent,
+                    "Integration event RabbitMQ consumer cancelled. Module: {Module}, ConsumerTag: {ConsumerTag}. No new deliveries will be accepted.",
+                    "IntegrationEventConsumer",
                     _consumerTag);
             }
             catch (Exception exception)
             {
                 _logger.LogWarning(
-                    exception,
-                    "Integration event RabbitMQ consumer could not be cancelled cleanly.");
+    ConsumerCancelFailedEvent,
+    exception,
+    "Integration event RabbitMQ consumer could not be cancelled cleanly. Module: {Module}.",
+    "IntegrationEventConsumer");
             }
         }
 
@@ -639,7 +792,9 @@ RabbitMqMessageHelper
                 ref _activeMessageCount) > 0)
         {
             _logger.LogInformation(
-                "Waiting for {ActiveMessageCount} active integration event message(s) to finish.",
+                WaitingForMessagesEvent,
+                "Waiting for active integration event messages to finish. Module: {Module}, ActiveMessageCount: {ActiveMessageCount}.",
+                "IntegrationEventConsumer",
                 Volatile.Read(
                     ref _activeMessageCount));
 
@@ -651,14 +806,18 @@ RabbitMqMessageHelper
                         cancellationToken);
 
                 _logger.LogInformation(
-                    "All active integration event messages completed successfully.");
+    MessagesDrainedEvent,
+    "All active integration event messages completed successfully. Module: {Module}.",
+    "IntegrationEventConsumer");
             }
             catch (OperationCanceledException)
                 when (cancellationToken
                     .IsCancellationRequested)
             {
                 _logger.LogWarning(
-                    "Graceful shutdown timeout reached while waiting for integration event processing to finish.");
+    ShutdownTimeoutEvent,
+    "Graceful shutdown timeout reached while waiting for integration event processing to finish. Module: {Module}.",
+    "IntegrationEventConsumer");
             }
         }
 
@@ -668,7 +827,9 @@ RabbitMqMessageHelper
         await DisposeRabbitMqResourcesAsync();
 
         _logger.LogInformation(
-            "Integration event consumer stopped successfully.");
+            ConsumerStoppedEvent,
+            "Integration event consumer stopped successfully. Module: {Module}.",
+            "IntegrationEventConsumer");
     }
 
     private async Task
@@ -688,9 +849,10 @@ RabbitMqMessageHelper
             catch (Exception exception)
             {
                 _logger.LogWarning(
+                    ChannelCloseFailedEvent,
                     exception,
-                    "Integration event channel "
-                    + "could not be closed cleanly.");
+                    "Integration event RabbitMQ channel could not be closed cleanly. Module: {Module}.",
+                    "IntegrationEventConsumer");
             }
 
             await _channel.DisposeAsync();
@@ -713,9 +875,10 @@ RabbitMqMessageHelper
             catch (Exception exception)
             {
                 _logger.LogWarning(
+                    ConnectionCloseFailedEvent,
                     exception,
-                    "Integration event connection "
-                    + "could not be closed cleanly.");
+                    "Integration event RabbitMQ connection could not be closed cleanly. Module: {Module}.",
+                    "IntegrationEventConsumer");
             }
 
             await _connection.DisposeAsync();
