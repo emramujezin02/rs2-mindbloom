@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using MindBloom.API.Configuration;
 
@@ -39,6 +40,14 @@ public sealed class RequestTimingMiddleware
     public async Task InvokeAsync(
         HttpContext context)
     {
+        if (IsHealthEndpoint(
+                context.Request.Path))
+        {
+            await _next(context);
+
+            return;
+        }
+
         var stopwatch =
             Stopwatch.StartNew();
 
@@ -53,6 +62,17 @@ public sealed class RequestTimingMiddleware
             var elapsedMilliseconds =
                 stopwatch.ElapsedMilliseconds;
 
+            var routeEndpoint =
+                context.GetEndpoint()
+                as RouteEndpoint;
+
+            var routeTemplate =
+                routeEndpoint
+                    ?.RoutePattern
+                    .RawText
+                ?? context.Request.Path.Value
+                ?? string.Empty;
+
             if (elapsedMilliseconds >=
                 _options
                     .SlowRequestThresholdMilliseconds)
@@ -61,13 +81,15 @@ public sealed class RequestTimingMiddleware
                     SlowRequestEvent,
                     "Slow HTTP request. "
                     + "Method: {RequestMethod}, "
-                    + "Path: {RequestPath}, "
+                    + "RouteTemplate: {RouteTemplate}, "
                     + "StatusCode: {StatusCode}, "
-                    + "DurationMs: {DurationMs}.",
+                    + "DurationMs: {DurationMs}, "
+                    + "CorrelationId: {CorrelationId}.",
                     context.Request.Method,
-                    context.Request.Path.Value,
+                    routeTemplate,
                     context.Response.StatusCode,
-                    elapsedMilliseconds);
+                    elapsedMilliseconds,
+                    context.TraceIdentifier);
             }
             else
             {
@@ -75,14 +97,24 @@ public sealed class RequestTimingMiddleware
                     RequestTimingEvent,
                     "HTTP request timing. "
                     + "Method: {RequestMethod}, "
-                    + "Path: {RequestPath}, "
+                    + "RouteTemplate: {RouteTemplate}, "
                     + "StatusCode: {StatusCode}, "
-                    + "DurationMs: {DurationMs}.",
+                    + "DurationMs: {DurationMs}, "
+                    + "CorrelationId: {CorrelationId}.",
                     context.Request.Method,
-                    context.Request.Path.Value,
+                    routeTemplate,
                     context.Response.StatusCode,
-                    elapsedMilliseconds);
+                    elapsedMilliseconds,
+                    context.TraceIdentifier);
             }
         }
+    }
+
+    private static bool IsHealthEndpoint(
+        PathString path)
+    {
+        return path.StartsWithSegments(
+            "/health",
+            StringComparison.OrdinalIgnoreCase);
     }
 }
