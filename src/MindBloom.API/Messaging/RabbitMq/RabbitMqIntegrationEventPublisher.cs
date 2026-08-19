@@ -59,6 +59,9 @@ public sealed class RabbitMqIntegrationEventPublisher
     private readonly RabbitMqTopology
         _topology;
 
+    private readonly ICorrelationIdAccessor
+    _correlationIdAccessor;
+
     private readonly ILogger<
         RabbitMqIntegrationEventPublisher>
         _logger;
@@ -77,6 +80,7 @@ public sealed class RabbitMqIntegrationEventPublisher
         RabbitMqConnectionManager connectionManager,
         IOptions<RabbitMqOptions> options,
         RabbitMqTopology topology,
+        ICorrelationIdAccessor correlationIdAccessor,
         ILogger<
             RabbitMqIntegrationEventPublisher>
             logger)
@@ -89,6 +93,9 @@ public sealed class RabbitMqIntegrationEventPublisher
 
         _topology =
             topology;
+
+        _correlationIdAccessor =
+    correlationIdAccessor;
 
         _logger =
             logger;
@@ -110,6 +117,20 @@ public sealed class RabbitMqIntegrationEventPublisher
             throw new ArgumentException(
                 "RabbitMQ routing key is required.",
                 nameof(routingKey));
+        }
+
+        var currentCorrelationId =
+    _correlationIdAccessor
+        .CorrelationId;
+
+        if (!string.IsNullOrWhiteSpace(
+                currentCorrelationId) &&
+            Guid.TryParse(
+                currentCorrelationId,
+                out var parsedCorrelationId))
+        {
+            integrationEvent.CorrelationId =
+                parsedCorrelationId;
         }
 
         ValidateEvent(
@@ -390,6 +411,8 @@ public sealed class RabbitMqIntegrationEventPublisher
         _topologyDeclared =
             true;
     }
+
+
 
     private static void ValidateEvent(
         IntegrationEvent integrationEvent)

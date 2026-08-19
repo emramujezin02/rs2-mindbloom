@@ -7,7 +7,7 @@ public abstract record IntegrationEvent
     public Guid EventId { get; init; } =
         Guid.NewGuid();
 
-    public Guid CorrelationId { get; init; } =
+    public Guid CorrelationId { get; set; } =
         Guid.NewGuid();
 
     public DateTime TimestampUtc { get; init; } =

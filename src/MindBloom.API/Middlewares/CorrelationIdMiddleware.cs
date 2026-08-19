@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
-using System.Security.Claims;
-using System.Text.RegularExpressions;
+
 
 namespace MindBloom.API.Middlewares;
 
@@ -65,12 +64,6 @@ public sealed partial class CorrelationIdMiddleware
                 return Task.CompletedTask;
             });
 
-        var userId =
-            context.User
-                .FindFirst(
-                    ClaimTypes.NameIdentifier)?
-                .Value;
-
         using var scope =
             _logger.BeginScope(
                 new Dictionary<string, object?>
@@ -114,39 +107,38 @@ public sealed partial class CorrelationIdMiddleware
             context.Response.StatusCode);
     }
 
-    private static readonly Regex
-        CorrelationIdPattern =
-            new(
-                "^[A-Za-z0-9._-]+$",
-                RegexOptions.CultureInvariant |
-                RegexOptions.Compiled);
-
     private static string ResolveCorrelationId(
         HttpContext context)
     {
         if (context.Request.Headers.TryGetValue(
                 HeaderName,
-                out var headerValues))
+                out var headerValues) &&
+            headerValues.Count == 1)
         {
             var providedCorrelationId =
-                headerValues
-                    .FirstOrDefault()
+                headerValues[0]
                     ?.Trim();
 
-            if (IsValidCorrelationId(
-                    providedCorrelationId))
+            if (TryNormalizeCorrelationId(
+                    providedCorrelationId,
+                    out var normalizedCorrelationId))
             {
-                return providedCorrelationId!;
+                return normalizedCorrelationId;
             }
         }
 
         return Guid.NewGuid()
-            .ToString("N");
+            .ToString("D");
     }
 
-    private static bool IsValidCorrelationId(
-        string? correlationId)
+    private static bool
+        TryNormalizeCorrelationId(
+            string? correlationId,
+            out string normalizedCorrelationId)
     {
+        normalizedCorrelationId =
+            string.Empty;
+
         if (string.IsNullOrWhiteSpace(
                 correlationId))
         {
@@ -159,7 +151,19 @@ public sealed partial class CorrelationIdMiddleware
             return false;
         }
 
-        return CorrelationIdPattern
-            .IsMatch(correlationId);
+        if (!Guid.TryParse(
+                correlationId,
+                out var parsedCorrelationId) ||
+            parsedCorrelationId ==
+                Guid.Empty)
+        {
+            return false;
+        }
+
+        normalizedCorrelationId =
+            parsedCorrelationId
+                .ToString("D");
+
+        return true;
     }
 }

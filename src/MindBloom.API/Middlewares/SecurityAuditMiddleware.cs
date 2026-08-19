@@ -101,6 +101,9 @@ public sealed class SecurityAuditMiddleware
                         FailureReason =
                             reason,
 
+                        CorrelationId =
+    context.TraceIdentifier,
+
                         ResourceType =
                             "HttpEndpoint",
 

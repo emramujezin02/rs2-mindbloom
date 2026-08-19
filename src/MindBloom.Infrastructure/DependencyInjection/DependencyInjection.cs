@@ -11,6 +11,7 @@ using MindBloom.Application.Features.Auth.Interfaces;
 using MindBloom.Application.Features.Reviews.Interfaces;
 using MindBloom.Application.Features.Therapists.Interfaces;
 using MindBloom.Domain.Entities;
+using MindBloom.Infrastructure.Observability;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Security;
 using MindBloom.Infrastructure.Services;
@@ -37,6 +38,7 @@ using MindBloom.Application.Features.Auth.Validators;
 using MindBloom.Application.Features.Security.Interfaces;
 using MindBloom.Application.Features.Privacy.Interfaces;
 using MindBloom.Infrastructure.Configuration;
+using MindBloom.Infrastructure.Observability;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
 
@@ -517,7 +519,9 @@ Environment.GetEnvironmentVariable(
 
                     client.Timeout =
                         TimeSpan.FromSeconds(10);
-                });
+                })
+                .AddHttpMessageHandler<
+                    CorrelationIdDelegatingHandler>();
         }
 
 
@@ -837,14 +841,17 @@ Environment.GetEnvironmentVariable(
         services.AddScoped<IArticleService,ArticleService>();
 
         services.AddScoped<IWorkshopService, WorkshopService>();
-
+        services.AddTransient<
+    CorrelationIdDelegatingHandler>();
         services.AddScoped<StripeVerificationService>();
         services.AddScoped<IChatService,ChatService>();
 
         services.AddScoped<IBusinessNotificationService, BusinessNotificationService>();
 
         services.AddScoped<IAdminReportService, AdminReportService>();
-
+        services.AddScoped<
+    ICorrelationIdAccessor,
+    HttpContextCorrelationIdAccessor>();
         services.AddScoped<
     IAdminAuditService,
     AdminAuditService>();

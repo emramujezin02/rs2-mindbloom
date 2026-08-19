@@ -154,7 +154,11 @@ builder.Services
                             "One or more validation errors occurred.",
 
                         ValidationErrors =
-                            errors
+                            errors,
+
+                        TraceId =
+    context.HttpContext
+        .TraceIdentifier,
                     });
             };
     });
@@ -398,7 +402,11 @@ builder.Services.AddRateLimiter(
                             "Too many requests",
 
                         Detail =
-                            "Too many requests were received. Please try again later."
+                            "Too many requests were received. Please try again later.",
+
+
+                    TraceId =
+    httpContext.TraceIdentifier
                     };
 
                 await httpContext.Response
@@ -602,6 +610,33 @@ app.UseStatusCodePages(
                             "The request could not be completed."
                     }
             };
+
+        error =
+    new ApiErrorResponse
+    {
+        StatusCode =
+            error.StatusCode,
+
+        Title =
+            error.Title,
+
+        Detail =
+            error.Detail,
+
+        TraceId =
+            statusCodeContext
+                .HttpContext
+                .TraceIdentifier,
+
+        ValidationErrors =
+            error.ValidationErrors,
+
+        ExceptionType =
+            error.ExceptionType,
+
+        StackTrace =
+            error.StackTrace
+    };
 
         response.ContentType =
             "application/problem+json";

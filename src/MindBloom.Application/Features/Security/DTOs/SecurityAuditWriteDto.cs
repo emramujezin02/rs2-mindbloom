@@ -14,4 +14,6 @@ public sealed class SecurityAuditWriteDto
     public string? ResourceType { get; set; }
 
     public string? ResourceId { get; set; }
+
+    public string? CorrelationId { get; set; }
 }
