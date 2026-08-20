@@ -13,11 +13,21 @@ using MindBloom.Application.Common.BusinessRules;
 using MindBloom.Messaging.Contracts.Appointments;
 using MindBloom.Messaging.Contracts.Common;
 using MindBloom.Shared.Observability;
+using System.Data;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace MindBloom.Infrastructure.Services;
 
 public class AppointmentService : IAppointmentService
 {
+    private const int
+    AppointmentBookingLockTimeoutMilliseconds =
+        10000;
+
+    private const string
+        AppointmentSlotConflictMessage =
+            "This appointment time has already been booked. "
+            + "Please choose another available time.";
     private readonly ApplicationDbContext _context;
 
     private readonly IPaymentService _paymentService;
@@ -112,6 +122,9 @@ public class AppointmentService : IAppointmentService
 
                     try
                     {
+                        await AcquireAppointmentBookingLockAsync(
+    request.TherapistId);
+
                         var therapist =
                             await _context.Therapists
                                 .Include(x => x.User)
@@ -183,13 +196,6 @@ public class AppointmentService : IAppointmentService
                             unavailableDate,
                             "Therapist is unavailable during this time.");
 
-                        /*
-                         * Ova provjera je namjerno unutar
-                         * Serializable transakcije.
-                         *
-                         * Time sprečavamo dva paralelna
-                         * requesta da rezervišu isti slot.
-                         */
                         var overlappingAppointment =
                             await _context.Appointments
                                 .AnyAsync(
@@ -210,9 +216,11 @@ public class AppointmentService : IAppointmentService
                                                     .Accepted
                                         ));
 
-                        BusinessRuleGuard.Against(
-                            overlappingAppointment,
-                            "Selected appointment time is already booked.");
+                        if (overlappingAppointment)
+                        {
+                            throw new BusinessException(
+                                AppointmentSlotConflictMessage);
+                        }
 
                         var client =
                             await _context.Clients
@@ -284,13 +292,6 @@ public class AppointmentService : IAppointmentService
                         _context.Appointments.Add(
                             appointment);
 
-                        /*
-                         * Prvi SaveChanges nam treba da
-                         * SQL dodijeli Appointment.Id.
-                         *
-                         * Još uvijek smo unutar iste
-                         * SQL transakcije.
-                         */
                         await _context
                             .SaveChangesAsync();
 
@@ -368,10 +369,6 @@ public class AppointmentService : IAppointmentService
                                 IntegrationEventRoutingKeys
                                     .AppointmentCreated);
 
-                        /*
-                         * Audit + Outbox ulaze u bazu
-                         * zajedno.
-                         */
                         await _context
                             .SaveChangesAsync();
 
@@ -415,6 +412,106 @@ public class AppointmentService : IAppointmentService
             .RecordAppointmentCreated();
 
         return result;
+    }
+
+    private async Task
+    AcquireAppointmentBookingLockAsync(
+        int therapistId,
+        CancellationToken cancellationToken =
+            default)
+    {
+        if (therapistId <= 0)
+        {
+            throw new ArgumentException(
+                "Therapist identifier is invalid.",
+                nameof(therapistId));
+        }
+
+        var currentTransaction =
+            _context.Database
+                .CurrentTransaction;
+
+        if (currentTransaction is null)
+        {
+            throw new InvalidOperationException(
+                "Appointment booking lock requires "
+                + "an active database transaction.");
+        }
+
+        var connection =
+            _context.Database
+                .GetDbConnection();
+
+        if (connection.State !=
+            ConnectionState.Open)
+        {
+            await connection.OpenAsync(
+                cancellationToken);
+        }
+
+        await using var command =
+            connection.CreateCommand();
+
+        command.Transaction =
+            currentTransaction
+                .GetDbTransaction();
+
+        command.CommandText =
+            """
+        DECLARE @result int;
+
+        EXEC @result = sp_getapplock
+            @Resource = @resource,
+            @LockMode = 'Exclusive',
+            @LockOwner = 'Transaction',
+            @LockTimeout = @timeout;
+
+        SELECT @result;
+        """;
+
+        var resourceParameter =
+            command.CreateParameter();
+
+        resourceParameter.ParameterName =
+            "@resource";
+
+        resourceParameter.DbType =
+            DbType.String;
+
+        resourceParameter.Value =
+            $"MindBloom.AppointmentBooking.Therapist.{therapistId}";
+
+        command.Parameters.Add(
+            resourceParameter);
+
+        var timeoutParameter =
+            command.CreateParameter();
+
+        timeoutParameter.ParameterName =
+            "@timeout";
+
+        timeoutParameter.DbType =
+            DbType.Int32;
+
+        timeoutParameter.Value =
+            AppointmentBookingLockTimeoutMilliseconds;
+
+        command.Parameters.Add(
+            timeoutParameter);
+
+        var result =
+            await command.ExecuteScalarAsync(
+                cancellationToken);
+
+        if (result is null ||
+            !int.TryParse(
+                result.ToString(),
+                out var lockResult) ||
+            lockResult < 0)
+        {
+            throw new BusinessException(
+                AppointmentSlotConflictMessage);
+        }
     }
 
     private async Task

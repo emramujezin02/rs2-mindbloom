@@ -240,6 +240,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.Entity<Appointment>()
+    .HasIndex(x => new
+    {
+        x.TherapistId,
+        x.StartUtc,
+        x.EndUtc,
+        x.Status
+    })
+    .HasDatabaseName(
+        "IX_Appointments_Therapist_SlotLookup");
+
         builder.Entity<SecurityAuditLog>(
     entity =>
     {
