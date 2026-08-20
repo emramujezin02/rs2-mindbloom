@@ -651,10 +651,6 @@ public sealed class StripeWebhookService
                 payment.Appointment.IsPaid =
                     false;
 
-                await EnqueueRefundedWebhookEventAsync(
-    payment,
-    cancellationToken);
-
                 break;
 
             case "pending":
@@ -811,7 +807,7 @@ public sealed class StripeWebhookService
         }
 
         payment.Status =
-            PaymentStatus.Refunded;
+      PaymentStatus.Refunded;
 
         payment.RefundedAtUtc ??=
             DateTime.UtcNow;
@@ -821,6 +817,10 @@ public sealed class StripeWebhookService
 
         payment.Appointment.IsPaid =
             false;
+
+        await EnqueueRefundedWebhookEventAsync(
+            payment,
+            cancellationToken);
 
         await _context
             .SaveChangesAsync(

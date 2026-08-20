@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Messaging.Contracts.Common;
+using MindBloom.Domain.Enums;
 
 namespace MindBloom.API.Messaging.Outbox;
 
@@ -27,11 +28,31 @@ public sealed class OutboxMessageProcessor
                 3402,
                 "OutboxMessageDeadLettered");
 
+    private static readonly TimeSpan
+    ProcessingLeaseTimeout =
+        TimeSpan.FromMinutes(5);
+
+
+
+    private static readonly EventId
+    OutboxHistoryCleanedEvent =
+        new(
+            3403,
+            "OutboxHistoryCleaned");
+
     private const int BatchSize =
         20;
 
     private const int MaximumAttempts =
         10;
+
+    private static readonly TimeSpan
+    ProcessedMessageRetention =
+        TimeSpan.FromDays(30);
+
+    private static readonly TimeSpan
+        CleanupInterval =
+            TimeSpan.FromHours(6);
 
     private static readonly TimeSpan
         PollingInterval =
@@ -48,6 +69,9 @@ public sealed class OutboxMessageProcessor
     private readonly ILogger<
         OutboxMessageProcessor>
         _logger;
+
+    private DateTime _nextCleanupAtUtc =
+    DateTime.UtcNow;
 
     public OutboxMessageProcessor(
         IServiceScopeFactory scopeFactory,
@@ -69,6 +93,18 @@ public sealed class OutboxMessageProcessor
         {
             try
             {
+
+                if (DateTime.UtcNow >=
+    _nextCleanupAtUtc)
+                {
+                    await CleanupProcessedHistoryAsync(
+                        stoppingToken);
+
+                    _nextCleanupAtUtc =
+                        DateTime.UtcNow.Add(
+                            CleanupInterval);
+                }
+
                 var processedAny =
                     await ProcessBatchAsync(
                         stoppingToken);
@@ -121,17 +157,25 @@ public sealed class OutboxMessageProcessor
         var now =
             DateTime.UtcNow;
 
+        var processingCutoff =
+    now.Subtract(
+        ProcessingLeaseTimeout);
+
         var messages =
             await context.OutboxMessages
-                .Where(message =>
-                    message.ProcessedAtUtc == null &&
-                    !message.IsDeadLettered &&
-                    (
-                        message.NextAttemptAtUtc ==
-                            null ||
-                        message.NextAttemptAtUtc <=
-                            now
-                    ))
+.Where(message =>
+    (
+        message.Status ==
+            OutboxMessageStatus.Pending ||
+        message.Status ==
+            OutboxMessageStatus.RetryPending
+    ) &&
+    (
+        message.NextAttemptAtUtc ==
+            null ||
+        message.NextAttemptAtUtc <=
+            now
+    ))
                 .OrderBy(message =>
                     message.CreatedAtUtc)
                 .ThenBy(message =>
@@ -152,6 +196,16 @@ public sealed class OutboxMessageProcessor
 
             try
             {
+
+                message.Status =
+    OutboxMessageStatus.Processing;
+
+                message.LastAttemptAtUtc =
+                    DateTime.UtcNow;
+
+                await context.SaveChangesAsync(
+                    cancellationToken);
+
                 var eventType =
                     Type.GetType(
                         message.EventType,
@@ -184,6 +238,9 @@ public sealed class OutboxMessageProcessor
                     integrationEvent,
                     message.RoutingKey,
                     cancellationToken);
+
+                message.Status =
+    OutboxMessageStatus.Processed;
 
                 message.ProcessedAtUtc =
                     DateTime.UtcNow;
@@ -238,6 +295,9 @@ public sealed class OutboxMessageProcessor
                 if (message.AttemptCount >=
                     MaximumAttempts)
                 {
+                    message.Status =
+    OutboxMessageStatus.DeadLettered;
+
                     message.IsDeadLettered =
                         true;
 
@@ -259,6 +319,9 @@ public sealed class OutboxMessageProcessor
                 }
                 else
                 {
+                    message.Status =
+    OutboxMessageStatus.RetryPending;
+
                     message.NextAttemptAtUtc =
                         DateTime.UtcNow.Add(
                             CalculateRetryDelay(
@@ -288,6 +351,52 @@ public sealed class OutboxMessageProcessor
         }
 
         return true;
+    }
+
+    private async Task
+    CleanupProcessedHistoryAsync(
+        CancellationToken cancellationToken)
+    {
+        using var scope =
+            _scopeFactory.CreateScope();
+
+        var context =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    ApplicationDbContext>();
+
+        var cutoffUtc =
+            DateTime.UtcNow.Subtract(
+                ProcessedMessageRetention);
+
+        var deletedCount =
+            await context.OutboxMessages
+                .Where(message =>
+                    message.Status ==
+                        OutboxMessageStatus
+                            .Processed &&
+                    message.ProcessedAtUtc !=
+                        null &&
+                    message.ProcessedAtUtc <
+                        cutoffUtc)
+                .ExecuteDeleteAsync(
+                    cancellationToken);
+
+        if (deletedCount <= 0)
+        {
+            return;
+        }
+
+        _logger.LogInformation(
+            OutboxHistoryCleanedEvent,
+            "Old processed Outbox history cleaned. "
+            + "Module: {Module}, "
+            + "DeletedCount: {DeletedCount}, "
+            + "RetentionDays: {RetentionDays}.",
+            "Outbox",
+            deletedCount,
+            ProcessedMessageRetention
+                .TotalDays);
     }
 
     private static TimeSpan

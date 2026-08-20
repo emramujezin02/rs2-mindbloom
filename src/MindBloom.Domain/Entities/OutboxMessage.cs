@@ -1,4 +1,6 @@
-﻿namespace MindBloom.Domain.Entities;
+﻿using MindBloom.Domain.Enums;
+
+namespace MindBloom.Domain.Entities;
 
 public sealed class OutboxMessage
 {
@@ -43,4 +45,10 @@ public sealed class OutboxMessage
     public string? LastError { get; set; }
 
     public bool IsDeadLettered { get; set; }
+
+    public OutboxMessageStatus Status
+    {
+        get;
+        set;
+    } = OutboxMessageStatus.Pending;
 }

@@ -4,7 +4,7 @@ using MindBloom.Application.Common.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Messaging.Contracts.Common;
-using Microsoft.EntityFrameworkCore;
+using MindBloom.Domain.Enums;
 
 namespace MindBloom.Infrastructure.Messaging.Outbox;
 
@@ -163,7 +163,10 @@ idempotencyKey)
                     0,
 
                 IsDeadLettered =
-                    false
+                    false,
+
+                Status =
+    OutboxMessageStatus.Pending,
             };
 
 

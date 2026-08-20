@@ -154,6 +154,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .IsRequired();
 
         entity.Property(x =>
+        x.Status)
+    .IsRequired()
+    .HasConversion<int>()
+    .HasDefaultValue(
+        OutboxMessageStatus.Pending);
+
+        entity.Property(x =>
                 x.AttemptCount)
             .HasDefaultValue(0);
 
@@ -177,8 +184,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
         entity.HasIndex(x => new
         {
+            x.Status,
             x.ProcessedAtUtc,
-            x.IsDeadLettered,
             x.NextAttemptAtUtc
         });
 

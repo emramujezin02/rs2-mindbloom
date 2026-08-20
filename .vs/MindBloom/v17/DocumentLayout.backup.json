@@ -3,24 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\persistence\\migrations\\20260820104821_addtransactionaloutbox.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\persistence\\migrations\\20260820104821_addtransactionaloutbox.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\persistence\\migrations\\20260820121437_completetransactionaloutbox.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\persistence\\migrations\\20260820121437_completetransactionaloutbox.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\dependencyinjection\\dependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\dependencyinjection\\dependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\messaging\\rabbitmq\\rabbitmqintegrationeventpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\messaging\\rabbitmq\\rabbitmqintegrationeventpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\common\\interfaces\\iintegrationeventpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\common\\interfaces\\iintegrationeventpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\messaging\\outbox\\outboxmessageprocessor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\messaging\\outbox\\outboxmessageprocessor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\persistence\\context\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -35,8 +23,12 @@
       "RelativeMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|solutionrelative:src\\mindbloom.domain\\entities\\outboxmessage.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\common\\interfaces\\ioutboxwriter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\common\\interfaces\\ioutboxwriter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.domain\\enums\\outboxmessagestatus.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9588F4E9-C225-4195-87DE-30B27B8CE671}|src\\MindBloom.Domain\\MindBloom.Domain.csproj|solutionrelative:src\\mindbloom.domain\\enums\\outboxmessagestatus.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.infrastructure\\payments\\stripewebhookservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{03B20F31-0554-43B3-B41B-A2041F821753}|src\\MindBloom.Infrastructure\\MindBloom.Infrastructure.csproj|solutionrelative:src\\mindbloom.infrastructure\\payments\\stripewebhookservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -51,118 +43,92 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "20260820104821_AddTransactionalOutbox.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260820104821_AddTransactionalOutbox.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260820104821_AddTransactionalOutbox.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260820104821_AddTransactionalOutbox.cs",
-              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260820104821_AddTransactionalOutbox.cs",
+              "Title": "20260820121437_CompleteTransactionaloutbox.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260820121437_CompleteTransactionaloutbox.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260820121437_CompleteTransactionaloutbox.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260820121437_CompleteTransactionaloutbox.cs",
+              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Persistence\\Migrations\\20260820121437_CompleteTransactionaloutbox.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-20T10:48:22.788Z",
+              "WhenOpened": "2026-08-20T12:14:38.301Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "DependencyInjection.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
-              "RelativeToolTip": "src\\MindBloom.Infrastructure\\DependencyInjection\\DependencyInjection.cs",
-              "ViewState": "AgIAAAsEAAAAAAAAAAAewBsEAAAoAAAAAAAAAA==",
+              "Title": "OutboxMessageProcessor.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\Outbox\\OutboxMessageProcessor.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\Messaging\\Outbox\\OutboxMessageProcessor.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\Outbox\\OutboxMessageProcessor.cs",
+              "RelativeToolTip": "src\\MindBloom.API\\Messaging\\Outbox\\OutboxMessageProcessor.cs",
+              "ViewState": "AgIAAJAAAAAAAAAAAAAAAKEAAAAgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-20T10:47:33.273Z",
+              "WhenOpened": "2026-08-20T11:42:44.767Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Program.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.API\\Program.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Program.cs",
-              "RelativeToolTip": "src\\MindBloom.API\\Program.cs",
-              "ViewState": "AgIAAMAAAAAAAAAAAAAgwNMAAAAeAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-20T10:22:45.012Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "RabbitMqIntegrationEventPublisher.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqIntegrationEventPublisher.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqIntegrationEventPublisher.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqIntegrationEventPublisher.cs",
-              "RelativeToolTip": "src\\MindBloom.API\\Messaging\\RabbitMq\\RabbitMqIntegrationEventPublisher.cs",
-              "ViewState": "AgIAAF0AAAAAAAAAAAAAAHwAAAAFAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-20T10:23:49.187Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "IIntegrationEventPublisher.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Common\\Interfaces\\IIntegrationEventPublisher.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Common\\Interfaces\\IIntegrationEventPublisher.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Common\\Interfaces\\IIntegrationEventPublisher.cs",
-              "RelativeToolTip": "src\\MindBloom.Application\\Common\\Interfaces\\IIntegrationEventPublisher.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-20T10:23:21.442Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
               "Title": "ApplicationDbContext.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
               "RelativeToolTip": "src\\MindBloom.Infrastructure\\Persistence\\Context\\ApplicationDbContext.cs",
-              "ViewState": "AgIAAI0AAAAAAAAAAADwv7AAAAAHAAAAAAAAAA==",
+              "ViewState": "AgIAAJ0AAAAAAAAAAAAAAKoAAAAcAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-20T10:22:03.237Z",
+              "WhenOpened": "2026-08-20T11:41:48.065Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "OutboxWriter.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Messaging\\Outbox\\OutboxWriter.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Messaging\\Outbox\\OutboxWriter.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Messaging\\Outbox\\OutboxWriter.cs",
-              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Messaging\\Outbox\\OutboxWriter.cs",
-              "ViewState": "AgIAAFwAAAAAAAAAAAAwwHgAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-20T10:21:11.228Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "IOutboxWriter.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Common\\Interfaces\\IOutboxWriter.cs",
-              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Common\\Interfaces\\IOutboxWriter.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Common\\Interfaces\\IOutboxWriter.cs",
-              "RelativeToolTip": "src\\MindBloom.Application\\Common\\Interfaces\\IOutboxWriter.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-20T10:20:33.675Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 4,
               "Title": "OutboxMessage.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\OutboxMessage.cs",
               "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Entities\\OutboxMessage.cs",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Entities\\OutboxMessage.cs",
               "RelativeToolTip": "src\\MindBloom.Domain\\Entities\\OutboxMessage.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACsAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAABYAAAAAAAAAAAAAACQAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-20T10:19:53.21Z",
+              "WhenOpened": "2026-08-20T11:40:35.221Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "OutboxWriter.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Messaging\\Outbox\\OutboxWriter.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Messaging\\Outbox\\OutboxWriter.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Messaging\\Outbox\\OutboxWriter.cs",
+              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Messaging\\Outbox\\OutboxWriter.cs",
+              "ViewState": "AgIAAIAAAAAAAAAAAAAAAJQAAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T11:39:45.648Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "OutboxMessageStatus.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Enums\\OutboxMessageStatus.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Domain\\Enums\\OutboxMessageStatus.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Domain\\Enums\\OutboxMessageStatus.cs",
+              "RelativeToolTip": "src\\MindBloom.Domain\\Enums\\OutboxMessageStatus.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T11:40:16.304Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "StripeWebhookService.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Payments\\StripeWebhookService.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Infrastructure\\Payments\\StripeWebhookService.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Infrastructure\\Payments\\StripeWebhookService.cs",
+              "RelativeToolTip": "src\\MindBloom.Infrastructure\\Payments\\StripeWebhookService.cs",
+              "ViewState": "AgIAABUDAAAAAAAAAAAAACkDAAAdAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-20T11:38:02.641Z",
               "EditorCaption": ""
             }
           ]
