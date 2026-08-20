@@ -95,33 +95,33 @@ if (!builder.Environment
         "Testing"))
 {
     healthChecks
-        .AddCheck<
-            EmailProviderHealthCheck>(
-            name:
-                "email-provider",
-            failureStatus:
-                HealthStatus.Unhealthy,
-            tags:
-                new[]
-                {
-                    "worker",
-                    "ready",
-                    "email"
-                })
+     .AddCheck<
+         EmailProviderHealthCheck>(
+         name:
+             "email-provider",
+         failureStatus:
+             HealthStatus.Degraded,
+         tags:
+             new[]
+             {
+                "worker",
+                "external",
+                "email"
+             })
 
-        .AddCheck<
-            FirebaseHealthCheck>(
-            name:
-                "firebase",
-            failureStatus:
-                HealthStatus.Unhealthy,
-            tags:
-                new[]
-                {
-                    "worker",
-                    "ready",
-                    "firebase"
-                });
+     .AddCheck<
+         FirebaseHealthCheck>(
+         name:
+             "firebase",
+         failureStatus:
+             HealthStatus.Degraded,
+         tags:
+             new[]
+             {
+                "worker",
+                "external",
+                "firebase"
+             });
 }
 
 builder.Services
