@@ -10,6 +10,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Microsoft.Extensions.DependencyInjection;
 using MindBloom.NotificationsWorker.Monitoring;
+using MindBloom.Shared.Observability;
 
 namespace MindBloom.NotificationsWorker.Workers;
 
@@ -190,6 +191,9 @@ public sealed class EmailNotificationConsumer :
     private readonly RabbitMqMonitoringMetrics
     _monitoringMetrics;
 
+    private readonly ApplicationMetrics
+    _applicationMetrics;
+
     private readonly RabbitMqWorkerConnectionProvider
         _connectionProvider;
 
@@ -230,6 +234,7 @@ public sealed class EmailNotificationConsumer :
         IEmailService emailService,
         RabbitMqConsumerOperations
     consumerOperations,
+        ApplicationMetrics applicationMetrics,
         EmailMessageBodyBuilder bodyBuilder,
         IServiceScopeFactory scopeFactory,
         RabbitMqMonitoringMetrics monitoringMetrics,
@@ -237,6 +242,9 @@ public sealed class EmailNotificationConsumer :
     {
         _options =
             options.Value;
+
+        _applicationMetrics =
+    applicationMetrics;
 
         _connectionProvider =
             connectionProvider;
@@ -524,6 +532,9 @@ public sealed class EmailNotificationConsumer :
                 _monitoringMetrics
     .RecordSuccess();
 
+                _applicationMetrics
+    .RecordRabbitMqConsumed();
+
                 _logger.LogInformation(
                     MessageProcessedEvent,
                     "Email notification sent successfully, marked as processed and acknowledged. Attempt: {Attempt}.",
@@ -701,6 +712,9 @@ public sealed class EmailNotificationConsumer :
             _monitoringMetrics
     .RecordRetry();
 
+            _applicationMetrics.RecordRetry(
+    "email-consumer");
+
             _logger.LogWarning(
                 RetryScheduledEvent,
                 "Email notification scheduled for retry. Module: {Module}, MessageId: {MessageId}, RetryCount: {RetryCount}, MaximumRetryCount: {MaximumRetryCount}, DelayMilliseconds: {DelayMilliseconds}, FailureType: {FailureType}.",
@@ -773,6 +787,9 @@ public sealed class EmailNotificationConsumer :
 
             _monitoringMetrics
     .RecordFailure();
+
+            _applicationMetrics
+    .RecordDlqMoved();
 
             _logger.LogError(
                 MovedToDeadLetterQueueEvent,

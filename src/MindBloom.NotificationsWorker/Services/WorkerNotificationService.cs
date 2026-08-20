@@ -3,6 +3,7 @@ using MindBloom.Application.Common.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Shared.Observability;
 
 namespace MindBloom.NotificationsWorker.Services;
 
@@ -29,6 +30,9 @@ public sealed class WorkerNotificationService
     private readonly IPushNotificationService
     _pushNotificationService;
 
+    private readonly ApplicationMetrics
+    _applicationMetrics;
+
     private readonly ILogger<
         WorkerNotificationService>
         _logger;
@@ -37,6 +41,7 @@ public sealed class WorkerNotificationService
         ApplicationDbContext context,
         IEmailService emailService,
         IPushNotificationService pushNotificationService,
+        ApplicationMetrics applicationMetrics,
         ILogger<WorkerNotificationService> logger)
     {
         _context =
@@ -47,6 +52,9 @@ public sealed class WorkerNotificationService
 
         _pushNotificationService =
             pushNotificationService;
+
+        _applicationMetrics =
+            applicationMetrics;
 
         _logger =
             logger;
@@ -126,6 +134,9 @@ public sealed class WorkerNotificationService
 
         await _context.SaveChangesAsync(
             cancellationToken);
+
+        _applicationMetrics
+    .RecordNotificationSent();
 
         _logger.LogInformation(
             NotificationCreatedEvent,

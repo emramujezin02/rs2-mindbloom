@@ -4,6 +4,7 @@ using MindBloom.Application.Common.Interfaces;
 using MindBloom.Infrastructure.Messaging.RabbitMq;
 using MindBloom.Messaging.Contracts.Common;
 using RabbitMQ.Client;
+using MindBloom.Shared.Observability;
 
 namespace MindBloom.API.Messaging.RabbitMq;
 
@@ -56,6 +57,9 @@ public sealed class RabbitMqIntegrationEventPublisher
     private readonly RabbitMqOptions
         _options;
 
+    private readonly ApplicationMetrics
+    _applicationMetrics;
+
     private readonly RabbitMqTopology
         _topology;
 
@@ -81,8 +85,8 @@ public sealed class RabbitMqIntegrationEventPublisher
         IOptions<RabbitMqOptions> options,
         RabbitMqTopology topology,
         ICorrelationIdAccessor correlationIdAccessor,
-        ILogger<
-            RabbitMqIntegrationEventPublisher>
+        ApplicationMetrics applicationMetrics,
+        ILogger<RabbitMqIntegrationEventPublisher>
             logger)
     {
         _connectionManager =
@@ -95,7 +99,10 @@ public sealed class RabbitMqIntegrationEventPublisher
             topology;
 
         _correlationIdAccessor =
-    correlationIdAccessor;
+            correlationIdAccessor;
+
+        _applicationMetrics =
+            applicationMetrics;
 
         _logger =
             logger;
@@ -233,6 +240,9 @@ public sealed class RabbitMqIntegrationEventPublisher
                     cancellationToken:
                         cancellationToken);
 
+                _applicationMetrics
+    .RecordRabbitMqPublished();
+
                 _logger.LogInformation(
                     PublishSucceededEvent,
                     "Integration event published successfully. "
@@ -281,7 +291,6 @@ public sealed class RabbitMqIntegrationEventPublisher
                     MaximumPublishAttempts,
                     exception.GetType().Name);
 
-
                 await ResetChannelAsync();
 
                 if (attempt >=
@@ -289,6 +298,9 @@ public sealed class RabbitMqIntegrationEventPublisher
                 {
                     break;
                 }
+
+                _applicationMetrics.RecordRetry(
+                    "rabbitmq-publisher");
 
                 var retryDelay =
                     CalculateRetryDelay(

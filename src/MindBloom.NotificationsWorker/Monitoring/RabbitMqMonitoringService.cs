@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using MindBloom.Infrastructure.Messaging.RabbitMq;
 using RabbitMQ.Client;
+using MindBloom.Shared.Observability;
 
 namespace MindBloom.NotificationsWorker.Monitoring;
 
@@ -113,6 +114,9 @@ public sealed class RabbitMqMonitoringService
     private readonly RabbitMqTopology
         _topology;
 
+    private readonly ApplicationMetrics
+    _applicationMetrics;
+
     private readonly RabbitMqMonitoringMetrics
         _metrics;
 
@@ -133,12 +137,11 @@ public sealed class RabbitMqMonitoringService
 
     public RabbitMqMonitoringService(
         IOptions<RabbitMqOptions> options,
-        RabbitMqConnectionFactory
-            connectionFactory,
+        RabbitMqConnectionFactory connectionFactory,
         RabbitMqTopology topology,
         RabbitMqMonitoringMetrics metrics,
-        ILogger<RabbitMqMonitoringService>
-            logger)
+        ApplicationMetrics applicationMetrics,
+        ILogger<RabbitMqMonitoringService> logger)
     {
         _options =
             options.Value;
@@ -154,6 +157,9 @@ public sealed class RabbitMqMonitoringService
 
         _logger =
             logger;
+
+        _applicationMetrics =
+    applicationMetrics;
     }
 
     protected override async Task ExecuteAsync(
@@ -332,6 +338,14 @@ public sealed class RabbitMqMonitoringService
                 _options
                     .IntegrationEventDeadLetterQueue,
                 cancellationToken);
+
+        _applicationMetrics.SetDlqDepth(
+    "Email",
+    emailDlq.MessageCount);
+
+        _applicationMetrics.SetDlqDepth(
+            "IntegrationEvent",
+            integrationDlq.MessageCount);
 
         var emailRetryMessages =
             await GetEmailRetryMessageCountAsync(

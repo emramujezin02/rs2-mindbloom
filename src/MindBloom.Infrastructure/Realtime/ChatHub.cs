@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Chat.DTOs;
 using MindBloom.Application.Features.Chat.Interfaces;
+using MindBloom.Shared.Observability;
 
 namespace MindBloom.Infrastructure.Realtime;
 
@@ -64,13 +65,19 @@ public sealed class ChatHub : Hub
     private readonly IChatMessageRateLimiter
     _messageRateLimiter;
 
+    private readonly ApplicationMetrics
+    _metrics;
+
+    private bool _connectionCounted;
+
     public ChatHub(
         IChatService chatService,
         IValidator<SendChatMessageDto>
             messageValidator,
         IChatMessageRateLimiter
             messageRateLimiter,
-        ILogger<ChatHub> logger)
+ILogger<ChatHub> logger,
+ApplicationMetrics metrics)
     {
         _chatService =
             chatService;
@@ -83,6 +90,9 @@ public sealed class ChatHub : Hub
 
         _logger =
             logger;
+
+        _metrics =
+    metrics;
     }
 
     public override async Task OnConnectedAsync()
@@ -101,6 +111,12 @@ public sealed class ChatHub : Hub
                 "Authenticated chat connection established.");
 
             await base.OnConnectedAsync();
+
+            _metrics
+    .IncrementSignalRConnections();
+
+            _connectionCounted =
+                true;
         }
         catch (Exception exception)
         {
@@ -147,6 +163,15 @@ public sealed class ChatHub : Hub
                     "Chat connection disconnected unexpectedly. FailureType: {FailureType}.",
                     exception.GetType().Name);
             }
+        }
+
+        if (_connectionCounted)
+        {
+            _metrics
+                .DecrementSignalRConnections();
+
+            _connectionCounted =
+                false;
         }
 
         await base.OnDisconnectedAsync(

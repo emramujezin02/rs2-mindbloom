@@ -8,6 +8,7 @@ using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 using Stripe;
+using MindBloom.Shared.Observability;
 
 namespace MindBloom.Infrastructure.Payments;
 
@@ -67,6 +68,9 @@ public sealed class StripeWebhookService
     private readonly IMembershipService
         _membershipService;
 
+    private readonly ApplicationMetrics
+    _applicationMetrics;
+
     private readonly ILogger<StripeWebhookService>
         _logger;
 
@@ -74,6 +78,7 @@ public sealed class StripeWebhookService
         ApplicationDbContext context,
         IPaymentService paymentService,
         IMembershipService membershipService,
+        ApplicationMetrics applicationMetrics,
         ILogger<StripeWebhookService> logger)
     {
         _context =
@@ -84,6 +89,9 @@ public sealed class StripeWebhookService
 
         _membershipService =
             membershipService;
+
+        _applicationMetrics =
+            applicationMetrics;
 
         _logger =
             logger;
@@ -117,11 +125,6 @@ public sealed class StripeWebhookService
             await strategy.ExecuteAsync(
                 async () =>
                 {
-                    /*
-                     * A retry must start from a clean
-                     * EF tracking state so that entities
-                     * from a failed attempt are not reused.
-                     */
                     _context.ChangeTracker.Clear();
 
                     var existingEvent =
@@ -209,6 +212,9 @@ public sealed class StripeWebhookService
                                     paymentIntent,
                                     cancellationToken);
 
+                                _applicationMetrics
+                                    .RecordPaymentSuccess();
+
                                 break;
 
                             case "payment_intent.payment_failed":
@@ -216,6 +222,9 @@ public sealed class StripeWebhookService
                                 await HandlePaymentIntentFailedAsync(
                                     paymentIntent,
                                     cancellationToken);
+
+                                _applicationMetrics
+                                    .RecordPaymentFailure();
 
                                 break;
 

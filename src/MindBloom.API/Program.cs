@@ -32,6 +32,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MindBloom.API.Health;
 using Microsoft.Extensions.Options;
 using MindBloom.Infrastructure.Persistence.Migration;
+using MindBloom.Shared.Observability;
 
 var bootstrapEnvironment =
     Environment.GetEnvironmentVariable(
@@ -51,6 +52,9 @@ if (!string.Equals(
 
 var builder =
     WebApplication.CreateBuilder(args);
+
+builder.Services.AddSingleton<
+    ApplicationMetrics>();
 
 builder.WebHost.ConfigureKestrel(
     options =>
@@ -735,6 +739,42 @@ app.MapHealthChecks(
                         .Contains(
                             "ready")
         })
+    .AllowAnonymous();
+
+app.MapGet(
+    "/metrics",
+    (
+        HttpContext context,
+        ApplicationMetrics metrics) =>
+    {
+        var configuredKey =
+            app.Configuration[
+                "METRICS_API_KEY"];
+
+        if (string.IsNullOrWhiteSpace(
+                configuredKey))
+        {
+            return Results.StatusCode(
+                StatusCodes
+                    .Status503ServiceUnavailable);
+        }
+
+        if (!context.Request.Headers
+                .TryGetValue(
+                    "X-Metrics-Key",
+                    out var providedKey) ||
+            providedKey.Count != 1 ||
+            !string.Equals(
+                providedKey[0],
+                configuredKey,
+                StringComparison.Ordinal))
+        {
+            return Results.Unauthorized();
+        }
+
+        return Results.Ok(
+            metrics.GetSnapshot());
+    })
     .AllowAnonymous();
 
 app.MapHub<NotificationHub>(

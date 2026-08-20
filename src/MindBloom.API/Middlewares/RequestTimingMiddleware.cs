@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using MindBloom.API.Configuration;
+using MindBloom.Shared.Observability;
 
 namespace MindBloom.API.Middlewares;
 
@@ -26,21 +27,25 @@ public sealed class RequestTimingMiddleware
 
     private readonly RequestTimingOptions
         _options;
+    private readonly ApplicationMetrics
+    _metrics;
 
     public RequestTimingMiddleware(
         RequestDelegate next,
         ILogger<RequestTimingMiddleware> logger,
-        IOptions<RequestTimingOptions> options)
+        IOptions<RequestTimingOptions> options,
+        ApplicationMetrics metrics)
     {
         _next = next;
         _logger = logger;
         _options = options.Value;
+        _metrics = metrics;
     }
 
     public async Task InvokeAsync(
         HttpContext context)
     {
-        if (IsHealthEndpoint(
+        if (IsExcludedEndpoint(
                 context.Request.Path))
         {
             await _next(context);
@@ -72,6 +77,15 @@ public sealed class RequestTimingMiddleware
                     .RawText
                 ?? context.Request.Path.Value
                 ?? string.Empty;
+
+            _metrics.RecordRequest(
+    context.Request.Method,
+    routeEndpoint
+        ?.RoutePattern
+        .RawText
+    ?? "unmatched",
+    context.Response.StatusCode,
+    elapsedMilliseconds);
 
             if (elapsedMilliseconds >=
                 _options
@@ -110,11 +124,16 @@ public sealed class RequestTimingMiddleware
         }
     }
 
-    private static bool IsHealthEndpoint(
+    private static bool IsExcludedEndpoint(
         PathString path)
     {
-        return path.StartsWithSegments(
-            "/health",
-            StringComparison.OrdinalIgnoreCase);
+        return
+            path.StartsWithSegments(
+                "/health",
+                StringComparison.OrdinalIgnoreCase)
+            ||
+            path.StartsWithSegments(
+                "/metrics",
+                StringComparison.OrdinalIgnoreCase);
     }
 }

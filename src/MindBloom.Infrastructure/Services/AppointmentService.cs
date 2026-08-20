@@ -12,6 +12,7 @@ using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.BusinessRules;
 using MindBloom.Messaging.Contracts.Appointments;
 using MindBloom.Messaging.Contracts.Common;
+using MindBloom.Shared.Observability;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -25,6 +26,9 @@ public class AppointmentService : IAppointmentService
 
     private readonly IIntegrationEventPublisher
     _integrationEventPublisher;
+
+    private readonly ApplicationMetrics
+    _applicationMetrics;
 
     private static bool IsValidStatusTransition(
     AppointmentStatus currentStatus,
@@ -60,6 +64,7 @@ public class AppointmentService : IAppointmentService
         ApplicationDbContext context,
         IPaymentService paymentService,
         IMembershipService membershipService,
+        ApplicationMetrics applicationMetrics,
         IIntegrationEventPublisher
             integrationEventPublisher)
     {
@@ -74,6 +79,8 @@ public class AppointmentService : IAppointmentService
 
         _integrationEventPublisher =
             integrationEventPublisher;
+        _applicationMetrics =
+    applicationMetrics;
     }
 
     public async Task<AppointmentResponseDto>
@@ -229,6 +236,9 @@ public class AppointmentService : IAppointmentService
     });
 
         await _context.SaveChangesAsync();
+
+        _applicationMetrics
+    .RecordAppointmentCreated();
 
         var correlationId =
             Guid.NewGuid();

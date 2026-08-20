@@ -7,6 +7,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using MindBloom.NotificationsWorker.Services;
 using MindBloom.NotificationsWorker.Monitoring;
+using MindBloom.Shared.Observability;
 
 namespace MindBloom.NotificationsWorker.Workers;
 
@@ -173,6 +174,9 @@ public sealed class IntegrationEventConsumer
     private readonly RabbitMqTopology
         _topology;
 
+    private readonly ApplicationMetrics
+    _applicationMetrics;
+
     private readonly IntegrationEventDeserializer
         _deserializer;
 
@@ -216,12 +220,16 @@ public sealed class IntegrationEventConsumer
         IIntegrationEventDispatcher dispatcher,
         IServiceScopeFactory scopeFactory,
         RabbitMqMonitoringMetrics monitoringMetrics,
+        ApplicationMetrics applicationMetrics,
         RabbitMqConsumerOperations
     consumerOperations,
         ILogger<IntegrationEventConsumer> logger)
     {
         _options =
             options.Value;
+
+        _applicationMetrics =
+    applicationMetrics;
 
         _connectionProvider =
             connectionProvider;
@@ -487,6 +495,9 @@ public sealed class IntegrationEventConsumer
 
                 _monitoringMetrics
     .RecordSuccess();
+
+                _applicationMetrics
+    .RecordRabbitMqConsumed();
             }
             catch (NotSupportedException exception)
             {
@@ -612,6 +623,9 @@ public sealed class IntegrationEventConsumer
             _monitoringMetrics
     .RecordRetry();
 
+            _applicationMetrics.RecordRetry(
+    "integration-event-consumer");
+
             _logger.LogWarning(
                 RetryScheduledEvent,
                 "Integration event scheduled for retry. Module: {Module}, RoutingKey: {RoutingKey}, RetryCount: {RetryCount}, MaximumRetryCount: {MaximumRetryCount}, DelayMilliseconds: {DelayMilliseconds}, FailureType: {FailureType}.",
@@ -690,6 +704,9 @@ public sealed class IntegrationEventConsumer
 
             _monitoringMetrics
     .RecordFailure();
+
+            _applicationMetrics
+    .RecordDlqMoved();
 
             _logger.LogError(
      MovedToDeadLetterQueueEvent,
