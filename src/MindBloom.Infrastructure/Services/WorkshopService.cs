@@ -952,10 +952,7 @@ public class WorkshopService : IWorkshopService
       int clientUserId,
       int workshopId)
     {
-        await using var transaction =
-            await _context.Database
-                .BeginTransactionAsync(
-                    IsolationLevel.Serializable);
+
 
         var workshopTitle =
             string.Empty;
@@ -963,9 +960,21 @@ public class WorkshopService : IWorkshopService
         var organizerUserId =
             0;
 
-        try
-        {
-            var client =
+        var strategy =
+            _context.Database
+                .CreateExecutionStrategy();
+
+        await strategy.ExecuteAsync(
+            async () =>
+            {
+                await using var transaction =
+                    await _context.Database
+                        .BeginTransactionAsync(
+                            IsolationLevel.Serializable);
+
+                try
+                {
+                    var client =
                 await _context.Clients
                     .FirstOrDefaultAsync(x =>
                         x.UserId ==
@@ -1088,11 +1097,13 @@ public class WorkshopService : IWorkshopService
 
             await transaction.CommitAsync();
         }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+                catch
+                {
+                    await transaction.RollbackAsync();
+
+                    throw;
+                }
+            });
 
         await _businessNotificationService
      .PublishAsync(

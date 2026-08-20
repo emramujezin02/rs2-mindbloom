@@ -716,15 +716,25 @@ public class AdminService : IAdminService
                 "Therapist cannot be approved without uploaded verification documents.");
         }
 
-        await using var transaction =
-            await _context.Database
-                .BeginTransactionAsync();
+        string title =
+    string.Empty;
 
-        string title;
-        string message;
+        string message =
+            string.Empty;
 
-        try
-        {
+        var strategy =
+            _context.Database
+                .CreateExecutionStrategy();
+
+        await strategy.ExecuteAsync(
+            async () =>
+            {
+                await using var transaction =
+                    await _context.Database
+                        .BeginTransactionAsync();
+
+                try
+                    {
             var affectedRows =
                 await _context.Therapists
                     .Where(x =>
@@ -846,12 +856,13 @@ public class AdminService : IAdminService
 
             await transaction.CommitAsync();
         }
-        catch
-        {
-            await transaction.RollbackAsync();
+                catch
+                {
+                    await transaction.RollbackAsync();
 
-            throw;
-        }
+                    throw;
+                }
+            });
 
         await _businessNotificationService
     .PublishAsync(
@@ -1684,13 +1695,20 @@ public class AdminService : IAdminService
         var now =
             DateTime.UtcNow;
 
-        await using var transaction =
-            await _context.Database
-                .BeginTransactionAsync();
+        var strategy =
+            _context.Database
+                .CreateExecutionStrategy();
 
-        try
-        {
-            review.IsApproved =
+        await strategy.ExecuteAsync(
+            async () =>
+            {
+                await using var transaction =
+                    await _context.Database
+                        .BeginTransactionAsync();
+
+                try
+                {
+                    review.IsApproved =
                 true;
 
             review.IsDeleted =
@@ -1734,11 +1752,13 @@ public class AdminService : IAdminService
 
             await transaction.CommitAsync();
         }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+                catch
+                {
+                    await transaction.RollbackAsync();
+
+                    throw;
+                }
+            });
 
         await _businessNotificationService
             .PublishAsync(
@@ -1813,13 +1833,20 @@ public class AdminService : IAdminService
         var now =
             DateTime.UtcNow;
 
-        await using var transaction =
-            await _context.Database
-                .BeginTransactionAsync();
+        var strategy =
+            _context.Database
+                .CreateExecutionStrategy();
 
-        try
-        {
-            review.IsDeleted = true;
+        await strategy.ExecuteAsync(
+            async () =>
+            {
+                await using var transaction =
+                    await _context.Database
+                        .BeginTransactionAsync();
+
+                try
+                {
+                    review.IsDeleted = true;
 
             review.IsApproved = false;
 
@@ -1865,12 +1892,13 @@ public class AdminService : IAdminService
 
             await transaction.CommitAsync();
         }
-        catch
-        {
-            await transaction.RollbackAsync();
+                catch
+                {
+                    await transaction.RollbackAsync();
 
-            throw;
-        }
+                    throw;
+                }
+            });
 
         await _businessNotificationService
             .PublishAsync(
@@ -5085,9 +5113,9 @@ public class AdminService : IAdminService
     }
 
     public async Task RejectReviewAsync(
-    int authenticatedAdminUserId,
-    int reviewId,
-    RejectAdminReviewDto request)
+     int authenticatedAdminUserId,
+     int reviewId,
+     RejectAdminReviewDto request)
     {
         var reason =
             request.Reason?.Trim()
@@ -5162,62 +5190,73 @@ public class AdminService : IAdminService
         var now =
             DateTime.UtcNow;
 
-        await using var transaction =
-            await _context.Database
-                .BeginTransactionAsync();
+        var strategy =
+            _context.Database
+                .CreateExecutionStrategy();
 
-        try
-        {
-            review.IsApproved =
-                false;
+        await strategy.ExecuteAsync(
+            async () =>
+            {
+                await using var transaction =
+                    await _context.Database
+                        .BeginTransactionAsync();
 
-            review.IsDeleted =
-                false;
-
-            review.ModerationStatus =
-                ReviewModerationStatus.Rejected;
-
-            review.ModeratedByUserId =
-                authenticatedAdminUserId;
-
-            review.ModeratedAtUtc =
-                now;
-
-            review.ModerationReason =
-                reason;
-
-            review.UpdatedAtUtc =
-                now;
-
-            _context.ReviewModerationAudits.Add(
-                new ReviewModerationAudit
+                try
                 {
-                    ReviewId =
-                        review.Id,
+                    review.IsApproved =
+                        false;
 
-                    AdminUserId =
-                        authenticatedAdminUserId,
+                    review.IsDeleted =
+                        false;
 
-                    Action =
-                        ReviewModerationAction.Rejected,
+                    review.ModerationStatus =
+                        ReviewModerationStatus.Rejected;
 
-                    Reason =
-                        reason,
+                    review.ModeratedByUserId =
+                        authenticatedAdminUserId;
 
-                    PerformedAtUtc =
-                        now
-                });
+                    review.ModeratedAtUtc =
+                        now;
 
+                    review.ModerationReason =
+                        reason;
 
-            await _context.SaveChangesAsync();
+                    review.UpdatedAtUtc =
+                        now;
 
-            await transaction.CommitAsync();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+                    _context.ReviewModerationAudits.Add(
+                        new ReviewModerationAudit
+                        {
+                            ReviewId =
+                                review.Id,
+
+                            AdminUserId =
+                                authenticatedAdminUserId,
+
+                            Action =
+                                ReviewModerationAction.Rejected,
+
+                            Reason =
+                                reason,
+
+                            PerformedAtUtc =
+                                now
+                        });
+
+                    await _context
+                        .SaveChangesAsync();
+
+                    await transaction
+                        .CommitAsync();
+                }
+                catch
+                {
+                    await transaction
+                        .RollbackAsync();
+
+                    throw;
+                }
+            });
 
         await _businessNotificationService
             .PublishAsync(
@@ -5232,9 +5271,9 @@ public class AdminService : IAdminService
     }
 
     public async Task HideReviewAsync(
-    int authenticatedAdminUserId,
-    int reviewId,
-    HideAdminReviewDto request)
+      int authenticatedAdminUserId,
+      int reviewId,
+      HideAdminReviewDto request)
     {
         var reason =
             request.Reason?.Trim()
@@ -5302,62 +5341,73 @@ public class AdminService : IAdminService
         var now =
             DateTime.UtcNow;
 
-        await using var transaction =
-            await _context.Database
-                .BeginTransactionAsync();
+        var strategy =
+            _context.Database
+                .CreateExecutionStrategy();
 
-        try
-        {
-            review.IsApproved =
-                false;
+        await strategy.ExecuteAsync(
+            async () =>
+            {
+                await using var transaction =
+                    await _context.Database
+                        .BeginTransactionAsync();
 
-            review.IsDeleted =
-                false;
-
-            review.ModerationStatus =
-                ReviewModerationStatus.Hidden;
-
-            review.ModeratedByUserId =
-                authenticatedAdminUserId;
-
-            review.ModeratedAtUtc =
-                now;
-
-            review.ModerationReason =
-                reason;
-
-            review.UpdatedAtUtc =
-                now;
-
-            _context.ReviewModerationAudits.Add(
-                new ReviewModerationAudit
+                try
                 {
-                    ReviewId =
-                        review.Id,
+                    review.IsApproved =
+                        false;
 
-                    AdminUserId =
-                        authenticatedAdminUserId,
+                    review.IsDeleted =
+                        false;
 
-                    Action =
-                        ReviewModerationAction.Hidden,
+                    review.ModerationStatus =
+                        ReviewModerationStatus.Hidden;
 
-                    Reason =
-                        reason,
+                    review.ModeratedByUserId =
+                        authenticatedAdminUserId;
 
-                    PerformedAtUtc = now
-                });
+                    review.ModeratedAtUtc =
+                        now;
 
-          
+                    review.ModerationReason =
+                        reason;
 
-            await _context.SaveChangesAsync();
+                    review.UpdatedAtUtc =
+                        now;
 
-            await transaction.CommitAsync();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+                    _context.ReviewModerationAudits.Add(
+                        new ReviewModerationAudit
+                        {
+                            ReviewId =
+                                review.Id,
+
+                            AdminUserId =
+                                authenticatedAdminUserId,
+
+                            Action =
+                                ReviewModerationAction.Hidden,
+
+                            Reason =
+                                reason,
+
+                            PerformedAtUtc =
+                                now
+                        });
+
+                    await _context
+                        .SaveChangesAsync();
+
+                    await transaction
+                        .CommitAsync();
+                }
+                catch
+                {
+                    await transaction
+                        .RollbackAsync();
+
+                    throw;
+                }
+            });
 
         await _businessNotificationService
             .PublishAsync(

@@ -1024,14 +1024,21 @@ public class MembershipService : IMembershipService
         int remainingSessions =
             0;
 
-        await using var transaction =
-            await _context.Database
-                .BeginTransactionAsync(
-                    IsolationLevel.Serializable);
+        var strategy =
+            _context.Database
+                .CreateExecutionStrategy();
 
-        try
-        {
-            var client =
+        await strategy.ExecuteAsync(
+            async () =>
+            {
+                await using var transaction =
+                    await _context.Database
+                        .BeginTransactionAsync(
+                            IsolationLevel.Serializable);
+
+                try
+                {
+                    var client =
                 await _context.Clients
                     .FirstOrDefaultAsync(x =>
                         x.UserId ==
@@ -1208,12 +1215,13 @@ public class MembershipService : IMembershipService
                     exception);
             }
         }
-        catch
-        {
-            await transaction.RollbackAsync();
+                catch
+                {
+                    await transaction.RollbackAsync();
 
-            throw;
-        }
+                    throw;
+                }
+            });
 
         var correlationId =
       Guid.NewGuid();
@@ -1318,14 +1326,21 @@ public class MembershipService : IMembershipService
                 normalizedReason[..500];
         }
 
-        await using var transaction =
-            await _context.Database
-                .BeginTransactionAsync(
-                    IsolationLevel.Serializable);
+        var strategy =
+    _context.Database
+        .CreateExecutionStrategy();
 
-        try
-        {
-            var usage =
+        await strategy.ExecuteAsync(
+            async () =>
+            {
+                await using var transaction =
+                    await _context.Database
+                        .BeginTransactionAsync(
+                            IsolationLevel.Serializable);
+
+                try
+                {
+                    var usage =
                 await _context.MembershipUsages
                     .Include(x =>
                         x.ClientMembership)
@@ -1428,12 +1443,13 @@ public class MembershipService : IMembershipService
 
             await transaction.CommitAsync();
         }
-        catch
-        {
-            await transaction.RollbackAsync();
+                catch
+                {
+                    await transaction.RollbackAsync();
 
-            throw;
-        }
+                    throw;
+                }
+            });
     }
 
     public async Task

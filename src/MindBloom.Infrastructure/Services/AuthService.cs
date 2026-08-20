@@ -1807,13 +1807,20 @@ public class AuthService : IAuthService
         var now =
             DateTime.UtcNow;
 
-        await using var transaction =
-            await _context.Database
-                .BeginTransactionAsync();
+        var strategy =
+            _context.Database
+                .CreateExecutionStrategy();
 
-        try
-        {
-            var activeRefreshTokens =
+        await strategy.ExecuteAsync(
+            async () =>
+            {
+                await using var transaction =
+                    await _context.Database
+                        .BeginTransactionAsync();
+
+                try
+                {
+                    var activeRefreshTokens =
                 await _context.RefreshTokens
                     .Where(x =>
                         x.UserId ==
@@ -2270,33 +2277,24 @@ public class AuthService : IAuthService
             user.LastLoginAtUtc =
                 null;
 
-            /*
-             * Security stamp promjena dodatno
-             * invalidira Identity security state.
-             */
             user.SecurityStamp =
                 Guid.NewGuid()
                     .ToString("N");
 
-            /*
-             * Ne brišemo user/client/therapist
-             * red jer finansijski, appointment
-             * i audit FK-ovi moraju ostati
-             * konzistentni.
-             */
-            await _context
-                .SaveChangesAsync();
+                    await _context
+             .SaveChangesAsync();
 
-            await transaction
-                .CommitAsync();
-        }
-        catch
-        {
-            await transaction
-                .RollbackAsync();
+                    await transaction
+                        .CommitAsync();
+                }
+                catch
+                {
+                    await transaction
+                        .RollbackAsync();
 
-            throw;
-        }
+                    throw;
+                }
+            });
 
         await _securityAuditService
             .WriteAsync(

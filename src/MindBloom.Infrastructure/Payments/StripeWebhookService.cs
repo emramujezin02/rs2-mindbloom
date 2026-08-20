@@ -90,9 +90,9 @@ public sealed class StripeWebhookService
     }
 
     public async Task ProcessAsync(
-        Event stripeEvent,
-        CancellationToken cancellationToken =
-            default)
+      Event stripeEvent,
+      CancellationToken cancellationToken =
+          default)
     {
         ArgumentNullException.ThrowIfNull(
             stripeEvent);
@@ -104,189 +104,225 @@ public sealed class StripeWebhookService
                 "Stripe event identifier is missing.");
         }
 
-        var existingEvent =
-            await _context
-                .StripeWebhookEvents
-                .FirstOrDefaultAsync(
-                    x =>
-                        x.StripeEventId ==
-                        stripeEvent.Id,
-                    cancellationToken);
-
-        if (existingEvent?.IsProcessed ==
-            true)
-        {
-            _logger.LogInformation(
-                DuplicateWebhookIgnoredEvent,
-                "Duplicate Stripe webhook event ignored. Module: {Module}, StripeEventId: {StripeEventId}, StripeEventType: {StripeEventType}.",
-                "Payments",
-                stripeEvent.Id,
-                stripeEvent.Type);
-
-            return;
-        }
-
         var paymentIntent =
             stripeEvent.Data.Object
                 as PaymentIntent;
 
-        await using var transaction =
-            await _context.Database
-                .BeginTransactionAsync(
-                    cancellationToken);
-
-        StripeWebhookEvent webhookEvent;
+        var strategy =
+            _context.Database
+                .CreateExecutionStrategy();
 
         try
         {
-            if (existingEvent == null)
-            {
-                webhookEvent =
-                    new StripeWebhookEvent
+            await strategy.ExecuteAsync(
+                async () =>
+                {
+                    /*
+                     * A retry must start from a clean
+                     * EF tracking state so that entities
+                     * from a failed attempt are not reused.
+                     */
+                    _context.ChangeTracker.Clear();
+
+                    var existingEvent =
+                        await _context
+                            .StripeWebhookEvents
+                            .FirstOrDefaultAsync(
+                                x =>
+                                    x.StripeEventId ==
+                                    stripeEvent.Id,
+                                cancellationToken);
+
+                    if (existingEvent?.IsProcessed ==
+                        true)
                     {
-                        StripeEventId =
+                        _logger.LogInformation(
+                            DuplicateWebhookIgnoredEvent,
+                            "Duplicate Stripe webhook event ignored. "
+                            + "Module: {Module}, "
+                            + "StripeEventId: {StripeEventId}, "
+                            + "StripeEventType: {StripeEventType}.",
+                            "Payments",
                             stripeEvent.Id,
+                            stripeEvent.Type);
 
-                        EventType =
-                            stripeEvent.Type
-                            ?? string.Empty,
+                        return;
+                    }
 
-                        StripePaymentIntentId =
-                            paymentIntent?.Id,
+                    await using var transaction =
+                        await _context.Database
+                            .BeginTransactionAsync(
+                                cancellationToken);
 
-                        ReceivedAtUtc =
-                            DateTime.UtcNow,
+                    try
+                    {
+                        StripeWebhookEvent webhookEvent;
 
-                        IsProcessed =
-                            false
-                    };
+                        if (existingEvent == null)
+                        {
+                            webhookEvent =
+                                new StripeWebhookEvent
+                                {
+                                    StripeEventId =
+                                        stripeEvent.Id,
 
-                _context
-                    .StripeWebhookEvents
-                    .Add(webhookEvent);
+                                    EventType =
+                                        stripeEvent.Type
+                                        ?? string.Empty,
 
-                await _context
-                    .SaveChangesAsync(
-                        cancellationToken);
-            }
-            else
-            {
-                webhookEvent =
-                    existingEvent;
+                                    StripePaymentIntentId =
+                                        paymentIntent?.Id,
 
-                webhookEvent.EventType =
-                    stripeEvent.Type
-                    ?? webhookEvent.EventType;
+                                    ReceivedAtUtc =
+                                        DateTime.UtcNow,
 
-                webhookEvent
-                    .StripePaymentIntentId ??=
-                    paymentIntent?.Id;
-            }
+                                    IsProcessed =
+                                        false
+                                };
 
-            switch (stripeEvent.Type)
-            {
-                case "payment_intent.succeeded":
-                    await HandlePaymentIntentSucceededAsync(
-                        paymentIntent,
-                        cancellationToken);
+                            _context
+                                .StripeWebhookEvents
+                                .Add(webhookEvent);
 
-                    break;
+                            await _context
+                                .SaveChangesAsync(
+                                    cancellationToken);
+                        }
+                        else
+                        {
+                            webhookEvent =
+                                existingEvent;
 
-                case "payment_intent.payment_failed":
-                case "payment_intent.canceled":
-                    await HandlePaymentIntentFailedAsync(
-                        paymentIntent,
-                        cancellationToken);
+                            webhookEvent.EventType =
+                                stripeEvent.Type
+                                ?? webhookEvent.EventType;
 
-                    break;
+                            webhookEvent
+                                .StripePaymentIntentId ??=
+                                paymentIntent?.Id;
+                        }
 
-                case "refund.updated":
-                case "refund.failed":
-                    await HandleRefundEventAsync(
-                        stripeEvent,
-                        cancellationToken);
+                        switch (stripeEvent.Type)
+                        {
+                            case "payment_intent.succeeded":
+                                await HandlePaymentIntentSucceededAsync(
+                                    paymentIntent,
+                                    cancellationToken);
 
-                    break;
+                                break;
 
-                case "charge.refunded":
-                    await HandleChargeRefundedAsync(
-                        stripeEvent,
-                        cancellationToken);
+                            case "payment_intent.payment_failed":
+                            case "payment_intent.canceled":
+                                await HandlePaymentIntentFailedAsync(
+                                    paymentIntent,
+                                    cancellationToken);
 
-                    break;
+                                break;
 
-                default:
-                    _logger.LogInformation(
-                        WebhookTypeIgnoredEvent,
-                        "Stripe webhook event type ignored. Module: {Module}, StripeEventId: {StripeEventId}, StripeEventType: {StripeEventType}.",
-                        "Payments",
-                        stripeEvent.Id,
-                        stripeEvent.Type);
+                            case "refund.updated":
+                            case "refund.failed":
+                                await HandleRefundEventAsync(
+                                    stripeEvent,
+                                    cancellationToken);
 
-                    break;
-            }
+                                break;
 
-            webhookEvent.IsProcessed =
-                true;
+                            case "charge.refunded":
+                                await HandleChargeRefundedAsync(
+                                    stripeEvent,
+                                    cancellationToken);
 
-            webhookEvent.ProcessedAtUtc =
-                DateTime.UtcNow;
+                                break;
 
-            webhookEvent.FailureReason =
-                null;
+                            default:
+                                _logger.LogInformation(
+                                    WebhookTypeIgnoredEvent,
+                                    "Stripe webhook event type ignored. "
+                                    + "Module: {Module}, "
+                                    + "StripeEventId: {StripeEventId}, "
+                                    + "StripeEventType: {StripeEventType}.",
+                                    "Payments",
+                                    stripeEvent.Id,
+                                    stripeEvent.Type);
 
-            await _context
-                .SaveChangesAsync(
-                    cancellationToken);
+                                break;
+                        }
 
-            await transaction
-                .CommitAsync(
-                    cancellationToken);
+                        webhookEvent.IsProcessed =
+                            true;
+
+                        webhookEvent.ProcessedAtUtc =
+                            DateTime.UtcNow;
+
+                        webhookEvent.FailureReason =
+                            null;
+
+                        await _context
+                            .SaveChangesAsync(
+                                cancellationToken);
+
+                        await transaction
+                            .CommitAsync(
+                                cancellationToken);
+                    }
+                    catch (DbUpdateException)
+                    {
+                        await transaction
+                            .RollbackAsync(
+                                cancellationToken);
+
+                        /*
+                         * The unique StripeEventId index
+                         * remains the final protection
+                         * against concurrent deliveries.
+                         */
+                        _context.ChangeTracker.Clear();
+
+                        var duplicate =
+                            await _context
+                                .StripeWebhookEvents
+                                .AsNoTracking()
+                                .FirstOrDefaultAsync(
+                                    x =>
+                                        x.StripeEventId ==
+                                        stripeEvent.Id,
+                                    cancellationToken);
+
+                        if (duplicate != null)
+                        {
+                            _logger.LogInformation(
+                                ConcurrentDuplicateWebhookIgnoredEvent,
+                                "Concurrent duplicate Stripe webhook event ignored. "
+                                + "Module: {Module}, "
+                                + "StripeEventId: {StripeEventId}, "
+                                + "StripeEventType: {StripeEventType}.",
+                                "Payments",
+                                stripeEvent.Id,
+                                stripeEvent.Type);
+
+                            return;
+                        }
+
+                        throw;
+                    }
+                    catch
+                    {
+                        await transaction
+                            .RollbackAsync(
+                                cancellationToken);
+
+                        throw;
+                    }
+                });
         }
-        catch (DbUpdateException exception)
+        catch (OperationCanceledException)
+            when (cancellationToken
+                .IsCancellationRequested)
         {
-            await transaction
-                .RollbackAsync(
-                    cancellationToken);
-
-            _context.ChangeTracker.Clear();
-
-            var duplicate =
-                await _context
-                    .StripeWebhookEvents
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(
-                        x =>
-                            x.StripeEventId ==
-                            stripeEvent.Id,
-                        cancellationToken);
-
-            if (duplicate != null)
-            {
-                _logger.LogInformation(
-                    ConcurrentDuplicateWebhookIgnoredEvent,
-                    "Concurrent duplicate Stripe webhook event ignored. Module: {Module}, StripeEventId: {StripeEventId}, StripeEventType: {StripeEventType}.",
-                    "Payments",
-                    stripeEvent.Id,
-                    stripeEvent.Type);
-
-                return;
-            }
-
-            await RecordFailureAsync(
-                stripeEvent,
-                paymentIntent?.Id,
-                exception,
-                cancellationToken);
-
             throw;
         }
         catch (Exception exception)
         {
-            await transaction
-                .RollbackAsync(
-                    cancellationToken);
-
             await RecordFailureAsync(
                 stripeEvent,
                 paymentIntent?.Id,
