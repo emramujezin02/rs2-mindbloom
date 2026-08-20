@@ -254,6 +254,16 @@ public sealed class GlobalExceptionMiddleware
                     exception.Message,
                     "invalid_argument"),
 
+            ExternalProviderException =>
+    new ErrorDefinition(
+        StatusCodes.Status503ServiceUnavailable,
+        "External service unavailable",
+        string.IsNullOrWhiteSpace(
+                exception.Message)
+            ? "An external service is currently unavailable."
+            : exception.Message,
+        "external_provider_failure"),
+
             HttpRequestException =>
                 new ErrorDefinition(
                     StatusCodes.Status503ServiceUnavailable,

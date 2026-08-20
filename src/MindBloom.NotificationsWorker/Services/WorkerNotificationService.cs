@@ -21,6 +21,18 @@ public sealed class WorkerNotificationService
                 4801,
                 "WorkerNotificationEmailSkipped");
 
+    private static readonly EventId
+    EmailDeliveryFailedEvent =
+        new(
+            4802,
+            "WorkerNotificationEmailDeliveryFailed");
+
+    private static readonly EventId
+        PushDeliveryFailedEvent =
+            new(
+                4803,
+                "WorkerNotificationPushDeliveryFailed");
+
     private readonly ApplicationDbContext
         _context;
 
@@ -190,16 +202,16 @@ public sealed class WorkerNotificationService
     }
 
     public async Task NotifyAsync(
-      int userId,
-      string title,
-      string message,
-      NotificationActionType actionType,
-      int? appointmentId = null,
-      int? resourceId = null,
-      bool sendEmail = true,
-      bool sendPush = true,
-      CancellationToken cancellationToken =
-          default)
+     int userId,
+     string title,
+     string message,
+     NotificationActionType actionType,
+     int? appointmentId = null,
+     int? resourceId = null,
+     bool sendEmail = true,
+     bool sendPush = true,
+     CancellationToken cancellationToken =
+         default)
     {
         await CreateAsync(
             userId,
@@ -212,11 +224,36 @@ public sealed class WorkerNotificationService
 
         if (sendEmail)
         {
-            await SendEmailAsync(
-                userId,
-                title,
-                message,
-                cancellationToken);
+            try
+            {
+                await SendEmailAsync(
+                    userId,
+                    title,
+                    message,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken
+                    .IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    EmailDeliveryFailedEvent,
+                    exception,
+                    "Email notification delivery failed, "
+                    + "but the in-app notification was preserved. "
+                    + "Module: {Module}, "
+                    + "UserId: {UserId}, "
+                    + "AppointmentId: {AppointmentId}, "
+                    + "ResourceId: {ResourceId}.",
+                    "NotificationsWorker",
+                    userId,
+                    appointmentId,
+                    resourceId);
+            }
         }
 
         if (sendPush)
@@ -242,13 +279,38 @@ public sealed class WorkerNotificationService
                         .ToString();
             }
 
-            await _pushNotificationService
-                .SendToUserAsync(
+            try
+            {
+                await _pushNotificationService
+                    .SendToUserAsync(
+                        userId,
+                        title,
+                        message,
+                        data,
+                        cancellationToken);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken
+                    .IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    PushDeliveryFailedEvent,
+                    exception,
+                    "Push notification delivery failed, "
+                    + "but the in-app notification was preserved. "
+                    + "Module: {Module}, "
+                    + "UserId: {UserId}, "
+                    + "AppointmentId: {AppointmentId}, "
+                    + "ResourceId: {ResourceId}.",
+                    "NotificationsWorker",
                     userId,
-                    title,
-                    message,
-                    data,
-                    cancellationToken);
+                    appointmentId,
+                    resourceId);
+            }
         }
     }
 }

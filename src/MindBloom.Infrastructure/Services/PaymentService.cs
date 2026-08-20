@@ -148,8 +148,11 @@ public class PaymentService : IPaymentService
                 }
                 catch (StripeException exception)
                 {
-                    throw new Exception(
-                        "Existing payment could not be verified with Stripe.",
+                    throw new ExternalProviderException(
+                        "Stripe",
+                        "The existing refund could not be verified "
+                        + "because the payment provider is temporarily unavailable. "
+                        + "Please try again.",
                         exception);
                 }
 
@@ -286,11 +289,24 @@ public class PaymentService : IPaymentService
                     + idempotencySource
             };
 
-        var paymentIntent =
-            await paymentIntentService
-                .CreateAsync(
-                    options,
-                    requestOptions);
+        PaymentIntent paymentIntent;
+
+        try
+        {
+            paymentIntent =
+                await paymentIntentService
+                    .CreateAsync(
+                        options,
+                        requestOptions);
+        }
+        catch (StripeException exception)
+        {
+            throw new ExternalProviderException(
+                "Stripe",
+                "The payment service is temporarily unavailable. "
+                + "Payment was not started. Please try again.",
+                exception);
+        }
 
         if (existingPayment != null)
         {
@@ -450,8 +466,11 @@ public class PaymentService : IPaymentService
         }
         catch (StripeException exception)
         {
-            throw new Exception(
-                "Payment could not be verified with Stripe.",
+            throw new ExternalProviderException(
+                "Stripe",
+                "The payment could not be verified because "
+                + "the payment provider is temporarily unavailable. "
+                + "Please try again.",
                 exception);
         }
 
@@ -954,8 +973,10 @@ public class PaymentService : IPaymentService
                 }
                 catch (StripeException exception)
                 {
-                    throw new Exception(
-                        "Existing Stripe refund could not be verified.",
+                    throw new ExternalProviderException(
+                        "Stripe",
+                        "The payment service is temporarily unavailable. "
+                        + "Please try again.",
                         exception);
                 }
 
@@ -1056,8 +1077,11 @@ public class PaymentService : IPaymentService
         }
         catch (StripeException exception)
         {
-            throw new Exception(
-                "Stripe payment could not be verified before refund.",
+            throw new ExternalProviderException(
+                "Stripe",
+                "The payment could not be verified for refund "
+                + "because the payment provider is temporarily unavailable. "
+                + "Please try again.",
                 exception);
         }
 
@@ -1174,8 +1198,11 @@ public class PaymentService : IPaymentService
             await _context
                 .SaveChangesAsync();
 
-            throw new Exception(
-                "Stripe refund could not be created.",
+            throw new ExternalProviderException(
+                "Stripe",
+                "The refund could not be completed because "
+                + "the payment provider is temporarily unavailable. "
+                + "Please try again.",
                 exception);
         }
 

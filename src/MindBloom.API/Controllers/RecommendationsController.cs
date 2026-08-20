@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using MindBloom.Application.Recommendations.DTOs;
 using MindBloom.Application.Recommendations.Services;
 using MindBloom.Shared.Constants;
+using Microsoft.Extensions.Logging;
 
 namespace MindBloom.API.Controllers;
 
@@ -14,12 +15,18 @@ namespace MindBloom.API.Controllers;
 public sealed class RecommendationsController : ControllerBase
 {
     private readonly IRecommendationService _recommendationService;
-
+    private readonly ILogger<
+    RecommendationsController>
+    _logger;
     public RecommendationsController(
-        IRecommendationService recommendationService)
+        IRecommendationService recommendationService,
+        ILogger<RecommendationsController> logger)
     {
         _recommendationService =
             recommendationService;
+
+        _logger =
+            logger;
     }
 
     [EnableRateLimiting(
@@ -56,13 +63,40 @@ public sealed class RecommendationsController : ControllerBase
                 });
         }
 
-        var recommendations =
-            await _recommendationService
-                .GetRecommendationsAsync(
-                    userId,
-                    request,
-                    cancellationToken);
+        try
+        {
+            var recommendations =
+                await _recommendationService
+                    .GetRecommendationsAsync(
+                        userId,
+                        request,
+                        cancellationToken);
 
-        return Ok(recommendations);
+            return Ok(recommendations);
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken
+                .IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (KeyNotFoundException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Therapist recommendation calculation failed. "
+                + "A safe empty fallback was returned. "
+                + "Module: {Module}, UserId: {UserId}.",
+                "Recommendations",
+                userId);
+
+            return Ok(
+                Array.Empty<
+                    TherapistRecommendationDto>());
+        }
     }
 }

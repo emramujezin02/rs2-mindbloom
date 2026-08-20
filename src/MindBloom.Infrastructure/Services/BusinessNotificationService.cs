@@ -1,4 +1,5 @@
-﻿using MindBloom.Application.Common.Interfaces;
+﻿using Microsoft.Extensions.Logging;
+using MindBloom.Application.Common.Interfaces;
 using MindBloom.Domain.Enums;
 using MindBloom.Messaging.Contracts.Common;
 using MindBloom.Messaging.Contracts.Notifications;
@@ -11,15 +12,24 @@ public sealed class BusinessNotificationService
     private readonly IIntegrationEventPublisher
         _integrationEventPublisher;
 
+    private readonly ILogger<
+    BusinessNotificationService>
+    _logger;
+
     public BusinessNotificationService(
         IIntegrationEventPublisher
-            integrationEventPublisher)
+            integrationEventPublisher,
+        ILogger<BusinessNotificationService>
+            logger)
     {
         _integrationEventPublisher =
             integrationEventPublisher;
+
+        _logger =
+            logger;
     }
 
-    public Task PublishAsync(
+    public async Task PublishAsync(
         int userId,
         string title,
         string message,
@@ -115,11 +125,38 @@ public sealed class BusinessNotificationService
     sendPush,
             };
 
-        return _integrationEventPublisher
-            .PublishAsync(
-                notificationRequestedEvent,
-                IntegrationEventRoutingKeys
-                    .NotificationRequested,
-                cancellationToken);
+        try
+        {
+            await _integrationEventPublisher
+                .PublishAsync(
+                    notificationRequestedEvent,
+                    IntegrationEventRoutingKeys
+                        .NotificationRequested,
+                    cancellationToken);
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken
+                .IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+
+            _logger.LogWarning(
+                exception,
+                "Business notification could not be queued. "
+                + "The business operation remains successful. "
+                + "Module: {Module}, "
+                + "UserId: {UserId}, "
+                + "AppointmentId: {AppointmentId}, "
+                + "ResourceId: {ResourceId}, "
+                + "ActionType: {ActionType}.",
+                "BusinessNotifications",
+                userId,
+                appointmentId,
+                resourceId,
+                actionType.ToString());
+        }
     }
 }
