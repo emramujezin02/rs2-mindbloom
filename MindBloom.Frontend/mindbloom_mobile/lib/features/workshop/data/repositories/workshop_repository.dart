@@ -1,9 +1,11 @@
 import '../models/workshop_model.dart';
 import '../models/workshop_paged_response.dart';
 import '../services/workshop_api_service.dart';
+import '../../../../core/network/idempotency_key_generator.dart';
 
 class WorkshopRepository {
   final WorkshopApiService apiService;
+  final Map<int, String> _workshopRegistrationKeys = <int, String>{};
 
   WorkshopRepository({required this.apiService});
 
@@ -23,8 +25,19 @@ class WorkshopRepository {
     return apiService.getWorkshop(workshopId);
   }
 
-  Future<void> register(int workshopId) {
-    return apiService.register(workshopId);
+  Future<void> register(int workshopId) async {
+    final idempotencyKey = _workshopRegistrationKeys.putIfAbsent(
+      workshopId,
+      IdempotencyKeyGenerator.generate,
+    );
+
+    try {
+      await apiService.register(workshopId, idempotencyKey: idempotencyKey);
+
+      _workshopRegistrationKeys.remove(workshopId);
+    } catch (_) {
+      rethrow;
+    }
   }
 
   Future<void> cancelRegistration(int workshopId) {

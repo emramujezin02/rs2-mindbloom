@@ -19,6 +19,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<MoodEntry> MoodEntries => Set<MoodEntry>();
     public DbSet<Therapist> Therapists => Set<Therapist>();
+    public DbSet<ApiIdempotencyRecord>
+    ApiIdempotencyRecords =>
+        Set<ApiIdempotencyRecord>();
     public DbSet<OutboxMessage>
     OutboxMessages =>
         Set<OutboxMessage>();
@@ -191,6 +194,49 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
         entity.HasIndex(x =>
             x.CreatedAtUtc);
+    });
+
+        builder.Entity<ApiIdempotencyRecord>(
+    entity =>
+    {
+        entity.HasKey(x =>
+            x.Id);
+
+        entity.Property(x =>
+                x.IdempotencyKey)
+            .HasMaxLength(128)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.Operation)
+            .HasMaxLength(200)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.RequestHash)
+            .HasMaxLength(64)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.Status)
+            .HasMaxLength(32)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.ResponseBody)
+            .HasColumnType(
+                "nvarchar(max)");
+
+        entity.HasIndex(x =>
+                x.IdempotencyKey)
+            .IsUnique()
+            .HasDatabaseName(
+                "UX_ApiIdempotencyRecords_Key");
+
+        entity.HasIndex(x =>
+                x.ExpiresAtUtc)
+            .HasDatabaseName(
+                "IX_ApiIdempotencyRecords_ExpiresAtUtc");
     });
 
         builder.Entity<UserConsent>(

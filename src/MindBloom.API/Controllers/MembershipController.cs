@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Memberships.DTOs;
 using MindBloom.Application.Features.Memberships.Interfaces;
 using System.Security.Claims;
+using MindBloom.API.Idempotency;
 using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
@@ -37,7 +38,11 @@ public class MembershipsController : ControllerBase
     }
 
     [HttpPost("create-payment-intent")]
-    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
+    [Authorize(
+        Policy =
+            AuthorizationPolicyConstants
+                .ClientOnly)]
+    [RequireIdempotency]
     public async Task<IActionResult>
         CreatePaymentIntent(
             CreateMembershipPaymentIntentDto request)
@@ -55,7 +60,11 @@ public class MembershipsController : ControllerBase
     }
 
     [HttpPost("confirm-payment")]
-    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
+    [Authorize(
+        Policy =
+            AuthorizationPolicyConstants
+                .ClientOnly)]
+    [RequireIdempotency]
     public async Task<IActionResult>
         ConfirmPayment(
             ConfirmMembershipPaymentDto request)

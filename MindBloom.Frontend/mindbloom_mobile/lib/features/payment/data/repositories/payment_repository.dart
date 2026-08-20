@@ -4,9 +4,11 @@ import '../models/payment_intent_response.dart';
 import '../models/payment_model.dart';
 import '../models/payment_receipt_model.dart';
 import '../services/payment_api_service.dart';
+import '../../../../core/network/idempotency_key_generator.dart';
 
 class PaymentRepository {
   final PaymentApiService apiService;
+  final Map<int, String> _paymentIntentKeys = <int, String>{};
 
   PaymentRepository({required this.apiService});
 
@@ -14,10 +16,24 @@ class PaymentRepository {
     return apiService.getMyPayments();
   }
 
-  Future<PaymentIntentResponse> createPaymentIntent(int appointmentId) {
-    return apiService.createPaymentIntent(
-      CreatePaymentIntentRequest(appointmentId: appointmentId),
+  Future<PaymentIntentResponse> createPaymentIntent(int appointmentId) async {
+    final idempotencyKey = _paymentIntentKeys.putIfAbsent(
+      appointmentId,
+      IdempotencyKeyGenerator.generate,
     );
+
+    try {
+      final result = await apiService.createPaymentIntent(
+        CreatePaymentIntentRequest(appointmentId: appointmentId),
+        idempotencyKey: idempotencyKey,
+      );
+
+      _paymentIntentKeys.remove(appointmentId);
+
+      return result;
+    } catch (_) {
+      rethrow;
+    }
   }
 
   Future<void> confirmPayment(String paymentIntentId) {

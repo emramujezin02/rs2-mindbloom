@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using MindBloom.Application.Features.Workshops.DTOs;
 using MindBloom.Application.Features.Workshops.Interfaces;
 using MindBloom.Shared.Constants;
+using MindBloom.API.Idempotency;
 
 namespace MindBloom.API.Controllers;
 
@@ -215,8 +216,12 @@ public class WorkshopsController : ControllerBase
         });
     }
 
-    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
+    [Authorize(
+        Policy =
+            AuthorizationPolicyConstants
+                .ClientOnly)]
     [HttpPost("{id}/register")]
+    [RequireIdempotency]
     public async Task<IActionResult>
         Register(
             int id)
@@ -232,7 +237,8 @@ public class WorkshopsController : ControllerBase
         return Ok(new
         {
             message =
-                "You have successfully registered for the workshop."
+                "You have successfully registered "
+                + "for the workshop."
         });
     }
 

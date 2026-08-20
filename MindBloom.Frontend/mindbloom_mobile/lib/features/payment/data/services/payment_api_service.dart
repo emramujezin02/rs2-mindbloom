@@ -4,6 +4,7 @@ import '../models/create_payment_intent_request.dart';
 import '../models/payment_intent_response.dart';
 import '../models/payment_model.dart';
 import '../models/payment_receipt_model.dart';
+import '../../../../core/network/idempotency_key_generator.dart';
 
 class PaymentApiService {
   final ApiClient apiClient;
@@ -19,11 +20,15 @@ class PaymentApiService {
   }
 
   Future<PaymentIntentResponse> createPaymentIntent(
-    CreatePaymentIntentRequest request,
-  ) async {
+    CreatePaymentIntentRequest request, {
+    String? idempotencyKey,
+  }) async {
+    final key = idempotencyKey ?? IdempotencyKeyGenerator.generate();
+
     final response = await apiClient.post(
       '/Payments/create-intent',
       body: request.toJson(),
+      idempotencyKey: key,
     );
 
     return PaymentIntentResponse.fromJson(response as Map<String, dynamic>);

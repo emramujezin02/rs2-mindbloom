@@ -6,14 +6,35 @@ import '../models/occupied_slot_model.dart';
 import '../models/therapist_appointment_status.dart';
 import '../models/unavailable_date_model.dart';
 import '../services/appointment_api_service.dart';
+import 'dart:convert';
+
+import '../../../../core/network/idempotency_key_generator.dart';
 
 class AppointmentRepository {
   final AppointmentApiService apiService;
 
+  final Map<String, String> _appointmentBookingKeys = <String, String>{};
+
   AppointmentRepository({required this.apiService});
 
-  Future<void> createAppointment(AppointmentCreateRequest request) {
-    return apiService.createAppointment(request);
+  Future<void> createAppointment(AppointmentCreateRequest request) async {
+    final operationKey = jsonEncode(request.toJson());
+
+    final idempotencyKey = _appointmentBookingKeys.putIfAbsent(
+      operationKey,
+      IdempotencyKeyGenerator.generate,
+    );
+
+    try {
+      await apiService.createAppointment(
+        request,
+        idempotencyKey: idempotencyKey,
+      );
+
+      _appointmentBookingKeys.remove(operationKey);
+    } catch (_) {
+      rethrow;
+    }
   }
 
   Future<List<AppointmentModel>> getMyAppointments() {

@@ -85,14 +85,24 @@ class ApiClient {
     String endpoint, {
     Object? body,
     bool requiresAuth = true,
+    String? idempotencyKey,
   }) {
     return _executeRequest(
       requiresAuth: requiresAuth,
       request: () async {
+        final headers = await _buildHeaders(requiresAuth: requiresAuth);
+
+        final normalizedIdempotencyKey = idempotencyKey?.trim();
+
+        if (normalizedIdempotencyKey != null &&
+            normalizedIdempotencyKey.isNotEmpty) {
+          headers['Idempotency-Key'] = normalizedIdempotencyKey;
+        }
+
         return http
             .put(
               _buildUri(endpoint),
-              headers: await _buildHeaders(requiresAuth: requiresAuth),
+              headers: headers,
               body: body == null ? null : jsonEncode(body),
             )
             .timeout(_requestTimeout);

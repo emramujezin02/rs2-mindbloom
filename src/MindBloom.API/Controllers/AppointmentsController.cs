@@ -4,6 +4,7 @@ using MindBloom.Application.Features.Appointments.DTOs;
 using MindBloom.Application.Features.Appointments.Interfaces;
 using System.Security.Claims;
 using MindBloom.Shared.Constants;
+using MindBloom.API.Idempotency;
 
 namespace MindBloom.API.Controllers;
 
@@ -20,17 +21,20 @@ public class AppointmentsController : ControllerBase
         _appointmentService = appointmentService;
     }
 
-    [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
+    [Authorize(
+        Policy =
+            AuthorizationPolicyConstants
+                .ClientOnly)]
     [HttpPost]
+    [RequireIdempotency]
     public async Task<IActionResult> Create(
         CreateAppointmentDto request)
     {
-
-
         var result =
-            await _appointmentService.CreateAsync(
-                GetCurrentUserId(),
-                request);
+            await _appointmentService
+                .CreateAsync(
+                    GetCurrentUserId(),
+                    request);
 
         return Ok(result);
     }

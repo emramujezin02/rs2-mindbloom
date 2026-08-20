@@ -36,6 +36,8 @@ using MindBloom.Shared.Observability;
 using MindBloom.Infrastructure.Messaging.Outbox;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.API.Messaging.Outbox;
+using MindBloom.API.Configuration;
+using MindBloom.API.Idempotency;
 
 var bootstrapEnvironment =
     Environment.GetEnvironmentVariable(
@@ -55,6 +57,34 @@ if (!string.Equals(
 
 var builder =
     WebApplication.CreateBuilder(args);
+
+builder.Services
+    .AddOptions<IdempotencyOptions>()
+    .Bind(
+        builder.Configuration
+            .GetSection(
+                IdempotencyOptions
+                    .SectionName))
+    .Validate(
+        options =>
+            options.ExpirationHours > 0,
+        "Idempotency:ExpirationHours "
+        + "must be greater than zero.")
+    .Validate(
+        options =>
+            options.MaximumKeyLength > 0 &&
+            options.MaximumKeyLength <= 256,
+        "Idempotency:MaximumKeyLength "
+        + "must be between 1 and 256.")
+    .ValidateOnStart();
+
+builder.Services
+    .AddScoped<
+        IdempotencyActionFilter>();
+
+builder.Services
+    .AddHostedService<
+        IdempotencyCleanupService>();
 
 builder.Services.AddScoped<
     IOutboxWriter,

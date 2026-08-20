@@ -105,12 +105,14 @@ class PaymentManagementApiService {
     required String paymentType,
     required int paymentId,
     required String reason,
+    required String idempotencyKey,
   }) async {
     await apiClient.put(
       '/Admin/payments/'
       '${Uri.encodeComponent(paymentType)}/'
       '$paymentId/refund',
       body: {'reason': reason},
+      idempotencyKey: idempotencyKey,
     );
   }
 }

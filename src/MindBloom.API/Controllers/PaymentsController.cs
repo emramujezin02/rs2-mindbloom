@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Payments.DTOs;
 using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Shared.Constants;
+using MindBloom.API.Idempotency;
 
 namespace MindBloom.API.Controllers;
 
@@ -23,6 +24,7 @@ public class PaymentsController : ControllerBase
     }
 
     [HttpPost("create-intent")]
+    [RequireIdempotency]
     public async Task<IActionResult>
         CreateIntent(
             CreatePaymentIntentDto request)

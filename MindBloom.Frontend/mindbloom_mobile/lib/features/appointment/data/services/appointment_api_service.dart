@@ -13,8 +13,15 @@ class AppointmentApiService {
 
   AppointmentApiService({required this.apiClient});
 
-  Future<void> createAppointment(AppointmentCreateRequest request) async {
-    await apiClient.post('/Appointments', body: request.toJson());
+  Future<void> createAppointment(
+    AppointmentCreateRequest request, {
+    String? idempotencyKey,
+  }) async {
+    await apiClient.post(
+      '/Appointments',
+      body: request.toJson(),
+      idempotencyKey: idempotencyKey,
+    );
   }
 
   Future<List<AppointmentModel>> getMyAppointments() async {

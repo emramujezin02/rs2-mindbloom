@@ -2,11 +2,14 @@ import '../models/admin_payment_details_model.dart';
 import '../models/admin_payment_paged_response.dart';
 import '../models/admin_payment_receipt_model.dart';
 import '../services/payment_management_api_service.dart';
+import '../../../../core/network/idempotency_key_generator.dart';
 
 class PaymentManagementRepository {
   final PaymentManagementApiService apiService;
 
-  const PaymentManagementRepository({required this.apiService});
+  final Map<String, String> _refundKeys = <String, String>{};
+
+  PaymentManagementRepository({required this.apiService});
 
   Future<AdminPaymentPagedResponse> getPayments({
     required int pageNumber,
@@ -56,11 +59,30 @@ class PaymentManagementRepository {
     required String paymentType,
     required int paymentId,
     required String reason,
-  }) {
-    return apiService.refundPayment(
-      paymentType: paymentType,
-      paymentId: paymentId,
-      reason: reason,
+  }) async {
+    final normalizedReason = reason.trim();
+
+    final operationKey =
+        '${paymentType.trim().toLowerCase()}'
+        ':$paymentId'
+        ':$normalizedReason';
+
+    final idempotencyKey = _refundKeys.putIfAbsent(
+      operationKey,
+      IdempotencyKeyGenerator.generate,
     );
+
+    try {
+      await apiService.refundPayment(
+        paymentType: paymentType,
+        paymentId: paymentId,
+        reason: normalizedReason,
+        idempotencyKey: idempotencyKey,
+      );
+
+      _refundKeys.remove(operationKey);
+    } catch (_) {
+      rethrow;
+    }
   }
 }

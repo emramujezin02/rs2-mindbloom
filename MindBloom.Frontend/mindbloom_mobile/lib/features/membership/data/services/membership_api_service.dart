@@ -6,6 +6,7 @@ import '../models/membership_plan_model.dart';
 import '../models/membership_receipt_model.dart';
 import '../models/purchase_membership_request.dart';
 import '../models/use_membership_request.dart';
+import '../../../../core/network/idempotency_key_generator.dart';
 
 class MembershipApiService {
   final ApiClient apiClient;
@@ -36,11 +37,15 @@ class MembershipApiService {
   }
 
   Future<MembershipPaymentIntentResponse> createPaymentIntent(
-    PurchaseMembershipRequest request,
-  ) async {
+    PurchaseMembershipRequest request, {
+    String? idempotencyKey,
+  }) async {
+    final key = idempotencyKey ?? IdempotencyKeyGenerator.generate();
+
     final response = await apiClient.post(
       '/Memberships/create-payment-intent',
       body: request.toJson(),
+      idempotencyKey: key,
     );
 
     return MembershipPaymentIntentResponse.fromJson(
@@ -49,11 +54,15 @@ class MembershipApiService {
   }
 
   Future<MembershipModel> confirmPayment(
-    ConfirmMembershipPaymentRequest request,
-  ) async {
+    ConfirmMembershipPaymentRequest request, {
+    String? idempotencyKey,
+  }) async {
+    final key = idempotencyKey ?? IdempotencyKeyGenerator.generate();
+
     final response = await apiClient.post(
       '/Memberships/confirm-payment',
       body: request.toJson(),
+      idempotencyKey: key,
     );
 
     return MembershipModel.fromJson(response as Map<String, dynamic>);

@@ -5,6 +5,7 @@ using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.Admin.DTOs;
 using MindBloom.Application.Features.Admin.Interfaces;
 using MindBloom.Shared.Constants;
+using MindBloom.API.Idempotency;
 
 namespace MindBloom.API.Controllers;
 
@@ -348,12 +349,13 @@ int paymentId)
     }
 
     [HttpPut(
-        "payments/{paymentType}/{paymentId:int}/refund")]
+     "payments/{paymentType}/{paymentId:int}/refund")]
+    [RequireIdempotency]
     public async Task<IActionResult>
-        RefundPayment(
-string paymentType,
-int paymentId,
-AdminRefundPaymentDto request)
+     RefundPayment(
+         string paymentType,
+         int paymentId,
+         AdminRefundPaymentDto request)
     {
         var adminUserId =
             GetAuthenticatedUserId();

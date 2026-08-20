@@ -1,6 +1,7 @@
 import '../../../../core/network/api_client.dart';
 import '../models/workshop_model.dart';
 import '../models/workshop_paged_response.dart';
+import '../../../../core/network/idempotency_key_generator.dart';
 
 class WorkshopApiService {
   final ApiClient apiClient;
@@ -36,8 +37,13 @@ class WorkshopApiService {
     return WorkshopModel.fromJson(response as Map<String, dynamic>);
   }
 
-  Future<void> register(int workshopId) async {
-    await apiClient.post('/Workshops/$workshopId/register');
+  Future<void> register(int workshopId, {String? idempotencyKey}) async {
+    final key = idempotencyKey ?? IdempotencyKeyGenerator.generate();
+
+    await apiClient.post(
+      '/Workshops/$workshopId/register',
+      idempotencyKey: key,
+    );
   }
 
   Future<void> cancelRegistration(int workshopId) async {
