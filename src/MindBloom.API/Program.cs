@@ -38,6 +38,7 @@ using MindBloom.Application.Common.Interfaces;
 using MindBloom.API.Messaging.Outbox;
 using MindBloom.API.Configuration;
 using MindBloom.API.Idempotency;
+using MindBloom.API.Maintenance;
 
 var bootstrapEnvironment =
     Environment.GetEnvironmentVariable(
@@ -57,6 +58,39 @@ if (!string.Equals(
 
 var builder =
     WebApplication.CreateBuilder(args);
+
+builder.Services
+    .AddOptions<DataRetentionOptions>()
+    .Bind(
+        builder.Configuration
+            .GetSection(
+                DataRetentionOptions
+                    .SectionName))
+    .Validate(
+        options =>
+            options.CleanupIntervalHours > 0,
+        "DataRetention:CleanupIntervalHours "
+        + "must be greater than zero.")
+    .Validate(
+        options =>
+            options.RefreshTokenRetentionDays >= 0,
+        "DataRetention:RefreshTokenRetentionDays "
+        + "cannot be negative.")
+    .Validate(
+        options =>
+            options.ProcessedMessageRetentionDays > 0,
+        "DataRetention:ProcessedMessageRetentionDays "
+        + "must be greater than zero.")
+    .Validate(
+        options =>
+            options.SecurityTokenRetentionDays >= 0,
+        "DataRetention:SecurityTokenRetentionDays "
+        + "cannot be negative.")
+    .ValidateOnStart();
+
+builder.Services
+    .AddHostedService<
+        DataRetentionCleanupService>();
 
 builder.Services
     .AddOptions<IdempotencyOptions>()
