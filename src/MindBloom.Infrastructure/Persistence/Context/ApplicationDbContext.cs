@@ -19,6 +19,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<MoodEntry> MoodEntries => Set<MoodEntry>();
     public DbSet<Therapist> Therapists => Set<Therapist>();
+    public DbSet<OutboxMessage>
+    OutboxMessages =>
+        Set<OutboxMessage>();
     public DbSet<TherapistAvailability> TherapistAvailabilities => Set<TherapistAvailability>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<UserConsent>
@@ -112,6 +115,76 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany(x => x.Appointments)
             .HasForeignKey(x => x.ClientId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<OutboxMessage>(
+    entity =>
+    {
+        entity.Property(x =>
+                x.EventId)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.CorrelationId)
+            .IsRequired();
+
+        entity.Property(x =>
+        x.IdempotencyKey)
+    .HasMaxLength(250);
+
+        entity.Property(x =>
+                x.EventType)
+            .IsRequired()
+            .HasMaxLength(1000);
+
+        entity.Property(x =>
+                x.RoutingKey)
+            .IsRequired()
+            .HasMaxLength(250);
+
+        entity.Property(x =>
+                x.PayloadJson)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.OccurredAtUtc)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.CreatedAtUtc)
+            .IsRequired();
+
+        entity.Property(x =>
+                x.AttemptCount)
+            .HasDefaultValue(0);
+
+        entity.Property(x =>
+                x.LastError)
+            .HasMaxLength(2000);
+
+        entity.Property(x =>
+                x.IsDeadLettered)
+            .HasDefaultValue(false);
+
+        entity.HasIndex(x =>
+                x.EventId)
+            .IsUnique();
+
+        entity.HasIndex(x =>
+        x.IdempotencyKey)
+    .IsUnique()
+    .HasFilter(
+        "[IdempotencyKey] IS NOT NULL");
+
+        entity.HasIndex(x => new
+        {
+            x.ProcessedAtUtc,
+            x.IsDeadLettered,
+            x.NextAttemptAtUtc
+        });
+
+        entity.HasIndex(x =>
+            x.CreatedAtUtc);
+    });
 
         builder.Entity<UserConsent>(
     entity =>

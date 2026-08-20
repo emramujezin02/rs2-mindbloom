@@ -9,6 +9,9 @@ using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 using Stripe;
 using MindBloom.Shared.Observability;
+using MindBloom.Application.Common.Interfaces;
+using MindBloom.Messaging.Contracts.Payments;
+using MindBloom.Messaging.Contracts.Common;
 
 namespace MindBloom.Infrastructure.Payments;
 
@@ -71,6 +74,9 @@ public sealed class StripeWebhookService
     private readonly ApplicationMetrics
     _applicationMetrics;
 
+    private readonly IOutboxWriter
+    _outboxWriter;
+
     private readonly ILogger<StripeWebhookService>
         _logger;
 
@@ -79,6 +85,7 @@ public sealed class StripeWebhookService
         IPaymentService paymentService,
         IMembershipService membershipService,
         ApplicationMetrics applicationMetrics,
+        IOutboxWriter outboxWriter,
         ILogger<StripeWebhookService> logger)
     {
         _context =
@@ -92,6 +99,9 @@ public sealed class StripeWebhookService
 
         _applicationMetrics =
             applicationMetrics;
+
+        _outboxWriter =
+            outboxWriter;
 
         _logger =
             logger;
@@ -280,11 +290,6 @@ public sealed class StripeWebhookService
                             .RollbackAsync(
                                 cancellationToken);
 
-                        /*
-                         * The unique StripeEventId index
-                         * remains the final protection
-                         * against concurrent deliveries.
-                         */
                         _context.ChangeTracker.Clear();
 
                         var duplicate =
@@ -646,6 +651,10 @@ public sealed class StripeWebhookService
                 payment.Appointment.IsPaid =
                     false;
 
+                await EnqueueRefundedWebhookEventAsync(
+    payment,
+    cancellationToken);
+
                 break;
 
             case "pending":
@@ -680,9 +689,80 @@ public sealed class StripeWebhookService
                 return;
         }
 
+        await EnqueueRefundedWebhookEventAsync(
+    payment,
+    cancellationToken);
+
         await _context
             .SaveChangesAsync(
                 cancellationToken);
+    }
+
+    private async Task
+    EnqueueRefundedWebhookEventAsync(
+        Payment payment,
+        CancellationToken cancellationToken)
+    {
+        if (payment.Status !=
+            PaymentStatus.Refunded)
+        {
+            return;
+        }
+
+
+
+        var clientUserId =
+            await _context.Appointments
+                .Where(x =>
+                    x.Id ==
+                    payment.AppointmentId)
+                .Select(x =>
+                    x.Client.UserId)
+                .FirstOrDefaultAsync(
+                    cancellationToken);
+
+        if (clientUserId <= 0)
+        {
+            throw new InvalidOperationException(
+                "Refunded payment client could not be resolved.");
+        }
+
+        await _outboxWriter.EnqueueAsync(
+     new PaymentRefundedEvent
+     {
+         PaymentId =
+             payment.Id,
+
+         PaymentType =
+             "Appointment",
+
+         AppointmentId =
+             payment.AppointmentId,
+
+         MembershipId =
+             null,
+
+         ClientUserId =
+             clientUserId,
+
+         Amount =
+             payment.Amount,
+
+         Currency =
+             PaymentCurrency,
+
+         Reason =
+             payment.RefundReason,
+
+         RefundedAtUtc =
+             payment.RefundedAtUtc
+             ?? DateTime.UtcNow
+     },
+     IntegrationEventRoutingKeys
+         .PaymentRefunded,
+     cancellationToken,
+     idempotencyKey:
+         $"payment-refunded:{payment.Id}");
     }
 
     private async Task HandleChargeRefundedAsync(

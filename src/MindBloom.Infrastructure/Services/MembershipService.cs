@@ -25,6 +25,8 @@ public class MembershipService : IMembershipService
     private readonly ApplicationDbContext _context;
     private readonly StripeClientProvider
     _stripeClientProvider;
+    private readonly IOutboxWriter
+    _outboxWriter;
     private readonly StripeVerificationService _stripeVerificationService;
     private readonly IIntegrationEventPublisher
     _integrationEventPublisher;
@@ -34,22 +36,21 @@ public class MembershipService : IMembershipService
         ApplicationDbContext context,
         StripeVerificationService
             stripeVerificationService,
-        StripeClientProvider
-            stripeClientProvider,
         IIntegrationEventPublisher
-            integrationEventPublisher)
+            integrationEventPublisher,
+        IOutboxWriter outboxWriter)
     {
         _context =
             context;
-
-        _stripeClientProvider =
-    stripeClientProvider;
 
         _stripeVerificationService =
             stripeVerificationService;
 
         _integrationEventPublisher =
             integrationEventPublisher;
+
+        _outboxWriter =
+            outboxWriter;
     }
 
     public async Task<List<MembershipPlanDto>>
@@ -605,9 +606,9 @@ public class MembershipService : IMembershipService
         }
 
         membershipPayment.Status =
-            PaymentStatus.Paid;
+      PaymentStatus.Paid;
 
-        membershipPayment.PaidAtUtc =
+        membershipPayment.PaidAtUtc ??=
             DateTime.UtcNow;
 
         membership.RemainingSessions =
@@ -616,7 +617,7 @@ public class MembershipService : IMembershipService
         membership.IsActive =
             true;
 
-        membership.PurchasedAtUtc =
+        membership.PurchasedAtUtc ??=
             DateTime.UtcNow;
 
         if (membership.DurationMonths <= 0)
@@ -625,14 +626,11 @@ public class MembershipService : IMembershipService
                 "Membership duration is invalid.");
         }
 
-        membership.ExpiresAtUtc =
-            DateTime.UtcNow.AddMonths(
-                membership.DurationMonths);
-
-        await _context.SaveChangesAsync();
-
-        var correlationId =
-    Guid.NewGuid();
+        membership.ExpiresAtUtc ??=
+            membership.PurchasedAtUtc
+                .Value
+                .AddMonths(
+                    membership.DurationMonths);
 
         var purchasedAtUtc =
             membership.PurchasedAtUtc
@@ -642,83 +640,85 @@ public class MembershipService : IMembershipService
             membershipPayment.PaidAtUtc
             ?? purchasedAtUtc;
 
-        await _integrationEventPublisher
-            .PublishAsync(
-                new MembershipPurchasedEvent
-                {
-                    CorrelationId =
-                        correlationId,
+        var membershipPurchasedEvent =
+            new MembershipPurchasedEvent
+            {
+                MembershipId =
+                    membership.Id,
 
-                    MembershipId =
-                        membership.Id,
+                ClientId =
+                    membership.ClientId,
 
-                    ClientId =
-                        membership.ClientId,
+                ClientUserId =
+                    clientUserId,
 
-                    ClientUserId =
-                        clientUserId,
+                TherapistId =
+                    membership.TherapistId,
 
-                    TherapistId =
-                        membership.TherapistId,
+                TherapistUserId =
+                    membership.Therapist.UserId,
 
-                    TherapistUserId =
-                        membership.Therapist.UserId,
+                PlanType =
+                    membership.PlanType
+                        .ToString(),
 
-                    PlanType =
-                        membership.PlanType
-                            .ToString(),
+                TotalSessions =
+                    membership.TotalSessions,
 
-                    TotalSessions =
-                        membership.TotalSessions,
+                Price =
+                    membership.Price,
 
-                    Price =
-                        membership.Price,
+                Currency =
+                    membershipPayment.Currency,
 
-                    Currency =
-                        membershipPayment.Currency,
+                PurchasedAtUtc =
+                    purchasedAtUtc,
 
-                    PurchasedAtUtc =
-                        purchasedAtUtc,
+                ExpiresAtUtc =
+                    membership.ExpiresAtUtc
+            };
 
-                    ExpiresAtUtc =
-                        membership.ExpiresAtUtc
-                },
+        var paymentSucceededEvent =
+            new PaymentSucceededEvent
+            {
+                PaymentId =
+                    membershipPayment.Id,
+
+                PaymentType =
+                    "Membership",
+
+                AppointmentId =
+                    null,
+
+                MembershipId =
+                    membership.Id,
+
+                ClientUserId =
+                    clientUserId,
+
+                Amount =
+                    membershipPayment.Amount,
+
+                Currency =
+                    membershipPayment.Currency,
+
+                PaidAtUtc =
+                    paidAtUtc
+            };
+
+        await _outboxWriter
+            .EnqueueAsync(
+                membershipPurchasedEvent,
                 IntegrationEventRoutingKeys
                     .MembershipPurchased);
 
-        await _integrationEventPublisher
-            .PublishAsync(
-                new PaymentSucceededEvent
-                {
-                    CorrelationId =
-                        correlationId,
-
-                    PaymentId =
-                        membershipPayment.Id,
-
-                    PaymentType =
-                        "Membership",
-
-                    AppointmentId =
-                        null,
-
-                    MembershipId =
-                        membership.Id,
-
-                    ClientUserId =
-                        clientUserId,
-
-                    Amount =
-                        membershipPayment.Amount,
-
-                    Currency =
-                        membershipPayment.Currency,
-
-                    PaidAtUtc =
-                        paidAtUtc
-                },
+        await _outboxWriter
+            .EnqueueAsync(
+                paymentSucceededEvent,
                 IntegrationEventRoutingKeys
                     .PaymentSucceeded);
+
+        await _context.SaveChangesAsync();
 
 
         return MapMembership(

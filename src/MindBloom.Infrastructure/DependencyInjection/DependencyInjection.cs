@@ -1047,7 +1047,7 @@ Environment.GetEnvironmentVariable(
         services.AddScoped<IBusinessNotificationService, BusinessNotificationService>();
 
         services.AddScoped<IAdminReportService, AdminReportService>();
-        services.AddScoped<
+        services.AddSingleton<
     ICorrelationIdAccessor,
     HttpContextCorrelationIdAccessor>();
         services.AddScoped<

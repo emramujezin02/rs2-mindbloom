@@ -27,14 +27,17 @@ public class WorkshopService : IWorkshopService
     private readonly UploadSettings
     _uploadSettings;
 
+    private readonly IIntegrationEventPublisher
+    _integrationEventPublisher;
+
     private readonly IBusinessNotificationService
         _businessNotificationService;
 
     private readonly IWebHostEnvironment
         _environment;
 
-    private readonly IIntegrationEventPublisher
-        _integrationEventPublisher;
+    private readonly IOutboxWriter
+        _outboxWriter;
 
     public WorkshopService(
         ApplicationDbContext context,
@@ -43,7 +46,8 @@ public class WorkshopService : IWorkshopService
         IWebHostEnvironment environment,
         IOptions<UploadSettings> uploadSettings,
         IIntegrationEventPublisher
-            integrationEventPublisher)
+            integrationEventPublisher,
+        IOutboxWriter outboxWriter)
     {
         _context =
             context;
@@ -52,13 +56,16 @@ public class WorkshopService : IWorkshopService
             businessNotificationService;
 
         _uploadSettings =
-    uploadSettings.Value;
+            uploadSettings.Value;
 
         _environment =
             environment;
 
         _integrationEventPublisher =
             integrationEventPublisher;
+
+        _outboxWriter =
+            outboxWriter;
     }
 
     public async Task<PagedResponse<WorkshopResponseDto>>
@@ -483,155 +490,218 @@ public class WorkshopService : IWorkshopService
     }
 
     public async Task<WorkshopResponseDto>
-        CreateAsync(
-            int userId,
-            bool isAdmin,
-            CreateWorkshopDto request)
+      CreateAsync(
+          int userId,
+          bool isAdmin,
+          CreateWorkshopDto request)
     {
+        var strategy =
+            _context.Database
+                .CreateExecutionStrategy();
 
-
-        var userExists =
-            await _context.Users
-                .AnyAsync(x =>
-                    x.Id == userId);
-
-        if (!userExists)
-        {
-            throw new NotFoundException(
-                "Organizer not found.");
-        }
-
-        int? therapistId = null;
-
-        if (isAdmin)
-        {
-            if (request.TherapistId.HasValue)
-            {
-                var therapistExists =
-                    await _context.Therapists
-                        .AnyAsync(x =>
-                            x.Id ==
-                            request.TherapistId.Value &&
-                            !x.IsDeleted);
-
-                if (!therapistExists)
+        var workshopId =
+            await strategy.ExecuteAsync(
+                async () =>
                 {
-                    throw new NotFoundException(
-                        "Selected therapist was not found.");
-                }
+                    await using var transaction =
+                        await _context.Database
+                            .BeginTransactionAsync();
 
-                therapistId =
-                    request.TherapistId;
-            }
-        }
-        else
-        {
-            var therapist =
-                await _context.Therapists
-                    .FirstOrDefaultAsync(x =>
-                        x.UserId == userId &&
-                        !x.IsDeleted);
+                    try
+                    {
+                        var userExists =
+                            await _context.Users
+                                .AnyAsync(
+                                    x =>
+                                        x.Id ==
+                                        userId);
 
-            if (therapist == null)
-            {
-                throw new NotFoundException(
-                    "Therapist profile not found.");
-            }
+                        if (!userExists)
+                        {
+                            throw new NotFoundException(
+                                "Organizer not found.");
+                        }
 
-            therapistId =
-                therapist.Id;
-        }
+                        int? therapistId =
+                            null;
 
-        var workshop =
-            new Workshop
-            {
-                Title =
-                    request.Title.Trim(),
-                Description =
-                    request.Description.Trim(),
-                StartUtc =
-                    request.StartUtc,
-                EndUtc =
-                    request.EndUtc,
-                Type =
-                    request.Type,
-                OnlineLink =
-                    Normalize(
-                        request.OnlineLink),
-                Location =
-                    Normalize(
-                        request.Location),
-                ImageUrl =
-    Normalize(
-        request.ImageUrl),
+                        if (isAdmin)
+                        {
+                            if (request
+                                .TherapistId
+                                .HasValue)
+                            {
+                                var therapistExists =
+                                    await _context
+                                        .Therapists
+                                        .AnyAsync(
+                                            x =>
+                                                x.Id ==
+                                                    request
+                                                        .TherapistId
+                                                        .Value &&
+                                                !x.IsDeleted);
 
-                RegistrationDeadlineUtc =
-    request.RegistrationDeadlineUtc,
-                Capacity =
-                    request.Capacity,
-                Price =
-                    request.Price,
-                Status =
-                    WorkshopStatus.Scheduled,
-                OrganizerUserId =
-                    userId,
-                TherapistId =
-                    therapistId
-            };
+                                if (!therapistExists)
+                                {
+                                    throw new NotFoundException(
+                                        "Selected therapist was not found.");
+                                }
 
-        _context.Workshops.Add(
-    workshop);
+                                therapistId =
+                                    request
+                                        .TherapistId;
+                            }
+                        }
+                        else
+                        {
+                            var therapist =
+                                await _context
+                                    .Therapists
+                                    .FirstOrDefaultAsync(
+                                        x =>
+                                            x.UserId ==
+                                                userId &&
+                                            !x.IsDeleted);
 
-        await _context.SaveChangesAsync();
+                            if (therapist == null)
+                            {
+                                throw new NotFoundException(
+                                    "Therapist profile not found.");
+                            }
 
-        var correlationId =
-            Guid.NewGuid();
+                            therapistId =
+                                therapist.Id;
+                        }
 
-        var workshopCreatedEvent =
-            new WorkshopCreatedEvent
-            {
-                CorrelationId =
-                    correlationId,
+                        var workshop =
+                            new Workshop
+                            {
+                                Title =
+                                    request.Title
+                                        .Trim(),
 
-                TimestampUtc =
-                    DateTime.UtcNow,
+                                Description =
+                                    request.Description
+                                        .Trim(),
 
-                WorkshopId =
-                    workshop.Id,
+                                StartUtc =
+                                    request.StartUtc,
 
-                OrganizerUserId =
-                    workshop.OrganizerUserId,
+                                EndUtc =
+                                    request.EndUtc,
 
-                TherapistId =
-                    workshop.TherapistId,
+                                Type =
+                                    request.Type,
 
-                Title =
-                    workshop.Title,
+                                OnlineLink =
+                                    Normalize(
+                                        request
+                                            .OnlineLink),
 
-                StartUtc =
-                    workshop.StartUtc,
+                                Location =
+                                    Normalize(
+                                        request
+                                            .Location),
 
-                EndUtc =
-                    workshop.EndUtc,
+                                ImageUrl =
+                                    Normalize(
+                                        request
+                                            .ImageUrl),
 
-                WorkshopType =
-                    workshop.Type.ToString(),
+                                RegistrationDeadlineUtc =
+                                    request
+                                        .RegistrationDeadlineUtc,
 
-                Capacity =
-                    workshop.Capacity,
+                                Capacity =
+                                    request.Capacity,
 
-                Price =
-                    workshop.Price
-            };
+                                Price =
+                                    request.Price,
 
-        await _integrationEventPublisher
-            .PublishAsync(
-                workshopCreatedEvent,
-                IntegrationEventRoutingKeys
-                    .WorkshopCreated);
+                                Status =
+                                    WorkshopStatus
+                                        .Scheduled,
+
+                                OrganizerUserId =
+                                    userId,
+
+                                TherapistId =
+                                    therapistId
+                            };
+
+                        _context.Workshops.Add(
+                            workshop);
+
+                        /*
+                         * Prvi SaveChanges daje nam
+                         * Workshop.Id, ali još nema commit-a.
+                         */
+                        await _context
+                            .SaveChangesAsync();
+
+                        var workshopCreatedEvent =
+                            new WorkshopCreatedEvent
+                            {
+                                TimestampUtc =
+                                    DateTime.UtcNow,
+
+                                WorkshopId =
+                                    workshop.Id,
+
+                                OrganizerUserId =
+                                    workshop
+                                        .OrganizerUserId,
+
+                                TherapistId =
+                                    workshop
+                                        .TherapistId,
+
+                                Title =
+                                    workshop.Title,
+
+                                StartUtc =
+                                    workshop.StartUtc,
+
+                                EndUtc =
+                                    workshop.EndUtc,
+
+                                WorkshopType =
+                                    workshop.Type
+                                        .ToString(),
+
+                                Capacity =
+                                    workshop.Capacity,
+
+                                Price =
+                                    workshop.Price
+                            };
+
+                        await _outboxWriter
+                            .EnqueueAsync(
+                                workshopCreatedEvent,
+                                IntegrationEventRoutingKeys
+                                    .WorkshopCreated);
+
+                        await _context
+                            .SaveChangesAsync();
+
+                        await transaction
+                            .CommitAsync();
+
+                        return workshop.Id;
+                    }
+                    catch
+                    {
+                        await transaction
+                            .RollbackAsync();
+
+                        throw;
+                    }
+                });
 
         return await GetByIdAsync(
-            workshop.Id,
+            workshopId,
             null);
     }
 

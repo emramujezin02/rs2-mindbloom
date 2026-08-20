@@ -4,9 +4,16 @@ namespace MindBloom.Application.Common.Interfaces;
 
 public interface IIntegrationEventPublisher
 {
+    Task PublishAsync(
+        IntegrationEvent integrationEvent,
+        string routingKey,
+        CancellationToken cancellationToken =
+            default);
+
     Task PublishAsync<TEvent>(
         TEvent integrationEvent,
         string routingKey,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken =
+            default)
         where TEvent : IntegrationEvent;
 }

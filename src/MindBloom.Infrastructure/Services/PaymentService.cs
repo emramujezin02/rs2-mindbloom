@@ -22,6 +22,9 @@ public class PaymentService : IPaymentService
     private readonly StripeClientProvider
     _stripeClientProvider;
 
+    private readonly IOutboxWriter
+    _outboxWriter;
+
     private readonly StripeVerificationService _stripeVerificationService;
 
     private readonly IBusinessNotificationService _businessNotificationService;
@@ -31,17 +34,14 @@ public class PaymentService : IPaymentService
         ApplicationDbContext context,
         StripeVerificationService
             stripeVerificationService,
-        StripeClientProvider
-            stripeClientProvider,
         IBusinessNotificationService
             businessNotificationService,
         IIntegrationEventPublisher
-            integrationEventPublisher)
+            integrationEventPublisher,
+        IOutboxWriter outboxWriter)
     {
         _context =
             context;
-        _stripeClientProvider =
-    stripeClientProvider;
 
         _stripeVerificationService =
             stripeVerificationService;
@@ -51,6 +51,9 @@ public class PaymentService : IPaymentService
 
         _integrationEventPublisher =
             integrationEventPublisher;
+
+        _outboxWriter =
+            outboxWriter;
     }
 
     public async Task<PaymentIntentResponseDto>
@@ -498,13 +501,48 @@ public class PaymentService : IPaymentService
             client.Id);
 
         payment.Status =
-            PaymentStatus.Paid;
+     PaymentStatus.Paid;
 
         payment.PaidAtUtc ??=
             DateTime.UtcNow;
 
         payment.Appointment.IsPaid =
             true;
+
+        var paymentSucceededEvent =
+            new PaymentSucceededEvent
+            {
+                PaymentId =
+                    payment.Id,
+
+                PaymentType =
+                    "Appointment",
+
+                AppointmentId =
+                    payment.AppointmentId,
+
+                MembershipId =
+                    null,
+
+                ClientUserId =
+                    clientUserId,
+
+                Amount =
+                    payment.Amount,
+
+                Currency =
+                    PaymentCurrency,
+
+                PaidAtUtc =
+                    payment.PaidAtUtc
+                    ?? DateTime.UtcNow
+            };
+
+        await _outboxWriter
+            .EnqueueAsync(
+                paymentSucceededEvent,
+                IntegrationEventRoutingKeys
+                    .PaymentSucceeded);
 
         try
         {
@@ -531,44 +569,6 @@ public class PaymentService : IPaymentService
                 "Payment confirmation could not be completed.",
                 exception);
         }
-
-        var paymentCorrelationId =
-    Guid.NewGuid();
-
-        await _integrationEventPublisher
-            .PublishAsync(
-                new PaymentSucceededEvent
-                {
-                    CorrelationId =
-                        paymentCorrelationId,
-
-                    PaymentId =
-                        payment.Id,
-
-                    PaymentType =
-                        "Appointment",
-
-                    AppointmentId =
-                        payment.AppointmentId,
-
-                    MembershipId =
-                        null,
-
-                    ClientUserId =
-                        clientUserId,
-
-                    Amount =
-                        payment.Amount,
-
-                    Currency =
-                        PaymentCurrency,
-
-                    PaidAtUtc =
-                        payment.PaidAtUtc
-                        ?? DateTime.UtcNow
-                },
-                IntegrationEventRoutingKeys
-                    .PaymentSucceeded);
 
         await _businessNotificationService
             .PublishAsync(
@@ -976,13 +976,13 @@ public class PaymentService : IPaymentService
                     payment.Appointment.IsPaid =
                         false;
 
-                    await _context.SaveChangesAsync();
+                    await EnqueuePaymentRefundedEventAsync(
+                        payment,
+                        clientUserId,
+                        cancellationReason:
+                            payment.RefundReason);
 
-                    await PublishPaymentRefundedEventAsync(
-    payment,
-    clientUserId,
-    cancellationReason:
-        payment.RefundReason);
+                    await _context.SaveChangesAsync();
 
                     await _businessNotificationService
                         .PublishAsync(
@@ -1029,7 +1029,9 @@ public class PaymentService : IPaymentService
         if (payment.Status !=
                 PaymentStatus.Paid &&
             payment.Status !=
-                PaymentStatus.RefundFailed)
+                PaymentStatus.RefundFailed &&
+            payment.Status !=
+                PaymentStatus.RefundPending)
         {
             return;
         }
@@ -1229,15 +1231,19 @@ public class PaymentService : IPaymentService
                 + $"{stripeRefund.Status}";
         }
 
+        if (refundCompleted)
+        {
+            await EnqueuePaymentRefundedEventAsync(
+                payment,
+                clientUserId,
+                cancellationReason:
+                    normalizedReason);
+        }
+
         await _context.SaveChangesAsync();
 
         if (refundCompleted)
         {
-            await PublishPaymentRefundedEventAsync(
-    payment,
-    clientUserId,
-    cancellationReason:
-        normalizedReason);
 
             await _businessNotificationService
                 .PublishAsync(
@@ -1252,58 +1258,62 @@ public class PaymentService : IPaymentService
         }
     }
 
-    private Task PublishPaymentRefundedEventAsync(
-    Payment payment,
-    int clientUserId,
-    string? cancellationReason)
+    private Task EnqueuePaymentRefundedEventAsync(
+      Payment payment,
+      int clientUserId,
+      string? cancellationReason,
+      CancellationToken cancellationToken =
+          default)
     {
         if (payment.Status !=
             PaymentStatus.Refunded)
         {
             throw new InvalidOperationException(
-                "PaymentRefundedEvent can only be published for a refunded payment.");
+                "PaymentRefundedEvent can only be created for a refunded payment.");
         }
 
-        return _integrationEventPublisher
-            .PublishAsync(
-                new PaymentRefundedEvent
-                {
-                    CorrelationId =
-                        Guid.NewGuid(),
+        var paymentRefundedEvent =
+            new PaymentRefundedEvent
+            {
+                PaymentId =
+                    payment.Id,
 
-                    PaymentId =
-                        payment.Id,
+                PaymentType =
+                    "Appointment",
 
-                    PaymentType =
-                        "Appointment",
+                AppointmentId =
+                    payment.AppointmentId,
 
-                    AppointmentId =
-                        payment.AppointmentId,
+                MembershipId =
+                    null,
 
-                    MembershipId =
-                        null,
+                ClientUserId =
+                    clientUserId,
 
-                    ClientUserId =
-                        clientUserId,
+                Amount =
+                    payment.Amount,
 
-                    Amount =
-                        payment.Amount,
+                Currency =
+                    PaymentCurrency,
 
-                    Currency =
-                        PaymentCurrency,
+                Reason =
+                    string.IsNullOrWhiteSpace(
+                        cancellationReason)
+                        ? payment.RefundReason
+                        : cancellationReason.Trim(),
 
-                    Reason =
-                        string.IsNullOrWhiteSpace(
-                            cancellationReason)
-                            ? payment.RefundReason
-                            : cancellationReason.Trim(),
+                RefundedAtUtc =
+                    payment.RefundedAtUtc
+                    ?? DateTime.UtcNow
+            };
 
-                    RefundedAtUtc =
-                        payment.RefundedAtUtc
-                        ?? DateTime.UtcNow
-                },
-                IntegrationEventRoutingKeys
-                    .PaymentRefunded);
+        return _outboxWriter.EnqueueAsync(
+            paymentRefundedEvent,
+            IntegrationEventRoutingKeys
+                .PaymentRefunded,
+            cancellationToken,
+            idempotencyKey:
+                $"payment-refunded:{payment.Id}");
     }
 
     private static void ValidateMetadata(

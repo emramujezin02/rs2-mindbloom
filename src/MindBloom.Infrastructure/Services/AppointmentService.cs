@@ -24,6 +24,9 @@ public class AppointmentService : IAppointmentService
 
     private readonly IMembershipService _membershipService;
 
+    private readonly IOutboxWriter
+    _outboxWriter;
+
     private readonly IIntegrationEventPublisher
     _integrationEventPublisher;
 
@@ -66,7 +69,8 @@ public class AppointmentService : IAppointmentService
         IMembershipService membershipService,
         ApplicationMetrics applicationMetrics,
         IIntegrationEventPublisher
-            integrationEventPublisher)
+            integrationEventPublisher,
+        IOutboxWriter outboxWriter)
     {
         _context =
             context;
@@ -79,229 +83,338 @@ public class AppointmentService : IAppointmentService
 
         _integrationEventPublisher =
             integrationEventPublisher;
+
+        _outboxWriter =
+            outboxWriter;
+
         _applicationMetrics =
-    applicationMetrics;
+            applicationMetrics;
     }
-
     public async Task<AppointmentResponseDto>
-        CreateAsync(
-            int clientUserId,
-            CreateAppointmentDto request)
+     CreateAsync(
+         int clientUserId,
+         CreateAppointmentDto request)
     {
-        var therapist =
-            await _context.Therapists
-                .Include(x => x.User)
-                .FirstOrDefaultAsync(
-                    x => x.Id == request.TherapistId);
+        var strategy =
+            _context.Database
+                .CreateExecutionStrategy();
 
+        var result =
+            await strategy.ExecuteAsync(
+                async () =>
+                {
+                    await using var transaction =
+                        await _context.Database
+                            .BeginTransactionAsync(
+                                System.Data
+                                    .IsolationLevel
+                                    .Serializable);
 
+                    try
+                    {
+                        var therapist =
+                            await _context.Therapists
+                                .Include(x => x.User)
+                                .FirstOrDefaultAsync(
+                                    x =>
+                                        x.Id ==
+                                        request.TherapistId);
 
-        if (therapist == null)
-        {
-            throw new NotFoundException("Therapist not found.");
-        }
+                        if (therapist == null)
+                        {
+                            throw new NotFoundException(
+                                "Therapist not found.");
+                        }
 
-        var dayOfWeek =
-            request.StartUtc.DayOfWeek;
+                        var dayOfWeek =
+                            request.StartUtc
+                                .DayOfWeek;
 
-        var availability =
-            await _context.TherapistAvailabilities
-                .FirstOrDefaultAsync(x =>
-                    x.TherapistId == request.TherapistId
-                    && x.DayOfWeek == dayOfWeek);
+                        var availability =
+                            await _context
+                                .TherapistAvailabilities
+                                .FirstOrDefaultAsync(
+                                    x =>
+                                        x.TherapistId ==
+                                            request
+                                                .TherapistId &&
+                                        x.DayOfWeek ==
+                                            dayOfWeek);
 
-        BusinessRuleGuard.Against(
-            availability == null,
-            "Therapist is not available on this day.");
+                        BusinessRuleGuard.Against(
+                            availability == null,
+                            "Therapist is not available on this day.");
 
-        if (availability == null)
-        {
-            throw new NotFoundException(
-                "Therapist availability was not found.");
-        }
+                        if (availability == null)
+                        {
+                            throw new NotFoundException(
+                                "Therapist availability was not found.");
+                        }
 
-        var startTime =
-            request.StartUtc.TimeOfDay;
+                        var startTime =
+                            request.StartUtc
+                                .TimeOfDay;
 
-        var endTime =
-            request.EndUtc.TimeOfDay;
+                        var endTime =
+                            request.EndUtc
+                                .TimeOfDay;
 
+                        BusinessRuleGuard.Against(
+                            startTime <
+                                availability.StartTime ||
+                            endTime >
+                                availability.EndTime,
+                            "Appointment is outside working hours.");
 
+                        var unavailableDate =
+                            await _context
+                                .TherapistUnavailableDates
+                                .AnyAsync(
+                                    x =>
+                                        x.TherapistId ==
+                                            request
+                                                .TherapistId &&
+                                        request.StartUtc <
+                                            x.EndUtc &&
+                                        request.EndUtc >
+                                            x.StartUtc);
 
-        BusinessRuleGuard.Against(
-            startTime < availability.StartTime
-            || endTime > availability.EndTime,
-            "Appointment is outside working hours.");
+                        BusinessRuleGuard.Against(
+                            unavailableDate,
+                            "Therapist is unavailable during this time.");
 
-        var unavailableDate =
-    await _context
-        .TherapistUnavailableDates
-        .AnyAsync(x =>
-            x.TherapistId
-                == request.TherapistId
-            && request.StartUtc < x.EndUtc
-            && request.EndUtc > x.StartUtc);
+                        /*
+                         * Ova provjera je namjerno unutar
+                         * Serializable transakcije.
+                         *
+                         * Time sprečavamo dva paralelna
+                         * requesta da rezervišu isti slot.
+                         */
+                        var overlappingAppointment =
+                            await _context.Appointments
+                                .AnyAsync(
+                                    x =>
+                                        x.TherapistId ==
+                                            request
+                                                .TherapistId &&
+                                        request.StartUtc <
+                                            x.EndUtc &&
+                                        request.EndUtc >
+                                            x.StartUtc &&
+                                        (
+                                            x.Status ==
+                                                AppointmentStatus
+                                                    .Pending ||
+                                            x.Status ==
+                                                AppointmentStatus
+                                                    .Accepted
+                                        ));
 
-        BusinessRuleGuard.Against(
-            unavailableDate,
-            "Therapist is unavailable during this time.");
+                        BusinessRuleGuard.Against(
+                            overlappingAppointment,
+                            "Selected appointment time is already booked.");
 
-        var overlappingAppointment =
-    await _context.Appointments
-        .AnyAsync(x =>
-            x.TherapistId ==
-                request.TherapistId &&
-            request.StartUtc < x.EndUtc &&
-            request.EndUtc > x.StartUtc &&
-            (
-                x.Status ==
-                    AppointmentStatus.Pending ||
-                x.Status ==
-                    AppointmentStatus.Accepted
-            ));
+                        var client =
+                            await _context.Clients
+                                .FirstOrDefaultAsync(
+                                    x =>
+                                        x.UserId ==
+                                            clientUserId &&
+                                        !x.IsDeleted);
 
-        BusinessRuleGuard.Against(
-            overlappingAppointment,
-            "Selected appointment time is already booked.");
+                        if (client == null)
+                        {
+                            throw new NotFoundException(
+                                "Client profile not found.");
+                        }
 
-        var client = await _context.Clients
-    .FirstOrDefaultAsync(x => x.UserId == clientUserId);
+                        var appointment =
+                            new Appointment
+                            {
+                                TherapistId =
+                                    request.TherapistId,
 
-        if (client == null)
-        {
-            throw new NotFoundException("Client profile not found.");
-        }
+                                StartUtc =
+                                    request.StartUtc,
 
+                                ClientId =
+                                    client.Id,
 
+                                EndUtc =
+                                    request.EndUtc,
 
+                                Status =
+                                    AppointmentStatus
+                                        .Pending,
 
-        var appointment = new Appointment
-        {
-            TherapistId = request.TherapistId,
-            StartUtc = request.StartUtc,
-            ClientId = client.Id,
-            EndUtc = request.EndUtc,
-            Status = AppointmentStatus.Pending,
-            Type = request.Type,
+                                Type =
+                                    request.Type,
 
-            MeetingLink =
-    string.IsNullOrWhiteSpace(
-        request.MeetingLink)
-        ? null
-        : request.MeetingLink.Trim(),
+                                MeetingLink =
+                                    string.IsNullOrWhiteSpace(
+                                        request.MeetingLink)
+                                        ? null
+                                        : request
+                                            .MeetingLink
+                                            .Trim(),
 
-            Location =
-    string.IsNullOrWhiteSpace(
-        request.Location)
-        ? null
-        : request.Location.Trim(),
+                                Location =
+                                    string.IsNullOrWhiteSpace(
+                                        request.Location)
+                                        ? null
+                                        : request
+                                            .Location
+                                            .Trim(),
 
-            Notes =
-    string.IsNullOrWhiteSpace(
-        request.Notes)
-        ? null
-        : request.Notes.Trim(),
-            AppointmentDateUtc = request.StartUtc,
+                                Notes =
+                                    string.IsNullOrWhiteSpace(
+                                        request.Notes)
+                                        ? null
+                                        : request
+                                            .Notes
+                                            .Trim(),
 
-            Price = therapist.HourlyRate,
-        };
+                                AppointmentDateUtc =
+                                    request.StartUtc,
 
-        _context.Appointments.Add(appointment);
+                                Price =
+                                    therapist.HourlyRate
+                            };
 
-        await _context.SaveChangesAsync();
+                        _context.Appointments.Add(
+                            appointment);
 
-        _context.AppointmentStatusAudits.Add(
-    new AppointmentStatusAudit
-    {
-        AppointmentId =
-            appointment.Id,
+                        /*
+                         * Prvi SaveChanges nam treba da
+                         * SQL dodijeli Appointment.Id.
+                         *
+                         * Još uvijek smo unutar iste
+                         * SQL transakcije.
+                         */
+                        await _context
+                            .SaveChangesAsync();
 
-        ChangedByUserId =
-            clientUserId,
+                        _context
+                            .AppointmentStatusAudits
+                            .Add(
+                                new AppointmentStatusAudit
+                                {
+                                    AppointmentId =
+                                        appointment.Id,
 
-        PreviousStatus =
-            null,
+                                    ChangedByUserId =
+                                        clientUserId,
 
-        NewStatus =
-            AppointmentStatus.Pending,
+                                    PreviousStatus =
+                                        null,
 
-        Action =
-            "Created",
+                                    NewStatus =
+                                        AppointmentStatus
+                                            .Pending,
 
-        Reason =
-            "Appointment created by client.",
+                                    Action =
+                                        "Created",
 
-        ChangedAtUtc =
-            DateTime.UtcNow
-    });
+                                    Reason =
+                                        "Appointment created by client.",
 
-        await _context.SaveChangesAsync();
+                                    ChangedAtUtc =
+                                        DateTime.UtcNow
+                                });
+
+                        var appointmentCreatedEvent =
+                            new AppointmentCreatedEvent
+                            {
+                                TimestampUtc =
+                                    DateTime.UtcNow,
+
+                                AppointmentId =
+                                    appointment.Id,
+
+                                ClientId =
+                                    appointment.ClientId,
+
+                                ClientUserId =
+                                    clientUserId,
+
+                                TherapistId =
+                                    appointment
+                                        .TherapistId,
+
+                                TherapistUserId =
+                                    therapist.UserId,
+
+                                StartUtc =
+                                    appointment.StartUtc,
+
+                                EndUtc =
+                                    appointment.EndUtc,
+
+                                AppointmentType =
+                                    appointment.Type
+                                        .ToString(),
+
+                                Status =
+                                    appointment.Status
+                                        .ToString(),
+
+                                Price =
+                                    appointment.Price
+                            };
+
+                        await _outboxWriter
+                            .EnqueueAsync(
+                                appointmentCreatedEvent,
+                                IntegrationEventRoutingKeys
+                                    .AppointmentCreated);
+
+                        /*
+                         * Audit + Outbox ulaze u bazu
+                         * zajedno.
+                         */
+                        await _context
+                            .SaveChangesAsync();
+
+                        await transaction
+                            .CommitAsync();
+
+                        return new AppointmentResponseDto
+                        {
+                            Id =
+                                appointment.Id,
+
+                            TherapistId =
+                                therapist.Id,
+
+                            TherapistName =
+                                therapist.User.FirstName
+                                + " "
+                                + therapist.User.LastName,
+
+                            StartUtc =
+                                appointment.StartUtc,
+
+                            EndUtc =
+                                appointment.EndUtc,
+
+                            Status =
+                                appointment.Status
+                                    .ToString()
+                        };
+                    }
+                    catch
+                    {
+                        await transaction
+                            .RollbackAsync();
+
+                        throw;
+                    }
+                });
 
         _applicationMetrics
-    .RecordAppointmentCreated();
+            .RecordAppointmentCreated();
 
-        var correlationId =
-            Guid.NewGuid();
-
-        var appointmentCreatedEvent =
-            new AppointmentCreatedEvent
-            {
-                CorrelationId =
-                    correlationId,
-
-                TimestampUtc =
-                    DateTime.UtcNow,
-
-                AppointmentId =
-                    appointment.Id,
-
-                ClientId =
-                    appointment.ClientId,
-
-                ClientUserId =
-                    clientUserId,
-
-                TherapistId =
-                    appointment.TherapistId,
-
-                TherapistUserId =
-                    therapist.UserId,
-
-                StartUtc =
-                    appointment.StartUtc,
-
-                EndUtc =
-                    appointment.EndUtc,
-
-                AppointmentType =
-                    appointment.Type.ToString(),
-
-                Status =
-                    appointment.Status.ToString(),
-
-                Price =
-                    appointment.Price
-            };
-
-        await _integrationEventPublisher
-            .PublishAsync(
-                appointmentCreatedEvent,
-                IntegrationEventRoutingKeys
-                    .AppointmentCreated);
-
-
-
-        return new AppointmentResponseDto
-        {
-            Id = appointment.Id,
-            TherapistId = therapist.Id,
-            TherapistName =
-                therapist.User.FirstName + " "
-                + therapist.User.LastName,
-            StartUtc = appointment.StartUtc,
-            EndUtc = appointment.EndUtc,
-            Status = appointment.Status.ToString()
-        };
+        return result;
     }
 
     private async Task

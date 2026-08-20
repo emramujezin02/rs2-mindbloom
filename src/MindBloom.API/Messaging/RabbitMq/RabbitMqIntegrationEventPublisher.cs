@@ -108,6 +108,22 @@ public sealed class RabbitMqIntegrationEventPublisher
             logger;
     }
 
+    public Task PublishAsync(
+    IntegrationEvent integrationEvent,
+    string routingKey,
+    CancellationToken cancellationToken =
+        default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            integrationEvent);
+
+        return PublishAsync<
+            IntegrationEvent>(
+                integrationEvent,
+                routingKey,
+                cancellationToken);
+    }
+
     public async Task PublishAsync<TEvent>(
         TEvent integrationEvent,
         string routingKey,

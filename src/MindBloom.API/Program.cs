@@ -33,6 +33,9 @@ using MindBloom.API.Health;
 using Microsoft.Extensions.Options;
 using MindBloom.Infrastructure.Persistence.Migration;
 using MindBloom.Shared.Observability;
+using MindBloom.Infrastructure.Messaging.Outbox;
+using MindBloom.Application.Common.Interfaces;
+using MindBloom.API.Messaging.Outbox;
 
 var bootstrapEnvironment =
     Environment.GetEnvironmentVariable(
@@ -52,6 +55,10 @@ if (!string.Equals(
 
 var builder =
     WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped<
+    IOutboxWriter,
+    OutboxWriter>();
 
 builder.Services.AddSingleton<
     ApplicationMetrics>();
@@ -200,6 +207,9 @@ builder.Services
 builder.Services
     .AddNotificationMessaging(
         builder.Configuration);
+
+builder.Services.AddHostedService<
+    OutboxMessageProcessor>();
 
 builder.Services
     .AddEndpointsApiExplorer();

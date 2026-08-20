@@ -8,6 +8,8 @@ using MindBloom.Infrastructure.Payments;
 using MindBloom.Infrastructure.Persistence.Context;
 using Stripe;
 using Xunit;
+using MindBloom.Shared.Observability;
+using MindBloom.Application.Common.Interfaces;
 
 namespace MindBloom.SecurityTests.Stripe;
 
@@ -31,10 +33,6 @@ public sealed class StripeDuplicateWebhookSecurityTests
         const string stripeEventId =
             "evt_security_duplicate_001";
 
-        /*
-         * Simuliramo Stripe event koji je već
-         * uspješno obrađen u prethodnom requestu.
-         */
         context.StripeWebhookEvents.Add(
             new StripeWebhookEvent
             {
@@ -74,6 +72,13 @@ public sealed class StripeDuplicateWebhookSecurityTests
         var membershipService =
             new Mock<IMembershipService>();
 
+
+        var outboxWriter =
+    new Mock<IOutboxWriter>();
+
+        var applicationMetrics =
+    new ApplicationMetrics();
+
         var logger =
             new Mock<
                 ILogger<StripeWebhookService>>();
@@ -83,6 +88,8 @@ public sealed class StripeDuplicateWebhookSecurityTests
                 context,
                 paymentService.Object,
                 membershipService.Object,
+                applicationMetrics,
+                outboxWriter.Object,
                 logger.Object);
 
         var duplicateEvent =
@@ -95,11 +102,6 @@ public sealed class StripeDuplicateWebhookSecurityTests
                     "payment_intent.succeeded"
             };
 
-        /*
-         * Pošto je event već obrađen,
-         * metoda mora završiti prije bilo
-         * kakve payment/membership obrade.
-         */
         await service.ProcessAsync(
             duplicateEvent);
 
@@ -114,9 +116,6 @@ public sealed class StripeDuplicateWebhookSecurityTests
                         stripeEventId)
                 .ToListAsync();
 
-        /*
-         * Ne smije nastati drugi audit/event zapis.
-         */
         Assert.Single(
             storedEvents);
 
@@ -184,15 +183,22 @@ public sealed class StripeDuplicateWebhookSecurityTests
         var membershipService =
             new Mock<IMembershipService>();
 
+        var applicationMetrics =
+            new ApplicationMetrics();
+
         var logger =
             new Mock<
                 ILogger<StripeWebhookService>>();
+        var outboxWriter =
+    new Mock<IOutboxWriter>();
 
         var service =
             new StripeWebhookService(
                 context,
                 paymentService.Object,
                 membershipService.Object,
+                applicationMetrics,
+                outboxWriter.Object,
                 logger.Object);
 
         var duplicateEvent =
