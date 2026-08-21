@@ -30,6 +30,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MindBloom.SecurityTests", "
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MindBloom.UnitTests", "MindBloom.UnitTests\MindBloom.UnitTests.csproj", "{A9797D99-1300-4B33-8C08-6C8846AAB95B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -136,6 +138,18 @@ Global
 		{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}.Release|x64.Build.0 = Release|Any CPU
 		{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}.Release|x86.ActiveCfg = Release|Any CPU
 		{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}.Release|x86.Build.0 = Release|Any CPU
+		{A9797D99-1300-4B33-8C08-6C8846AAB95B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A9797D99-1300-4B33-8C08-6C8846AAB95B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A9797D99-1300-4B33-8C08-6C8846AAB95B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A9797D99-1300-4B33-8C08-6C8846AAB95B}.Debug|x64.Build.0 = Debug|Any CPU
+		{A9797D99-1300-4B33-8C08-6C8846AAB95B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A9797D99-1300-4B33-8C08-6C8846AAB95B}.Debug|x86.Build.0 = Debug|Any CPU
+		{A9797D99-1300-4B33-8C08-6C8846AAB95B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A9797D99-1300-4B33-8C08-6C8846AAB95B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A9797D99-1300-4B33-8C08-6C8846AAB95B}.Release|x64.ActiveCfg = Release|Any CPU
+		{A9797D99-1300-4B33-8C08-6C8846AAB95B}.Release|x64.Build.0 = Release|Any CPU
+		{A9797D99-1300-4B33-8C08-6C8846AAB95B}.Release|x86.ActiveCfg = Release|Any CPU
+		{A9797D99-1300-4B33-8C08-6C8846AAB95B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
