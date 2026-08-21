@@ -664,7 +664,10 @@ public class AppointmentService : IAppointmentService
                     MeetingLink =
                         null,
 
-                    Notes=x.Notes,
+                    ClientId =
+    x.ClientId,
+
+                    Notes =x.Notes,
 
                     Location =
                         x.Location,
