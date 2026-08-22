@@ -3,6 +3,14 @@
   "WorkspaceRootPath": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.integrationtests\\stripesandbox\\stripesandboxworkflowtests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|solutionrelative:mindbloom.integrationtests\\stripesandbox\\stripesandboxworkflowtests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.integrationtests\\stripesandbox\\infrastructure\\stripesandboxfixture.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|solutionrelative:mindbloom.integrationtests\\stripesandbox\\infrastructure\\stripesandboxfixture.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.integrationtests\\rabbitmq\\infrastructure\\rabbitmqworkflowfixture.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|solutionrelative:mindbloom.integrationtests\\rabbitmq\\infrastructure\\rabbitmqworkflowfixture.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -51,6 +59,32 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "StripeSandboxWorkflowTests.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\StripeSandbox\\StripeSandboxWorkflowTests.cs",
+              "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\StripeSandbox\\StripeSandboxWorkflowTests.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\StripeSandbox\\StripeSandboxWorkflowTests.cs",
+              "RelativeToolTip": "MindBloom.IntegrationTests\\StripeSandbox\\StripeSandboxWorkflowTests.cs",
+              "ViewState": "AgIAANgBAAAAAAAAAAAswOcBAAAcAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-22T13:51:09.38Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "StripeSandboxFixture.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\StripeSandbox\\Infrastructure\\StripeSandboxFixture.cs",
+              "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\StripeSandbox\\Infrastructure\\StripeSandboxFixture.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\StripeSandbox\\Infrastructure\\StripeSandboxFixture.cs",
+              "RelativeToolTip": "MindBloom.IntegrationTests\\StripeSandbox\\Infrastructure\\StripeSandboxFixture.cs",
+              "ViewState": "AgIAABcBAAAAAAAAAAAkwDYBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-22T13:36:16.254Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "RabbitMqWorkflowFixture.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\RabbitMq\\Infrastructure\\RabbitMqWorkflowFixture.cs",
               "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\RabbitMq\\Infrastructure\\RabbitMqWorkflowFixture.cs",
@@ -63,7 +97,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
               "Title": "RabbitMqWorkflowTests.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\RabbitMq\\RabbitMqWorkflowTests.cs",
               "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\RabbitMq\\RabbitMqWorkflowTests.cs",
@@ -76,20 +110,19 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "MindBloom.IntegrationTests",
+              "DocumentIndex": 4,
+              "Title": "MindBloom.IntegrationTests.csproj",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj",
               "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj",
               "RelativeToolTip": "MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj",
               "ViewState": "AgIAAAwAAAAAAAAAAAAcwB4AAABdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-08-22T12:22:08.524Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-22T12:22:08.524Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "TestEmailService.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\RabbitMq\\Infrastructure\\TestEmailService.cs",
               "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\RabbitMq\\Infrastructure\\TestEmailService.cs",
@@ -97,12 +130,11 @@
               "RelativeToolTip": "MindBloom.IntegrationTests\\RabbitMq\\Infrastructure\\TestEmailService.cs",
               "ViewState": "AgIAAG8AAAAAAAAAAAAuwJYAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-22T12:45:11.468Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-22T12:45:11.468Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 6,
               "Title": "TestNotificationPublisher.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\Infrastructure\\TestNotificationPublisher.cs",
               "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\Infrastructure\\TestNotificationPublisher.cs",
@@ -110,12 +142,11 @@
               "RelativeToolTip": "MindBloom.IntegrationTests\\Infrastructure\\TestNotificationPublisher.cs",
               "ViewState": "AgIAAAYAAAAAAAAAAAAuwCoAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-22T12:30:35.963Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-22T12:30:35.963Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 7,
               "Title": "TestAuthenticationHandler.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\Infrastructure\\TestAuthenticationHandler.cs",
               "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\Infrastructure\\TestAuthenticationHandler.cs",
@@ -123,12 +154,11 @@
               "RelativeToolTip": "MindBloom.IntegrationTests\\Infrastructure\\TestAuthenticationHandler.cs",
               "ViewState": "AgIAAEkAAAAAAAAAAAAiwHAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-22T12:30:27.725Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-22T12:30:27.725Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 8,
               "Title": "MindBloomIntegrationTestFactory.cs",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\Infrastructure\\MindBloomIntegrationTestFactory.cs",
               "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\Infrastructure\\MindBloomIntegrationTestFactory.cs",
@@ -141,29 +171,27 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "MindBloom.Worker",
+              "DocumentIndex": 9,
+              "Title": "MindBloom.Worker.csproj",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
               "RelativeDocumentMoniker": "src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
               "RelativeToolTip": "src\\MindBloom.NotificationsWorker\\MindBloom.Worker.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACcAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-08-22T12:22:27.421Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-22T12:22:27.421Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "MindBloom.Messaging.Contracts",
+              "DocumentIndex": 10,
+              "Title": "MindBloom.Messaging.Contracts.csproj",
               "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj",
               "RelativeDocumentMoniker": "MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj",
               "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj",
               "RelativeToolTip": "MindBloom.Messaging.Contracts\\MindBloom.Messaging.Contracts.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-08-22T12:22:18.583Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-22T12:22:18.583Z"
             }
           ]
         }
