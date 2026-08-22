@@ -465,16 +465,23 @@ public sealed class PaymentServiceTests
     }
 
     private static PaymentService
-        CreateService(
-            ApplicationDbContext context)
+     CreateService(
+         ApplicationDbContext context)
     {
         /*
          * Ovi unit testovi namjerno testiraju
          * grane prije Stripe poziva.
          *
-         * Zato concrete StripeVerificationService
-         * ne treba stvarnu mrežnu konfiguraciju.
+         * Zato concrete Stripe servisi
+         * ne trebaju stvarnu mrežnu konfiguraciju.
          */
+        var stripeClientProvider =
+            (StripeClientProvider)
+            RuntimeHelpers
+                .GetUninitializedObject(
+                    typeof(
+                        StripeClientProvider));
+
         var stripeVerificationService =
             (StripeVerificationService)
             RuntimeHelpers
@@ -496,6 +503,7 @@ public sealed class PaymentServiceTests
 
         return new PaymentService(
             context,
+            stripeClientProvider,
             stripeVerificationService,
             notificationService.Object,
             publisher.Object,

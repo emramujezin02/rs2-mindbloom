@@ -3,12 +3,36 @@
   "WorkspaceRootPath": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.integrationtests\\infrastructure\\mindbloomintegrationtestfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|solutionrelative:mindbloom.integrationtests\\infrastructure\\mindbloomintegrationtestfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.integrationtests\\endtoend\\infrastructure\\testintegrationeventpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|solutionrelative:mindbloom.integrationtests\\endtoend\\infrastructure\\testintegrationeventpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.integrationtests\\infrastructure\\testnotificationpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|solutionrelative:mindbloom.integrationtests\\infrastructure\\testnotificationpublisher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.integrationtests\\endtoend\\infrastructure\\mindbloomendtoendtestfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|solutionrelative:mindbloom.integrationtests\\endtoend\\infrastructure\\mindbloomendtoendtestfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.integrationtests\\mindbloom.integrationtests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|solutionrelative:mindbloom.integrationtests\\mindbloom.integrationtests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.api\\.env||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{3FEF201E-BE79-42A8-BB82-C63C3788310F}|src\\MindBloom.API\\MindBloom.API.csproj|solutionrelative:src\\mindbloom.api\\.env||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.integrationtests\\endtoend\\clientjourneyendtoendtests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|solutionrelative:mindbloom.integrationtests\\endtoend\\clientjourneyendtoendtests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\clientonboarding\\dtos\\clientonboardingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\clientonboarding\\dtos\\clientonboardingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\src\\mindbloom.application\\features\\clientonboarding\\dtos\\saveclientonboardingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{84EDA7DA-CA64-41E2-A5A7-FEE3283A7850}|src\\MindBloom.Application\\MindBloom.Application.csproj|solutionrelative:src\\mindbloom.application\\features\\clientonboarding\\dtos\\saveclientonboardingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.securitytests\\concurrency\\appointmentbookingconcurrencytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4F590F96-C8A9-4FD8-976B-2F2BC19AC03D}|MindBloom.SecurityTests\\MindBloom.SecurityTests.csproj|solutionrelative:mindbloom.securitytests\\concurrency\\appointmentbookingconcurrencytests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -23,27 +47,105 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "MindBloomIntegrationTestFactory.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\Infrastructure\\MindBloomIntegrationTestFactory.cs",
-              "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\Infrastructure\\MindBloomIntegrationTestFactory.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\Infrastructure\\MindBloomIntegrationTestFactory.cs*",
-              "RelativeToolTip": "MindBloom.IntegrationTests\\Infrastructure\\MindBloomIntegrationTestFactory.cs*",
-              "ViewState": "AgIAAKwAAAAAAAAAAAAAAMMAAAAAAAAAAAAAAA==",
+              "Title": "TestIntegrationEventPublisher.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\EndToEnd\\Infrastructure\\TestIntegrationEventPublisher.cs",
+              "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\EndToEnd\\Infrastructure\\TestIntegrationEventPublisher.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\EndToEnd\\Infrastructure\\TestIntegrationEventPublisher.cs",
+              "RelativeToolTip": "MindBloom.IntegrationTests\\EndToEnd\\Infrastructure\\TestIntegrationEventPublisher.cs",
+              "ViewState": "AgIAAD0AAAAAAAAAAAAAAEgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-21T11:24:31.072Z",
+              "WhenOpened": "2026-08-21T22:49:00.194Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "MindBloom.IntegrationTests",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj",
+              "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj",
+              "RelativeToolTip": "MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj",
+              "ViewState": "AgIAAAEAAAAAAAAAAAAmwCAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-08-21T22:00:58.332Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "TestNotificationPublisher.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\Infrastructure\\TestNotificationPublisher.cs",
-              "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\Infrastructure\\TestNotificationPublisher.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\Infrastructure\\TestNotificationPublisher.cs",
-              "RelativeToolTip": "MindBloom.IntegrationTests\\Infrastructure\\TestNotificationPublisher.cs",
-              "ViewState": "AgIAAAUAAAAAAAAAAAAmwCoAAAABAAAAAAAAAA==",
+              "Title": "MindBloomEndToEndTestFactory.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\EndToEnd\\Infrastructure\\MindBloomEndToEndTestFactory.cs",
+              "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\EndToEnd\\Infrastructure\\MindBloomEndToEndTestFactory.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\EndToEnd\\Infrastructure\\MindBloomEndToEndTestFactory.cs",
+              "RelativeToolTip": "MindBloom.IntegrationTests\\EndToEnd\\Infrastructure\\MindBloomEndToEndTestFactory.cs",
+              "ViewState": "AgIAAMwBAAAAAAAAAAAYwNwBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-21T11:24:14.174Z",
+              "WhenOpened": "2026-08-21T21:17:20.584Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": ".env",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\.env",
+              "RelativeDocumentMoniker": "src\\MindBloom.API\\.env",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.API\\.env",
+              "RelativeToolTip": "src\\MindBloom.API\\.env",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-08-21T22:18:02.472Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "ClientOnboardingDto.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\ClientOnboarding\\DTOs\\ClientOnboardingDto.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\ClientOnboarding\\DTOs\\ClientOnboardingDto.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\ClientOnboarding\\DTOs\\ClientOnboardingDto.cs",
+              "RelativeToolTip": "src\\MindBloom.Application\\Features\\ClientOnboarding\\DTOs\\ClientOnboardingDto.cs",
+              "ViewState": "AgIAADgAAAAAAAAAAAAowEcAAAAVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-21T21:42:55.886Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ClientJourneyEndToEndTests.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\EndToEnd\\ClientJourneyEndToEndTests.cs",
+              "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\EndToEnd\\ClientJourneyEndToEndTests.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\EndToEnd\\ClientJourneyEndToEndTests.cs",
+              "RelativeToolTip": "MindBloom.IntegrationTests\\EndToEnd\\ClientJourneyEndToEndTests.cs",
+              "ViewState": "AgIAAN0AAAAAAAAAAAAiwOgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-21T21:17:00.145Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "SaveClientOnboardingDto.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\ClientOnboarding\\DTOs\\SaveClientOnboardingDto.cs",
+              "RelativeDocumentMoniker": "src\\MindBloom.Application\\Features\\ClientOnboarding\\DTOs\\SaveClientOnboardingDto.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\src\\MindBloom.Application\\Features\\ClientOnboarding\\DTOs\\SaveClientOnboardingDto.cs",
+              "RelativeToolTip": "src\\MindBloom.Application\\Features\\ClientOnboarding\\DTOs\\SaveClientOnboardingDto.cs",
+              "ViewState": "AgIAACYAAAAAAAAAAAAowDUAAAAVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-21T21:42:44.111Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "AppointmentBookingConcurrencyTests.cs",
+              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Concurrency\\AppointmentBookingConcurrencyTests.cs",
+              "RelativeDocumentMoniker": "MindBloom.SecurityTests\\Concurrency\\AppointmentBookingConcurrencyTests.cs",
+              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.SecurityTests\\Concurrency\\AppointmentBookingConcurrencyTests.cs",
+              "RelativeToolTip": "MindBloom.SecurityTests\\Concurrency\\AppointmentBookingConcurrencyTests.cs",
+              "ViewState": "AgIAAIoCAAAAAAAAAAAUwKICAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-21T21:08:48.849Z",
               "EditorCaption": ""
             }
           ]

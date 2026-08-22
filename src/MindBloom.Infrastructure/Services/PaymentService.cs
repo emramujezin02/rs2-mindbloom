@@ -32,6 +32,8 @@ public class PaymentService : IPaymentService
     _integrationEventPublisher;
     public PaymentService(
         ApplicationDbContext context,
+        StripeClientProvider
+            stripeClientProvider,
         StripeVerificationService
             stripeVerificationService,
         IBusinessNotificationService
@@ -42,6 +44,9 @@ public class PaymentService : IPaymentService
     {
         _context =
             context;
+
+        _stripeClientProvider =
+            stripeClientProvider;
 
         _stripeVerificationService =
             stripeVerificationService;
