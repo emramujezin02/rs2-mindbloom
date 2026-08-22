@@ -106,7 +106,7 @@ class AdminTablePagination extends StatelessWidget {
               ),
             ];
 
-            if (constraints.maxWidth < 760) {
+            if (constraints.maxWidth < 900) {
               return Wrap(
                 spacing: 12,
                 runSpacing: 8,
