@@ -34,7 +34,7 @@ FROM build AS publish
 RUN dotnet publish \
     ./src/MindBloom.API/MindBloom.API.csproj \
     --configuration Release \
-    --no-build \
+    --no-restore \
     --output /app/publish \
     /p:UseAppHost=false
 

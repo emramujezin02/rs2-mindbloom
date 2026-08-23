@@ -1,54 +1,12 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\",
-  "Documents": [
-    {
-      "AbsoluteMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.integrationtests\\performance\\applicationperformancetests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|solutionrelative:mindbloom.integrationtests\\performance\\applicationperformancetests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|c:\\users\\emram\\onedrive\\desktop\\mindbloom\\mindbloom.integrationtests\\mindbloom.integrationtests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{DA734197-F783-410B-843C-4DA180E6B2F9}|MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj|solutionrelative:mindbloom.integrationtests\\mindbloom.integrationtests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    }
-  ],
+  "Documents": [],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": [
-        {
-          "DockedWidth": 200,
-          "SelectedChildIndex": 0,
-          "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "ApplicationPerformanceTests.cs",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\Performance\\ApplicationPerformanceTests.cs",
-              "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\Performance\\ApplicationPerformanceTests.cs",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\Performance\\ApplicationPerformanceTests.cs",
-              "RelativeToolTip": "MindBloom.IntegrationTests\\Performance\\ApplicationPerformanceTests.cs",
-              "ViewState": "AgIAAAkCAAAAAAAAAAAmwBUCAAAgAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-22T17:32:06.856Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "MindBloom.IntegrationTests",
-              "DocumentMoniker": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj",
-              "RelativeDocumentMoniker": "MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj",
-              "ToolTip": "C:\\Users\\emram\\OneDrive\\Desktop\\MindBloom\\MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj",
-              "RelativeToolTip": "MindBloom.IntegrationTests\\MindBloom.IntegrationTests.csproj",
-              "ViewState": "AgIAAAYAAAAAAAAAAAAswCIAAAAKAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-08-22T17:25:10.174Z",
-              "EditorCaption": ""
-            }
-          ]
-        }
-      ]
+      "DocumentGroups": []
     }
   ]
 }

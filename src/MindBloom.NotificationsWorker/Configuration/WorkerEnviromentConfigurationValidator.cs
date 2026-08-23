@@ -30,9 +30,7 @@ public static class
             "RABBITMQ_EMAIL_DEAD_LETTER_ROUTING_KEY",
 
             "EMAIL_USERNAME",
-            "EMAIL_PASSWORD",
-
-            "FIREBASE_CREDENTIALS_PATH"
+            "EMAIL_PASSWORD"
         ];
 
     public static void Validate(

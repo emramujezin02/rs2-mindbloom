@@ -252,16 +252,20 @@ public sealed class RabbitMqMonitoringService
                             cancellationToken);
 
                 _channel =
-                    await _connection
-                        .CreateChannelAsync(
-                            cancellationToken:
-                                cancellationToken);
+     await _connection
+         .CreateChannelAsync(
+             cancellationToken:
+                 cancellationToken);
+
+                await _topology.DeclareAsync(
+                    _channel,
+                    cancellationToken);
 
                 _logger.LogInformation(
-    ConnectionEstablishedEvent,
-    "RabbitMQ monitoring connection established successfully. Module: {Module}, Client: {Client}.",
-    "RabbitMQMonitoring",
-    clientName);
+                    ConnectionEstablishedEvent,
+                    "RabbitMQ monitoring connection established successfully. Module: {Module}, Client: {Client}.",
+                    "RabbitMQMonitoring",
+                    clientName);
 
                 return;
             }

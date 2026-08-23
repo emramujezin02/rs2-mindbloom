@@ -34,7 +34,7 @@ FROM build AS publish
 RUN dotnet publish \
     ./src/MindBloom.NotificationsWorker/MindBloom.Worker.csproj \
     --configuration Release \
-    --no-build \
+    --no-restore \
     --output /app/publish \
     /p:UseAppHost=false
 

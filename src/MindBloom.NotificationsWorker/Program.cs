@@ -165,6 +165,37 @@ builder.Services
         "Firebase retry delay must be greater than zero.")
     .ValidateOnStart();
 
+var firebaseCredentialsPath =
+    builder.Configuration[
+        "FIREBASE_CREDENTIALS_PATH"];
+
+var firebaseConfigured =
+    !string.IsNullOrWhiteSpace(
+        firebaseCredentialsPath) &&
+    File.Exists(
+        firebaseCredentialsPath);
+
+if (!builder.Environment
+        .IsEnvironment(
+            "Testing") &&
+    firebaseConfigured)
+{
+    healthChecks
+        .AddCheck<
+            FirebaseHealthCheck>(
+            name:
+                "firebase",
+            failureStatus:
+                HealthStatus.Degraded,
+            tags:
+                new[]
+                {
+                    "worker",
+                    "external",
+                    "firebase"
+                });
+}
+
 var connectionString =
     builder.Configuration["DB_CONNECTION"];
 
@@ -269,8 +300,9 @@ builder.Services.AddScoped<
     ChatMessageCreatedEventHandler>();
 
 if (builder.Environment
-    .IsEnvironment(
-        "Testing"))
+        .IsEnvironment(
+            "Testing") ||
+    !firebaseConfigured)
 {
     builder.Services.AddScoped<
         IPushNotificationService,
@@ -282,7 +314,6 @@ else
         IPushNotificationService,
         FirebasePushNotificationService>();
 }
-
 builder.Services.AddScoped<
     IIntegrationEventHandler<
         MembershipPurchasedEvent>,
@@ -340,8 +371,9 @@ builder.Services.AddSingleton<
     RabbitMqMonitoringMetrics>();
 
 if (!builder.Environment
-    .IsEnvironment(
-        "Testing"))
+        .IsEnvironment(
+            "Testing") &&
+    firebaseConfigured)
 {
     builder.Services.AddSingleton(
         serviceProvider =>
@@ -352,21 +384,6 @@ if (!builder.Environment
                         IOptions<
                             FirebasePushOptions>>()
                     .Value;
-
-            if (string.IsNullOrWhiteSpace(
-                    options.CredentialsPath))
-            {
-                throw new InvalidOperationException(
-                    "FIREBASE_CREDENTIALS_PATH is not configured.");
-            }
-
-            if (!File.Exists(
-                    options.CredentialsPath))
-            {
-                throw new InvalidOperationException(
-                    $"Firebase credentials file was not found at "
-                    + $"'{options.CredentialsPath}'.");
-            }
 
             var credential =
                 GoogleCredential.FromFile(
@@ -418,6 +435,19 @@ var logger =
             ILoggerFactory>()
         .CreateLogger(
             "MindBloom.NotificationsWorker");
+
+if (!builder.Environment
+        .IsEnvironment(
+            "Testing") &&
+    !firebaseConfigured)
+{
+    logger.LogWarning(
+        "Firebase push notifications are disabled because "
+        + "FIREBASE_CREDENTIALS_PATH is not configured "
+        + "or the credentials file does not exist. "
+        + "The Notifications Worker will continue running "
+        + "with the no-op push notification service.");
+}
 
 var lifetime =
     app.Services
