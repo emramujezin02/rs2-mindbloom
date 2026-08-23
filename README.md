@@ -1,114 +1,112 @@
-\## Docker image versioning
+# MindBloom
 
+MindBloom is a mental health platform that connects clients, therapists and administrators through a mobile application, desktop administration application and ASP.NET Core backend.
 
+The system includes:
 
-MindBloom API and Notifications Worker Docker images use versioned tags.
-
-
-
-The recommended tags are:
-
-
-
-\- semantic version, for example `1.0.0`
-
-\- current Git commit hash
-
-\- `latest` as an additional convenience tag only
-
-
-
-The API and Worker use separate image names:
-
-
-
-```text
-
-mindbloom-api
-
-mindbloom-worker
-
-# MindBloom - Local Docker Setup
-
-This section describes how to build and run the MindBloom backend locally using Docker.
-
-The local Docker environment includes:
-
-- MindBloom API
-- MindBloom Notifications Worker
+- ASP.NET Core Web API
+- Flutter mobile application
+- Flutter desktop administration application
 - SQL Server
 - RabbitMQ
-- RabbitMQ Management UI
-- persistent Docker volumes
-- automatic development database migrations
-- demonstration seed data
+- Notifications Worker
+- Stripe sandbox payments
+- Firebase push notifications
+- email notifications
+- SignalR realtime communication
+- recommendation system
+- PDF reporting
+- Docker Compose infrastructure
 
 ---
+
+# Local Development Setup
 
 ## Prerequisites
 
 Before starting the project, install:
 
+- Git
 - Docker Desktop
 - Docker Compose
-- Git
+- .NET SDK 9
+- Flutter SDK
 
-Verify that Docker is running:
+Depending on the functionality being tested, you may also need:
+
+- Android Studio / Android Emulator
+- Stripe CLI
+- Firebase service account credentials
+- Gmail application password
+
+Verify the main tools:
 
 ```bash
+git --version
 docker --version
 docker compose version
+dotnet --version
+flutter --version
 ```
 
-The project does not require a locally installed SQL Server or RabbitMQ when the complete Docker Compose environment is used.
+When using the complete Docker Compose environment, a locally installed SQL Server or RabbitMQ instance is not required.
 
 ---
 
-## Environment configuration
+# Environment Configuration
 
 The repository contains an `.env.example` file with all required configuration keys and safe placeholder values.
 
 Create a local `.env` file from it.
 
-### Windows PowerShell
+## Windows PowerShell
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-### Windows Command Prompt
+## Windows Command Prompt
 
 ```cmd
 copy .env.example .env
 ```
 
-### Linux / macOS
+## Linux / macOS
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and replace placeholder values where required.
+Open `.env` and replace the placeholder values where required.
 
 Important configuration groups include:
 
 - application environment
+- API port
 - SQL Server
 - JWT
 - RabbitMQ
 - SMTP / email
 - Stripe
 - Firebase
-- CORS
 - Google Maps
-- upload configuration
-- Docker image version
+- CORS
+- uploads
+- Docker image versioning
 
 Example:
 
 ```env
 ASPNETCORE_ENVIRONMENT=Development
 DOTNET_ENVIRONMENT=Development
+
+API_PORT=8080
+WORKER_HEALTH_PORT=8081
+
+API_URL=http://localhost:8080
+
+MOBILE_API_BASE_URL=http://10.0.2.2:8080
+DESKTOP_API_BASE_URL=http://localhost:8080
 
 IMAGE_VERSION=1.0.0
 
@@ -123,19 +121,121 @@ STRIPE_WEBHOOK_SECRET=your-stripe-test-webhook-secret
 
 Do not commit the real `.env` file.
 
-Only `.env.example` with placeholder values should be stored in source control.
+Only `.env.example` containing safe placeholder values should be stored in source control.
 
 ---
 
-## Build the Docker environment
+# API URL Configuration
 
-From the repository root run:
+MindBloom uses port `8080` as the standard local Docker API port.
+
+The backend is available from the host computer at:
+
+```text
+http://localhost:8080
+```
+
+Flutter applications receive the API address through:
+
+```text
+--dart-define=API_BASE_URL=<url>
+```
+
+This means the source code does not need to be changed when the API address changes.
+
+## Android Emulator
+
+Android Emulator cannot use `localhost` to access the API running on the host computer.
+
+Use:
+
+```text
+http://10.0.2.2:8080
+```
+
+Example:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
+```
+
+## Desktop Application
+
+When the desktop application and Docker API run on the same computer, use:
+
+```text
+http://localhost:8080
+```
+
+Example:
+
+```bash
+flutter run -d windows --dart-define=API_BASE_URL=http://localhost:8080
+```
+
+The Flutter projects also contain platform-appropriate local defaults, but `--dart-define` is the recommended way to explicitly configure the API URL.
+
+---
+
+# Docker Environment
+
+The Docker environment contains:
+
+- MindBloom API
+- MindBloom Notifications Worker
+- SQL Server
+- RabbitMQ
+- RabbitMQ Management UI
+- persistent Docker volumes
+
+Docker Compose exposes the API on port:
+
+```text
+8080
+```
+
+The Worker health endpoint is exposed on:
+
+```text
+8081
+```
+
+---
+
+# Validate Docker Compose
+
+Before starting the environment, validate the Compose configuration:
+
+```bash
+docker compose config
+```
+
+Display configured services:
+
+```bash
+docker compose config --services
+```
+
+Expected services include:
+
+```text
+sql-server
+rabbitmq
+notifications-worker
+api
+```
+
+---
+
+# Build the Docker Environment
+
+From the repository root:
 
 ```bash
 docker compose build
 ```
 
-To build without using the Docker build cache:
+To rebuild without Docker cache:
 
 ```bash
 docker compose build --no-cache
@@ -143,15 +243,9 @@ docker compose build --no-cache
 
 ---
 
-## Start the application
+# Start the Docker Environment
 
-Start all services:
-
-```bash
-docker compose up -d
-```
-
-To build and start in one command:
+Build and start all services:
 
 ```bash
 docker compose up -d --build
@@ -163,122 +257,152 @@ Check container status:
 docker compose ps
 ```
 
-All required services should eventually report a running or healthy state.
+Required services should eventually report a running or healthy state.
+
+Expected services:
+
+```text
+mindbloom-sql-server
+mindbloom-rabbitmq
+mindbloom-api
+mindbloom-notifications-worker
+```
 
 ---
 
-## Stop the application
+# Stop the Docker Environment
 
-Stop the containers while keeping persistent volumes:
+Stop containers while preserving Docker volumes:
 
 ```bash
 docker compose down
 ```
 
-The database and other persisted Docker data remain available for the next startup.
+Persisted SQL Server and RabbitMQ data remain available for the next startup.
 
 ---
 
-## Reset the local database
+# Reset the Local Docker Environment
 
-WARNING: The following command removes persistent Docker volumes and deletes the local Docker database.
-
-Stop the environment and remove volumes:
+> WARNING: The following command removes Docker volumes and deletes persisted local Docker data.
 
 ```bash
 docker compose down -v
 ```
 
-Start the environment again:
+Then recreate the environment:
 
 ```bash
 docker compose up -d --build
 ```
 
-In the Development environment, MindBloom automatically waits for the database, applies pending EF Core migrations and prepares demonstration seed data.
-
-This makes a completely new local database ready for application testing without manually running EF Core migration commands.
-
-Never use this reset command against an environment containing data that must be preserved.
+Use this only when the local Docker data can safely be deleted.
 
 ---
 
-## View logs
+# MindBloom Mobile Application
 
-Show logs for all services:
+The mobile Flutter application communicates with the ASP.NET Core API.
 
-```bash
-docker compose logs
+Navigate to the mobile project directory:
+
+```powershell
+cd MindBloom.Frontend\mindbloom_mobile
 ```
 
-Follow logs continuously:
+Install dependencies:
 
 ```bash
-docker compose logs -f
+flutter pub get
 ```
 
-Show API logs:
+Run static analysis:
 
 ```bash
-docker compose logs -f api
+flutter analyze
 ```
 
-Show Notifications Worker logs:
+Run tests:
 
 ```bash
-docker compose logs -f worker
+flutter test
 ```
 
-Show SQL Server logs:
+## Android Emulator
+
+Run:
 
 ```bash
-docker compose logs -f sqlserver
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
 ```
 
-Show RabbitMQ logs:
-
-```bash
-docker compose logs -f rabbitmq
-```
-
-Docker logging is configured with log rotation so container logs do not grow without limit.
-
----
-
-## RabbitMQ Management
-
-RabbitMQ exposes its Management UI locally.
-
-Open:
+The Android emulator uses:
 
 ```text
-http://localhost:15672
+10.0.2.2
 ```
 
-The local development credentials are defined through the RabbitMQ variables in `.env`.
-
-With the default development placeholders:
+instead of:
 
 ```text
-Username: guest
-Password: guest
+localhost
 ```
 
-The Management UI can be used to inspect:
+to access services running on the host computer.
 
-- exchanges
-- queues
-- bindings
-- consumers
-- connections
-- message rates
-- dead-letter queues
+If Stripe mobile payments are being tested, also provide the Stripe sandbox publishable key:
 
-Do not use default RabbitMQ credentials in production.
+```bash
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080 --dart-define=STRIPE_PUBLISHABLE_KEY=pk_test_your_key
+```
+
+Only Stripe sandbox/test publishable keys should be used during development.
 
 ---
 
-## API and Swagger
+# MindBloom Desktop Application
+
+Navigate to the desktop project directory:
+
+```powershell
+cd MindBloom.Frontend\mindbloom_desktop
+```
+
+Install dependencies:
+
+```bash
+flutter pub get
+```
+
+Run static analysis:
+
+```bash
+flutter analyze
+```
+
+Run tests:
+
+```bash
+flutter test
+```
+
+Run the Windows desktop application:
+
+```bash
+flutter run -d windows --dart-define=API_BASE_URL=http://localhost:8080
+```
+
+The desktop application should use:
+
+```text
+http://localhost:8080
+```
+
+when the Docker API runs on the same computer.
+
+---
+
+# API and Swagger
 
 The API is available locally at:
 
@@ -292,15 +416,227 @@ In the Development environment, Swagger is available at:
 http://localhost:8080/swagger
 ```
 
-Swagger availability is environment-specific and must not be assumed to be enabled in Production.
+Swagger availability depends on the application environment and must not be assumed to be enabled in Production.
 
 ---
 
-## Demonstration accounts
+# Health Checks
 
-The Development seed creates demonstration users for the main application roles.
+The API exposes health endpoints used by Docker.
 
-### Administrator
+The API container internally checks:
+
+```text
+http://localhost:8080/health/ready
+```
+
+The Notifications Worker also exposes a health endpoint through Docker.
+
+Check all container states with:
+
+```bash
+docker compose ps
+```
+
+---
+
+# RabbitMQ
+
+RabbitMQ is used for asynchronous communication between the API and Notifications Worker.
+
+The main local ports are:
+
+```text
+AMQP:
+5672
+
+Management UI:
+15672
+```
+
+Open the RabbitMQ Management UI:
+
+```text
+http://localhost:15672
+```
+
+RabbitMQ credentials are configured through `.env`.
+
+The Management UI can be used to inspect:
+
+- exchanges
+- queues
+- bindings
+- consumers
+- connections
+- message rates
+- retry queues
+- dead-letter queues
+
+Do not use default development credentials in Production.
+
+---
+
+# Notifications Worker
+
+MindBloom uses a separate Notifications Worker for asynchronous processing.
+
+The Worker handles functionality such as:
+
+- notification integration events
+- email notification processing
+- push notification processing
+- RabbitMQ retry flows
+- dead-letter handling
+- duplicate-event protection
+- monitoring
+
+The Worker connects to SQL Server and RabbitMQ through Docker service hostnames.
+
+Firebase configuration is optional for Worker startup.
+
+If valid Firebase credentials are configured, the Firebase push service is enabled.
+
+If Firebase credentials are not configured, the Worker continues running without Firebase push delivery instead of terminating the complete Worker process.
+
+Firebase credentials are configured with:
+
+```text
+FIREBASE_CREDENTIALS_PATH
+```
+
+The real Firebase service-account JSON file must never be committed to source control.
+
+---
+
+# SMTP / Email
+
+Email configuration is supplied through environment variables.
+
+Important variables include:
+
+```text
+SMTP_HOST
+SMTP_PORT
+SMTP_ENABLE_SSL
+EMAIL_USERNAME
+EMAIL_PASSWORD
+```
+
+For Gmail, an application-specific password may be required instead of the normal Google account password.
+
+Never commit a real email application password.
+
+---
+
+# Stripe Sandbox
+
+MindBloom payment functionality uses Stripe sandbox/test mode during development.
+
+Backend configuration:
+
+```text
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
+```
+
+The secret key must be a Stripe test key.
+
+Never commit Stripe secret keys.
+
+## Stripe CLI
+
+Install Stripe CLI if local webhook testing is required.
+
+Login:
+
+```bash
+stripe login
+```
+
+Forward local Stripe webhook events to the API:
+
+```bash
+stripe listen --forward-to http://localhost:8080/api/stripe/webhook
+```
+
+Stripe CLI provides a webhook signing secret beginning with:
+
+```text
+whsec_
+```
+
+Configure that value locally as:
+
+```env
+STRIPE_WEBHOOK_SECRET=whsec_your_local_secret
+```
+
+Do not commit the real webhook secret.
+
+---
+
+# Firebase
+
+Firebase is used for push notifications.
+
+Configure:
+
+```text
+FIREBASE_CREDENTIALS_PATH
+FIREBASE_BATCH_SIZE
+FIREBASE_RETRY_COUNT
+FIREBASE_RETRY_DELAY_SECONDS
+```
+
+`FIREBASE_CREDENTIALS_PATH` must point to a valid Firebase service-account JSON file when Firebase push notifications are enabled.
+
+The credential file must not be committed to source control.
+
+Without Firebase credentials, the Notifications Worker can continue operating using the configured graceful fallback behavior.
+
+---
+
+# Google Maps
+
+Google Maps functionality uses:
+
+```text
+GOOGLE_MAPS_API_KEY
+GOOGLE_MAPS_GEOCODING_URL
+```
+
+The API key must be supplied through local configuration.
+
+Do not hardcode or commit a private Google Maps API key.
+
+---
+
+# Upload Configuration
+
+Upload limits are configured using:
+
+```text
+UPLOAD_MAX_IMAGE_SIZE_MB
+UPLOAD_MAX_DOCUMENT_SIZE_MB
+UPLOAD_ROOT_PATH
+```
+
+Example:
+
+```env
+UPLOAD_MAX_IMAGE_SIZE_MB=5
+UPLOAD_MAX_DOCUMENT_SIZE_MB=10
+UPLOAD_ROOT_PATH=uploads
+```
+
+---
+
+# Demonstration Accounts
+
+The Development seed contains demonstration users for the main application roles.
+
+## Administrator
 
 ```text
 Username: desktop
@@ -309,7 +645,7 @@ Password: MindBloom123!
 Role: Admin
 ```
 
-### Client
+## Client
 
 ```text
 Username: mobile
@@ -318,7 +654,7 @@ Password: MindBloom123!
 Role: Client
 ```
 
-### Approved therapist
+## Approved Therapist
 
 ```text
 Username: therapist.amina
@@ -328,7 +664,7 @@ Role: Therapist
 Status: Approved
 ```
 
-### Pending therapist
+## Pending Therapist
 
 ```text
 Username: therapist.haris
@@ -338,19 +674,76 @@ Role: Therapist
 Status: Pending
 ```
 
-These accounts are demonstration-only accounts.
+These accounts are intended only for demonstration and development.
 
-The seed process also creates representative application data including therapist profiles, therapy approaches, specializations, availability, appointments with different statuses, payments, memberships, reviews, articles, workshops, mood entries, journal data, notifications and chat examples.
+The Development seed also creates representative data such as:
 
-The seeding process is designed to be idempotent so restarting the Development environment does not intentionally create duplicate demonstration records.
+- therapist profiles
+- therapy approaches
+- therapist specializations
+- therapist availability
+- appointments
+- payments
+- memberships
+- reviews
+- articles
+- workshops
+- mood entries
+- journal data
+- notifications
+- chat examples
+
+The seed process is designed to be idempotent so restarting the Development environment does not intentionally create duplicate demonstration data.
 
 ---
 
-## Rebuild a single service
+# Logs
 
-It is not necessary to rebuild the complete Docker environment after changing only one application.
+Show logs for all Docker services:
 
-### Rebuild API
+```bash
+docker compose logs
+```
+
+Follow logs continuously:
+
+```bash
+docker compose logs -f
+```
+
+## API
+
+```bash
+docker compose logs -f api
+```
+
+## Notifications Worker
+
+```bash
+docker compose logs -f notifications-worker
+```
+
+## SQL Server
+
+```bash
+docker compose logs -f sql-server
+```
+
+## RabbitMQ
+
+```bash
+docker compose logs -f rabbitmq
+```
+
+Docker logging uses log rotation to prevent container logs from growing without limit.
+
+---
+
+# Rebuild a Single Service
+
+It is not necessary to rebuild the complete Docker environment after changing only one backend service.
+
+## API
 
 ```bash
 docker compose build api
@@ -363,42 +756,42 @@ Or:
 docker compose up -d --build api
 ```
 
-### Rebuild Notifications Worker
+## Notifications Worker
 
 ```bash
-docker compose build worker
-docker compose up -d worker
+docker compose build notifications-worker
+docker compose up -d notifications-worker
 ```
 
 Or:
 
 ```bash
-docker compose up -d --build worker
+docker compose up -d --build notifications-worker
 ```
 
 ---
 
-## Recreate a single container
+# Recreate a Single Container
 
-If an image is already built but the container needs to be recreated:
+API:
 
 ```bash
 docker compose up -d --force-recreate api
 ```
 
-For the Worker:
+Notifications Worker:
 
 ```bash
-docker compose up -d --force-recreate worker
+docker compose up -d --force-recreate notifications-worker
 ```
 
 ---
 
-## Common problems
+# Common Problems
 
-### Docker daemon is not running
+## Docker daemon is not running
 
-If Docker commands return an error indicating that the Docker daemon cannot be reached, start Docker Desktop and wait until Docker is ready.
+Start Docker Desktop and wait until Docker reports that it is ready.
 
 Then retry:
 
@@ -408,9 +801,9 @@ docker compose up -d
 
 ---
 
-### Port is already in use
+## Port is already in use
 
-The default local ports include:
+Default local ports:
 
 ```text
 API: 8080
@@ -420,31 +813,81 @@ RabbitMQ: 5672
 RabbitMQ Management: 15672
 ```
 
-If Docker reports that a port is already allocated, stop the application using that port or change the corresponding local port in `.env`.
+If Docker reports that a port is already allocated, stop the process using that port or change the corresponding host-side configuration.
 
 ---
 
-### SQL Server does not become ready
+## Mobile application cannot reach API
 
-Check container status:
+For Android Emulator, do not use:
+
+```text
+http://localhost:8080
+```
+
+Use:
+
+```text
+http://10.0.2.2:8080
+```
+
+Run:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
+```
+
+Also verify:
 
 ```bash
 docker compose ps
 ```
 
-Inspect SQL Server logs:
-
-```bash
-docker compose logs sqlserver
-```
-
-The API development startup includes retry/wait logic for initial database availability.
-
-If the database remains unavailable, verify the SQL Server configuration in `.env`.
+and ensure that `mindbloom-api` is running and healthy.
 
 ---
 
-### Database migration fails
+## Desktop application cannot reach API
+
+Use:
+
+```text
+http://localhost:8080
+```
+
+Run:
+
+```bash
+flutter run -d windows --dart-define=API_BASE_URL=http://localhost:8080
+```
+
+Verify that the API container is running:
+
+```bash
+docker compose ps
+```
+
+---
+
+## SQL Server does not become ready
+
+Check status:
+
+```bash
+docker compose ps
+```
+
+Inspect logs:
+
+```bash
+docker compose logs sql-server
+```
+
+Verify SQL Server configuration in `.env`.
+
+---
+
+## Database migration fails
 
 Inspect API logs:
 
@@ -452,26 +895,24 @@ Inspect API logs:
 docker compose logs api
 ```
 
-A failed Development migration stops application startup instead of silently continuing with an invalid database schema.
-
-After correcting the problem, restart the API:
+After correcting the problem:
 
 ```bash
 docker compose up -d api
 ```
 
-For a completely disposable local database, it can be reset with:
+For a disposable local environment, Docker volumes can be reset:
 
 ```bash
 docker compose down -v
 docker compose up -d --build
 ```
 
-WARNING: This deletes persisted local Docker data.
+> WARNING: This deletes persisted local Docker data.
 
 ---
 
-### RabbitMQ connection fails
+## RabbitMQ connection fails
 
 Check RabbitMQ:
 
@@ -480,7 +921,7 @@ docker compose ps
 docker compose logs rabbitmq
 ```
 
-Verify the RabbitMQ variables in `.env`, especially:
+Verify:
 
 ```text
 RABBITMQ_HOST
@@ -490,37 +931,42 @@ RABBITMQ_PASSWORD
 RABBITMQ_VIRTUAL_HOST
 ```
 
-When services communicate inside Docker Compose they must use the configured Docker service hostname rather than assuming that `localhost` refers to another container.
+Inside Docker Compose, services communicate using Docker service hostnames rather than using `localhost` to refer to another container.
 
 ---
 
-### Startup configuration validation fails
+## Startup configuration validation fails
 
 MindBloom validates critical configuration during startup.
 
-If a required option is missing, startup fails and the log identifies the missing configuration option without displaying the secret value.
-
-Check:
+Inspect API logs:
 
 ```bash
 docker compose logs api
 ```
 
-or:
+or Worker logs:
 
 ```bash
-docker compose logs worker
+docker compose logs notifications-worker
 ```
 
-Then verify the corresponding variable in `.env`.
-
-Critical configuration includes JWT, database, RabbitMQ and other enabled external-service settings.
+The startup error should identify the missing configuration setting without exposing its secret value.
 
 ---
 
-### JWT configuration error
+## JWT configuration error
 
-Ensure that `JWT_SECRET` is configured and contains a sufficiently long random value.
+Verify:
+
+```text
+JWT_SECRET
+JWT_ISSUER
+JWT_AUDIENCE
+JWT_EXPIRATION_MINUTES
+```
+
+Use a sufficiently long random JWT secret.
 
 Example placeholder:
 
@@ -528,11 +974,11 @@ Example placeholder:
 JWT_SECRET=replace-with-a-random-secret-with-at-least-32-characters
 ```
 
-Never store a real production JWT secret in README or `.env.example`.
+Never store real production JWT secrets in README or `.env.example`.
 
 ---
 
-### Email sending fails
+## Email sending fails
 
 Verify:
 
@@ -544,13 +990,11 @@ SMTP_PORT
 SMTP_ENABLE_SSL
 ```
 
-For Gmail, an application-specific password may be required instead of the normal account password.
+For Gmail, ensure that a valid application-specific password is being used.
 
 ---
 
-### Stripe requests fail
-
-For local development, use Stripe test/sandbox credentials.
+## Stripe requests fail
 
 Verify:
 
@@ -559,11 +1003,17 @@ STRIPE_SECRET_KEY
 STRIPE_WEBHOOK_SECRET
 ```
 
-Never place production Stripe secrets in README, `.env.example` or source control.
+Use Stripe sandbox/test credentials in Development.
+
+For webhook testing:
+
+```bash
+stripe listen --forward-to http://localhost:8080/api/stripe/webhook
+```
 
 ---
 
-### Firebase notifications fail
+## Firebase notifications fail
 
 Verify:
 
@@ -571,25 +1021,25 @@ Verify:
 FIREBASE_CREDENTIALS_PATH
 ```
 
-The configured credentials file must be available to the environment in which the Notifications Worker runs.
+If Firebase is expected to be enabled, ensure that the service-account file exists at the configured path.
 
-Never commit the real Firebase service-account credentials.
+If Firebase is intentionally not configured, the Notifications Worker should continue running without Firebase push delivery.
 
 ---
 
-## Docker image versioning
+# Docker Image Versioning
 
-MindBloom uses separate Docker images for the API and Notifications Worker:
+MindBloom API and Notifications Worker use separate Docker image names:
 
 ```text
 mindbloom-api
 mindbloom-worker
 ```
 
-Images should receive:
+Recommended image tags include:
 
-- a semantic version tag
-- a Git commit tag
+- semantic version, for example `1.0.0`
+- current Git commit hash
 - `latest` only as an additional convenience tag
 
 Example:
@@ -604,51 +1054,120 @@ mindbloom-worker:<git-commit>
 mindbloom-worker:latest
 ```
 
-The semantic version used by Docker Compose can be configured through:
+The Docker Compose image version is configured through:
 
 ```env
 IMAGE_VERSION=1.0.0
 ```
 
-Using explicit version tags allows a previous application image to be selected again when rollback is required.
+Using explicit versions makes rollback and reproducible deployment easier.
 
 ---
 
-## Production note
+# Production Notes
 
-The local Docker workflow is intended primarily for Development.
+The local Docker workflow is primarily intended for Development.
 
 Production deployment must use production-specific:
 
 - secrets
 - database credentials
+- RabbitMQ credentials
+- SMTP configuration
+- Stripe credentials
+- Firebase credentials
 - CORS origins
-- HTTPS configuration
-- external service credentials
+- HTTPS
 - resource limits
 - retry settings
 - persistent storage
-- image versions
+- Docker image versions
 
-Development-only behavior such as automatic development database preparation, demonstration seed data and development Swagger configuration must not be relied upon in Production.
+Development-only functionality such as demonstration seed data, local Stripe forwarding and Development Swagger configuration must not be relied upon in Production.
 
-Production database migrations should follow the defined deployment/migration strategy rather than allowing uncontrolled automatic schema changes during application startup.
+Real secrets must never be stored in:
+
+- source code
+- README
+- `.env.example`
+- Git history
 
 ---
 
-## Quick start
+# Quick Start
 
-For a new local installation, the complete workflow is:
+## 1. Clone repository
 
 ```bash
 git clone <repository-url>
 cd <repository-directory>
+```
+
+## 2. Create environment file
+
+Linux/macOS:
+
+```bash
 cp .env.example .env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Configure the required local secrets in `.env`.
+
+## 3. Validate Docker configuration
+
+```bash
+docker compose config
+```
+
+## 4. Start backend infrastructure
+
+```bash
 docker compose up -d --build
+```
+
+## 5. Check status
+
+```bash
 docker compose ps
 ```
 
-Then open:
+## 6. Open Swagger
+
+```text
+http://localhost:8080/swagger
+```
+
+## 7. Run Android mobile application
+
+From the mobile Flutter project:
+
+```bash
+flutter pub get
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
+```
+
+If testing Stripe payments:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080 --dart-define=STRIPE_PUBLISHABLE_KEY=pk_test_your_key
+```
+
+## 8. Run desktop application
+
+From the desktop Flutter project:
+
+```bash
+flutter pub get
+flutter run -d windows --dart-define=API_BASE_URL=http://localhost:8080
+```
+
+## 9. Useful local addresses
 
 ```text
 API:
@@ -661,22 +1180,41 @@ RabbitMQ Management:
 http://localhost:15672
 ```
 
-To stop:
+## 10. Stop environment
 
 ```bash
 docker compose down
 ```
 
-To inspect logs:
+---
 
-```bash
-docker compose logs -f
+# Standard Local URLs
+
+| Component | URL |
+|---|---|
+| Docker API from host | `http://localhost:8080` |
+| Android Emulator API | `http://10.0.2.2:8080` |
+| Desktop API | `http://localhost:8080` |
+| Swagger | `http://localhost:8080/swagger` |
+| RabbitMQ Management | `http://localhost:15672` |
+| Worker health port | `http://localhost:8081` |
+
+The standard Flutter configuration variable is:
+
+```text
+API_BASE_URL
 ```
 
-To completely reset the disposable local environment:
+Mobile:
 
-```bash
-docker compose down -v
-docker compose up -d --build
+```text
+API_BASE_URL=http://10.0.2.2:8080
 ```
 
+Desktop:
+
+```text
+API_BASE_URL=http://localhost:8080
+```
+
+This configuration allows MindBloom to be started on another development computer without modifying Flutter source code.
