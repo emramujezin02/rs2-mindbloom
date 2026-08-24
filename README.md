@@ -108,7 +108,14 @@ API_URL=http://localhost:8080
 MOBILE_API_BASE_URL=http://10.0.2.2:8080
 DESKTOP_API_BASE_URL=http://localhost:8080
 
+SQL_SERVER_DATABASE=220075
+
 IMAGE_VERSION=1.0.0
+
+The required MindBloom demonstration database name is:
+
+```text
+220075
 
 JWT_SECRET=replace-with-a-random-secret-with-at-least-32-characters
 
