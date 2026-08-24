@@ -17,7 +17,7 @@ Future<void> main() async {
     throw StateError(
       'STRIPE_PUBLISHABLE_KEY is not configured. '
       'Start the application using '
-      '--dart-define=STRIPE_PUBLISHABLE_KEY=4242 4242 4242 4242',
+      '--dart-define=STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key',
     );
   }
 
