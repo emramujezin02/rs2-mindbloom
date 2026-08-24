@@ -123,7 +123,7 @@ public sealed class StripeWebhookService
         }
 
         var paymentIntent =
-            stripeEvent.Data.Object
+            stripeEvent.Data?.Object
                 as PaymentIntent;
 
         var strategy =

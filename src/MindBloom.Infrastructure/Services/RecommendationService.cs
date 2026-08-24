@@ -8,14 +8,36 @@ namespace MindBloom.Infrastructure.Recommendations;
 
 public sealed class RecommendationService : IRecommendationService
 {
-    private const decimal SpecializationMaximumScore = 25m;
+    /*
+     * Weighted Content-Based Filtering.
+     *
+     * Each therapist is represented through profile/content features.
+     * User preferences form the corresponding user-profile features.
+     *
+     * Every feature produces a normalized similarity/match contribution
+     * which is multiplied by its configured weight.
+     *
+     * The weights intentionally sum to 100 points so the final score
+     * directly represents a match percentage.
+     */
+    private const decimal SpecializationMaximumScore = 15m;
+
+    private const decimal TherapyApproachMaximumScore = 10m;
+
     private const decimal AssessmentMaximumScore = 15m;
+
     private const decimal PreferenceMaximumScore = 15m;
+
     private const decimal PriceMaximumScore = 10m;
+
     private const decimal ExperienceMaximumScore = 10m;
+
     private const decimal RatingMaximumScore = 10m;
+
     private const decimal AvailabilityMaximumScore = 10m;
+
     private const decimal PreviousAppointmentMaximumScore = 3m;
+
     private const decimal FavoriteMaximumScore = 2m;
 
     private const int DefaultRecommendationCount = 10;
@@ -45,6 +67,8 @@ public sealed class RecommendationService : IRecommendationService
 
         var client = await _context.Clients
             .AsNoTracking()
+            .Include(x =>
+                x.PreferredTherapyApproaches)
             .FirstOrDefaultAsync(
                 x => x.UserId == userId &&
                      !x.IsDeleted,
@@ -75,23 +99,58 @@ public sealed class RecommendationService : IRecommendationService
             request.MaximumPricePerSession
             ?? client.MaximumPricePerSession;
 
-        var preferredSpecializationIds = request
-            .PreferredSpecializationIds
-            .Where(x => x > 0)
-            .ToHashSet();
+        var preferredSpecializationIds =
+     request
+         .PreferredSpecializationIds
+         .Where(x => x > 0)
+         .Distinct()
+         .ToHashSet();
 
-        var preferredDays = request
-            .PreferredDays
-            .Distinct()
-            .ToHashSet();
+        var requestedTherapyApproachIds =
+            request
+                .PreferredTherapyApproachIds
+                .Where(x => x > 0)
+                .Distinct()
+                .ToHashSet();
 
-        var assessmentFocusAreas = request
-            .AssessmentFocusAreas
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(NormalizeText)
-            .Where(x => x.Length > 0)
-            .Distinct()
-            .ToList();
+        var preferredTherapyApproachIds =
+            requestedTherapyApproachIds.Count > 0
+                ? requestedTherapyApproachIds
+                : client
+                    .PreferredTherapyApproaches
+                    .Where(x => !x.IsDeleted)
+                    .Select(x =>
+                        x.TherapyApproachId)
+                    .Where(x => x > 0)
+                    .ToHashSet();
+
+        var requestedPreferredDays =
+            request
+                .PreferredDays
+                .Distinct()
+                .ToHashSet();
+
+        var preferredDays =
+            requestedPreferredDays.Count > 0
+                ? requestedPreferredDays
+                : SplitStoredPreferredDays(
+                    client.PreferredDays);
+
+        var requestedAssessmentFocusAreas =
+            request
+                .AssessmentFocusAreas
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(x))
+                .Select(NormalizeText)
+                .Where(x => x.Length > 0)
+                .Distinct()
+                .ToList();
+
+        var assessmentFocusAreas =
+            requestedAssessmentFocusAreas.Count > 0
+                ? requestedAssessmentFocusAreas
+                : SplitStoredAssessmentFocusAreas(
+                    client.AssessmentFocusAreas);
 
         var previousTherapistIds = await _context.Appointments
             .AsNoTracking()
@@ -121,6 +180,7 @@ public sealed class RecommendationService : IRecommendationService
             .Include(x => x.SpecializationReference)
             .Include(x => x.Availabilities)
             .Include(x => x.Reviews)
+            .Include(x => x.TherapyApproaches)
             .ToListAsync(cancellationToken);
 
         var requestedTake = request.Take <= 0
@@ -143,17 +203,19 @@ public sealed class RecommendationService : IRecommendationService
                 CreateRecommendation(
                     therapist,
                     preferredSpecializationIds,
+                    preferredTherapyApproachIds,
                     assessmentFocusAreas,
                     preferredDays,
                     maximumPricePerSession,
                     request.MinimumExperienceYears,
                     previousTherapistIds.Contains(therapist.Id),
                     favoriteTherapistIds.Contains(therapist.Id)))
-                    .OrderByDescending(x => x.Score)
-            .ThenByDescending(x => x.AverageRating)
-            .ThenByDescending(x => x.ExperienceYears)
-            .ThenBy(x => x.PricePerSession)
-            .Take(requestedTake)
+                .OrderByDescending(x => x.Score)
+                .ThenByDescending(x => x.AverageRating)
+                .ThenByDescending(x => x.ExperienceYears)
+                .ThenBy(x => x.PricePerSession)
+                .ThenBy(x => x.TherapistId)
+                .Take(requestedTake)
             .ToList();
 
         return recommendations;
@@ -162,6 +224,7 @@ public sealed class RecommendationService : IRecommendationService
     private static TherapistRecommendationDto CreateRecommendation(
         Therapist therapist,
         IReadOnlySet<int> preferredSpecializationIds,
+        IReadOnlySet<int> preferredTherapyApproachIds,
         IReadOnlyCollection<string> assessmentFocusAreas,
         IReadOnlySet<DayOfWeek> preferredDays,
         decimal? maximumPricePerSession,
@@ -175,6 +238,12 @@ public sealed class RecommendationService : IRecommendationService
             therapist,
             preferredSpecializationIds,
             reasons);
+
+        var therapyApproachScore =
+    CalculateTherapyApproachScore(
+        therapist,
+        preferredTherapyApproachIds,
+        reasons);
 
         var assessmentScore = CalculateAssessmentScore(
             therapist,
@@ -227,6 +296,7 @@ public sealed class RecommendationService : IRecommendationService
 
         var totalScore =
             specializationScore +
+            therapyApproachScore +
             assessmentScore +
             preferenceScore +
             priceScore +
@@ -331,7 +401,7 @@ public sealed class RecommendationService : IRecommendationService
                 "Specialization",
                 SpecializationMaximumScore,
                 SpecializationMaximumScore,
-                "The therapist's specialization matches your selected therapeutic approach.");
+                "The therapist's specialization matches your selected specialization preference.");
 
             return SpecializationMaximumScore;
         }
@@ -341,9 +411,135 @@ public sealed class RecommendationService : IRecommendationService
             "Specialization",
             0m,
             SpecializationMaximumScore,
-            "The therapist's specialization does not directly match the selected approach.");
+            "The therapist's specialization does not directly match the selected specialization preference.");
 
         return 0m;
+    }
+
+    private static decimal CalculateTherapyApproachScore(
+    Therapist therapist,
+    IReadOnlySet<int> preferredTherapyApproachIds,
+    ICollection<RecommendationReasonDto> reasons)
+    {
+        var therapistApproachIds =
+            therapist
+                .TherapyApproaches
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.TherapyApproachId > 0)
+                .Select(x =>
+                    x.TherapyApproachId)
+                .Distinct()
+                .ToHashSet();
+
+        if (preferredTherapyApproachIds.Count == 0)
+        {
+            const decimal neutralScore = 5m;
+
+            AddReason(
+                reasons,
+                "Therapy approach",
+                neutralScore,
+                TherapyApproachMaximumScore,
+                "No specific therapy approach preference was supplied.");
+
+            return neutralScore;
+        }
+
+        var matchingApproachCount =
+            therapistApproachIds
+                .Intersect(
+                    preferredTherapyApproachIds)
+                .Count();
+
+        if (matchingApproachCount == 0)
+        {
+            AddReason(
+                reasons,
+                "Therapy approach",
+                0m,
+                TherapyApproachMaximumScore,
+                "The therapist does not currently match any of your preferred therapy approaches.");
+
+            return 0m;
+        }
+
+        var matchRatio =
+            Math.Clamp(
+                (decimal)matchingApproachCount /
+                preferredTherapyApproachIds.Count,
+                0m,
+                1m);
+
+        var score =
+            TherapyApproachMaximumScore *
+            matchRatio;
+
+        AddReason(
+            reasons,
+            "Therapy approach",
+            score,
+            TherapyApproachMaximumScore,
+            $"The therapist matches {matchingApproachCount} of "
+            + $"{preferredTherapyApproachIds.Count} preferred therapy approach(es).");
+
+        return score;
+    }
+
+    private static List<string>
+    SplitStoredAssessmentFocusAreas(
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(
+                value))
+        {
+            return [];
+        }
+
+        return value
+            .Split(
+                '|',
+                StringSplitOptions
+                    .RemoveEmptyEntries |
+                StringSplitOptions
+                    .TrimEntries)
+            .Select(NormalizeText)
+            .Where(x =>
+                x.Length > 0)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+    }
+
+    private static HashSet<DayOfWeek>
+    SplitStoredPreferredDays(
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(
+                value))
+        {
+            return [];
+        }
+
+        return value
+            .Split(
+                ',',
+                StringSplitOptions
+                    .RemoveEmptyEntries |
+                StringSplitOptions
+                    .TrimEntries)
+            .Select(x =>
+                int.TryParse(
+                    x,
+                    out var day)
+                    ? day
+                    : -1)
+            .Where(x =>
+                x >= 0 &&
+                x <= 6)
+            .Select(x =>
+                (DayOfWeek)x)
+            .ToHashSet();
     }
 
     private static decimal CalculateAssessmentScore(
