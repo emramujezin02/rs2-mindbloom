@@ -17,6 +17,22 @@ jobs:
   security-tests:
     runs-on: ubuntu-latest
 
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: "MindBloom_Test_SQL_2026!"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'MindBloom_Test_SQL_2026!' -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'MindBloom_Test_SQL_2026!' -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 15
+          --health-start-period 30s
+
     env:
       ASPNETCORE_ENVIRONMENT: Testing
       DOTNET_ENVIRONMENT: Testing
@@ -40,6 +56,8 @@ jobs:
 
       GOOGLE_MAPS_API_KEY: security-tests-placeholder
 
+      TEST_SQL_CONNECTION: "Server=localhost,1433;Database=master;User Id=sa;Password=MindBloom_Test_SQL_2026!;TrustServerCertificate=True;Encrypt=False;"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -57,7 +75,7 @@ jobs:
 
       - name: Run security tests
         run: >
-dotnet test ./tests/MindBloom.SecurityTests/MindBloom.SecurityTests.csproj
+          dotnet test ./MindBloom.SecurityTests/MindBloom.SecurityTests.csproj
           --no-build
           --configuration Release
           --logger "console;verbosity=normal"
