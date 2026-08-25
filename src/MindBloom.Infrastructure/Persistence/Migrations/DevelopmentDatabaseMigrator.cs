@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MindBloom.Infrastructure.Persistence.Context;
+using Microsoft.Data.SqlClient;
 
 namespace MindBloom.Infrastructure.Persistence.Migration;
 
@@ -133,69 +134,40 @@ public static class DevelopmentDatabaseMigrator
         try
         {
             await WaitForDatabaseAsync(
-                context,
-                logger,
-                cancellationToken);
+     context,
+     logger,
+     cancellationToken);
+
+            var pendingMigrations =
+                (await context.Database
+                    .GetPendingMigrationsAsync(
+                        cancellationToken))
+                .ToList();
+
+            if (pendingMigrations.Count == 0)
+            {
+                logger.LogInformation(
+                    DatabaseUpToDateEvent,
+                    "Database is already up to date. No pending EF Core migrations were found.");
+
+                return;
+            }
+
+            logger.LogInformation(
+                PendingMigrationsEvent,
+                "Applying pending EF Core migrations. MigrationCount: {MigrationCount}, Migrations: {Migrations}.",
+                pendingMigrations.Count,
+                string.Join(
+                    ", ",
+                    pendingMigrations));
 
             await context.Database
-                .OpenConnectionAsync(
+                .MigrateAsync(
                     cancellationToken);
 
-            var lockAcquired = false;
-
-            try
-            {
-                await AcquireMigrationLockAsync(
-                    context,
-                    logger,
-                    cancellationToken);
-
-                lockAcquired = true;
-
-                var pendingMigrations =
-                    (await context.Database
-                        .GetPendingMigrationsAsync(
-                            cancellationToken))
-                    .ToList();
-
-                if (pendingMigrations.Count == 0)
-                {
-                    logger.LogInformation(
-                        DatabaseUpToDateEvent,
-                        "Database is already up to date. No pending EF Core migrations were found.");
-
-                    return;
-                }
-
-                logger.LogInformation(
-                    PendingMigrationsEvent,
-                    "Applying pending EF Core migrations. MigrationCount: {MigrationCount}, Migrations: {Migrations}.",
-                    pendingMigrations.Count,
-                    string.Join(
-                        ", ",
-                        pendingMigrations));
-
-                await context.Database
-                    .MigrateAsync(
-                        cancellationToken);
-
-                logger.LogInformation(
-    MigrationCompletedEvent,
-    "Development database migrations completed successfully.");
-            }
-            finally
-            {
-                if (lockAcquired)
-                {
-                    await ReleaseMigrationLockAsync(
-                        context,
-                        logger,
-                        cancellationToken);
-                }
-
-                await context.Database
-                    .CloseConnectionAsync();
-            }
+            logger.LogInformation(
+                MigrationCompletedEvent,
+                "Development database migrations completed successfully.");
         }
         catch (OperationCanceledException)
             when (cancellationToken
@@ -222,9 +194,9 @@ public static class DevelopmentDatabaseMigrator
     }
 
     private static async Task WaitForDatabaseAsync(
-        ApplicationDbContext context,
-        ILogger logger,
-        CancellationToken cancellationToken)
+     ApplicationDbContext context,
+     ILogger logger,
+     CancellationToken cancellationToken)
     {
         const int maximumAttempts = 10;
 
@@ -233,6 +205,22 @@ public static class DevelopmentDatabaseMigrator
 
         Exception? lastException =
             null;
+
+        var applicationConnectionString =
+            context.Database.GetConnectionString();
+
+        if (string.IsNullOrWhiteSpace(applicationConnectionString))
+        {
+            throw new InvalidOperationException(
+                "Database connection string is not configured.");
+        }
+
+        var connectionStringBuilder =
+            new SqlConnectionStringBuilder(
+                applicationConnectionString)
+            {
+                InitialCatalog = "master"
+            };
 
         for (var attempt = 1;
              attempt <= maximumAttempts;
@@ -245,26 +233,22 @@ public static class DevelopmentDatabaseMigrator
             {
                 logger.LogInformation(
                     DatabaseAvailabilityCheckEvent,
-                    "Checking database availability. Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
+                    "Checking SQL Server availability. Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
                     attempt,
                     maximumAttempts);
 
-                if (await context.Database
-                        .CanConnectAsync(
-                            cancellationToken))
-                {
-                    logger.LogInformation(
-                        DatabaseAvailableEvent,
-                        "Database connection is available.");
+                await using var connection =
+                    new SqlConnection(
+                        connectionStringBuilder.ConnectionString);
 
-                    return;
-                }
+                await connection.OpenAsync(
+                    cancellationToken);
 
-                logger.LogWarning(
-                    DatabaseUnavailableEvent,
-                    "Database is not available yet. Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}.",
-                    attempt,
-                    maximumAttempts);
+                logger.LogInformation(
+                    DatabaseAvailableEvent,
+                    "SQL Server connection is available.");
+
+                return;
             }
             catch (Exception exception)
             {
@@ -273,14 +257,13 @@ public static class DevelopmentDatabaseMigrator
 
                 logger.LogWarning(
                     DatabaseConnectionAttemptFailedEvent,
-                    "Database connection attempt failed. Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}, FailureType: {FailureType}.",
+                    "SQL Server connection attempt failed. Attempt: {Attempt}, MaximumAttempts: {MaximumAttempts}, FailureType: {FailureType}.",
                     attempt,
                     maximumAttempts,
                     exception.GetType().Name);
             }
 
-            if (attempt <
-                maximumAttempts)
+            if (attempt < maximumAttempts)
             {
                 await Task.Delay(
                     delay,
@@ -289,7 +272,7 @@ public static class DevelopmentDatabaseMigrator
         }
 
         throw new InvalidOperationException(
-            $"Database was not available after "
+            $"SQL Server was not available after "
             + $"{maximumAttempts} startup attempts.",
             lastException);
     }

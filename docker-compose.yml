@@ -210,6 +210,14 @@ services:
 
       GOOGLE_MAPS_API_KEY: "${GOOGLE_MAPS_API_KEY}"
 
+      # -----------------------------------------------------
+      # UPLOADS
+      # -----------------------------------------------------
+
+      UPLOAD_ROOT_PATH: "${UPLOAD_ROOT_PATH:-uploads}"
+      UPLOAD_MAX_IMAGE_SIZE_MB: "${UPLOAD_MAX_IMAGE_SIZE_MB:-5}"
+      UPLOAD_MAX_DOCUMENT_SIZE_MB: "${UPLOAD_MAX_DOCUMENT_SIZE_MB:-10}"
+
     ports:
       - "${API_PORT:-8080}:8080"
 
