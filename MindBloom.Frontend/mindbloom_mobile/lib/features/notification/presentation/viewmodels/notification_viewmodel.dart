@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/debug/mindbloom_debug_log.dart';
 import '../../../../core/widgets/app_error_message.dart';
 import '../../data/models/notification_model.dart';
 import '../../data/repositories/notification_repository.dart';
@@ -40,6 +41,9 @@ class NotificationViewModel extends ChangeNotifier {
   bool isLoadingMore = false;
   bool isMarkingAllRead = false;
   bool isInitialized = false;
+  bool _isInitializing = false;
+  bool _isDisposed = false;
+  int _lifecycleGeneration = 0;
 
   String? error;
   String? loadMoreError;
@@ -74,23 +78,86 @@ class NotificationViewModel extends ChangeNotifier {
   }
 
   Future<void> initialize() async {
-    if (isInitialized) {
+    if (isInitialized || _isInitializing) {
+      logDebug(
+        'MOBILE NOTIFICATIONS',
+        'initialize skipped isInitialized=$isInitialized '
+            'isInitializing=$_isInitializing',
+      );
+
       return;
     }
 
-    isInitialized = true;
+    _isInitializing = true;
+    final generation = _lifecycleGeneration;
+    final stopwatch = Stopwatch()..start();
 
-    await loadFirstPage();
+    logDebug(
+      'MOBILE NOTIFICATIONS',
+      'initialize started generation=$generation',
+    );
 
-    await realtimeService.start();
+    try {
+      await loadFirstPage();
 
-    _startPolling();
+      if (_isDisposed || generation != _lifecycleGeneration) {
+        return;
+      }
+
+      _startPolling();
+
+      isInitialized = true;
+      logDebug(
+        'MOBILE NOTIFICATIONS',
+        'initialize completed durationMs=${stopwatch.elapsedMilliseconds}',
+      );
+
+      unawaited(_startRealtime(generation));
+    } finally {
+      if (generation == _lifecycleGeneration) {
+        _isInitializing = false;
+      }
+
+      logDebug(
+        'MOBILE NOTIFICATIONS',
+        'initialize finally isInitialized=$isInitialized '
+            'isInitializing=$_isInitializing '
+            'durationMs=${stopwatch.elapsedMilliseconds}',
+      );
+    }
+  }
+
+  Future<void> _startRealtime(int generation) async {
+    final stopwatch = Stopwatch()..start();
+
+    logDebug('MOBILE NOTIFICATIONS', 'realtime start requested');
+
+    try {
+      await realtimeService.start();
+    } catch (error) {
+      logDebug(
+        'MOBILE NOTIFICATIONS',
+        'realtime start failed ${error.runtimeType}: $error',
+      );
+    } finally {
+      logDebug(
+        'MOBILE NOTIFICATIONS',
+        'realtime start finished '
+            'stale=${generation != _lifecycleGeneration} '
+            'durationMs=${stopwatch.elapsedMilliseconds}',
+      );
+    }
   }
 
   Future<void> loadFirstPage({bool showLoading = true}) async {
     if (isRefreshing) {
+      logDebug('MOBILE NOTIFICATIONS', 'loadFirstPage skipped isRefreshing');
+
       return;
     }
+
+    final generation = _lifecycleGeneration;
+    final stopwatch = Stopwatch()..start();
 
     isRefreshing = true;
 
@@ -102,6 +169,11 @@ class NotificationViewModel extends ChangeNotifier {
     loadMoreError = null;
 
     notifyListeners();
+    logDebug(
+      'MOBILE NOTIFICATIONS',
+      'loadFirstPage started showLoading=$showLoading '
+          'hasExistingItems=${notifications.isNotEmpty} generation=$generation',
+    );
 
     try {
       final response = await repository.getNotifications(
@@ -109,19 +181,44 @@ class NotificationViewModel extends ChangeNotifier {
         pageSize: _pageSize,
       );
 
+      if (_isDisposed || generation != _lifecycleGeneration) {
+        return;
+      }
+
       notifications = response.items;
       _currentPage = response.pageNumber;
       _totalPages = response.totalPages;
       unreadCount = response.unreadCount;
 
       error = null;
+      logDebug(
+        'MOBILE NOTIFICATIONS',
+        'loadFirstPage success count=${notifications.length} '
+            'unreadCount=$unreadCount durationMs=${stopwatch.elapsedMilliseconds}',
+      );
     } catch (exception) {
-      error = AppErrorMessage.from(exception);
-    } finally {
-      isLoading = false;
-      isRefreshing = false;
+      if (_isDisposed || generation != _lifecycleGeneration) {
+        return;
+      }
 
-      notifyListeners();
+      error = AppErrorMessage.from(exception);
+      logDebug(
+        'MOBILE NOTIFICATIONS',
+        'loadFirstPage failed ${exception.runtimeType}: $exception '
+            'durationMs=${stopwatch.elapsedMilliseconds}',
+      );
+    } finally {
+      if (!_isDisposed && generation == _lifecycleGeneration) {
+        isLoading = false;
+        isRefreshing = false;
+
+        notifyListeners();
+        logDebug(
+          'MOBILE NOTIFICATIONS',
+          'loadFirstPage finally isLoading=$isLoading '
+              'isRefreshing=$isRefreshing errorPresent=${error != null}',
+        );
+      }
     }
   }
 
@@ -262,18 +359,28 @@ class NotificationViewModel extends ChangeNotifier {
   void _startPolling() {
     _pollingTimer?.cancel();
 
-    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (isRealtimeConnected || isRefreshing) {
+        return;
+      }
+
       unawaited(refresh());
     });
   }
 
   void _setConnectionStatus(NotificationConnectionStatus status) {
+    if (_isDisposed) {
+      return;
+    }
+
     connectionStatus = status;
 
     notifyListeners();
   }
 
   Future<void> stop() async {
+    _lifecycleGeneration++;
+
     _pollingTimer?.cancel();
     _pollingTimer = null;
 
@@ -288,6 +395,7 @@ class NotificationViewModel extends ChangeNotifier {
     isLoadingMore = false;
     isMarkingAllRead = false;
     isInitialized = false;
+    _isInitializing = false;
 
     connectionStatus = NotificationConnectionStatus.disconnected;
 
@@ -296,6 +404,8 @@ class NotificationViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
+
     _pollingTimer?.cancel();
 
     unawaited(realtimeService.stop());

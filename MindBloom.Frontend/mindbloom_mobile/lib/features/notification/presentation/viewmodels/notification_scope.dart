@@ -19,4 +19,16 @@ class NotificationScope extends InheritedNotifier<NotificationViewModel> {
 
     return scope.notifier!;
   }
+
+  static NotificationViewModel read(BuildContext context) {
+    final element = context
+        .getElementForInheritedWidgetOfExactType<NotificationScope>();
+    final scope = element?.widget as NotificationScope?;
+
+    if (scope == null) {
+      throw StateError('NotificationScope not found.');
+    }
+
+    return scope.notifier!;
+  }
 }

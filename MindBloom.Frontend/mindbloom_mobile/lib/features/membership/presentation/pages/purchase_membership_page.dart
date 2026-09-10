@@ -9,6 +9,15 @@ import '../../../therapist/data/models/therapist_model.dart';
 import '../../data/models/membership_plan_model.dart';
 import '../viewmodels/membership_viewmodel.dart';
 
+const _purchaseBackground = Color(0xFFFCFAFF);
+const _purchaseSurface = Color(0xFFFFFFFF);
+const _purchaseLavender = Color(0xFFF6F0FC);
+const _purchaseBorder = Color(0xFFE7DDF1);
+const _purchasePrimary = Color(0xFF6D4F91);
+const _purchaseText = Color(0xFF372D45);
+const _purchaseMuted = Color(0xFF6C6278);
+const _purchaseRadius = 20.0;
+
 class PurchaseMembershipPage extends StatefulWidget {
   final TherapistModel therapist;
 
@@ -119,8 +128,11 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _purchaseBackground,
       appBar: AppBar(
         title: const Text('Membership packages'),
+        backgroundColor: _purchaseBackground,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             tooltip: 'Refresh',
@@ -165,7 +177,7 @@ class _PurchaseMembershipPageState extends State<PurchaseMembershipPage> {
       onRefresh: _loadPlans,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         itemCount: _viewModel.plans.length + (_viewModel.error != null ? 1 : 0),
         separatorBuilder: (context, index) {
           return const SizedBox(height: 12);
@@ -207,21 +219,41 @@ class _MembershipPlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: _purchaseSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_purchaseRadius),
+        side: const BorderSide(color: _purchaseBorder),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.card_membership, size: 30),
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    color: _purchaseLavender,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.card_membership,
+                    color: _purchasePrimary,
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     plan.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
+                      color: _purchaseText,
                       fontSize: 19,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
@@ -229,7 +261,10 @@ class _MembershipPlanCard extends StatelessWidget {
             ),
             if (plan.description.isNotEmpty) ...[
               const SizedBox(height: 10),
-              Text(plan.description, style: const TextStyle(height: 1.4)),
+              Text(
+                plan.description,
+                style: const TextStyle(color: _purchaseMuted, height: 1.4),
+              ),
             ],
             const SizedBox(height: 16),
             _PlanInfoRow(
@@ -252,7 +287,10 @@ class _MembershipPlanCard extends StatelessWidget {
               const SizedBox(height: 18),
               const Text(
                 'Benefits',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: _purchaseText,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 8),
               ...plan.benefits.map(
@@ -261,29 +299,53 @@ class _MembershipPlanCard extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.check_circle_outline, size: 19),
+                      const Icon(
+                        Icons.check_circle_outline,
+                        size: 19,
+                        color: _purchasePrimary,
+                      ),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(benefit)),
+                      Expanded(
+                        child: Text(
+                          benefit,
+                          style: const TextStyle(
+                            color: _purchaseText,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
             ],
-            const Divider(height: 28),
-            Text(
-              'Total price: '
-              '${plan.price.toStringAsFixed(2)} KM',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              'Price per session: '
-              '${plan.pricePerSession.toStringAsFixed(2)} KM',
+            const Divider(height: 28, color: _purchaseBorder),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.end,
+              spacing: 10,
+              runSpacing: 6,
+              children: [
+                Text(
+                  '${plan.price.toStringAsFixed(2)} KM',
+                  style: const TextStyle(
+                    color: _purchaseText,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  '${plan.pricePerSession.toStringAsFixed(2)} KM per session',
+                  style: const TextStyle(
+                    color: _purchaseMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
+              child: FilledButton.icon(
                 onPressed: isPurchasing || !plan.isActive ? null : onPurchase,
                 icon: isPurchasing
                     ? const SizedBox(
@@ -315,10 +377,20 @@ class _PlanInfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20),
+        Icon(icon, size: 20, color: _purchasePrimary),
         const SizedBox(width: 9),
-        Expanded(child: Text(text)),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: _purchaseText,
+              fontWeight: FontWeight.w600,
+              height: 1.3,
+            ),
+          ),
+        ),
       ],
     );
   }

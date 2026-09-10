@@ -7,9 +7,13 @@ namespace MindBloom.Application
 public interface IClientOnboardingService
 {
     Task<ClientOnboardingDto> GetAsync(
-        int userId);
+        int userId,
+        CancellationToken cancellationToken =
+            default);
 
     Task<ClientOnboardingDto> SaveAsync(
         int userId,
-        SaveClientOnboardingDto request);
+        SaveClientOnboardingDto request,
+        CancellationToken cancellationToken =
+            default);
 }

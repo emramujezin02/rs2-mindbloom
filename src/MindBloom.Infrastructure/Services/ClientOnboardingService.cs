@@ -26,16 +26,33 @@ public sealed class ClientOnboardingService
 
     public async Task<ClientOnboardingDto>
         GetAsync(
-            int userId)
+            int userId,
+            CancellationToken cancellationToken =
+                default)
     {
         var client =
             await _context.Clients
                 .AsNoTracking()
-                .Include(x =>
-                    x.PreferredTherapyApproaches)
-                .FirstOrDefaultAsync(x =>
+                .Where(x =>
                     x.UserId == userId &&
-                    !x.IsDeleted);
+                    !x.IsDeleted)
+                .Select(x =>
+                    new
+                    {
+                        x.Id,
+                        x.HasCompletedOnboarding,
+                        x.OnboardingCompletedAtUtc,
+                        x.AssessmentFocusAreas,
+                        x.PreferredTherapistGender,
+                        x.PreferredSessionType,
+                        x.PreferredLanguages,
+                        x.MinimumPricePerSession,
+                        x.MaximumPricePerSession,
+                        x.Location,
+                        x.PreferredDays
+                    })
+                .FirstOrDefaultAsync(
+                    cancellationToken);
 
         if (client == null)
         {
@@ -44,7 +61,55 @@ public sealed class ClientOnboardingService
         }
 
         var dto =
-    MapToDto(client);
+            new ClientOnboardingDto
+            {
+                HasCompletedOnboarding =
+                    client.HasCompletedOnboarding,
+
+                CompletedAtUtc =
+                    client.OnboardingCompletedAtUtc,
+
+                AssessmentFocusAreas =
+                    SplitTextValues(
+                        client.AssessmentFocusAreas),
+
+                PreferredTherapistGender =
+                    client.PreferredTherapistGender,
+
+                PreferredSessionType =
+                    client.PreferredSessionType,
+
+                PreferredLanguages =
+                    SplitTextValues(
+                        client.PreferredLanguages),
+
+                MinimumPricePerSession =
+                    client.MinimumPricePerSession,
+
+                MaximumPricePerSession =
+                    client.MaximumPricePerSession,
+
+                Location =
+                    client.Location,
+
+                PreferredDays =
+                    SplitDays(
+                        client.PreferredDays),
+
+                PreferredTherapyApproachIds =
+                    await _context
+                        .Set<ClientTherapyApproach>()
+                        .AsNoTracking()
+                        .Where(x =>
+                            x.ClientId == client.Id &&
+                            !x.IsDeleted)
+                        .Select(x =>
+                            x.TherapyApproachId)
+                        .Distinct()
+                        .OrderBy(x => x)
+                        .ToListAsync(
+                            cancellationToken)
+            };
 
         var sensitiveConsent =
             await _context.UserConsents
@@ -58,7 +123,8 @@ public sealed class ClientOnboardingService
                     !x.IsDeleted)
                 .OrderByDescending(x =>
                     x.AcceptedAtUtc)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(
+                    cancellationToken);
 
         dto.HasAcceptedSensitiveDataProcessing =
             sensitiveConsent != null;
@@ -85,7 +151,9 @@ public sealed class ClientOnboardingService
     public async Task<ClientOnboardingDto>
         SaveAsync(
             int userId,
-            SaveClientOnboardingDto request)
+            SaveClientOnboardingDto request,
+            CancellationToken cancellationToken =
+                default)
     {
         var client =
             await _context.Clients
@@ -93,7 +161,8 @@ public sealed class ClientOnboardingService
                     x.PreferredTherapyApproaches)
                 .FirstOrDefaultAsync(x =>
                     x.UserId == userId &&
-                    !x.IsDeleted);
+                    !x.IsDeleted,
+                    cancellationToken);
 
         if (client == null)
         {
@@ -120,7 +189,8 @@ public sealed class ClientOnboardingService
                         ConsentDocumentConstants
                             .SensitiveDataProcessingVersion &&
                     x.IsAccepted &&
-                    !x.IsDeleted);
+                    !x.IsDeleted,
+                    cancellationToken);
 
         var alreadyAcceptedCurrentConsent =
             currentSensitiveConsent != null;
@@ -161,7 +231,8 @@ public sealed class ClientOnboardingService
                     x.IsActive &&
                     !x.IsDeleted)
                 .Select(x => x.Id)
-                .ToListAsync();
+                .ToListAsync(
+                    cancellationToken);
 
         if (existingApproachIds.Count !=
             therapyApproachIds.Count)
@@ -282,9 +353,12 @@ public sealed class ClientOnboardingService
                 });
         }
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(
+            cancellationToken);
 
-        return await GetAsync(userId);
+        return await GetAsync(
+            userId,
+            cancellationToken);
     }
 
     private static ClientOnboardingDto

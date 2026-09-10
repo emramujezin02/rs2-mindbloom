@@ -6,7 +6,17 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/widgets/app_empty_state_widget.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../../../../core/widgets/app_loading_widget.dart';
+import '../../data/models/conversation_model.dart';
 import '../viewmodels/chat_list_viewmodel.dart';
+
+const _chatListBackground = Color(0xFFFCFAFF);
+const _chatListSurface = Color(0xFFFFFFFF);
+const _chatListLavender = Color(0xFFF6F0FC);
+const _chatListBorder = Color(0xFFE7DDF1);
+const _chatListPrimary = Color(0xFF6D4F91);
+const _chatListText = Color(0xFF372D45);
+const _chatListMuted = Color(0xFF6C6278);
+const _chatListRadius = 20.0;
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -59,8 +69,11 @@ class _ChatListPageState extends State<ChatListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _chatListBackground,
       appBar: AppBar(
         title: const Text('Messages'),
+        backgroundColor: _chatListBackground,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             tooltip: 'Refresh',
@@ -106,7 +119,7 @@ class _ChatListPageState extends State<ChatListPage> {
       onRefresh: _refresh,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         itemCount:
             _viewModel.conversations.length +
             (_viewModel.errorMessage != null ? 1 : 0),
@@ -125,62 +138,129 @@ class _ChatListPageState extends State<ChatListPage> {
 
           final conversation = _viewModel.conversations[conversationIndex];
 
-          return Card(
-            child: ListTile(
-              leading: CircleAvatar(
-                child: Text(
-                  conversation.otherParticipantName.isEmpty
-                      ? '?'
-                      : conversation.otherParticipantName[0].toUpperCase(),
-                ),
+          return _ConversationCard(
+            conversation: conversation,
+            formatter: formatter,
+            onTap: () {
+              _openConversation(conversation.appointmentId);
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ConversationCard extends StatelessWidget {
+  final ConversationModel conversation;
+  final DateFormat formatter;
+  final VoidCallback onTap;
+
+  const _ConversationCard({
+    required this.conversation,
+    required this.formatter,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasUnread = conversation.unreadCount > 0;
+    final name = conversation.otherParticipantName.trim();
+    final lastMessage = conversation.lastMessage?.trim();
+
+    return Material(
+      color: hasUnread ? _chatListLavender : _chatListSurface,
+      borderRadius: BorderRadius.circular(_chatListRadius),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(_chatListRadius),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_chatListRadius),
+            border: Border.all(
+              color: hasUnread ? _chatListPrimary : _chatListBorder,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                backgroundColor: hasUnread
+                    ? _chatListPrimary
+                    : _chatListLavender,
+                foregroundColor: hasUnread ? Colors.white : _chatListPrimary,
+                child: Text(name.isEmpty ? '?' : name[0].toUpperCase()),
               ),
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      conversation.otherParticipantName,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name.isEmpty ? 'Conversation' : name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: _chatListText,
+                              fontSize: 16,
+                              fontWeight: hasUnread
+                                  ? FontWeight.w800
+                                  : FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        if (hasUnread) ...[
+                          const SizedBox(width: 8),
+                          Badge.count(count: conversation.unreadCount),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      lastMessage?.isNotEmpty == true
+                          ? lastMessage!
+                          : 'No messages yet.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontWeight: conversation.unreadCount > 0
-                            ? FontWeight.bold
+                        color: hasUnread ? _chatListText : _chatListMuted,
+                        height: 1.35,
+                        fontWeight: hasUnread
+                            ? FontWeight.w600
                             : FontWeight.normal,
                       ),
                     ),
-                  ),
-                  if (conversation.unreadCount > 0)
-                    Badge.count(count: conversation.unreadCount),
-                ],
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  Text(
-                    conversation.lastMessage?.trim().isNotEmpty == true
-                        ? conversation.lastMessage!
-                        : 'No messages yet.',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (conversation.lastMessageAtUtc != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      formatter.format(
-                        conversation.lastMessageAtUtc!.toLocal(),
+                    if (conversation.lastMessageAtUtc != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        formatter.format(
+                          conversation.lastMessageAtUtc!.toLocal(),
+                        ),
+                        style: const TextStyle(
+                          color: _chatListMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
-              trailing: conversation.isClosed
-                  ? const Icon(Icons.lock_outline)
-                  : const Icon(Icons.chevron_right),
-              onTap: () {
-                _openConversation(conversation.appointmentId);
-              },
-            ),
-          );
-        },
+              const SizedBox(width: 10),
+              Icon(
+                conversation.isClosed
+                    ? Icons.lock_outline
+                    : Icons.chevron_right,
+                color: _chatListMuted,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

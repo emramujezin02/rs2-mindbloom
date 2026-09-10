@@ -9,6 +9,16 @@ import '../../../journal/presentation/constants/mood_options.dart';
 import '../../data/services/private_journal_draft_service.dart';
 import '../viewmodels/private_journal_viewmodel.dart';
 import '../../../../core/validation/app_validators.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
+
+const _privateEditorBackground = Color(0xFFFCFAFF);
+const _privateEditorSurface = Color(0xFFFFFFFF);
+const _privateEditorLavender = Color(0xFFF6F0FC);
+const _privateEditorBorder = Color(0xFFE7DDF1);
+const _privateEditorPrimary = Color(0xFF6D4F91);
+const _privateEditorText = Color(0xFF372D45);
+const _privateEditorMuted = Color(0xFF6C6278);
+const _privateEditorRadius = 20.0;
 
 class AddPrivateJournalEntryPage extends StatefulWidget {
   const AddPrivateJournalEntryPage({super.key});
@@ -198,100 +208,152 @@ class _AddPrivateJournalEntryPageState
   @override
   Widget build(BuildContext context) {
     if (_isLoadingDraft) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        backgroundColor: _privateEditorBackground,
+        body: AppLoadingWidget.skeleton(
+          message: 'Restoring your draft...',
+          skeletonItemCount: 4,
+        ),
+      );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('New private journal entry')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Card(
-                child: ListTile(
-                  leading: Icon(Icons.lock_outline),
-                  title: Text('Private by default'),
-                  subtitle: Text(
-                    'Your therapist cannot '
-                    'automatically see this text.',
+      backgroundColor: _privateEditorBackground,
+      appBar: AppBar(
+        title: const Text('New private journal entry'),
+        backgroundColor: _privateEditorBackground,
+        surfaceTintColor: Colors.transparent,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _privateEditorLavender,
+                    borderRadius: BorderRadius.circular(_privateEditorRadius),
+                    border: Border.all(color: _privateEditorBorder),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.lock_outline, color: _privateEditorPrimary),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Private by default',
+                              style: TextStyle(
+                                color: _privateEditorText,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Your therapist cannot automatically see this text.',
+                              style: TextStyle(
+                                color: _privateEditorMuted,
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _titleController,
-                maxLength: 150,
-                enabled: !_viewModel.isSaving,
-                decoration: const InputDecoration(
-                  labelText: 'Naslov',
-                  hintText: 'Unesite naslov zapisa',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _titleController,
+                  maxLength: 150,
+                  enabled: !_viewModel.isSaving,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    hintText: 'Give this entry a title',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    return _viewModel.fieldError('Title') ??
+                        AppValidators.journalTitle(value);
+                  },
                 ),
-                validator: (value) {
-                  return _viewModel.fieldError('Title') ??
-                      AppValidators.journalTitle(value);
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _contentController,
-                minLines: 10,
-                maxLines: 20,
-                maxLength: 10000,
-                enabled: !_viewModel.isSaving,
-                decoration: const InputDecoration(
-                  labelText: 'Sadržaj',
-                  hintText: 'Zapišite svoje misli...',
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  return _viewModel.fieldError('Content') ??
-                      AppValidators.journalContent(value);
-                },
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.calendar_month),
-                  title: const Text('Entry date'),
-                  subtitle: Text(DateFormat('dd.MM.yyyy.').format(_entryDate)),
-                  trailing: const Icon(Icons.edit_calendar),
-                  onTap: _viewModel.isSaving ? null : _selectDate,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildMoodSelection(),
-              if (_viewModel.error != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  _viewModel.error!,
+                TextFormField(
+                  controller: _contentController,
+                  minLines: 10,
+                  maxLines: 20,
+                  maxLength: 10000,
+                  enabled: !_viewModel.isSaving,
+                  decoration: const InputDecoration(
+                    labelText: 'Content',
+                    hintText: 'Write your thoughts...',
+                    alignLabelWithHint: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    return _viewModel.fieldError('Content') ??
+                        AppValidators.journalContent(value);
+                  },
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  color: _privateEditorSurface,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(_privateEditorRadius),
+                    side: const BorderSide(color: _privateEditorBorder),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.calendar_month),
+                    title: const Text('Entry date'),
+                    subtitle: Text(
+                      DateFormat('dd.MM.yyyy.').format(_entryDate),
+                    ),
+                    trailing: const Icon(Icons.edit_calendar),
+                    onTap: _viewModel.isSaving ? null : _selectDate,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildMoodSelection(),
+                if (_viewModel.error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _viewModel.error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: _viewModel.isSaving ? null : _save,
+                  icon: _viewModel.isSaving
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(_viewModel.isSaving ? 'Saving...' : 'Save entry'),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'An unfinished entry is saved '
+                  'locally on this device as a draft.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: _viewModel.isSaving ? null : _save,
-                icon: _viewModel.isSaving
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save),
-                label: Text(_viewModel.isSaving ? 'Saving...' : 'Save entry'),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'An unfinished entry is saved '
-                'locally on this device as a draft.',
-                textAlign: TextAlign.center,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -309,6 +371,12 @@ class _AddPrivateJournalEntryPageState
     }
 
     return Card(
+      color: _privateEditorSurface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_privateEditorRadius),
+        side: const BorderSide(color: _privateEditorBorder),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -316,7 +384,11 @@ class _AddPrivateJournalEntryPageState
           children: [
             const Text(
               'Related mood entry',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: _privateEditorText,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 6),
             const Text(

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/widgets/app_error_widget.dart';
-import '../../../notification/presentation/viewmodels/notification_scope.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
@@ -117,19 +116,7 @@ class _LoginPageState extends State<LoginPage> {
      */
     final session = SessionScope.of(context);
 
-    /*
-     * Ranija funkcionalnost:
-     * nakon prijave inicijalizuju se i notifikacije.
-     */
-    final notifications = NotificationScope.of(context);
-
     await session.initialize();
-
-    if (!mounted) {
-      return;
-    }
-
-    await notifications.initialize();
 
     if (!mounted) {
       return;

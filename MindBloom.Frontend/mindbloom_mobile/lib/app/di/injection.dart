@@ -4,7 +4,9 @@ import 'package:mindbloom_mobile/features/therapist/presentation/viewmodels/ther
 import 'package:mindbloom_mobile/features/therapist/presentation/viewmodels/therapist_profile_viewmodel.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/navigation/app_navigation.dart';
 import '../../features/session/presentation/viewmodels/session_viewmodel.dart';
+import '../../services/session_runtime_state_service.dart';
 import '../../services/session_storage_service.dart';
 
 import '../../features/therapy_approach/data/repositories/therapy_approach_repository.dart';
@@ -105,6 +107,8 @@ import '../../features/settings/presentation/viewmodels/therapist_settings_viewm
 
 class AppInjection {
   static final SessionStorageService sessionStorage = SessionStorageService();
+  static final SessionRuntimeStateService runtimeState =
+      SessionRuntimeStateService();
   static final ApiClient apiClient = ApiClient(sessionStorage: sessionStorage);
   static ChatDetailsViewModel? _activeChatDetailsViewModel;
   static final NotificationRepository _notificationRepository =
@@ -120,11 +124,18 @@ class AppInjection {
       sessionStorage: sessionStorage,
     );
 
-    return SessionViewModel(
+    final sessionViewModel = SessionViewModel(
       sessionStorage: sessionStorage,
       authRepository: authRepository,
       onSessionEnded: stopRealtimeSession,
+      runtimeState: runtimeState,
+      refreshAccessToken: apiClient.refreshAccessToken,
+      onNavigateToLogin: AppNavigation.goToLogin,
     );
+
+    apiClient.onSessionExpired = sessionViewModel.expireSession;
+
+    return sessionViewModel;
   }
 
   static ClientEmotionalAnalyticsViewModel

@@ -391,20 +391,20 @@ public static class DependencyInjection
             .AddDefaultTokenProviders();
 
         var jwtSecret =
-            Environment.GetEnvironmentVariable(
-                "JWT_SECRET");
+            configuration[
+                "JWT_SECRET"];
 
         var jwtIssuer =
-            Environment.GetEnvironmentVariable(
-                "JWT_ISSUER");
+            configuration[
+                "JWT_ISSUER"];
 
         var jwtAudience =
-            Environment.GetEnvironmentVariable(
-                "JWT_AUDIENCE");
+            configuration[
+                "JWT_AUDIENCE"];
 
         var jwtExpirationValue =
-            Environment.GetEnvironmentVariable(
-                "JWT_EXPIRATION_MINUTES");
+            configuration[
+                "JWT_EXPIRATION_MINUTES"];
 
         if (string.IsNullOrWhiteSpace(
                 jwtSecret))
@@ -548,11 +548,11 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         var environmentName =
-Environment.GetEnvironmentVariable(
-"ASPNETCORE_ENVIRONMENT")
+configuration[
+"ASPNETCORE_ENVIRONMENT"]
 ??
-Environment.GetEnvironmentVariable(
-"DOTNET_ENVIRONMENT")
+configuration[
+"DOTNET_ENVIRONMENT"]
 ??
 "Production";
 

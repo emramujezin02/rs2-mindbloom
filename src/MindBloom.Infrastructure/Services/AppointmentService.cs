@@ -603,12 +603,14 @@ public class AppointmentService : IAppointmentService
                         appointment.Price
                 };
 
-            await _integrationEventPublisher
-                .PublishAsync(
+            await _outboxWriter
+                .EnqueueAsync(
                     appointmentCompletedEvent,
                     IntegrationEventRoutingKeys
                         .AppointmentCompleted);
         }
+
+        await _context.SaveChangesAsync();
     }
 
     public async Task<List<AppointmentResponseDto>>

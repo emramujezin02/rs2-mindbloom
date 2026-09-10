@@ -1,5 +1,7 @@
-﻿using MindBloom.API.Messaging.RabbitMq;
+using MindBloom.API.Messaging.Mock;
+using MindBloom.API.Messaging.RabbitMq;
 using MindBloom.Application.Common.Interfaces;
+using MindBloom.Infrastructure.Configuration;
 using MindBloom.Infrastructure.Messaging.RabbitMq;
 using MindBloom.Infrastructure.Services;
 
@@ -24,12 +26,29 @@ public static class MessagingDependencyInjection
             RabbitMqIntegrationEventPublisher>();
 
         services.AddScoped<
-    IBusinessNotificationService,
-    BusinessNotificationService>();
+            IBusinessNotificationService,
+            BusinessNotificationService>();
 
-        services.AddSingleton<
-            INotificationPublisher,
-            RabbitMqNotificationPublisher>();
+        var externalServices =
+            configuration
+                .GetSection(
+                    ExternalServicesOptions
+                        .SectionName)
+                .Get<ExternalServicesOptions>()
+            ?? new ExternalServicesOptions();
+
+        if (externalServices.EmailEnabled)
+        {
+            services.AddSingleton<
+                INotificationPublisher,
+                RabbitMqNotificationPublisher>();
+        }
+        else
+        {
+            services.AddSingleton<
+                INotificationPublisher,
+                MockNotificationPublisher>();
+        }
 
         return services;
     }

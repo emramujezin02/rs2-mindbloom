@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../core/debug/mindbloom_debug_log.dart';
 import '../../../appointment/presentation/pages/therapist_appointments_page.dart';
 import '../../../chat/presentation/pages/chat_list_page.dart';
 import '../../../notification/presentation/viewmodels/notification_scope.dart';
@@ -21,21 +22,19 @@ class TherapistNavigationShell extends StatefulWidget {
 class _TherapistNavigationShellState extends State<TherapistNavigationShell> {
   static const String _activeTabKey =
       'mindbloom_therapist_active_navigation_tab';
+  static const int _pageCount = 4;
 
   int currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    TherapistDashboardPage(),
-    TherapistAppointmentsPage(),
-    TherapistClientsPage(),
-    ChatListPage(),
-  ];
+  final Set<int> _visitedIndexes = <int>{0};
 
   final List<String> _titles = const ['Početna', 'Termini', 'Klijenti', 'Chat'];
 
   @override
   void initState() {
     super.initState();
+
+    logWidget('TherapistNavigationShell.initState');
 
     _loadActiveTab();
 
@@ -45,6 +44,10 @@ class _TherapistNavigationShellState extends State<TherapistNavigationShell> {
   }
 
   Future<void> _applyNotificationSettings() async {
+    final stopwatch = Stopwatch()..start();
+
+    logWidget('TherapistNavigationShell.notificationSettings started');
+
     try {
       final repository = AppInjection.createUserSettingsRepository();
 
@@ -54,16 +57,26 @@ class _TherapistNavigationShellState extends State<TherapistNavigationShell> {
         return;
       }
 
-      final notifications = NotificationScope.of(context);
+      final notifications = NotificationScope.read(context);
 
       if (settings.notificationsEnabled) {
+        logWidget('TherapistNavigationShell notifications enabled');
         await notifications.initialize();
       } else {
+        logWidget('TherapistNavigationShell notifications disabled');
         await notifications.stop();
       }
-    } catch (_) {
-      // Notifications keep their current behavior
-      // if settings cannot be loaded.
+    } catch (error) {
+      logWidget(
+        'TherapistNavigationShell.notificationSettings failed '
+        '${error.runtimeType}: $error',
+      );
+      // Notifications keep their current behavior if settings cannot be loaded.
+    } finally {
+      logWidget(
+        'TherapistNavigationShell.notificationSettings finished '
+        'durationMs=${stopwatch.elapsedMilliseconds}',
+      );
     }
   }
 
@@ -76,9 +89,10 @@ class _TherapistNavigationShellState extends State<TherapistNavigationShell> {
       return;
     }
 
-    if (savedIndex != null && savedIndex >= 0 && savedIndex < _pages.length) {
+    if (savedIndex != null && savedIndex >= 0 && savedIndex < _pageCount) {
       setState(() {
         currentIndex = savedIndex;
+        _visitedIndexes.add(savedIndex);
       });
     }
   }
@@ -90,6 +104,7 @@ class _TherapistNavigationShellState extends State<TherapistNavigationShell> {
 
     setState(() {
       currentIndex = index;
+      _visitedIndexes.add(index);
     });
 
     final preferences = await SharedPreferences.getInstance();
@@ -133,9 +148,28 @@ class _TherapistNavigationShellState extends State<TherapistNavigationShell> {
     await _logout();
   }
 
+  Widget _buildPage(int index) {
+    if (!_visitedIndexes.contains(index)) {
+      return const SizedBox.shrink();
+    }
+
+    return switch (index) {
+      0 => const TherapistDashboardPage(),
+      1 => const TherapistAppointmentsPage(),
+      2 => const TherapistClientsPage(),
+      3 => const ChatListPage(),
+      _ => const SizedBox.shrink(),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final notifications = NotificationScope.of(context);
+
+    logWidget(
+      'TherapistNavigationShell.build currentIndex=$currentIndex '
+      'unreadCount=${notifications.unreadCount}',
+    );
 
     return PopScope(
       canPop: currentIndex == 0,
@@ -268,7 +302,10 @@ class _TherapistNavigationShellState extends State<TherapistNavigationShell> {
           ),
         ),
         body: SafeArea(
-          child: IndexedStack(index: currentIndex, children: _pages),
+          child: IndexedStack(
+            index: currentIndex,
+            children: List.generate(_pageCount, _buildPage),
+          ),
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: currentIndex,

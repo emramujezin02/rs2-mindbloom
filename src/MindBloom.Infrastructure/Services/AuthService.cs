@@ -2503,7 +2503,7 @@ public class AuthService : IAuthService
                             user.Id.ToString()
                     });
 
-            throw new UnauthorizedException(
+           throw new UnauthorizedException(
                 "Invalid credentials.");
         }
 
@@ -2678,40 +2678,52 @@ public class AuthService : IAuthService
                 user.Id.ToString()
         });
 
-        await _notificationPublisher
-            .PublishEmailAsync(
-                new EmailNotificationMessage
-                {
-                    CorrelationId =
-                        Guid.NewGuid(),
+        var emailMessage =
+     new EmailNotificationMessage
+     {
+         CorrelationId =
+             Guid.NewGuid(),
 
-                    EventType =
-                        NotificationEventType
-                            .TwoFactorCodeRequested,
+         EventType =
+             NotificationEventType
+                 .TwoFactorCodeRequested,
 
-                    RecipientEmail =
-                        user.Email!,
+         RecipientEmail =
+             user.Email!,
 
-                    RecipientName =
-                        $"{user.FirstName} {user.LastName}"
-                            .Trim(),
+         RecipientName =
+             $"{user.FirstName} {user.LastName}"
+                 .Trim(),
 
-                    Subject =
-                        "MindBloom 2FA Code",
+         Subject =
+             "MindBloom 2FA Code",
 
-                    Body =
-                        "Your MindBloom verification code is: "
-                        + code
-                        + Environment.NewLine
-                        + Environment.NewLine
-                        + "This code expires in 5 minutes.",
+         Body =
+             "Your MindBloom verification code is: "
+             + code
+             + Environment.NewLine
+             + Environment.NewLine
+             + "This code expires in 5 minutes.",
 
-                    IsHtml =
-                        false,
+         IsHtml =
+             false,
 
-                    Source =
-                        "MindBloom.API"
-                });
+         Source =
+             "MindBloom.API"
+     };
+
+        try
+        {
+            await _notificationPublisher
+                .PublishEmailAsync(emailMessage)
+                .WaitAsync(
+                    TimeSpan.FromSeconds(5));
+        }
+        catch (TimeoutException)
+        {
+            throw new InvalidOperationException(
+                "Two-factor authentication code could not be queued for delivery.");
+        }
 
         return new Login2FAResponseDto
         {

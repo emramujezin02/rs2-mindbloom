@@ -58,6 +58,10 @@ public sealed class OutboxMessageProcessor
         PollingInterval =
             TimeSpan.FromSeconds(2);
 
+    private static readonly TimeSpan
+        FailureBackoffInterval =
+            TimeSpan.FromSeconds(30);
+
     private static readonly JsonSerializerOptions
         JsonOptions =
             new(
@@ -132,7 +136,7 @@ public sealed class OutboxMessageProcessor
                     "Outbox");
 
                 await Task.Delay(
-                    PollingInterval,
+                    FailureBackoffInterval,
                     stoppingToken);
             }
         }

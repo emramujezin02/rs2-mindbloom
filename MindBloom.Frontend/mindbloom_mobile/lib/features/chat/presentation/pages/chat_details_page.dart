@@ -2,7 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mindbloom_mobile/features/chat/data/models/chat_message_model.dart';
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../viewmodels/chat_details_viewmodel.dart';
+
+const _chatBackground = Color(0xFFFCFAFF);
+const _chatSurface = Color(0xFFFFFFFF);
+const _chatLavender = Color(0xFFF6F0FC);
+const _chatBorder = Color(0xFFE7DDF1);
+const _chatPrimary = Color(0xFF6D4F91);
+const _chatText = Color(0xFF372D45);
+const _chatMuted = Color(0xFF6C6278);
+const _chatRadius = 20.0;
 
 class ChatDetailsPage extends StatefulWidget {
   final int appointmentId;
@@ -164,24 +176,47 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
     final conversation = _viewModel.conversation;
 
     return Scaffold(
+      backgroundColor: _chatBackground,
       appBar: AppBar(
-        title: Text(conversation?.otherParticipantName ?? 'Conversation'),
+        backgroundColor: _chatBackground,
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          conversation?.otherParticipantName ?? 'Conversation',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Center(
-              child: Row(
-                children: [
-                  Icon(
-                    _viewModel.isConnected ? Icons.wifi : Icons.wifi_off,
-                    size: 17,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    _viewModel.connectionStatusText,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _viewModel.isConnected ? _chatLavender : _chatSurface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: _chatBorder),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _viewModel.isConnected ? Icons.wifi : Icons.wifi_off,
+                      size: 15,
+                      color: _chatPrimary,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      _viewModel.connectionStatusText,
+                      style: const TextStyle(
+                        color: _chatMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -193,44 +228,41 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
 
   Widget _buildBody() {
     if (_viewModel.isLoading && _viewModel.conversation == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading conversation...',
+        skeletonItemCount: 5,
+      );
     }
 
     if (_viewModel.errorMessage != null && _viewModel.conversation == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _viewModel.errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _initialize,
-                child: const Text('Try again'),
-              ),
-            ],
-          ),
-        ),
+      return AppErrorWidget(
+        title: 'Conversation could not be loaded',
+        error: _viewModel.errorMessage,
+        onRetry: _initialize,
       );
     }
 
     final conversation = _viewModel.conversation;
 
     if (conversation == null) {
-      return const Center(child: Text('Conversation could not be loaded.'));
+      return const AppEmptyStateWidget(
+        title: 'Conversation unavailable',
+        message: 'The requested conversation could not be loaded.',
+        icon: Icons.chat_bubble_outline,
+      );
     }
+
+    final canSend =
+        _messageController.text.trim().isNotEmpty && !_viewModel.isLoading;
 
     return Column(
       children: [
         if (_viewModel.isLoadingMore)
           const Padding(
             padding: EdgeInsets.all(10),
-            child: CircularProgressIndicator(),
+            child: AppInlineLoadingIndicator(
+              message: 'Loading older messages...',
+            ),
           ),
 
         if (_viewModel.hasMoreMessages && !_viewModel.isLoadingMore)
@@ -242,18 +274,14 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
 
         Expanded(
           child: _viewModel.messages.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No messages yet. '
-                    'Start the conversation.',
-                  ),
+              ? const AppEmptyStateWidget(
+                  title: 'No messages yet',
+                  message: 'Start the conversation when you are ready.',
+                  icon: Icons.chat_bubble_outline,
                 )
               : ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
                   itemCount: _viewModel.messages.length,
                   itemBuilder: (context, index) {
                     final message = _viewModel.messages[index];
@@ -298,10 +326,9 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
         if (_viewModel.errorMessage != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-            child: Text(
-              _viewModel.errorMessage!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
+            child: AppInlineError(
+              title: 'Message action could not be completed',
+              error: _viewModel.errorMessage,
             ),
           ),
 
@@ -320,33 +347,56 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      minLines: 1,
-                      maxLines: 5,
-                      maxLength: 2000,
-                      onChanged: _viewModel.onComposerChanged,
-                      decoration: const InputDecoration(
-                        hintText: 'Write a message...',
-                        border: OutlineInputBorder(),
-                        counterText: '',
-                      ),
-                      onSubmitted: (_) {
-                        _sendMessage();
-                      },
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _chatSurface,
+                  borderRadius: BorderRadius.circular(_chatRadius),
+                  border: Border.all(color: _chatBorder),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0A000000),
+                      blurRadius: 16,
+                      offset: Offset(0, -4),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: _sendMessage,
-                    icon: const Icon(Icons.send),
-                  ),
-                ],
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        minLines: 1,
+                        maxLines: 5,
+                        maxLength: 2000,
+                        onChanged: (value) {
+                          _viewModel.onComposerChanged(value);
+                          setState(() {});
+                        },
+                        decoration: const InputDecoration(
+                          hintText: 'Write a message...',
+                          border: InputBorder.none,
+                          counterText: '',
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
+                        ),
+                        onSubmitted: (_) {
+                          _sendMessage();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    IconButton.filled(
+                      onPressed: canSend ? _sendMessage : null,
+                      tooltip: 'Send message',
+                      icon: const Icon(Icons.send),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -367,96 +417,139 @@ class _MessageBubble extends StatelessWidget {
 
     return Align(
       alignment: message.isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 310),
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: message.hasFailed
-              ? Theme.of(context).colorScheme.errorContainer
-              : message.isMine
-              ? Theme.of(context).colorScheme.primaryContainer
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(14),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.78,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (!message.isMine)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  message.senderName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 5),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+          decoration: BoxDecoration(
+            color: message.hasFailed
+                ? Theme.of(context).colorScheme.errorContainer
+                : message.isMine
+                ? _chatPrimary
+                : _chatSurface,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(18),
+              topRight: const Radius.circular(18),
+              bottomLeft: Radius.circular(message.isMine ? 18 : 6),
+              bottomRight: Radius.circular(message.isMine ? 6 : 18),
+            ),
+            border: Border.all(
+              color: message.hasFailed
+                  ? Theme.of(context).colorScheme.error
+                  : message.isMine
+                  ? _chatPrimary
+                  : _chatBorder,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!message.isMine)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    message.senderName,
+                    style: const TextStyle(
+                      color: _chatMuted,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
-              ),
-
-            Text(message.content),
-
-            const SizedBox(height: 5),
-
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  formatter.format(message.sentAtUtc.toLocal()),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-
-                if (message.isEdited) ...[
-                  const SizedBox(width: 4),
-                  const Text('edited', style: TextStyle(fontSize: 10)),
-                ],
-
-                if (message.isMine) ...[
-                  const SizedBox(width: 6),
-
-                  if (message.isSending)
-                    const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 1.5),
-                    )
-                  else if (message.hasFailed)
-                    const Tooltip(
-                      message: 'Message could not be sent',
-                      child: Icon(Icons.error_outline, size: 16),
-                    )
-                  else if (message.isRead)
-                    const Tooltip(
-                      message: 'Read',
-                      child: Icon(Icons.done_all, size: 17),
-                    )
-                  else
-                    const Tooltip(
-                      message: 'Sent',
-                      child: Icon(Icons.done, size: 16),
-                    ),
-                ],
-              ],
-            ),
-
-            if (message.hasFailed) ...[
-              const SizedBox(height: 6),
 
               Text(
-                message.sendingError ?? 'Message could not be sent.',
+                message.content,
+                softWrap: true,
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onErrorContainer,
-                  fontSize: 11,
+                  color: message.isMine ? Colors.white : _chatText,
+                  fontSize: 15,
+                  height: 1.4,
                 ),
               ),
 
-              TextButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('Try again'),
+              const SizedBox(height: 5),
+
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    formatter.format(message.sentAtUtc.toLocal()),
+                    style: TextStyle(
+                      color: message.isMine
+                          ? Colors.white.withValues(alpha: 0.78)
+                          : _chatMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  if (message.isEdited) ...[
+                    const SizedBox(width: 4),
+                    Text(
+                      'edited',
+                      style: TextStyle(
+                        color: message.isMine
+                            ? Colors.white.withValues(alpha: 0.78)
+                            : _chatMuted,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+
+                  if (message.isMine) ...[
+                    const SizedBox(width: 6),
+
+                    if (message.isSending)
+                      const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 1.5),
+                      )
+                    else if (message.hasFailed)
+                      const Tooltip(
+                        message: 'Message could not be sent',
+                        child: Icon(Icons.error_outline, size: 16),
+                      )
+                    else if (message.isRead)
+                      const Tooltip(
+                        message: 'Read',
+                        child: Icon(
+                          Icons.done_all,
+                          size: 17,
+                          color: Colors.white,
+                        ),
+                      )
+                    else
+                      const Tooltip(
+                        message: 'Sent',
+                        child: Icon(Icons.done, size: 16, color: Colors.white),
+                      ),
+                  ],
+                ],
               ),
+
+              if (message.hasFailed) ...[
+                const SizedBox(height: 6),
+
+                Text(
+                  message.sendingError ?? 'Message could not be sent.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                    fontSize: 11,
+                  ),
+                ),
+
+                TextButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('Try again'),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

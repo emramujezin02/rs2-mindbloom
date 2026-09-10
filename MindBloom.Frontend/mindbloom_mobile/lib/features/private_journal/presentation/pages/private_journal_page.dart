@@ -8,6 +8,15 @@ import '../../../../core/widgets/app_error_widget.dart';
 import '../../../../core/widgets/app_loading_widget.dart';
 import '../viewmodels/private_journal_viewmodel.dart';
 
+const _privateJournalBackground = Color(0xFFFCFAFF);
+const _privateJournalSurface = Color(0xFFFFFFFF);
+const _privateJournalLavender = Color(0xFFF6F0FC);
+const _privateJournalBorder = Color(0xFFE7DDF1);
+const _privateJournalPrimary = Color(0xFF6D4F91);
+const _privateJournalText = Color(0xFF372D45);
+const _privateJournalMuted = Color(0xFF6C6278);
+const _privateJournalRadius = 20.0;
+
 class PrivateJournalPage extends StatefulWidget {
   const PrivateJournalPage({super.key});
 
@@ -200,8 +209,11 @@ class _PrivateJournalPageState extends State<PrivateJournalPage> {
         _viewModel.fromDate != null || _viewModel.toDate != null;
 
     return Scaffold(
+      backgroundColor: _privateJournalBackground,
       appBar: AppBar(
         title: const Text('Private journal'),
+        backgroundColor: _privateJournalBackground,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             onPressed: _openDateFilter,
@@ -213,25 +225,55 @@ class _PrivateJournalPageState extends State<PrivateJournalPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: _privateJournalPrimary,
+        foregroundColor: Colors.white,
         onPressed: _addEntry,
         child: const Icon(Icons.add),
       ),
       body: Column(
         children: [
-          const Card(
-            margin: EdgeInsets.fromLTRB(12, 12, 12, 0),
-            child: ListTile(
-              leading: Icon(Icons.lock_outline),
-              title: Text('Your private space'),
-              subtitle: Text(
-                'Journal text is not '
-                'automatically shared with '
-                'your therapist.',
-              ),
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _privateJournalLavender,
+              borderRadius: BorderRadius.circular(_privateJournalRadius),
+              border: Border.all(color: _privateJournalBorder),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lock_outline, color: _privateJournalPrimary),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Your private space',
+                        style: TextStyle(
+                          color: _privateJournalText,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Journal text is not automatically shared with your therapist.',
+                        style: TextStyle(
+                          color: _privateJournalMuted,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             child: TextField(
               controller: _searchController,
               textInputAction: TextInputAction.search,
@@ -241,13 +283,22 @@ class _PrivateJournalPageState extends State<PrivateJournalPage> {
               decoration: InputDecoration(
                 labelText: 'Search private journal',
                 prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: _privateJournalSurface,
                 suffixIcon: _searchController.text.isEmpty
                     ? null
                     : IconButton(
                         onPressed: _clearSearch,
                         icon: const Icon(Icons.clear),
+                        tooltip: 'Clear search',
                       ),
-                border: const OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _privateJournalBorder),
+                ),
               ),
               onChanged: (_) {
                 setState(() {});
@@ -291,7 +342,7 @@ class _PrivateJournalPageState extends State<PrivateJournalPage> {
       onRefresh: _viewModel.loadEntries,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 100),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
         children: [
           if (_viewModel.error != null)
             AppInlineError(
@@ -302,16 +353,33 @@ class _PrivateJournalPageState extends State<PrivateJournalPage> {
             ),
           ..._viewModel.entries.map(
             (entry) => Card(
+              color: _privateJournalSurface,
+              elevation: 0,
               margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(_privateJournalRadius),
+                side: const BorderSide(color: _privateJournalBorder),
+              ),
               child: ListTile(
+                contentPadding: const EdgeInsets.all(16),
                 onTap: () {
                   _openEntry(entry.id);
                 },
-                leading: const CircleAvatar(child: Icon(Icons.lock_outline)),
+                leading: const CircleAvatar(
+                  backgroundColor: _privateJournalLavender,
+                  child: Icon(
+                    Icons.lock_outline,
+                    color: _privateJournalPrimary,
+                  ),
+                ),
                 title: Text(
                   entry.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _privateJournalText,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

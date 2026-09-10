@@ -370,6 +370,7 @@ builder.Services.AddScoped<
 builder.Services.AddSingleton<
     RabbitMqMonitoringMetrics>();
 
+
 if (!builder.Environment
         .IsEnvironment(
             "Testing") &&

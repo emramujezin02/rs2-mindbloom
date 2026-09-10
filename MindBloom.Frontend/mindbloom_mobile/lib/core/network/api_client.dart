@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../services/session_storage_service.dart';
 import '../constants/api_constants.dart';
+import '../debug/mindbloom_debug_log.dart';
 import '../error/app_exception.dart';
 import '../navigation/app_navigation.dart';
 
@@ -14,19 +16,26 @@ class ApiClient {
 
   final SessionStorageService sessionStorage;
 
+  Future<void> Function()? onSessionExpired;
+
+  final http.Client _httpClient = http.Client();
+
   Future<bool>? _refreshInProgress;
 
-  ApiClient({required this.sessionStorage});
+  Future<void>? _sessionExpirationInProgress;
+
+  ApiClient({required this.sessionStorage, this.onSessionExpired});
 
   Future<dynamic> get(String endpoint, {bool requiresAuth = true}) async {
+    final uri = _buildUri(endpoint);
+
     return _executeRequest(
+      method: 'GET',
+      uri: uri,
       requiresAuth: requiresAuth,
       request: () async {
-        return http
-            .get(
-              _buildUri(endpoint),
-              headers: await _headers(requiresAuth: requiresAuth),
-            )
+        return _httpClient
+            .get(uri, headers: await _headers(requiresAuth: requiresAuth))
             .timeout(_requestTimeout);
       },
     );
@@ -38,7 +47,11 @@ class ApiClient {
     bool requiresAuth = true,
     String? idempotencyKey,
   }) async {
+    final uri = _buildUri(endpoint);
+
     return _executeRequest(
+      method: 'POST',
+      uri: uri,
       requiresAuth: requiresAuth,
       request: () async {
         final headers = await _headers(requiresAuth: requiresAuth);
@@ -50,12 +63,10 @@ class ApiClient {
           headers['Idempotency-Key'] = normalizedIdempotencyKey;
         }
 
-        return http
-            .post(
-              _buildUri(endpoint),
-              headers: headers,
-              body: body == null ? null : jsonEncode(body),
-            )
+        final encodedBody = body == null ? null : jsonEncode(body);
+
+        return _httpClient
+            .post(uri, headers: headers, body: encodedBody, encoding: utf8)
             .timeout(_requestTimeout);
       },
     );
@@ -66,12 +77,16 @@ class ApiClient {
     Object? body,
     bool requiresAuth = true,
   }) async {
+    final uri = _buildUri(endpoint);
+
     return _executeRequest(
+      method: 'PUT',
+      uri: uri,
       requiresAuth: requiresAuth,
       request: () async {
-        return http
+        return _httpClient
             .put(
-              _buildUri(endpoint),
+              uri,
               headers: await _headers(requiresAuth: requiresAuth),
               body: body == null ? null : jsonEncode(body),
             )
@@ -85,10 +100,14 @@ class ApiClient {
     Object? body,
     bool requiresAuth = true,
   }) async {
+    final uri = _buildUri(endpoint);
+
     return _executeRequest(
+      method: 'DELETE',
+      uri: uri,
       requiresAuth: requiresAuth,
       request: () async {
-        final request = http.Request('DELETE', _buildUri(endpoint));
+        final request = http.Request('DELETE', uri);
 
         request.headers.addAll(await _headers(requiresAuth: requiresAuth));
 
@@ -96,7 +115,9 @@ class ApiClient {
           request.body = jsonEncode(body);
         }
 
-        final streamedResponse = await request.send().timeout(_requestTimeout);
+        final streamedResponse = await _httpClient
+            .send(request)
+            .timeout(_requestTimeout);
 
         return http.Response.fromStream(
           streamedResponse,
@@ -111,10 +132,14 @@ class ApiClient {
     String fileFieldName = 'file',
     bool requiresAuth = true,
   }) async {
+    final uri = _buildUri(endpoint);
+
     return _executeRequest(
+      method: 'POST multipart',
+      uri: uri,
       requiresAuth: requiresAuth,
       request: () async {
-        final request = http.MultipartRequest('POST', _buildUri(endpoint));
+        final request = http.MultipartRequest('POST', uri);
 
         final headers = await _headers(requiresAuth: requiresAuth);
 
@@ -126,7 +151,9 @@ class ApiClient {
           await http.MultipartFile.fromPath(fileFieldName, filePath),
         );
 
-        final streamedResponse = await request.send().timeout(_requestTimeout);
+        final streamedResponse = await _httpClient
+            .send(request)
+            .timeout(_requestTimeout);
 
         return http.Response.fromStream(
           streamedResponse,
@@ -136,27 +163,84 @@ class ApiClient {
   }
 
   Future<dynamic> _executeRequest({
+    required String method,
+    required Uri uri,
     required bool requiresAuth,
     required Future<http.Response> Function() request,
   }) async {
+    final stopwatch = Stopwatch()..start();
+    final requestId = nextHttpRequestId();
+
     try {
-      final response = await request();
+      final tokenPresent = await _hasStoredAccessToken();
+
+      _logDevelopmentRequest(
+        requestId,
+        method,
+        uri,
+        requiresAuth: requiresAuth,
+        tokenPresent: tokenPresent,
+        refreshInProgress: _refreshInProgress != null,
+      );
+
+      final response = await _sendWithDevelopmentFailureLog(
+        requestId,
+        method,
+        uri,
+        stopwatch,
+        attempt: 1,
+        request: request,
+      );
+
+      _logDevelopmentResponse(
+        requestId,
+        method,
+        uri,
+        response.statusCode,
+        stopwatch,
+        attempt: 1,
+      );
 
       if (response.statusCode != 401 || !requiresAuth) {
         return _handleResponse(response);
       }
 
+      logHttp(
+        requestId,
+        '401 received; attempting refresh before retry ${_describeUri(uri)}',
+      );
+
       final refreshed = await _refreshAccessToken();
 
       if (!refreshed) {
+        logHttp(requestId, 'refresh failed; expiring local session');
         await _expireSession();
 
         return _handleResponse(response);
       }
 
-      final repeatedResponse = await request();
+      logHttp(requestId, 'refresh succeeded; retrying original request');
+
+      final repeatedResponse = await _sendWithDevelopmentFailureLog(
+        requestId,
+        method,
+        uri,
+        stopwatch,
+        attempt: 2,
+        request: request,
+      );
+
+      _logDevelopmentResponse(
+        requestId,
+        method,
+        uri,
+        repeatedResponse.statusCode,
+        stopwatch,
+        attempt: 2,
+      );
 
       if (repeatedResponse.statusCode == 401) {
+        logHttp(requestId, 'retry returned 401; expiring local session');
         await _expireSession();
       }
 
@@ -165,15 +249,28 @@ class ApiClient {
       rethrow;
     } on TimeoutException {
       throw const AppException(
-        message:
-            'Zahtjev je trajao predugo. Provjerite internet vezu i pokušajte ponovo.',
+        message: 'Server nije odgovorio dovoljno brzo. Pokušajte ponovo.',
       );
-    } on SocketException {
+    } on SocketException catch (error) {
+      if (_isConnectionRefused(error.toString())) {
+        throw const AppException(
+          message:
+              'Server nije dostupan. Provjerite da li je MindBloom.API pokrenut.',
+        );
+      }
+
       throw const AppException(
         message:
             'Nema internet veze. Provjerite mrežnu vezu i pokušajte ponovo.',
       );
-    } on http.ClientException {
+    } on http.ClientException catch (error) {
+      if (_isConnectionRefused(error.toString())) {
+        throw const AppException(
+          message:
+              'Server nije dostupan. Provjerite da li je MindBloom.API pokrenut.',
+        );
+      }
+
       throw const AppException(
         message:
             'Povezivanje sa serverom nije uspjelo. Provjerite internet vezu i pokušajte ponovo.',
@@ -185,14 +282,18 @@ class ApiClient {
     }
   }
 
-  Future<bool> _refreshAccessToken() async {
+  Future<bool> refreshAccessToken({Duration timeout = _requestTimeout}) {
+    return _refreshAccessToken(timeout: timeout);
+  }
+
+  Future<bool> _refreshAccessToken({Duration timeout = _requestTimeout}) async {
     final existingRefresh = _refreshInProgress;
 
     if (existingRefresh != null) {
       return existingRefresh;
     }
 
-    final refreshFuture = _performTokenRefresh();
+    final refreshFuture = _performTokenRefresh(timeout: timeout);
 
     _refreshInProgress = refreshFuture;
 
@@ -203,15 +304,35 @@ class ApiClient {
     }
   }
 
-  Future<bool> _performTokenRefresh() async {
-    final refreshToken = await sessionStorage.getRefreshToken();
+  Future<bool> _performTokenRefresh({required Duration timeout}) async {
+    final refreshRequestId = nextRefreshRequestId();
+    final stopwatch = Stopwatch()..start();
 
-    if (refreshToken == null || refreshToken.trim().isEmpty) {
-      return false;
-    }
+    logRefresh(
+      refreshRequestId,
+      'START POST ${_describeUri(_buildUri('/Auth/refresh-token'))} '
+      'refreshTokenPresent=unknown',
+    );
 
     try {
-      final response = await http
+      final refreshToken = await sessionStorage.getRefreshToken().timeout(
+        timeout,
+      );
+      final refreshTokenPresent =
+          refreshToken != null && refreshToken.trim().isNotEmpty;
+
+      logRefresh(
+        refreshRequestId,
+        'TOKEN READ refreshTokenPresent=$refreshTokenPresent '
+        'durationMs=${stopwatch.elapsedMilliseconds}',
+      );
+
+      if (refreshToken == null || refreshToken.trim().isEmpty) {
+        logRefresh(refreshRequestId, 'SKIP missing refresh token');
+        return false;
+      }
+
+      final response = await _httpClient
           .post(
             _buildUri('/Auth/refresh-token'),
             headers: const {
@@ -220,7 +341,13 @@ class ApiClient {
             },
             body: jsonEncode({'refreshToken': refreshToken.trim()}),
           )
-          .timeout(_requestTimeout);
+          .timeout(timeout);
+
+      logRefresh(
+        refreshRequestId,
+        'END status=${response.statusCode} '
+        'durationMs=${stopwatch.elapsedMilliseconds}',
+      );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return false;
@@ -247,26 +374,82 @@ class ApiClient {
         return false;
       }
 
-      await sessionStorage.saveTokens(
-        accessToken: newAccessToken.trim(),
-        refreshToken: newRefreshToken.trim(),
+      await sessionStorage
+          .saveTokens(
+            accessToken: newAccessToken.trim(),
+            refreshToken: newRefreshToken.trim(),
+          )
+          .timeout(timeout);
+
+      logRefresh(
+        refreshRequestId,
+        'TOKENS SAVED durationMs=${stopwatch.elapsedMilliseconds}',
       );
 
       return true;
-    } on TimeoutException {
+    } on TimeoutException catch (error) {
+      logRefresh(
+        refreshRequestId,
+        'FAIL TimeoutException: $error '
+        'durationMs=${stopwatch.elapsedMilliseconds}',
+      );
       return false;
-    } on SocketException {
+    } on SocketException catch (error) {
+      logRefresh(
+        refreshRequestId,
+        'FAIL SocketException: $error '
+        'durationMs=${stopwatch.elapsedMilliseconds}',
+      );
       return false;
-    } on FormatException {
+    } on FormatException catch (error) {
+      logRefresh(
+        refreshRequestId,
+        'FAIL FormatException: $error '
+        'durationMs=${stopwatch.elapsedMilliseconds}',
+      );
       return false;
-    } on http.ClientException {
+    } on http.ClientException catch (error) {
+      logRefresh(
+        refreshRequestId,
+        'FAIL ClientException: $error '
+        'durationMs=${stopwatch.elapsedMilliseconds}',
+      );
       return false;
-    } catch (_) {
+    } catch (error) {
+      logRefresh(
+        refreshRequestId,
+        'FAIL ${error.runtimeType}: $error '
+        'durationMs=${stopwatch.elapsedMilliseconds}',
+      );
       return false;
     }
   }
 
   Future<void> _expireSession() async {
+    final activeExpiration = _sessionExpirationInProgress;
+
+    if (activeExpiration != null) {
+      return activeExpiration;
+    }
+
+    final expiration = _performSessionExpiration();
+    _sessionExpirationInProgress = expiration;
+
+    return expiration.whenComplete(() {
+      if (identical(_sessionExpirationInProgress, expiration)) {
+        _sessionExpirationInProgress = null;
+      }
+    });
+  }
+
+  Future<void> _performSessionExpiration() async {
+    final sessionExpired = onSessionExpired;
+
+    if (sessionExpired != null) {
+      await sessionExpired();
+      return;
+    }
+
     await sessionStorage.clearSession();
 
     AppNavigation.goToLogin();
@@ -278,6 +461,122 @@ class ApiClient {
         : '/$endpoint';
 
     return Uri.parse('${ApiConstants.apiBaseUrl}$normalizedEndpoint');
+  }
+
+  Future<http.Response> _sendWithDevelopmentFailureLog(
+    int requestId,
+    String method,
+    Uri uri,
+    Stopwatch stopwatch, {
+    required int attempt,
+    required Future<http.Response> Function() request,
+  }) async {
+    try {
+      return await request();
+    } catch (error) {
+      _logDevelopmentFailure(
+        requestId,
+        method,
+        uri,
+        error,
+        stopwatch,
+        attempt: attempt,
+      );
+
+      rethrow;
+    }
+  }
+
+  String _describeUri(Uri uri) {
+    final buffer = StringBuffer()
+      ..write(uri.scheme)
+      ..write('://')
+      ..write(uri.host);
+
+    if (uri.hasPort) {
+      buffer
+        ..write(':')
+        ..write(uri.port);
+    }
+
+    buffer.write(uri.path);
+
+    if (uri.queryParameters.isNotEmpty) {
+      buffer
+        ..write('?queryKeys=')
+        ..write(uri.queryParameters.keys.join(','));
+    }
+
+    return buffer.toString();
+  }
+
+  bool _isConnectionRefused(String message) {
+    return message.toLowerCase().contains('connection refused');
+  }
+
+  void _logDevelopmentRequest(
+    int requestId,
+    String method,
+    Uri uri, {
+    required bool requiresAuth,
+    required bool tokenPresent,
+    required bool refreshInProgress,
+  }) {
+    if (!kDebugMode) {
+      return;
+    }
+
+    logHttp(
+      requestId,
+      'START $method ${_describeUri(uri)} '
+      'requiresAuth=$requiresAuth tokenPresent=$tokenPresent '
+      'refreshInProgress=$refreshInProgress',
+    );
+  }
+
+  void _logDevelopmentResponse(
+    int requestId,
+    String method,
+    Uri uri,
+    int statusCode,
+    Stopwatch stopwatch, {
+    required int attempt,
+  }) {
+    if (!kDebugMode) {
+      return;
+    }
+
+    logHttp(
+      requestId,
+      'END attempt=$attempt $method ${_describeUri(uri)} -> $statusCode '
+      'durationMs=${stopwatch.elapsedMilliseconds}',
+    );
+  }
+
+  void _logDevelopmentFailure(
+    int requestId,
+    String method,
+    Uri uri,
+    Object error,
+    Stopwatch stopwatch, {
+    required int attempt,
+  }) {
+    if (!kDebugMode) {
+      return;
+    }
+
+    logHttp(
+      requestId,
+      'FAIL attempt=$attempt $method ${_describeUri(uri)} -> '
+      '${error.runtimeType}: $error '
+      'durationMs=${stopwatch.elapsedMilliseconds}',
+    );
+  }
+
+  Future<bool> _hasStoredAccessToken() async {
+    final token = await sessionStorage.getToken();
+
+    return token != null && token.trim().isNotEmpty;
   }
 
   Future<Map<String, String>> _headers({required bool requiresAuth}) async {

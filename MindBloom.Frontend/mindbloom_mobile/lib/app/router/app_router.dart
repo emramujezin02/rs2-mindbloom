@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mindbloom_mobile/features/about/presentation/page/about_page.dart';
 import 'package:mindbloom_mobile/features/private_journal/presentation/pages/private_journal_page.dart';
 import 'package:mindbloom_mobile/features/profile/presentation/pages/edit_profile_page.dart';
+import '../../core/debug/mindbloom_debug_log.dart';
 import '../../screens/home_screen.dart';
 
 import '../../features/privacy/presentation/pages/privacy_consents_page.dart';
@@ -142,6 +143,8 @@ class AppRouter {
   static const String editPrivateJournalEntry = '/private-journal/edit';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
+    logRouter('generateRoute name=${settings.name ?? "null"}');
+
     switch (settings.name) {
       case login:
         return MaterialPageRoute(builder: (_) => const LoginPage());
@@ -446,9 +449,11 @@ class AppRouter {
           settings: settings,
         );
 
-      case home:
       case privateJournal:
         return MaterialPageRoute(builder: (_) => const PrivateJournalPage());
+
+      case home:
+        return MaterialPageRoute(builder: (_) => const HomeScreen());
 
       case addPrivateJournalEntry:
         return MaterialPageRoute(

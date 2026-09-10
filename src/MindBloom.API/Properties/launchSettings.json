@@ -6,12 +6,35 @@
       "dotnetRunMessages": true,
       "launchBrowser": true,
       "launchUrl": "swagger",
-      "applicationUrl": "http://localhost:5110",
+      "applicationUrl": "http://0.0.0.0:5110",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT": "false"
-      },
-      "dotnetRunMessages": true
+        "DOTNET_ENVIRONMENT": "Development",
+        "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT": "false",
+
+        "JWT_ISSUER": "MindBloom.API",
+        "JWT_AUDIENCE": "MindBloom.Client",
+        "JWT_EXPIRATION_MINUTES": "60",
+
+        "RABBITMQ_HOST": "localhost",
+        "RABBITMQ_PORT": "5672",
+        "RABBITMQ_USERNAME": "mindbloom",
+        "RABBITMQ_VIRTUAL_HOST": "/",
+
+        "RABBITMQ_CLIENT_NAME": "mindbloom-api-notification-publisher",
+        "RABBITMQ_WORKER_CLIENT_NAME": "mindbloom-notifications-worker",
+
+        "RABBITMQ_NOTIFICATION_EXCHANGE": "mindbloom.notifications",
+        "RABBITMQ_EMAIL_QUEUE": "mindbloom.notifications.email",
+        "RABBITMQ_EMAIL_ROUTING_KEY": "notification.email",
+
+        "RABBITMQ_RETRY_EXCHANGE": "mindbloom.notifications.retry",
+        "RABBITMQ_DEAD_LETTER_EXCHANGE": "mindbloom.notifications.dead-letter",
+        "RABBITMQ_EMAIL_DEAD_LETTER_QUEUE": "mindbloom.notifications.email.dlq",
+        "RABBITMQ_EMAIL_DEAD_LETTER_ROUTING_KEY": "notification.email.dead",
+
+        "UPLOAD_ROOT_PATH": "uploads"
+      }
     },
     "https": {
       "commandName": "Project",

@@ -10,6 +10,15 @@ import '../../data/models/payment_model.dart';
 import '../viewmodels/payment_list_viewmodel.dart';
 import 'payment_receipt_page.dart';
 
+const _paymentBackground = Color(0xFFFCFAFF);
+const _paymentSurface = Color(0xFFFFFFFF);
+const _paymentLavender = Color(0xFFF6F0FC);
+const _paymentBorder = Color(0xFFE7DDF1);
+const _paymentPrimary = Color(0xFF6D4F91);
+const _paymentText = Color(0xFF372D45);
+const _paymentMuted = Color(0xFF6C6278);
+const _paymentRadius = 20.0;
+
 class PaymentListPage extends StatefulWidget {
   const PaymentListPage({super.key});
 
@@ -96,8 +105,11 @@ class _PaymentListPageState extends State<PaymentListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _paymentBackground,
       appBar: AppBar(
         title: const Text('Payment history'),
+        backgroundColor: _paymentBackground,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             tooltip: 'Refresh',
@@ -143,7 +155,7 @@ class _PaymentListPageState extends State<PaymentListPage> {
       onRefresh: _refresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
           if (_viewModel.error != null)
             AppInlineError(
@@ -155,56 +167,233 @@ class _PaymentListPageState extends State<PaymentListPage> {
           ..._viewModel.payments.map((payment) {
             final receiptAvailable = payment.isPaid || payment.hasRefundProcess;
 
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _PaymentHistoryCard(
+                payment: payment,
+                icon: _statusIcon(payment.status),
+                createdDate: formatter.format(payment.createdAtUtc.toLocal()),
+                receiptAvailable: receiptAvailable,
                 onTap: receiptAvailable
                     ? () => _openTransaction(payment)
                     : null,
-                leading: Icon(_statusIcon(payment.status)),
-                title: Text(payment.therapistName),
-                subtitle: Text(
-                  '${payment.displayType}\n'
-                  '${payment.purpose}\n'
-                  '${formatter.format(payment.createdAtUtc.toLocal())}'
-                  '${payment.isAppointmentPayment && payment.appointmentId != null ? '\nAppointment #${payment.appointmentId}' : ''}'
-                  '${payment.isMembershipPayment && payment.membershipId != null ? '\nMembership #${payment.membershipId}' : ''}'
-                  '${receiptAvailable ? '\nTap to view transaction details' : ''}',
-                ),
-                isThreeLine: false,
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${payment.amount.toStringAsFixed(2)} '
-                      '${payment.currency}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(payment.displayStatus),
-                    if (receiptAvailable)
-                      const Icon(Icons.chevron_right, size: 18),
-                    if (payment.isRefundPending)
-                      const Text(
-                        'Refund processing',
-                        style: TextStyle(fontSize: 11),
-                      ),
-                    if (payment.isRefunded && payment.refundedAtUtc != null)
-                      const Text(
-                        'Amount returned',
-                        style: TextStyle(fontSize: 11),
-                      ),
-                    if (payment.isRefundFailed)
-                      const Text(
-                        'Refund failed',
-                        style: TextStyle(fontSize: 11),
-                      ),
-                  ],
-                ),
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentHistoryCard extends StatelessWidget {
+  final PaymentModel payment;
+  final IconData icon;
+  final String createdDate;
+  final bool receiptAvailable;
+  final VoidCallback? onTap;
+
+  const _PaymentHistoryCard({
+    required this.payment,
+    required this.icon,
+    required this.createdDate,
+    required this.receiptAvailable,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final reference =
+        payment.isAppointmentPayment && payment.appointmentId != null
+        ? 'Appointment #${payment.appointmentId}'
+        : payment.isMembershipPayment && payment.membershipId != null
+        ? 'Membership #${payment.membershipId}'
+        : null;
+
+    return Material(
+      color: _paymentSurface,
+      borderRadius: BorderRadius.circular(_paymentRadius),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(_paymentRadius),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_paymentRadius),
+            border: Border.all(color: _paymentBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.025),
+                blurRadius: 14,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: const BoxDecoration(
+                      color: _paymentLavender,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: _paymentPrimary),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          payment.therapistName.trim().isEmpty
+                              ? payment.displayType
+                              : payment.therapistName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _paymentText,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          payment.displayType,
+                          style: const TextStyle(
+                            color: _paymentMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  _PaymentStatusChip(label: payment.displayStatus),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                payment.purpose,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: _paymentText, height: 1.35),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _PaymentMetaPill(
+                    icon: Icons.calendar_today_outlined,
+                    label: createdDate,
+                  ),
+                  if (reference != null)
+                    _PaymentMetaPill(
+                      icon: Icons.tag_outlined,
+                      label: reference,
+                    ),
+                  if (payment.isRefundPending)
+                    const _PaymentMetaPill(
+                      icon: Icons.hourglass_top,
+                      label: 'Refund processing',
+                    ),
+                  if (payment.isRefunded && payment.refundedAtUtc != null)
+                    const _PaymentMetaPill(
+                      icon: Icons.replay_circle_filled,
+                      label: 'Amount returned',
+                    ),
+                  if (payment.isRefundFailed)
+                    const _PaymentMetaPill(
+                      icon: Icons.error_outline,
+                      label: 'Refund failed',
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${payment.amount.toStringAsFixed(2)} ${payment.currency}',
+                      style: const TextStyle(
+                        color: _paymentText,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  if (receiptAvailable) ...[
+                    const SizedBox(width: 10),
+                    const Icon(Icons.chevron_right, color: _paymentPrimary),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentStatusChip extends StatelessWidget {
+  final String label;
+
+  const _PaymentStatusChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: _paymentLavender,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _paymentBorder),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: _paymentPrimary,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentMetaPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _PaymentMetaPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: _paymentLavender,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: _paymentPrimary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: _paymentText,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

@@ -133,6 +133,12 @@ public static class RabbitMqConfigurationExtensions
                         "RABBITMQ_CONNECTION_RETRY_COUNT",
                         5);
 
+                options.ConnectionTimeoutSeconds =
+                    GetIntValue(
+                        configuration,
+                        "RABBITMQ_CONNECTION_TIMEOUT_SECONDS",
+                        3);
+
                 options.IntegrationEventQueue =
     configuration[
         "RABBITMQ_INTEGRATION_EVENT_QUEUE"]
@@ -263,6 +269,10 @@ public static class RabbitMqConfigurationExtensions
                 options =>
                     options.ConnectionRetryCount > 0,
                 "RABBITMQ_CONNECTION_RETRY_COUNT must be greater than zero.")
+            .Validate(
+                options =>
+                    options.ConnectionTimeoutSeconds > 0,
+                "RABBITMQ_CONNECTION_TIMEOUT_SECONDS must be greater than zero.")
             .Validate(
     options =>
         !string.IsNullOrWhiteSpace(

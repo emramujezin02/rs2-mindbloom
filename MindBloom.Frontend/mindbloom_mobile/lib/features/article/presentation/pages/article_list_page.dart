@@ -3,13 +3,23 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
-import '../../../../core/constants/api_constants.dart';
-import '../../../../core/widgets/public_footer.dart';
 import '../../../../core/widgets/app_empty_state_widget.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../../../../core/widgets/app_loading_widget.dart';
+import '../../../../core/widgets/public_footer.dart';
+import '../../data/models/article_category_model.dart';
 import '../../data/models/article_model.dart';
 import '../viewmodels/article_viewmodel.dart';
+import '../widgets/article_image.dart';
+
+const _articleBackground = Color(0xFFFCFAFF);
+const _articleSurface = Color(0xFFFFFFFF);
+const _articleTint = Color(0xFFFAF7FE);
+const _articleBorder = Color(0xFFE8DEF3);
+const _articlePrimary = Color(0xFF6D4F91);
+const _articleText = Color(0xFF3E3152);
+const _articleBody = Color(0xFF625B6B);
+const _articleRadius = 20.0;
 
 class ArticleListPage extends StatefulWidget {
   const ArticleListPage({super.key});
@@ -85,107 +95,35 @@ class _ArticleListPageState extends State<ArticleListPage> {
     await _viewModel.refreshArticles();
   }
 
-  String? _buildImageUrl(String imageUrl) {
-    final value = imageUrl.trim();
-
-    if (value.isEmpty) {
-      return null;
-    }
-
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
-    }
-
-    final normalizedPath = value.startsWith('/') ? value : '/$value';
-
-    return '${ApiConstants.baseUrl}'
-        '$normalizedPath';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Articles')),
+      backgroundColor: _articleBackground,
+      appBar: AppBar(
+        title: const Text('Articles'),
+        backgroundColor: _articleBackground,
+        foregroundColor: _articleText,
+        surfaceTintColor: Colors.transparent,
+      ),
       body: Column(
         children: [
-          _buildSearch(),
-          _buildCategoryFilter(),
+          _ArticleListHeader(
+            searchController: _searchController,
+            isBusy: _viewModel.isLoading,
+            onSearch: _search,
+            onClearSearch: _clearSearch,
+          ),
+          _CategoryFilter(
+            isLoading: _viewModel.isLoadingCategories,
+            categoriesError: _viewModel.categoriesError,
+            selectedCategoryId: _viewModel.selectedArticleCategoryId,
+            categories: _viewModel.categories,
+            isArticlesLoading: _viewModel.isLoading,
+            onRetryCategories: _viewModel.loadCategories,
+            onChanged: _viewModel.filterByCategory,
+          ),
           Expanded(child: _buildBody()),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSearch() {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) {
-                _search();
-              },
-              decoration: const InputDecoration(
-                labelText: 'Search articles',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.search),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            onPressed: _viewModel.isLoading ? null : _search,
-            tooltip: 'Search',
-            icon: const Icon(Icons.search),
-          ),
-          IconButton(
-            onPressed: _viewModel.isLoading ? null : _clearSearch,
-            tooltip: 'Clear search',
-            icon: const Icon(Icons.clear),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryFilter() {
-    if (_viewModel.isLoadingCategories) {
-      return const Padding(
-        padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
-        child: LinearProgressIndicator(),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      child: DropdownButtonFormField<int?>(
-        initialValue: _viewModel.selectedArticleCategoryId,
-        isExpanded: true,
-        decoration: const InputDecoration(
-          labelText: 'Article category',
-          prefixIcon: Icon(Icons.category),
-          border: OutlineInputBorder(),
-        ),
-        items: [
-          const DropdownMenuItem<int?>(
-            value: null,
-            child: Text('All categories'),
-          ),
-          ..._viewModel.categories.map(
-            (category) => DropdownMenuItem<int?>(
-              value: category.id,
-              child: Text(category.name),
-            ),
-          ),
-        ],
-        onChanged: _viewModel.isLoading
-            ? null
-            : (value) {
-                _viewModel.filterByCategory(value);
-              },
       ),
     );
   }
@@ -195,6 +133,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
       return const AppLoadingWidget.skeleton(
         message: 'Loading articles...',
         skeletonItemCount: 5,
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 16),
       );
     }
 
@@ -224,47 +163,31 @@ class _ArticleListPageState extends State<ArticleListPage> {
       child: ListView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.zero,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         children: [
           if (_viewModel.error != null)
             AppInlineError(
               title: 'Articles could not be refreshed',
               error: _viewModel.error,
               onRetry: _refresh,
-              margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              margin: const EdgeInsets.only(bottom: 12),
             ),
-          ..._viewModel.articles.asMap().entries.map((entry) {
-            final index = entry.key;
-            final article = entry.value;
-
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 12,
-                right: 12,
-                top: index == 0 ? 12 : 0,
-              ),
-              child: _ArticleCard(
-                article: article,
-                imageUrl: _buildImageUrl(article.imageUrl),
-              ),
-            );
-          }),
+          ..._viewModel.articles.map(
+            (article) => _ArticleCard(article: article),
+          ),
           if (_viewModel.isLoadingMore)
             const AppLoadMoreIndicator(
               loadingMessage: 'Loading more articles...',
             )
           else if (_viewModel.loadMoreError != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: AppLoadMoreError(
-                error: _viewModel.loadMoreError,
-                fallbackMessage: 'More articles could not be loaded.',
-                onRetry: _viewModel.retryLoadMore,
-              ),
+            AppLoadMoreError(
+              error: _viewModel.loadMoreError,
+              fallbackMessage: 'More articles could not be loaded.',
+              onRetry: _viewModel.retryLoadMore,
             )
           else if (_viewModel.hasMorePages)
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(vertical: 18),
               child: OutlinedButton.icon(
                 onPressed: _viewModel.loadMore,
                 icon: const Icon(Icons.expand_more),
@@ -281,17 +204,188 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 }
 
-class _ArticleCard extends StatelessWidget {
-  final ArticleModel article;
-  final String? imageUrl;
+class _ArticleListHeader extends StatelessWidget {
+  final TextEditingController searchController;
+  final bool isBusy;
+  final Future<void> Function() onSearch;
+  final Future<void> Function() onClearSearch;
 
-  const _ArticleCard({required this.article, required this.imageUrl});
+  const _ArticleListHeader({
+    required this.searchController,
+    required this.isBusy,
+    required this.onSearch,
+    required this.onClearSearch,
+  });
 
   @override
   Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+      decoration: const BoxDecoration(
+        color: _articleBackground,
+        border: Border(bottom: BorderSide(color: _articleBorder)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'MindBloom articles',
+            style: TextStyle(
+              color: _articleText,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Explore educational content written by professionals.',
+            style: TextStyle(color: _articleBody, height: 1.45),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: searchController,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) {
+              onSearch();
+            },
+            decoration: InputDecoration(
+              labelText: 'Search articles',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: SizedBox(
+                width: 96,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      onPressed: isBusy ? null : onSearch,
+                      tooltip: 'Search',
+                      icon: const Icon(Icons.arrow_forward),
+                    ),
+                    IconButton(
+                      onPressed: isBusy ? null : onClearSearch,
+                      tooltip: 'Clear search',
+                      icon: const Icon(Icons.clear),
+                    ),
+                  ],
+                ),
+              ),
+              filled: true,
+              fillColor: _articleSurface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: _articleBorder),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryFilter extends StatelessWidget {
+  final bool isLoading;
+  final String? categoriesError;
+  final int? selectedCategoryId;
+  final List<ArticleCategoryModel> categories;
+  final bool isArticlesLoading;
+  final Future<void> Function() onRetryCategories;
+  final Future<void> Function(int?) onChanged;
+
+  const _CategoryFilter({
+    required this.isLoading,
+    required this.categoriesError,
+    required this.selectedCategoryId,
+    required this.categories,
+    required this.isArticlesLoading,
+    required this.onRetryCategories,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: LinearProgressIndicator(minHeight: 3),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Column(
+        children: [
+          if (categoriesError != null)
+            AppInlineError(
+              title: 'Categories could not be loaded',
+              error: categoriesError,
+              onRetry: onRetryCategories,
+              margin: const EdgeInsets.only(bottom: 10),
+            ),
+          DropdownButtonFormField<int?>(
+            initialValue: selectedCategoryId,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: 'Article category',
+              prefixIcon: const Icon(Icons.category_outlined),
+              filled: true,
+              fillColor: _articleSurface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: _articleBorder),
+              ),
+            ),
+            items: [
+              const DropdownMenuItem<int?>(
+                value: null,
+                child: Text('All categories'),
+              ),
+              ...categories.map(
+                (category) => DropdownMenuItem<int?>(
+                  value: category.id,
+                  child: Text(
+                    category.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+            onChanged: isArticlesLoading ? null : onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArticleCard extends StatelessWidget {
+  final ArticleModel article;
+
+  const _ArticleCard({required this.article});
+
+  @override
+  Widget build(BuildContext context) {
+    final category = article.articleCategoryName.trim();
+    final author = article.authorName.trim();
+    final description = article.description.trim();
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 14),
+      elevation: 0,
+      color: _articleSurface,
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_articleRadius),
+        side: const BorderSide(color: _articleBorder),
+      ),
       child: InkWell(
         onTap: () {
           Navigator.of(
@@ -301,68 +395,72 @@ class _ArticleCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (imageUrl != null)
-              Image.network(
-                imageUrl!,
-                width: double.infinity,
-                height: 180,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return const SizedBox(
-                    height: 140,
-                    child: Center(child: Icon(Icons.broken_image, size: 45)),
-                  );
-                },
-              ),
+            ArticleImage(imageUrl: article.imageUrl),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (article.articleCategoryName.trim().isNotEmpty) ...[
-                    Chip(
-                      avatar: const Icon(Icons.category, size: 17),
-                      label: Text(article.articleCategoryName),
+                  if (category.isNotEmpty) ...[
+                    _ArticleMetaChip(
+                      icon: Icons.category_outlined,
+                      label: category,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                   ],
                   Text(
                     article.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      color: _articleText,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      height: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    article.description,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (article.articleCategoryName.trim().isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Chip(
-                      avatar: const Icon(Icons.category, size: 17),
-                      label: Text(article.articleCategoryName),
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: _articleBody, height: 1.45),
                     ),
                   ],
-                  const SizedBox(height: 12),
-                  Row(
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 8,
                     children: [
-                      const Icon(Icons.person, size: 18),
-                      const SizedBox(width: 6),
-                      Expanded(child: Text(article.authorName)),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_month, size: 18),
-                      const SizedBox(width: 6),
-                      Text(
-                        DateFormat(
+                      if (author.isNotEmpty)
+                        _ArticleMetaChip(
+                          icon: Icons.person_outline,
+                          label: author,
+                        ),
+                      _ArticleMetaChip(
+                        icon: Icons.calendar_today_outlined,
+                        label: DateFormat(
                           'dd.MM.yyyy.',
                         ).format(article.publishedAtUtc.toLocal()),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Row(
+                    children: [
+                      Text(
+                        'Read article',
+                        style: TextStyle(
+                          color: _articlePrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      Icon(
+                        Icons.arrow_forward,
+                        color: _articlePrimary,
+                        size: 18,
                       ),
                     ],
                   ),
@@ -371,6 +469,45 @@ class _ArticleCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ArticleMetaChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _ArticleMetaChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 260),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: _articleTint,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _articleBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: _articlePrimary),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _articleBody,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

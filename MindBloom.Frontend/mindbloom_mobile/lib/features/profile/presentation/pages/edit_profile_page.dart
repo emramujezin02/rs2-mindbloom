@@ -4,6 +4,14 @@ import '../../../../app/di/injection.dart';
 import '../../data/models/profile_model.dart';
 import '../viewmodels/profile_viewmodel.dart';
 
+const _editProfileBackground = Color(0xFFFCFAFF);
+const _editProfileLavender = Color(0xFFF6F0FC);
+const _editProfileBorder = Color(0xFFE7DDF1);
+const _editProfilePrimary = Color(0xFF6D4F91);
+const _editProfileText = Color(0xFF372D45);
+const _editProfileMuted = Color(0xFF6C6278);
+const _editProfileRadius = 20.0;
+
 class EditProfilePage extends StatefulWidget {
   final ProfileModel profile;
 
@@ -236,160 +244,178 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit profile')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _firstNameController,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'First name',
-                  border: OutlineInputBorder(),
+      backgroundColor: _editProfileBackground,
+      appBar: AppBar(
+        title: const Text('Edit profile'),
+        backgroundColor: _editProfileBackground,
+        surfaceTintColor: Colors.transparent,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const _ProfileEditIntro(),
+                const SizedBox(height: 18),
+                TextFormField(
+                  controller: _firstNameController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'First name',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    return _viewModel.fieldError('FirstName') ??
+                        AppValidators.textLength(
+                          value,
+                          fieldName: 'Ime',
+                          minimumLength: 2,
+                          maximumLength: 50,
+                        );
+                  },
                 ),
-                validator: (value) {
-                  return _viewModel.fieldError('FirstName') ??
-                      AppValidators.textLength(
-                        value,
-                        fieldName: 'Ime',
-                        minimumLength: 2,
-                        maximumLength: 50,
-                      );
-                },
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextFormField(
-                controller: _lastNameController,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'Last name',
-                  border: OutlineInputBorder(),
+                TextFormField(
+                  controller: _lastNameController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Last name',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    return _viewModel.fieldError('LastName') ??
+                        AppValidators.textLength(
+                          value,
+                          fieldName: 'Prezime',
+                          minimumLength: 2,
+                          maximumLength: 50,
+                        );
+                  },
                 ),
-                validator: (value) {
-                  return _viewModel.fieldError('LastName') ??
-                      AppValidators.textLength(
-                        value,
-                        fieldName: 'Prezime',
-                        minimumLength: 2,
-                        maximumLength: 50,
-                      );
-                },
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextFormField(
-                initialValue: widget.profile.email,
-                enabled: false,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  helperText: 'Email cannot be changed here.',
-                  border: OutlineInputBorder(),
+                TextFormField(
+                  initialValue: widget.profile.email,
+                  enabled: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    helperText: 'Email cannot be changed here.',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'Phone number',
-                  border: OutlineInputBorder(),
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone number',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    return _viewModel.fieldError('PhoneNumber') ??
+                        AppValidators.phone(value);
+                  },
                 ),
-                validator: (value) {
-                  return _viewModel.fieldError('PhoneNumber') ??
-                      AppValidators.phone(value);
-                },
-              ),
 
-              OutlinedButton.icon(
-                onPressed: _selectDateOfBirth,
-                icon: const Icon(Icons.cake),
-                label: Text(
-                  'Date of birth: '
-                  '${_formatDate(_dateOfBirth)}',
+                OutlinedButton.icon(
+                  onPressed: _selectDateOfBirth,
+                  icon: const Icon(Icons.cake),
+                  label: Text(
+                    'Date of birth: '
+                    '${_formatDate(_dateOfBirth)}',
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextFormField(
-                controller: _locationController,
-                maxLength: 200,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'Location',
-                  hintText: 'City or location',
-                  border: OutlineInputBorder(),
+                TextFormField(
+                  controller: _locationController,
+                  maxLength: 200,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    hintText: 'City or location',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    return _viewModel.fieldError('Location') ??
+                        AppValidators.location(value);
+                  },
                 ),
-                validator: (value) {
-                  return _viewModel.fieldError('Location') ??
-                      AppValidators.location(value);
-                },
-              ),
 
-              const SizedBox(height: 8),
+                const SizedBox(height: 8),
 
-              DropdownButtonFormField<String>(
-                initialValue: _preferredTherapistGender,
-                decoration: const InputDecoration(
-                  labelText: 'Preferred therapist gender',
-                  border: OutlineInputBorder(),
+                DropdownButtonFormField<String>(
+                  initialValue: _preferredTherapistGender,
+                  decoration: const InputDecoration(
+                    labelText: 'Preferred therapist gender',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Any',
+                      child: Text('No preference'),
+                    ),
+                    DropdownMenuItem(value: 'Female', child: Text('Female')),
+                    DropdownMenuItem(value: 'Male', child: Text('Male')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
+
+                    setState(() {
+                      _preferredTherapistGender = value;
+                    });
+                  },
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'Any', child: Text('No preference')),
-                  DropdownMenuItem(value: 'Female', child: Text('Female')),
-                  DropdownMenuItem(value: 'Male', child: Text('Male')),
-                ],
-                onChanged: (value) {
-                  if (value == null) {
-                    return;
-                  }
 
-                  setState(() {
-                    _preferredTherapistGender = value;
-                  });
-                },
-              ),
+                const SizedBox(height: 16),
 
-              const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: _preferredSessionType,
+                  decoration: const InputDecoration(
+                    labelText: 'Preferred session type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Any',
+                      child: Text('No preference'),
+                    ),
+                    DropdownMenuItem(value: 'Online', child: Text('Online')),
+                    DropdownMenuItem(
+                      value: 'InPerson',
+                      child: Text('In person'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
 
-              DropdownButtonFormField<String>(
-                initialValue: _preferredSessionType,
-                decoration: const InputDecoration(
-                  labelText: 'Preferred session type',
-                  border: OutlineInputBorder(),
+                    setState(() {
+                      _preferredSessionType = value;
+                    });
+                  },
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'Any', child: Text('No preference')),
-                  DropdownMenuItem(value: 'Online', child: Text('Online')),
-                  DropdownMenuItem(value: 'InPerson', child: Text('In person')),
-                ],
-                onChanged: (value) {
-                  if (value == null) {
-                    return;
-                  }
 
-                  setState(() {
-                    _preferredSessionType = value;
-                  });
-                },
-              ),
+                const SizedBox(height: 16),
 
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final stackFields = constraints.maxWidth < 360;
+                    final minimumField = TextFormField(
                       controller: _minimumPriceController,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
@@ -408,13 +434,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               fieldName: 'Minimalna cijena',
                             );
                       },
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    child: TextFormField(
+                    );
+                    final maximumField = TextFormField(
                       controller: _maximumPriceController,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
@@ -433,71 +454,132 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               fieldName: 'Maksimalna cijena',
                             );
                       },
-                    ),
+                    );
+
+                    if (stackFields) {
+                      return Column(
+                        children: [
+                          minimumField,
+                          const SizedBox(height: 12),
+                          maximumField,
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: minimumField),
+                        const SizedBox(width: 12),
+                        Expanded(child: maximumField),
+                      ],
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _languagesController,
+                  maxLines: 2,
+                  maxLength: 500,
+                  decoration: const InputDecoration(
+                    labelText: 'Preferred languages',
+                    hintText: 'Bosnian, English, German',
+                    helperText: 'Separate languages with commas.',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final languages =
+                        value
+                            ?.split(',')
+                            .map((language) => language.trim())
+                            .where((language) => language.isNotEmpty)
+                            .toList() ??
+                        [];
+
+                    if (languages.length > 10) {
+                      return 'You may add at most 10 languages.';
+                    }
+
+                    if (languages.any((language) => language.length > 50)) {
+                      return 'Each language may contain at most 50 characters.';
+                    }
+
+                    return null;
+                  },
+                ),
+
+                if (_viewModel.error != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _viewModel.error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red),
                   ),
                 ],
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
-              TextFormField(
-                controller: _languagesController,
-                maxLines: 2,
-                maxLength: 500,
-                decoration: const InputDecoration(
-                  labelText: 'Preferred languages',
-                  hintText: 'Bosnian, English, German',
-                  helperText: 'Separate languages with commas.',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  final languages =
-                      value
-                          ?.split(',')
-                          .map((language) => language.trim())
-                          .where((language) => language.isNotEmpty)
-                          .toList() ??
-                      [];
-
-                  if (languages.length > 10) {
-                    return 'You may add at most 10 languages.';
-                  }
-
-                  if (languages.any((language) => language.length > 50)) {
-                    return 'Each language may contain at most 50 characters.';
-                  }
-
-                  return null;
-                },
-              ),
-
-              if (_viewModel.error != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  _viewModel.error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
+                FilledButton.icon(
+                  onPressed: _viewModel.isLoading ? null : _save,
+                  icon: _viewModel.isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(
+                    _viewModel.isLoading ? 'Saving...' : 'Save changes',
+                  ),
                 ),
               ],
-
-              const SizedBox(height: 20),
-
-              ElevatedButton.icon(
-                onPressed: _viewModel.isLoading ? null : _save,
-                icon: _viewModel.isLoading
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save),
-                label: Text(
-                  _viewModel.isLoading ? 'Saving...' : 'Save changes',
-                ),
-              ),
-            ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ProfileEditIntro extends StatelessWidget {
+  const _ProfileEditIntro();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _editProfileLavender,
+        borderRadius: BorderRadius.circular(_editProfileRadius),
+        border: Border.all(color: _editProfileBorder),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.manage_accounts_outlined, color: _editProfilePrimary),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Profile details',
+                  style: TextStyle(
+                    color: _editProfileText,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Keep your contact details and therapy preferences current.',
+                  style: TextStyle(color: _editProfileMuted, height: 1.35),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

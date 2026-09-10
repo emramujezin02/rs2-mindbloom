@@ -10,6 +10,19 @@ import '../../../therapy_approach/data/models/therapy_approach_model.dart';
 import '../../../therapist/presentation/widgets/therapist_profile_image.dart';
 import '../../../therapist/presentation/widgets/therapist_session_modes.dart';
 import '../../../../core/widgets/public_footer.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
+
+const _landingBackground = Color(0xFFFCFAFF);
+const _landingSectionLavender = Color(0xFFF6F0FC);
+const _landingSurface = Color(0xFFFFFFFF);
+const _landingTint = Color(0xFFFAF7FE);
+const _landingBorder = Color(0xFFE8DEF3);
+const _landingPrimary = Color(0xFF6D4F91);
+const _landingText = Color(0xFF3E3152);
+const _landingBody = Color(0xFF625B6B);
+const _landingCardRadius = 20.0;
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -112,7 +125,7 @@ class _LandingPageState extends State<LandingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFAFF),
+      backgroundColor: _landingBackground,
       drawer: _LandingDrawer(
         onHome: () => _handleDrawerNavigation(homeSectionKey),
         onTherapy: () => _handleDrawerNavigation(therapySectionKey),
@@ -308,7 +321,17 @@ class _LandingNavigation extends StatelessWidget {
               TextButton(onPressed: onLogin, child: const Text('Log in')),
               const SizedBox(width: 6),
             ],
-            FilledButton(onPressed: onRegister, child: const Text('Register')),
+            if (MediaQuery.sizeOf(context).width < 360)
+              IconButton.filled(
+                tooltip: 'Register',
+                onPressed: onRegister,
+                icon: const Icon(Icons.person_add_alt_1_outlined),
+              )
+            else
+              FilledButton(
+                onPressed: onRegister,
+                child: const Text('Register'),
+              ),
           ],
         ),
       ),
@@ -439,13 +462,13 @@ class _MindBloomLogo extends StatelessWidget {
         CircleAvatar(
           radius: 20,
           backgroundColor: Color(0xFFE9DFFF),
-          child: Icon(Icons.local_florist_outlined, color: Color(0xFF72559A)),
+          child: Icon(Icons.local_florist_outlined, color: _landingPrimary),
         ),
         SizedBox(width: 10),
         Text(
           'MindBloom',
           style: TextStyle(
-            color: Color(0xFF5C477B),
+            color: _landingPrimary,
             fontSize: 21,
             fontWeight: FontWeight.w800,
           ),
@@ -471,12 +494,12 @@ class _HeroSection extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(
-        horizontal: isDesktop ? 70 : 24,
-        vertical: isDesktop ? 85 : 52,
+        horizontal: isDesktop ? 70 : 20,
+        vertical: isDesktop ? 85 : 42,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFFAF7FF), Color(0xFFEDE3FB)],
+          colors: [_landingBackground, _landingSectionLavender],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -505,7 +528,7 @@ class _HeroSection extends StatelessWidget {
                       onFindTherapist: onFindTherapist,
                       onExploreTherapy: onExploreTherapy,
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 30),
                     const _HeroVisual(),
                   ],
                 ),
@@ -536,13 +559,14 @@ class _HeroContent extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
+            color: _landingSurface,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: _landingBorder),
           ),
           child: const Text(
             'A safe space for your mental wellbeing',
             style: TextStyle(
-              color: Color(0xFF684C8E),
+              color: _landingPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -552,8 +576,8 @@ class _HeroContent extends StatelessWidget {
           'Your mind deserves\nspace to bloom.',
           textAlign: isDesktop ? TextAlign.left : TextAlign.center,
           style: TextStyle(
-            color: const Color(0xFF3E3152),
-            fontSize: isDesktop ? 54 : 39,
+            color: _landingText,
+            fontSize: isDesktop ? 54 : 36,
             height: 1.08,
             fontWeight: FontWeight.w800,
           ),
@@ -564,14 +588,14 @@ class _HeroContent extends StatelessWidget {
           'journey toward greater emotional balance.',
           textAlign: isDesktop ? TextAlign.left : TextAlign.center,
           style: const TextStyle(
-            color: Color(0xFF625B6B),
+            color: _landingBody,
             fontSize: 17,
             height: 1.6,
           ),
         ),
         const SizedBox(height: 30),
         Wrap(
-          alignment: WrapAlignment.center,
+          alignment: isDesktop ? WrapAlignment.start : WrapAlignment.center,
           spacing: 12,
           runSpacing: 12,
           children: [
@@ -597,27 +621,101 @@ class _HeroVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 1.15,
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFDED0F0),
-          borderRadius: BorderRadius.circular(36),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x22000000),
-              blurRadius: 28,
-              offset: Offset(0, 15),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 440),
+      child: AspectRatio(
+        aspectRatio: 1.08,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8DDF4),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: Colors.white, width: 4),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x14000000),
+                blurRadius: 24,
+                offset: Offset(0, 12),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset(
+                  'assets/images/landing/hero_therapy.jpg',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const _HeroVisualFallback(),
+                ),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0x00FFFFFF), Color(0xBFFFFFFF)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                ),
+                const Positioned(
+                  left: 18,
+                  right: 18,
+                  bottom: 18,
+                  child: _HeroVisualCaption(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroVisualCaption extends StatelessWidget {
+  const _HeroVisualCaption();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _landingBorder),
+      ),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(Icons.verified_outlined, color: _landingPrimary),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Trusted support, online or in person',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: _landingText,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ],
         ),
-        child: const Center(
-          child: Icon(
-            Icons.self_improvement,
-            size: 135,
-            color: Color(0xFF72559A),
-          ),
-        ),
+      ),
+    );
+  }
+}
+
+class _HeroVisualFallback extends StatelessWidget {
+  const _HeroVisualFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFFE8DDF4),
+      child: Center(
+        child: Icon(Icons.self_improvement, size: 112, color: _landingPrimary),
       ),
     );
   }
@@ -646,7 +744,7 @@ class _TherapySection extends StatelessWidget {
       eyebrow: 'THERAPY DIRECTIONS',
       title: 'Find an approach that suits your needs',
       description: 'Learn about different forms of psychotherapy.',
-      backgroundColor: Colors.white,
+      backgroundColor: _landingSurface,
       child: _SectionContent(
         isLoading: isLoading,
         isEmpty: approaches.isEmpty,
@@ -704,32 +802,28 @@ class _TherapyCard extends StatelessWidget {
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,
-      color: const Color(0xFFFAF7FE),
+      color: _landingTint,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-        side: const BorderSide(color: Color(0xFFE8DEF3)),
+        borderRadius: BorderRadius.circular(_landingCardRadius),
+        side: const BorderSide(color: _landingBorder),
       ),
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const CircleAvatar(
-                radius: 27,
-                backgroundColor: Color(0xFFE9DFFF),
-                child: Icon(
-                  Icons.psychology_alt_outlined,
-                  color: Color(0xFF72559A),
-                ),
-              ),
-              const SizedBox(height: 17),
+              _ApproachIcon(iconUrl: approach.iconUrl),
+              const SizedBox(height: 16),
               Text(
                 approach.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
+                  color: _landingText,
                 ),
               ),
               const SizedBox(height: 9),
@@ -739,26 +833,61 @@ class _TherapyCard extends StatelessWidget {
                     : approach.description,
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Color(0xFF6D6673), height: 1.5),
+                style: const TextStyle(color: _landingBody, height: 1.45),
               ),
               const SizedBox(height: 16),
               const Row(
                 children: [
-                  Text(
-                    'View therapists',
-                    style: TextStyle(
-                      color: Color(0xFF72559A),
-                      fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Text(
+                      'View therapists',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: _landingPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   SizedBox(width: 5),
-                  Icon(Icons.arrow_forward, size: 18, color: Color(0xFF72559A)),
+                  Icon(Icons.arrow_forward, size: 18, color: _landingPrimary),
                 ],
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ApproachIcon extends StatelessWidget {
+  final String? iconUrl;
+
+  const _ApproachIcon({required this.iconUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final normalizedUrl = iconUrl?.trim();
+
+    return Container(
+      width: 54,
+      height: 54,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE9DFFF),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: normalizedUrl == null || normalizedUrl.isEmpty
+          ? const Icon(Icons.psychology_alt_outlined, color: _landingPrimary)
+          : Image.network(
+              normalizedUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const Icon(
+                Icons.psychology_alt_outlined,
+                color: _landingPrimary,
+              ),
+            ),
     );
   }
 }
@@ -786,7 +915,7 @@ class _TherapistsSection extends StatelessWidget {
       eyebrow: 'OUR PROFESSIONALS',
       title: 'Meet therapists who are here to listen',
       description: 'Choose a therapist whose experience and approach suit you.',
-      backgroundColor: const Color(0xFFF5EFFC),
+      backgroundColor: _landingSectionLavender,
       child: _SectionContent(
         isLoading: isLoading,
         isEmpty: therapists.isEmpty,
@@ -799,26 +928,36 @@ class _TherapistsSection extends StatelessWidget {
           icon: const Icon(Icons.people_outline),
           label: const Text('View all therapists'),
         ),
-        child: SizedBox(
-          height: 430,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: therapists.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 18),
-            itemBuilder: (context, index) {
-              final therapist = therapists[index];
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final cardWidth = constraints.maxWidth >= 700
+                ? 300.0
+                : (constraints.maxWidth * 0.78).clamp(250.0, 292.0).toDouble();
 
-              return SizedBox(
-                width: 290,
-                child: _TherapistCard(
-                  therapist: therapist,
-                  onTap: () {
-                    onTherapistSelected(therapist.id);
-                  },
-                ),
-              );
-            },
-          ),
+            return SizedBox(
+              height: 398,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                itemCount: therapists.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 16),
+                itemBuilder: (context, index) {
+                  final therapist = therapists[index];
+
+                  return SizedBox(
+                    width: cardWidth,
+                    child: _TherapistCard(
+                      therapist: therapist,
+                      onTap: () {
+                        onTherapistSelected(therapist.id);
+                      },
+                    ),
+                  );
+                },
+              ),
+            );
+          },
         ),
       ),
     );
@@ -835,47 +974,82 @@ class _TherapistCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
+      color: _landingSurface,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-        side: const BorderSide(color: Color(0xFFE1D5ED)),
+        borderRadius: BorderRadius.circular(_landingCardRadius),
+        side: const BorderSide(color: _landingBorder),
       ),
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: TherapistProfileImage(
-                  fullName: therapist.fullName,
-                  profileImageUrl: therapist.profileImageUrl,
-                  radius: 42,
-                ),
+              Row(
+                children: [
+                  TherapistProfileImage(
+                    fullName: therapist.fullName,
+                    profileImageUrl: therapist.profileImageUrl,
+                    radius: 36,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          therapist.fullName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _landingText,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 18,
+                              color: Color(0xFFF2B84B),
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                '${therapist.averageRating.toStringAsFixed(1)}'
+                                ' (${therapist.totalReviews})',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: _landingBody,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
               Text(
-                therapist.fullName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 5),
-
-              Text(
-                therapist.specialization,
+                therapist.specialization.trim().isEmpty
+                    ? 'Specialization not specified'
+                    : therapist.specialization,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: Color(0xFF72559A),
-                  fontWeight: FontWeight.w600,
+                  color: _landingPrimary,
+                  fontWeight: FontWeight.w700,
+                  height: 1.25,
                 ),
               ),
 
@@ -891,29 +1065,45 @@ class _TherapistCard extends StatelessWidget {
 
               Row(
                 children: [
-                  const Icon(Icons.star, size: 18, color: Color(0xFFF2B84B)),
-                  const SizedBox(width: 4),
-                  Text(
-                    therapist.averageRating.toStringAsFixed(1),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  const Icon(
+                    Icons.location_on_outlined,
+                    size: 17,
+                    color: _landingPrimary,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      therapist.formattedLocation,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _landingBody,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 8),
-
+              const Spacer(),
               Text(
                 '${therapist.hourlyRate.toStringAsFixed(2)} KM / session',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _landingText,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-
-              const Spacer(),
+              const SizedBox(height: 12),
 
               SizedBox(
                 width: double.infinity,
-                child: FilledButton(
+                child: FilledButton.icon(
                   onPressed: onTap,
-                  child: const Text('View profile'),
+                  icon: const Icon(Icons.arrow_forward_outlined, size: 18),
+                  label: const Text('View profile'),
                 ),
               ),
             ],
@@ -943,7 +1133,7 @@ class _ReviewsSection extends StatelessWidget {
       eyebrow: 'CLIENT EXPERIENCES',
       title: 'Stories from people who took the first step',
       description: 'Read experiences shared by clients after therapy.',
-      backgroundColor: Colors.white,
+      backgroundColor: _landingSurface,
       child: _SectionContent(
         isLoading: isLoading,
         isEmpty: reviews.isEmpty,
@@ -958,10 +1148,10 @@ class _ReviewsSection extends StatelessWidget {
                 ? 360.0
                 : constraints.maxWidth >= 600
                 ? 330.0
-                : constraints.maxWidth * 0.88;
+                : (constraints.maxWidth * 0.88).clamp(260.0, 320.0).toDouble();
 
             return SizedBox(
-              height: 330,
+              height: 310,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
@@ -992,9 +1182,7 @@ class _ReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initials = review.clientName.trim().isEmpty
-        ? 'MB'
-        : review.clientName.trim();
+    final initials = _reviewInitials(review.clientName);
 
     final therapistName = review.therapistName.trim().isEmpty
         ? 'MindBloom therapist'
@@ -1002,13 +1190,13 @@ class _ReviewCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      color: const Color(0xFFFAF7FE),
+      color: _landingTint,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-        side: const BorderSide(color: Color(0xFFE7DDF1)),
+        borderRadius: BorderRadius.circular(_landingCardRadius),
+        side: const BorderSide(color: _landingBorder),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(22),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1021,7 +1209,7 @@ class _ReviewCard extends StatelessWidget {
                   child: Text(
                     initials,
                     style: const TextStyle(
-                      color: Color(0xFF684C8E),
+                      color: _landingPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                     ),
@@ -1030,12 +1218,12 @@ class _ReviewCard extends StatelessWidget {
                 const Spacer(),
                 const Icon(
                   Icons.format_quote_rounded,
-                  size: 38,
+                  size: 34,
                   color: Color(0xFF9277B4),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Wrap(
               spacing: 2,
               children: List.generate(
@@ -1049,20 +1237,20 @@ class _ReviewCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             Expanded(
               child: Text(
                 review.comment,
-                maxLines: 6,
+                maxLines: 5,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Color(0xFF5F5865), height: 1.6),
+                style: const TextStyle(color: _landingText, height: 1.5),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Text(
               initials,
               style: const TextStyle(
-                color: Color(0xFF3E3152),
+                color: _landingText,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1072,7 +1260,7 @@ class _ReviewCard extends StatelessWidget {
                 const Icon(
                   Icons.psychology_outlined,
                   size: 18,
-                  color: Color(0xFF9277B4),
+                  color: _landingPrimary,
                 ),
                 const SizedBox(width: 7),
                 Expanded(
@@ -1081,7 +1269,7 @@ class _ReviewCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF6B6272),
+                      color: _landingBody,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1093,6 +1281,25 @@ class _ReviewCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _reviewInitials(String value) {
+    final normalized = value.trim();
+
+    if (normalized.isEmpty) {
+      return 'MB';
+    }
+
+    final parts = normalized.split(RegExp(r'\s+'));
+
+    if (parts.length == 1) {
+      final endIndex = parts.first.length == 1 ? 1 : 2;
+
+      return parts.first.substring(0, endIndex).toUpperCase();
+    }
+
+    return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
+        .toUpperCase();
   }
 }
 
@@ -1119,7 +1326,7 @@ class _ArticlesSection extends StatelessWidget {
       eyebrow: 'MINDBLOOM ARTICLES',
       title: 'Learn more about yourself and mental health',
       description: 'Explore educational content written by professionals.',
-      backgroundColor: const Color(0xFFF5EFFC),
+      backgroundColor: _landingSectionLavender,
       child: _SectionContent(
         isLoading: isLoading,
         isEmpty: articles.isEmpty,
@@ -1194,8 +1401,8 @@ class _ArticleCard extends StatelessWidget {
       elevation: 0,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-        side: const BorderSide(color: Color(0xFFE3D9EF)),
+        borderRadius: BorderRadius.circular(_landingCardRadius),
+        side: const BorderSide(color: _landingBorder),
       ),
       child: InkWell(
         onTap: onTap,
@@ -1216,8 +1423,9 @@ class _ArticleCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 17,
                       fontWeight: FontWeight.w800,
+                      color: _landingText,
                     ),
                   ),
                   const SizedBox(height: 9),
@@ -1225,10 +1433,7 @@ class _ArticleCard extends StatelessWidget {
                     description,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF68616D),
-                      height: 1.5,
-                    ),
+                    style: const TextStyle(color: _landingBody, height: 1.5),
                   ),
                   const SizedBox(height: 15),
                   Row(
@@ -1237,7 +1442,7 @@ class _ArticleCard extends StatelessWidget {
                       const Icon(
                         Icons.person_outline,
                         size: 18,
-                        color: Color(0xFF8063A4),
+                        color: _landingPrimary,
                       ),
                       const SizedBox(width: 7),
                       Expanded(
@@ -1246,7 +1451,7 @@ class _ArticleCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: Color(0xFF8063A4),
+                            color: _landingPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1259,13 +1464,13 @@ class _ArticleCard extends StatelessWidget {
                       const Icon(
                         Icons.calendar_today_outlined,
                         size: 17,
-                        color: Color(0xFF8063A4),
+                        color: _landingPrimary,
                       ),
                       const SizedBox(width: 7),
                       Text(
                         formattedPublishedDate,
                         style: const TextStyle(
-                          color: Color(0xFF6B6272),
+                          color: _landingBody,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1278,7 +1483,7 @@ class _ArticleCard extends StatelessWidget {
                       Text(
                         'Read article',
                         style: TextStyle(
-                          color: Color(0xFF72559A),
+                          color: _landingPrimary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1286,7 +1491,7 @@ class _ArticleCard extends StatelessWidget {
                       Icon(
                         Icons.arrow_forward,
                         size: 18,
-                        color: Color(0xFF72559A),
+                        color: _landingPrimary,
                       ),
                     ],
                   ),
@@ -1361,10 +1566,7 @@ class _SectionContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading && isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(35),
-        child: CircularProgressIndicator(),
-      );
+      return const AppInlineLoadingIndicator(message: 'Loading section...');
     }
 
     if (errorMessage != null && isEmpty) {
@@ -1372,17 +1574,14 @@ class _SectionContent extends StatelessWidget {
     }
 
     if (isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(30),
-        child: Text(
-          emptyMessage,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0xFF6A6370), fontSize: 16),
-        ),
+      return AppInlineEmptyState(
+        message: emptyMessage,
+        icon: Icons.spa_outlined,
       );
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         child,
         if (footer != null) ...[const SizedBox(height: 30), footer!],
@@ -1399,14 +1598,12 @@ class _SectionError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Icon(Icons.error_outline, size: 42, color: Colors.redAccent),
-        const SizedBox(height: 10),
-        Text(message, textAlign: TextAlign.center),
-        const SizedBox(height: 14),
-        OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
-      ],
+    return AppInlineError(
+      title: 'Section could not be loaded',
+      error: message,
+      fallbackMessage: message,
+      onRetry: () async => onRetry(),
+      margin: EdgeInsets.zero,
     );
   }
 }
@@ -1420,11 +1617,12 @@ class _LandingMainError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(22),
-      padding: const EdgeInsets.all(22),
+      margin: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(_landingCardRadius),
+        border: Border.all(color: Colors.red.shade100),
       ),
       child: _SectionError(message: message, onRetry: onRetry),
     );
@@ -1444,17 +1642,17 @@ class _CallToActionSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: Colors.white,
+      color: _landingSurface,
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 65),
       child: Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 1000),
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 45),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 38),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF6E5193), Color(0xFF8C70AE)],
+              colors: [_landingPrimary, Color(0xFF8A6CAD)],
             ),
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(26),
           ),
           child: Column(
             children: [
@@ -1469,7 +1667,7 @@ class _CallToActionSection extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 28,
+                  fontSize: 25,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1534,8 +1732,8 @@ class _LandingSection extends StatelessWidget {
       width: double.infinity,
       color: backgroundColor,
       padding: EdgeInsets.symmetric(
-        horizontal: isDesktop ? 70 : 22,
-        vertical: isDesktop ? 76 : 55,
+        horizontal: isDesktop ? 70 : 20,
+        vertical: isDesktop ? 76 : 50,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -1546,10 +1744,10 @@ class _LandingSection extends StatelessWidget {
                 eyebrow,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Color(0xFF8063A4),
+                  color: _landingPrimary,
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 1.3,
+                  letterSpacing: 0,
                 ),
               ),
               const SizedBox(height: 10),
@@ -1557,7 +1755,7 @@ class _LandingSection extends StatelessWidget {
                 title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: const Color(0xFF40334D),
+                  color: _landingText,
                   fontSize: isDesktop ? 35 : 27,
                   fontWeight: FontWeight.w800,
                 ),
@@ -1569,7 +1767,7 @@ class _LandingSection extends StatelessWidget {
                   description,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: Color(0xFF6A6370),
+                    color: _landingBody,
                     fontSize: 16,
                     height: 1.5,
                   ),

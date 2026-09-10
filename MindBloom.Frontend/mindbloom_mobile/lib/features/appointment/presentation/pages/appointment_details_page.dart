@@ -2,12 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/validation/app_validators.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../payment/presentation/pages/payment_receipt_page.dart';
 import '../../../payment/presentation/viewmodels/appointment_payment_viewmodel.dart';
 import '../../data/models/appointment_model.dart';
 import '../viewmodels/appointment_details_viewmodel.dart';
+
+const _detailsBackground = Color(0xFFFCFAFF);
+const _detailsSurface = Color(0xFFFFFFFF);
+const _detailsLavender = Color(0xFFF6F0FC);
+const _detailsBorder = Color(0xFFE7DDF1);
+const _detailsPrimary = Color(0xFF6D4F91);
+const _detailsText = Color(0xFF372D45);
+const _detailsMuted = Color(0xFF6C6278);
+const _detailsRadius = 20.0;
 
 class AppointmentDetailsPage extends StatefulWidget {
   final AppointmentModel appointment;
@@ -388,61 +398,44 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
   Widget _buildPaymentStatusCard() {
     if (_paymentViewModel.isCheckingPayment) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 16),
-        child: Center(child: CircularProgressIndicator()),
+      return const _DetailsCard(
+        child: AppInlineLoadingIndicator(message: 'Checking payment status...'),
       );
     }
 
     if (_paymentViewModel.isRefundPending) {
-      return const Card(
-        child: ListTile(
-          leading: Icon(Icons.hourglass_top),
-          title: Text('Refund pending'),
-          subtitle: Text(
-            'Stripe is currently processing your refund. '
-            'A second refund request cannot be submitted.',
-          ),
-        ),
+      return const _StatusNotice(
+        icon: Icons.hourglass_top,
+        title: 'Refund pending',
+        message:
+            'Stripe is currently processing your refund. A second refund request cannot be submitted.',
       );
     }
 
     if (_paymentViewModel.isRefunded) {
-      return const Card(
-        child: ListTile(
-          leading: Icon(Icons.replay_circle_filled),
-          title: Text('Payment refunded'),
-          subtitle: Text(
-            'The paid amount has been refunded. '
-            'No additional refund request is required.',
-          ),
-        ),
+      return const _StatusNotice(
+        icon: Icons.replay_circle_filled,
+        title: 'Payment refunded',
+        message:
+            'The paid amount has been refunded. No additional refund request is required.',
       );
     }
 
     if (_paymentViewModel.isRefundFailed) {
-      return const Card(
-        child: ListTile(
-          leading: Icon(Icons.error_outline),
-          title: Text('Refund failed'),
-          subtitle: Text(
-            'The refund could not be completed. '
-            'Please contact support before trying again.',
-          ),
-        ),
+      return const _StatusNotice(
+        icon: Icons.error_outline,
+        title: 'Refund failed',
+        message:
+            'The refund could not be completed. Please contact support before trying again.',
       );
     }
 
     if (_paymentViewModel.isPaid) {
-      return const Card(
-        child: ListTile(
-          leading: Icon(Icons.check_circle),
-          title: Text('Appointment paid'),
-          subtitle: Text(
-            'If you cancel this appointment, '
-            'a Stripe refund will be initiated automatically.',
-          ),
-        ),
+      return const _StatusNotice(
+        icon: Icons.check_circle,
+        title: 'Appointment paid',
+        message:
+            'If you cancel this appointment, a Stripe refund will be initiated automatically.',
       );
     }
 
@@ -496,61 +489,53 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         normalizedStatus == 'accepted' || normalizedStatus == 'completed';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Appointment details')),
+      backgroundColor: _detailsBackground,
+      appBar: AppBar(
+        title: const Text('Appointment details'),
+        backgroundColor: _detailsBackground,
+        surfaceTintColor: Colors.transparent,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.calendar_month, size: 80),
-
-            const SizedBox(height: 20),
-
-            Text(
-              appointment.therapistName,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            _AppointmentHero(
+              therapistName: appointment.therapistName,
+              status: appointment.status,
+              type: appointment.type,
+              startsAt: formatter.format(appointment.startUtc.toLocal()),
+              price: '${appointment.price.toStringAsFixed(2)} BAM',
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _RowItem(label: 'Status', value: appointment.status),
-
-                    const Divider(),
-
-                    _RowItem(label: 'Type', value: appointment.type),
-
-                    const Divider(),
-
-                    _RowItem(
-                      label: 'Start',
-                      value: formatter.format(appointment.startUtc.toLocal()),
-                    ),
-
-                    const Divider(),
-
-                    _RowItem(
-                      label: 'End',
-                      value: formatter.format(appointment.endUtc.toLocal()),
-                    ),
-
-                    const Divider(),
-
-                    _RowItem(label: 'Duration', value: durationText),
-
-                    const Divider(),
-
-                    _RowItem(
-                      label: 'Price',
-                      value: '${appointment.price.toStringAsFixed(2)} BAM',
-                    ),
-                  ],
-                ),
+            _DetailsSection(
+              title: 'Appointment summary',
+              icon: Icons.event_note_outlined,
+              child: Column(
+                children: [
+                  _RowItem(label: 'Status', value: appointment.status),
+                  const _DetailsDivider(),
+                  _RowItem(label: 'Type', value: appointment.type),
+                  const _DetailsDivider(),
+                  _RowItem(
+                    label: 'Start',
+                    value: formatter.format(appointment.startUtc.toLocal()),
+                  ),
+                  const _DetailsDivider(),
+                  _RowItem(
+                    label: 'End',
+                    value: formatter.format(appointment.endUtc.toLocal()),
+                  ),
+                  const _DetailsDivider(),
+                  _RowItem(label: 'Duration', value: durationText),
+                  const _DetailsDivider(),
+                  _RowItem(
+                    label: 'Price',
+                    value: '${appointment.price.toStringAsFixed(2)} BAM',
+                  ),
+                ],
               ),
             ),
 
@@ -558,28 +543,12 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                 appointment.notes!.trim().isNotEmpty) ...[
               const SizedBox(height: 16),
 
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.notes_outlined),
-                          SizedBox(width: 8),
-                          Text(
-                            'Appointment note',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      Text(appointment.notes!),
-                    ],
-                  ),
+              _DetailsSection(
+                title: 'Appointment note',
+                icon: Icons.notes_outlined,
+                child: Text(
+                  appointment.notes!,
+                  style: const TextStyle(color: _detailsText, height: 1.45),
                 ),
               ),
             ],
@@ -589,259 +558,202 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
             _buildPaymentStatusCard(),
 
             if (appointment.type.trim().toLowerCase() == 'online') ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        appointment.canAccessSession
-                            ? Icons.video_call
-                            : Icons.lock_clock_outlined,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              appointment.canAccessSession
-                                  ? 'Online session available'
-                                  : 'Online session unavailable',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              appointment.canAccessSession
-                                  ? 'You can now securely join the online session.'
-                                  : appointment.sessionAccessMessage ??
-                                        'The online session is not currently available.',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              _StatusNotice(
+                icon: appointment.canAccessSession
+                    ? Icons.video_call
+                    : Icons.lock_clock_outlined,
+                title: appointment.canAccessSession
+                    ? 'Online session available'
+                    : 'Online session unavailable',
+                message: appointment.canAccessSession
+                    ? 'You can now securely join the online session.'
+                    : appointment.sessionAccessMessage ??
+                          'The online session is not currently available.',
               ),
             ],
 
             if (appointment.location != null &&
                 appointment.location!.trim().isNotEmpty) ...[
-              const SizedBox(height: 20),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Location',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(appointment.location!),
-                    ],
-                  ),
+              const SizedBox(height: 16),
+              _DetailsSection(
+                title: 'Location',
+                icon: Icons.location_on_outlined,
+                child: Text(
+                  appointment.location!,
+                  style: const TextStyle(color: _detailsText, height: 1.45),
                 ),
               ),
-
-              if (appointment.notes != null &&
-                  appointment.notes!.trim().isNotEmpty) ...[
-                const SizedBox(height: 20),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.notes_outlined),
-                            SizedBox(width: 8),
-                            Text(
-                              'Client note',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(appointment.notes!),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
             ],
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
-            if (canPay)
-              ElevatedButton.icon(
-                onPressed: _paymentViewModel.isPaying ? null : _payAppointment,
-                icon: _paymentViewModel.isPaying
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.payment),
-                label: Text(
-                  _paymentViewModel.isPaying
-                      ? 'Processing payment...'
-                      : 'Pay appointment',
-                ),
-              ),
-
-            if (canPay) const SizedBox(height: 10),
-
-            if (canOpenReceipt)
-              ElevatedButton.icon(
-                onPressed: _openReceipt,
-                icon: const Icon(Icons.receipt_long),
-                label: const Text('View receipt'),
-              ),
-
-            if (canOpenReceipt) const SizedBox(height: 10),
-
-            if (appointment.type.trim().toLowerCase() == 'online')
-              ElevatedButton.icon(
-                onPressed: _viewModel.isRefreshingSession ? null : _joinSession,
-                icon: _viewModel.isRefreshingSession
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        canJoinSession
-                            ? Icons.video_call
-                            : Icons.lock_clock_outlined,
+            _DetailsSection(
+              title: 'Actions',
+              icon: Icons.touch_app_outlined,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (canPay) ...[
+                    FilledButton.icon(
+                      onPressed: _paymentViewModel.isPaying
+                          ? null
+                          : _payAppointment,
+                      icon: _paymentViewModel.isPaying
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.payment),
+                      label: Text(
+                        _paymentViewModel.isPaying
+                            ? 'Processing payment...'
+                            : 'Pay appointment',
                       ),
-                label: Text(
-                  _viewModel.isRefreshingSession
-                      ? 'Checking session access...'
-                      : canJoinSession
-                      ? 'Join session'
-                      : 'Check session access',
-                ),
-              ),
-
-            if (appointment.type.trim().toLowerCase() == 'online')
-              const SizedBox(height: 10),
-
-            ElevatedButton.icon(
-              onPressed: canOpenChat
-                  ? () {
-                      Navigator.of(context).pushNamed(
-                        AppRouter.chatDetails,
-                        arguments: appointment.id,
-                      );
-                    }
-                  : null,
-              icon: const Icon(Icons.chat_bubble_outline),
-              label: Text(
-                canOpenChat ? 'Open chat' : 'Chat available after acceptance',
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pushNamed(AppRouter.myPayments);
-              },
-              icon: const Icon(Icons.payments),
-              label: const Text('Payment history'),
-            ),
-
-            const SizedBox(height: 10),
-
-            ElevatedButton.icon(
-              onPressed:
-                  appointmentAllowsCancel &&
-                      !_paymentViewModel.isPaid &&
-                      !_paymentViewModel.hasRefundProcess
-                  ? () {
-                      Navigator.of(context).pushNamed(
-                        AppRouter.useMembership,
-                        arguments: appointment,
-                      );
-                    }
-                  : null,
-              icon: const Icon(Icons.card_membership),
-              label: Text(
-                _paymentViewModel.isPaid
-                    ? 'Appointment already paid'
-                    : _paymentViewModel.hasRefundProcess
-                    ? 'Refund already processed'
-                    : 'Use membership',
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            ElevatedButton.icon(
-              onPressed: canReview
-                  ? () {
-                      Navigator.of(context).pushNamed(
-                        AppRouter.createReview,
-                        arguments: appointment,
-                      );
-                    }
-                  : null,
-              icon: const Icon(Icons.star),
-              label: Text(
-                canReview
-                    ? 'Leave review'
-                    : 'Review available after completion',
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            OutlinedButton.icon(
-              onPressed: canCancel && !_viewModel.isLoading
-                  ? _showCancellationDialog
-                  : null,
-              icon: _viewModel.isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.cancel_outlined),
-              label: Text(
-                refundBlocksCancellation
-                    ? 'Refund already requested'
-                    : appointmentAllowsCancel
-                    ? _paymentViewModel.isPaid
-                          ? 'Cancel and request refund'
-                          : 'Cancel appointment'
-                    : 'Cancellation unavailable',
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  if (canOpenReceipt) ...[
+                    OutlinedButton.icon(
+                      onPressed: _openReceipt,
+                      icon: const Icon(Icons.receipt_long),
+                      label: const Text('View receipt'),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  if (appointment.type.trim().toLowerCase() == 'online') ...[
+                    FilledButton.tonalIcon(
+                      onPressed: _viewModel.isRefreshingSession
+                          ? null
+                          : _joinSession,
+                      icon: _viewModel.isRefreshingSession
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              canJoinSession
+                                  ? Icons.video_call
+                                  : Icons.lock_clock_outlined,
+                            ),
+                      label: Text(
+                        _viewModel.isRefreshingSession
+                            ? 'Checking session access...'
+                            : canJoinSession
+                            ? 'Join session'
+                            : 'Check session access',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  OutlinedButton.icon(
+                    onPressed: canOpenChat
+                        ? () {
+                            Navigator.of(context).pushNamed(
+                              AppRouter.chatDetails,
+                              arguments: appointment.id,
+                            );
+                          }
+                        : null,
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    label: Text(
+                      canOpenChat
+                          ? 'Open chat'
+                          : 'Chat available after acceptance',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pushNamed(AppRouter.myPayments);
+                    },
+                    icon: const Icon(Icons.payments),
+                    label: const Text('Payment history'),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed:
+                        appointmentAllowsCancel &&
+                            !_paymentViewModel.isPaid &&
+                            !_paymentViewModel.hasRefundProcess
+                        ? () {
+                            Navigator.of(context).pushNamed(
+                              AppRouter.useMembership,
+                              arguments: appointment,
+                            );
+                          }
+                        : null,
+                    icon: const Icon(Icons.card_membership),
+                    label: Text(
+                      _paymentViewModel.isPaid
+                          ? 'Appointment already paid'
+                          : _paymentViewModel.hasRefundProcess
+                          ? 'Refund already processed'
+                          : 'Use membership',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: canReview
+                        ? () {
+                            Navigator.of(context).pushNamed(
+                              AppRouter.createReview,
+                              arguments: appointment,
+                            );
+                          }
+                        : null,
+                    icon: const Icon(Icons.star_border),
+                    label: Text(
+                      canReview
+                          ? 'Leave review'
+                          : 'Review available after completion',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                    onPressed: canCancel && !_viewModel.isLoading
+                        ? _showCancellationDialog
+                        : null,
+                    icon: _viewModel.isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.cancel_outlined),
+                    label: Text(
+                      refundBlocksCancellation
+                          ? 'Refund already requested'
+                          : appointmentAllowsCancel
+                          ? _paymentViewModel.isPaid
+                                ? 'Cancel and request refund'
+                                : 'Cancel appointment'
+                          : 'Cancellation unavailable',
+                    ),
+                  ),
+                ],
               ),
             ),
 
             if (_paymentViewModel.errorMessage != null) ...[
               const SizedBox(height: 12),
-              Text(
-                _paymentViewModel.errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
+              _InlineMessage(
+                message: _paymentViewModel.errorMessage!,
+                icon: Icons.error_outline,
               ),
             ],
 
             if (_viewModel.errorMessage != null) ...[
               const SizedBox(height: 12),
-              Text(
-                _viewModel.errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
+              _InlineMessage(
+                message: _viewModel.errorMessage!,
+                icon: Icons.error_outline,
               ),
             ],
           ],
@@ -859,18 +771,341 @@ class _RowItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 3,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: _detailsMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Flexible(child: Text(value, textAlign: TextAlign.right)),
-      ],
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 5,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: _detailsText,
+                fontWeight: FontWeight.w700,
+                height: 1.25,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
+  }
+}
+
+class _AppointmentHero extends StatelessWidget {
+  final String therapistName;
+  final String status;
+  final String type;
+  final String startsAt;
+  final String price;
+
+  const _AppointmentHero({
+    required this.therapistName,
+    required this.status,
+    required this.type,
+    required this.startsAt,
+    required this.price,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailsCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: const BoxDecoration(
+              color: _detailsLavender,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.calendar_month_outlined,
+              size: 38,
+              color: _detailsPrimary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _StatusChip(status: status),
+          const SizedBox(height: 12),
+          Text(
+            therapistName,
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: _detailsText,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _InfoPill(icon: Icons.schedule_outlined, label: startsAt),
+              _InfoPill(icon: Icons.spa_outlined, label: type),
+              _InfoPill(icon: Icons.payments_outlined, label: price),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailsSection extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Widget child;
+
+  const _DetailsSection({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: _detailsLavender,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: _detailsPrimary, size: 21),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: _detailsText,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailsCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  const _DetailsCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: _detailsSurface,
+        borderRadius: BorderRadius.circular(_detailsRadius),
+        border: Border.all(color: _detailsBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _StatusNotice extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+
+  const _StatusNotice({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailsCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: _detailsLavender,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: _detailsPrimary, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: _detailsText,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  message,
+                  style: const TextStyle(color: _detailsMuted, height: 1.35),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String status;
+
+  const _StatusChip({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: _detailsLavender,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _detailsBorder),
+      ),
+      child: Text(
+        status,
+        style: const TextStyle(
+          color: _detailsPrimary,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _InfoPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: _detailsLavender,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: _detailsPrimary),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: _detailsText,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineMessage extends StatelessWidget {
+  final String message;
+  final IconData icon;
+
+  const _InlineMessage({required this.message, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.error.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: colorScheme.onErrorContainer, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: colorScheme.onErrorContainer,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailsDivider extends StatelessWidget {
+  const _DetailsDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Divider(height: 18, color: _detailsBorder);
   }
 }

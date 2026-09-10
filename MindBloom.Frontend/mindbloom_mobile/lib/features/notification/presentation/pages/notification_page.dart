@@ -11,6 +11,15 @@ import '../../data/models/notification_model.dart';
 import '../viewmodels/notification_scope.dart';
 import '../viewmodels/notification_viewmodel.dart';
 
+const _notificationBackground = Color(0xFFFCFAFF);
+const _notificationSurface = Color(0xFFFFFFFF);
+const _notificationLavender = Color(0xFFF6F0FC);
+const _notificationBorder = Color(0xFFE7DDF1);
+const _notificationPrimary = Color(0xFF6D4F91);
+const _notificationText = Color(0xFF372D45);
+const _notificationMuted = Color(0xFF6C6278);
+const _notificationRadius = 18.0;
+
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
 
@@ -245,8 +254,11 @@ class _NotificationPageState extends State<NotificationPage> {
     final viewModel = NotificationScope.of(context);
 
     return Scaffold(
+      backgroundColor: _notificationBackground,
       appBar: AppBar(
         title: const Text('Notifications'),
+        backgroundColor: _notificationBackground,
+        surfaceTintColor: Colors.transparent,
         actions: [
           if (viewModel.unreadCount > 0)
             TextButton(
@@ -262,18 +274,36 @@ class _NotificationPageState extends State<NotificationPage> {
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Center(
-              child: Row(
-                children: [
-                  Icon(
-                    viewModel.isRealtimeConnected ? Icons.wifi : Icons.sync,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    viewModel.connectionStatusText,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: viewModel.isRealtimeConnected
+                      ? _notificationLavender
+                      : _notificationSurface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: _notificationBorder),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      viewModel.isRealtimeConnected ? Icons.wifi : Icons.sync,
+                      size: 15,
+                      color: _notificationPrimary,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      viewModel.connectionStatusText,
+                      style: const TextStyle(
+                        color: _notificationMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -320,7 +350,7 @@ class _NotificationPageState extends State<NotificationPage> {
       child: ListView.separated(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         itemCount:
             viewModel.notifications.length +
             footerItemCount +
@@ -355,50 +385,13 @@ class _NotificationPageState extends State<NotificationPage> {
 
           final item = viewModel.notifications[adjustedIndex];
 
-          return Card(
-            child: ListTile(
-              leading: CircleAvatar(
-                child: Icon(_iconForAction(item.actionType, item.isRead)),
-              ),
-              title: Text(
-                item.title,
-                style: TextStyle(
-                  fontWeight: item.isRead ? FontWeight.normal : FontWeight.bold,
-                ),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 5),
-                  Text(
-                    item.message,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
-                    formatter.format(item.createdAtUtc.toLocal()),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  if (!item.isActionAvailable) ...[
-                    const SizedBox(height: 5),
-                    Text(
-                      item.unavailableReason ?? 'Linked resource unavailable.',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              trailing: item.isRead
-                  ? const Icon(Icons.done_all)
-                  : const Icon(Icons.circle, size: 12),
-              onTap: () {
-                _openNotification(item);
-              },
-            ),
+          return _NotificationTile(
+            notification: item,
+            formatter: formatter,
+            icon: _iconForAction(item.actionType, item.isRead),
+            onTap: () {
+              _openNotification(item);
+            },
           );
         },
       ),
@@ -431,5 +424,157 @@ class _NotificationPageState extends State<NotificationPage> {
       case NotificationActionType.none:
         return isRead ? Icons.notifications_none : Icons.notifications_active;
     }
+  }
+}
+
+class _NotificationTile extends StatelessWidget {
+  final NotificationModel notification;
+  final DateFormat formatter;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _NotificationTile({
+    required this.notification,
+    required this.formatter,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isUnread = !notification.isRead;
+    final errorColor = Theme.of(context).colorScheme.error;
+
+    return Material(
+      color: isUnread ? _notificationLavender : _notificationSurface,
+      borderRadius: BorderRadius.circular(_notificationRadius),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(_notificationRadius),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_notificationRadius),
+            border: Border.all(
+              color: isUnread ? _notificationPrimary : _notificationBorder,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: isUnread
+                        ? _notificationPrimary
+                        : _notificationLavender,
+                    child: Icon(
+                      icon,
+                      color: isUnread ? Colors.white : _notificationPrimary,
+                    ),
+                  ),
+                  if (isUnread)
+                    Positioned(
+                      right: -1,
+                      top: -1,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: _notificationPrimary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: _notificationSurface),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      notification.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: _notificationText,
+                        fontSize: 16,
+                        fontWeight: isUnread
+                            ? FontWeight.w800
+                            : FontWeight.w700,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      notification.message,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isUnread
+                            ? _notificationText
+                            : _notificationMuted,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          formatter.format(notification.createdAtUtc.toLocal()),
+                          style: const TextStyle(
+                            color: _notificationMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (isUnread)
+                          const Text(
+                            'Unread',
+                            style: TextStyle(
+                              color: _notificationPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (!notification.isActionAvailable) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        notification.unavailableReason ??
+                            'Linked resource unavailable.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: errorColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(
+                notification.isRead ? Icons.done_all : Icons.circle,
+                size: notification.isRead ? 20 : 12,
+                color: notification.isRead
+                    ? _notificationMuted
+                    : _notificationPrimary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

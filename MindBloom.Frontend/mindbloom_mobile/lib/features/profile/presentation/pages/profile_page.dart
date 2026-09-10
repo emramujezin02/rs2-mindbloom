@@ -11,6 +11,15 @@ import '../../../session/presentation/viewmodels/session_scope.dart';
 import 'package:intl/intl.dart';
 import '../../../appointment/data/models/unavailable_date_model.dart';
 
+const _profileBackground = Color(0xFFFCFAFF);
+const _profileSurface = Color(0xFFFFFFFF);
+const _profileLavender = Color(0xFFF6F0FC);
+const _profileBorder = Color(0xFFE7DDF1);
+const _profilePrimary = Color(0xFF6D4F91);
+const _profileText = Color(0xFF372D45);
+const _profileMuted = Color(0xFF6C6278);
+const _profileRadius = 20.0;
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -23,6 +32,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final TherapistProfileViewModel _therapistProfileViewModel =
       AppInjection.createTherapistProfileViewModel();
   final ImagePicker _imagePicker = ImagePicker();
+  bool _initialLoadRequested = false;
 
   @override
   void initState() {
@@ -30,9 +40,25 @@ class _ProfilePageState extends State<ProfilePage> {
 
     _viewModel.addListener(_refresh);
     _therapistProfileViewModel.addListener(_refresh);
+  }
 
-    _viewModel.loadProfile();
-    _therapistProfileViewModel.loadProfile();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (_initialLoadRequested) {
+      return;
+    }
+
+    _initialLoadRequested = true;
+
+    final session = SessionScope.of(context);
+
+    if (session.isTherapist) {
+      _therapistProfileViewModel.loadProfile();
+    } else {
+      _viewModel.loadProfile();
+    }
   }
 
   @override
@@ -507,11 +533,15 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     if (_viewModel.isLoading && _viewModel.profile == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        backgroundColor: _profileBackground,
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (_viewModel.error != null && _viewModel.profile == null) {
       return Scaffold(
+        backgroundColor: _profileBackground,
         appBar: AppBar(title: const Text('My profile')),
         body: Center(
           child: Padding(
@@ -530,6 +560,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (profile == null) {
       return const Scaffold(
+        backgroundColor: _profileBackground,
         body: Center(child: Text('Unable to load profile.')),
       );
     }
@@ -537,8 +568,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final imageUrl = _buildImageUrl(profile.profileImageUrl);
 
     return Scaffold(
+      backgroundColor: _profileBackground,
       appBar: AppBar(
         title: const Text('My profile'),
+        backgroundColor: _profileBackground,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(onPressed: _openEditProfile, icon: const Icon(Icons.edit)),
         ],
@@ -551,187 +585,22 @@ class _ProfilePageState extends State<ProfilePage> {
           ]);
         },
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
           children: [
-            Center(
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  CircleAvatar(
-                    radius: 52,
-                    backgroundImage: imageUrl != null
-                        ? NetworkImage(imageUrl)
-                        : null,
-                    child: imageUrl == null
-                        ? const Icon(Icons.person, size: 52)
-                        : null,
-                  ),
-                  Positioned(
-                    right: -4,
-                    bottom: -4,
-                    child: Material(
-                      shape: const CircleBorder(),
-                      elevation: 3,
-                      child: IconButton(
-                        onPressed: _viewModel.isUploadingImage
-                            ? null
-                            : _selectProfileImage,
-                        tooltip: 'Change profile picture',
-                        icon: _viewModel.isUploadingImage
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.camera_alt),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            _ProfileHeaderCard(
+              profile: profile,
+              imageUrl: imageUrl,
+              isUploadingImage: _viewModel.isUploadingImage,
+              onChangePhoto: _selectProfileImage,
             ),
-
-            const SizedBox(height: 24),
-
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('Name'),
-              subtitle: Text(
-                '${profile.firstName} '
-                '${profile.lastName}',
-              ),
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.email),
-              title: const Text('Email'),
-              subtitle: Text(profile.email),
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.phone),
-              title: const Text('Phone'),
-              subtitle: Text(
-                profile.phoneNumber.isEmpty ? 'Not added' : profile.phoneNumber,
-              ),
-            ),
-
-            if (profile.dateOfBirth != null)
-              ListTile(
-                leading: const Icon(Icons.cake),
-                title: const Text('Date of birth'),
-                subtitle: Text(
-                  '${profile.dateOfBirth!.day.toString().padLeft(2, '0')}.'
-                  '${profile.dateOfBirth!.month.toString().padLeft(2, '0')}.'
-                  '${profile.dateOfBirth!.year}.',
-                ),
-              ),
 
             const SizedBox(height: 20),
 
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Therapy preferences',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+            _buildPersonalInfoSection(profile),
 
-                    const SizedBox(height: 8),
+            const SizedBox(height: 20),
 
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.location_on_outlined),
-                      title: const Text('Location'),
-                      subtitle: Text(
-                        profile.location == null ||
-                                profile.location!.trim().isEmpty
-                            ? 'Not added'
-                            : profile.location!,
-                      ),
-                    ),
-
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.person_search_outlined),
-                      title: const Text('Preferred therapist gender'),
-                      subtitle: Text(
-                        profile.preferredTherapistGender == null ||
-                                profile.preferredTherapistGender!
-                                        .toLowerCase() ==
-                                    'any'
-                            ? 'No preference'
-                            : profile.preferredTherapistGender!,
-                      ),
-                    ),
-
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.video_call_outlined),
-                      title: const Text('Preferred session type'),
-                      subtitle: Text(
-                        profile.preferredSessionType == null ||
-                                profile.preferredSessionType!.toLowerCase() ==
-                                    'any'
-                            ? 'No preference'
-                            : profile.preferredSessionType == 'InPerson'
-                            ? 'In person'
-                            : profile.preferredSessionType!,
-                      ),
-                    ),
-
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.payments_outlined),
-                      title: const Text('Preferred price range'),
-                      subtitle: Text(_formatPriceRange(profile)),
-                    ),
-
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.language),
-                      title: const Text('Preferred languages'),
-                      subtitle: Text(
-                        profile.preferredLanguages.isEmpty
-                            ? 'No preference'
-                            : profile.preferredLanguages.join(', '),
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final result = await Navigator.of(
-                            context,
-                          ).pushNamed(AppRouter.onboarding);
-
-                          if (!mounted) {
-                            return;
-                          }
-
-                          if (result == true) {
-                            await _viewModel.loadProfile();
-                          }
-                        },
-                        icon: const Icon(Icons.tune),
-                        label: const Text('Edit recommendation preferences'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            _buildTherapyPreferencesSection(profile),
 
             if (_therapistProfileViewModel.profile != null) ...[
               const SizedBox(height: 20),
@@ -751,85 +620,165 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
 
             const SizedBox(height: 20),
-
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pushNamed(AppRouter.changePassword);
-                },
-                icon: const Icon(Icons.lock_reset),
-                label: const Text('Change password'),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pushNamed(AppRouter.twoFactorSettings);
-                },
-                icon: const Icon(Icons.security),
-                label: const Text('Two-factor authentication'),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pushNamed(AppRouter.privacyConsents);
-                },
-                icon: const Icon(Icons.privacy_tip_outlined),
-                label: const Text('Privacy & consents'),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pushNamed(AppRouter.myReviews);
-                },
-                icon: const Icon(Icons.reviews),
-                label: const Text('My reviews'),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.error,
-                  side: BorderSide(color: Theme.of(context).colorScheme.error),
-                ),
-                onPressed: _deleteAccount,
-                icon: const Icon(Icons.delete_forever_outlined),
-                label: const Text('Delete account'),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _logout,
-                icon: const Icon(Icons.logout),
-                label: const Text('Log out'),
-              ),
-            ),
+            _buildAccountActionsSection(),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPersonalInfoSection(ProfileModel profile) {
+    return _ProfileSection(
+      title: 'Personal information',
+      children: [
+        _ProfileInfoRow(
+          icon: Icons.person_outline,
+          label: 'Name',
+          value: '${profile.firstName} ${profile.lastName}'.trim(),
+        ),
+        _ProfileInfoRow(
+          icon: Icons.email_outlined,
+          label: 'Email',
+          value: profile.email,
+        ),
+        _ProfileInfoRow(
+          icon: Icons.phone_outlined,
+          label: 'Phone',
+          value: profile.phoneNumber.isEmpty
+              ? 'Not added'
+              : profile.phoneNumber,
+        ),
+        if (profile.dateOfBirth != null)
+          _ProfileInfoRow(
+            icon: Icons.cake_outlined,
+            label: 'Date of birth',
+            value:
+                '${profile.dateOfBirth!.day.toString().padLeft(2, '0')}.'
+                '${profile.dateOfBirth!.month.toString().padLeft(2, '0')}.'
+                '${profile.dateOfBirth!.year}.',
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTherapyPreferencesSection(ProfileModel profile) {
+    final gender =
+        profile.preferredTherapistGender == null ||
+            profile.preferredTherapistGender!.toLowerCase() == 'any'
+        ? 'No preference'
+        : profile.preferredTherapistGender!;
+    final sessionType =
+        profile.preferredSessionType == null ||
+            profile.preferredSessionType!.toLowerCase() == 'any'
+        ? 'No preference'
+        : profile.preferredSessionType == 'InPerson'
+        ? 'In person'
+        : profile.preferredSessionType!;
+
+    return _ProfileSection(
+      title: 'Therapy preferences',
+      children: [
+        _ProfileInfoRow(
+          icon: Icons.location_on_outlined,
+          label: 'Location',
+          value: profile.location == null || profile.location!.trim().isEmpty
+              ? 'Not added'
+              : profile.location!,
+        ),
+        _ProfileInfoRow(
+          icon: Icons.person_search_outlined,
+          label: 'Preferred therapist gender',
+          value: gender,
+        ),
+        _ProfileInfoRow(
+          icon: Icons.video_call_outlined,
+          label: 'Preferred session type',
+          value: sessionType,
+        ),
+        _ProfileInfoRow(
+          icon: Icons.payments_outlined,
+          label: 'Preferred price range',
+          value: _formatPriceRange(profile),
+        ),
+        _ProfileInfoRow(
+          icon: Icons.language,
+          label: 'Preferred languages',
+          value: profile.preferredLanguages.isEmpty
+              ? 'No preference'
+              : profile.preferredLanguages.join(', '),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              final result = await Navigator.of(
+                context,
+              ).pushNamed(AppRouter.onboarding);
+
+              if (!mounted) {
+                return;
+              }
+
+              if (result == true) {
+                await _viewModel.loadProfile();
+              }
+            },
+            icon: const Icon(Icons.tune),
+            label: const Text('Edit recommendation preferences'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccountActionsSection() {
+    final errorColor = Theme.of(context).colorScheme.error;
+
+    return _ProfileSection(
+      title: 'Account',
+      children: [
+        _ProfileActionButton(
+          icon: Icons.lock_reset,
+          label: 'Change password',
+          onPressed: () {
+            Navigator.of(context).pushNamed(AppRouter.changePassword);
+          },
+        ),
+        _ProfileActionButton(
+          icon: Icons.security,
+          label: 'Two-factor authentication',
+          onPressed: () {
+            Navigator.of(context).pushNamed(AppRouter.twoFactorSettings);
+          },
+        ),
+        _ProfileActionButton(
+          icon: Icons.privacy_tip_outlined,
+          label: 'Privacy & consents',
+          onPressed: () {
+            Navigator.of(context).pushNamed(AppRouter.privacyConsents);
+          },
+        ),
+        _ProfileActionButton(
+          icon: Icons.reviews,
+          label: 'My reviews',
+          onPressed: () {
+            Navigator.of(context).pushNamed(AppRouter.myReviews);
+          },
+        ),
+        _ProfileActionButton(
+          icon: Icons.delete_forever_outlined,
+          label: 'Delete account',
+          foregroundColor: errorColor,
+          borderColor: errorColor,
+          onPressed: _deleteAccount,
+        ),
+        _ProfileActionButton(
+          icon: Icons.logout,
+          label: 'Log out',
+          onPressed: _logout,
+        ),
+      ],
     );
   }
 
@@ -1358,5 +1307,235 @@ class _ProfilePageState extends State<ProfilePage> {
       default:
         return Icons.block_outlined;
     }
+  }
+}
+
+class _ProfileHeaderCard extends StatelessWidget {
+  final ProfileModel profile;
+  final String? imageUrl;
+  final bool isUploadingImage;
+  final VoidCallback onChangePhoto;
+
+  const _ProfileHeaderCard({
+    required this.profile,
+    required this.imageUrl,
+    required this.isUploadingImage,
+    required this.onChangePhoto,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fullName = '${profile.firstName} ${profile.lastName}'.trim();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _profileLavender,
+        borderRadius: BorderRadius.circular(_profileRadius),
+        border: Border.all(color: _profileBorder),
+      ),
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.white,
+                backgroundImage: imageUrl != null
+                    ? NetworkImage(imageUrl!)
+                    : null,
+                child: imageUrl == null
+                    ? const Icon(
+                        Icons.person_outline,
+                        size: 48,
+                        color: _profilePrimary,
+                      )
+                    : null,
+              ),
+              Positioned(
+                right: -4,
+                bottom: -4,
+                child: Material(
+                  color: _profileSurface,
+                  shape: const CircleBorder(),
+                  elevation: 2,
+                  child: IconButton(
+                    onPressed: isUploadingImage ? null : onChangePhoto,
+                    tooltip: 'Change profile picture',
+                    icon: isUploadingImage
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.camera_alt_outlined),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            fullName.isEmpty ? 'MindBloom client' : fullName,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: _profileText,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            profile.email,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: _profileMuted, height: 1.35),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileSection extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const _ProfileSection({required this.title, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _profileSurface,
+        borderRadius: BorderRadius.circular(_profileRadius),
+        border: Border.all(color: _profileBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: _profileText,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _ProfileInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: _profileLavender,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: _profilePrimary, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: _profileMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: _profileText,
+                    fontSize: 15,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final Color? foregroundColor;
+  final Color? borderColor;
+
+  const _ProfileActionButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.foregroundColor,
+    this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            alignment: Alignment.centerLeft,
+            foregroundColor: foregroundColor ?? _profilePrimary,
+            side: BorderSide(color: borderColor ?? _profileBorder),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          ),
+          onPressed: onPressed,
+          icon: Icon(icon),
+          label: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ),
+      ),
+    );
   }
 }

@@ -29,6 +29,7 @@ class AuthRepository {
         accessToken: auth.token,
         refreshToken: auth.refreshToken,
       );
+      await sessionStorage.saveUserRole(auth.role);
     }
 
     return response;
@@ -41,6 +42,7 @@ class AuthRepository {
       accessToken: response.token,
       refreshToken: response.refreshToken,
     );
+    await sessionStorage.saveUserRole(response.role);
 
     return response;
   }

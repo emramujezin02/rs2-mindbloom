@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/navigation/app_navigation.dart';
+import '../core/debug/mindbloom_debug_log.dart';
 import '../features/notification/presentation/viewmodels/notification_scope.dart';
 import '../features/notification/presentation/viewmodels/notification_viewmodel.dart';
 import '../features/session/presentation/viewmodels/session_scope.dart';
@@ -21,6 +22,8 @@ class MindBloomMobileApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    logStartup('MindBloomMobileApp.build reached');
+
     return SessionScope(
       session: session,
       child: NotificationScope(
@@ -32,6 +35,13 @@ class MindBloomMobileApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           onGenerateRoute: AppRouter.generateRoute,
           initialRoute: AppRouter.home,
+          builder: (context, child) {
+            logStartup(
+              'MaterialApp.builder reached child=${child.runtimeType}',
+            );
+
+            return child ?? const SizedBox.shrink();
+          },
         ),
       ),
     );

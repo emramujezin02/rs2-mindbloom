@@ -6,8 +6,18 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/widgets/app_empty_state_widget.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../../../../core/widgets/app_loading_widget.dart';
+import '../../data/models/journal_entry_model.dart';
 import '../constants/mood_options.dart';
 import '../viewmodels/journal_viewmodel.dart';
+
+const _journalBackground = Color(0xFFFCFAFF);
+const _journalSurface = Color(0xFFFFFFFF);
+const _journalLavender = Color(0xFFF6F0FC);
+const _journalBorder = Color(0xFFE7DDF1);
+const _journalPrimary = Color(0xFF6D4F91);
+const _journalText = Color(0xFF372D45);
+const _journalMuted = Color(0xFF6C6278);
+const _journalRadius = 20.0;
 
 class JournalPage extends StatefulWidget {
   const JournalPage({super.key});
@@ -187,8 +197,11 @@ class _JournalPageState extends State<JournalPage> {
     final hasFilter = viewModel.fromDate != null || viewModel.toDate != null;
 
     return Scaffold(
+      backgroundColor: _journalBackground,
       appBar: AppBar(
         title: const Text('Mood and emotions'),
+        backgroundColor: _journalBackground,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             tooltip: 'Filter by period',
@@ -200,6 +213,8 @@ class _JournalPageState extends State<JournalPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: _journalPrimary,
+        foregroundColor: Colors.white,
         onPressed: viewModel.isLoading ? null : _addEntry,
         child: const Icon(Icons.add),
       ),
@@ -245,7 +260,7 @@ class _JournalPageState extends State<JournalPage> {
       onRefresh: _reload,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
           if (viewModel.error != null)
             AppInlineError(
@@ -257,43 +272,13 @@ class _JournalPageState extends State<JournalPage> {
               margin: const EdgeInsets.only(bottom: 12),
             ),
           ...viewModel.entries.map((entry) {
-            final moodOption = moodOptionFor(entry.mood);
-
             return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Card(
-                child: ListTile(
-                  onTap: () {
-                    _openEntry(entry.id);
-                  },
-                  leading: CircleAvatar(child: Icon(moodOption.icon)),
-                  title: Text(moodOption.label),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      Text(
-                        entry.emotions.isEmpty
-                            ? 'No emotions selected.'
-                            : entry.emotions.join(', '),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        entry.note.trim().isEmpty
-                            ? 'No notes added.'
-                            : entry.note,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        DateFormat(
-                          'dd.MM.yyyy. HH:mm',
-                        ).format(entry.createdAtUtc.toLocal()),
-                      ),
-                    ],
-                  ),
-                ),
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _MoodJournalCard(
+                entry: entry,
+                onTap: () {
+                  _openEntry(entry.id);
+                },
               ),
             );
           }),
@@ -319,6 +304,115 @@ class _JournalPageState extends State<JournalPage> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _MoodJournalCard extends StatelessWidget {
+  final JournalEntryModel entry;
+  final VoidCallback onTap;
+
+  const _MoodJournalCard({required this.entry, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final moodOption = moodOptionFor(entry.mood);
+    final note = entry.note.trim();
+    final emotions = entry.emotions.isEmpty
+        ? 'No emotions selected.'
+        : entry.emotions.join(', ');
+    final created = DateFormat(
+      'dd.MM.yyyy. HH:mm',
+    ).format(entry.createdAtUtc.toLocal());
+
+    return Material(
+      color: _journalSurface,
+      borderRadius: BorderRadius.circular(_journalRadius),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(_journalRadius),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_journalRadius),
+            border: Border.all(color: _journalBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x08000000),
+                blurRadius: 14,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: _journalLavender,
+                child: Icon(moodOption.icon, color: _journalPrimary),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            moodOption.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: _journalText,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: _journalMuted,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      emotions,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _journalMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      note.isEmpty ? 'No notes added.' : note,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: _journalText, height: 1.4),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      created,
+                      style: const TextStyle(
+                        color: _journalMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

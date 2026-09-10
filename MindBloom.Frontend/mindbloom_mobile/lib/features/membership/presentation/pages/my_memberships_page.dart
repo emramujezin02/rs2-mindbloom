@@ -9,6 +9,15 @@ import '../../data/models/membership_model.dart';
 import '../viewmodels/membership_viewmodel.dart';
 import 'membership_receipt_page.dart';
 
+const _membershipBackground = Color(0xFFFCFAFF);
+const _membershipSurface = Color(0xFFFFFFFF);
+const _membershipLavender = Color(0xFFF6F0FC);
+const _membershipBorder = Color(0xFFE7DDF1);
+const _membershipPrimary = Color(0xFF6D4F91);
+const _membershipText = Color(0xFF372D45);
+const _membershipMuted = Color(0xFF6C6278);
+const _membershipRadius = 20.0;
+
 class MyMembershipsPage extends StatefulWidget {
   const MyMembershipsPage({super.key});
 
@@ -57,8 +66,11 @@ class _MyMembershipsPageState extends State<MyMembershipsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _membershipBackground,
       appBar: AppBar(
         title: const Text('My memberships'),
+        backgroundColor: _membershipBackground,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             tooltip: 'Refresh',
@@ -105,7 +117,7 @@ class _MyMembershipsPageState extends State<MyMembershipsPage> {
       onRefresh: _refresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
           if (_viewModel.error != null)
             AppInlineError(
@@ -173,13 +185,22 @@ class _MembershipSectionEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: _membershipSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_membershipRadius),
+        side: const BorderSide(color: _membershipBorder),
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
         child: Column(
           children: [
-            Icon(icon, size: 42),
+            Icon(icon, size: 42, color: _membershipPrimary),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: _membershipMuted, height: 1.35),
+            ),
           ],
         ),
       ),
@@ -209,90 +230,159 @@ class _MembershipCard extends StatelessWidget {
             1.0,
           );
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
+    return Material(
+      color: _membershipSurface,
+      borderRadius: BorderRadius.circular(_membershipRadius),
       child: InkWell(
         onTap: onReceipt,
+        borderRadius: BorderRadius.circular(_membershipRadius),
         child: Padding(
-          padding: const EdgeInsets.all(17),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(highlightActive ? Icons.verified : Icons.history),
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: const BoxDecoration(
+                      color: _membershipLavender,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      highlightActive ? Icons.verified : Icons.history,
+                      color: _membershipPrimary,
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       membership.displayPlanName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
+                        color: _membershipText,
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
-                  Chip(label: Text(membership.displayMembershipStatus)),
+                  const SizedBox(width: 8),
+                  _MembershipStatusChip(
+                    label: membership.displayMembershipStatus,
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
                 membership.therapistName,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _membershipMuted,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               if (membership.isPaid) ...[
                 const SizedBox(height: 16),
-                LinearProgressIndicator(value: progress),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 7,
+                    color: _membershipPrimary,
+                    backgroundColor: _membershipLavender,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   '${membership.remainingSessions} of '
                   '${membership.totalSessions} sessions remaining',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: _membershipText,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 5),
-                Text('${membership.usedSessions} sessions used'),
+                Text(
+                  '${membership.usedSessions} sessions used',
+                  style: const TextStyle(color: _membershipMuted),
+                ),
               ],
               const SizedBox(height: 12),
-              Text(
-                'Price: '
-                '${membership.price.toStringAsFixed(2)} KM',
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Payment: '
-                '${membership.displayPaymentStatus}',
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _MembershipMetaPill(
+                    icon: Icons.payments_outlined,
+                    label: '${membership.price.toStringAsFixed(2)} KM',
+                  ),
+                  _MembershipMetaPill(
+                    icon: Icons.receipt_long_outlined,
+                    label: membership.displayPaymentStatus,
+                  ),
+                ],
               ),
               if (membership.purchasedAtUtc != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  'Start date: '
-                  '${formatter.format(membership.purchasedAtUtc!.toLocal())}',
+                const SizedBox(height: 8),
+                _MembershipInfoRow(
+                  label: 'Start date',
+                  value: formatter.format(membership.purchasedAtUtc!.toLocal()),
                 ),
               ],
               if (membership.expiresAtUtc != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  'Expiration date: '
-                  '${formatter.format(membership.expiresAtUtc!.toLocal())}',
+                const SizedBox(height: 8),
+                _MembershipInfoRow(
+                  label: 'Expiration date',
+                  value: formatter.format(membership.expiresAtUtc!.toLocal()),
                 ),
               ],
               if (onReceipt != null) ...[
                 const SizedBox(height: 14),
-                const Align(
-                  alignment: Alignment.centerRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.receipt_long, size: 18),
-                      SizedBox(width: 6),
-                      Text('View receipt'),
-                    ],
-                  ),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Icon(
+                      Icons.receipt_long,
+                      size: 18,
+                      color: _membershipPrimary,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'View receipt',
+                      style: TextStyle(
+                        color: _membershipPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ],
           ),
         ),
       ),
+    ).withMembershipBorder();
+  }
+}
+
+extension _MembershipBorder on Widget {
+  Widget withMembershipBorder() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(_membershipRadius),
+        border: Border.all(color: _membershipBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: this,
     );
   }
 }
@@ -306,7 +396,106 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       value,
-      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+      style: const TextStyle(
+        color: _membershipText,
+        fontSize: 19,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
+
+class _MembershipStatusChip extends StatelessWidget {
+  final String label;
+
+  const _MembershipStatusChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: _membershipLavender,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _membershipBorder),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: _membershipPrimary,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _MembershipMetaPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MembershipMetaPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: _membershipLavender,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: _membershipPrimary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: _membershipText,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MembershipInfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _MembershipInfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: _membershipMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              color: _membershipText,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

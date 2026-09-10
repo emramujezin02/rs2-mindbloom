@@ -85,6 +85,12 @@ public sealed class RabbitMqOptions
         set;
     } = 3;
 
+    public int ConnectionTimeoutSeconds
+    {
+        get;
+        set;
+    } = 3;
+
     public int DeadLetterMonitoringIntervalSeconds
     {
         get;

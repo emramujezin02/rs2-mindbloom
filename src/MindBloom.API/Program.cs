@@ -1,5 +1,4 @@
-using System.Text.Json;
-using DotNetEnv;
+﻿using System.Text.Json;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +7,7 @@ using MindBloom.API.Configuration;
 using MindBloom.API.Filters;
 using MindBloom.API.Messaging.DependencyInjection;
 using MindBloom.API.Middlewares;
+using MindBloom.API.Messaging.RabbitMq;
 using MindBloom.API.Models;
 using MindBloom.Application.Features.Auth.Validators;
 using MindBloom.Application.Recommendations.Services;
@@ -36,28 +36,18 @@ using MindBloom.Shared.Observability;
 using MindBloom.Infrastructure.Messaging.Outbox;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.API.Messaging.Outbox;
-using MindBloom.API.Configuration;
 using MindBloom.API.Idempotency;
 using MindBloom.API.Maintenance;
 
-var bootstrapEnvironment =
-    Environment.GetEnvironmentVariable(
-        "ASPNETCORE_ENVIRONMENT")
-    ??
-    Environment.GetEnvironmentVariable(
-        "DOTNET_ENVIRONMENT");
-
-if (!string.Equals(
-        bootstrapEnvironment,
-        "Testing",
-        StringComparison.OrdinalIgnoreCase))
-{
-    Env.TraversePath()
-        .Load();
-}
-
 var builder =
     WebApplication.CreateBuilder(args);
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Logging.ClearProviders();
+    builder.Logging.AddConsole();
+    builder.Logging.AddDebug();
+}
 
 builder.Services
     .AddOptions<DataRetentionOptions>()
@@ -181,6 +171,8 @@ builder.Services
     .AddValidatorsFromAssemblyContaining<
         CreatePrivateJournalEntryDtoValidator>();
 
+
+
 builder.Services.AddScoped<
     IUserSettingsService,
     UserSettingsService>();
@@ -271,6 +263,9 @@ builder.Services
 builder.Services
     .AddNotificationMessaging(
         builder.Configuration);
+
+builder.Services.AddHostedService<
+    RabbitMqPublisherWarmupHostedService>();
 
 builder.Services.AddHostedService<
     OutboxMessageProcessor>();
@@ -1012,14 +1007,20 @@ static FixedWindowRateLimiterOptions
             TimeSpan.FromSeconds(
                 rule.WindowSeconds),
 
-        QueueLimit =
-            Math.Max(
-                0,
-                rule.QueueLimit),
+        /*
+         * API zahtjevi se ne smiju držati u redu čekanja.
+         *
+         * Posebno kod autentifikacije mobile klijent ima
+         * vlastiti request timeout. Ako je rate limit
+         * potrošen, server mora odmah vratiti HTTP 429,
+         * a ne držati zahtjev dok se prozor ne obnovi.
+         */
+        QueueLimit = 0,
 
         AutoReplenishment =
             true
     };
+
 }
 
 public partial class Program

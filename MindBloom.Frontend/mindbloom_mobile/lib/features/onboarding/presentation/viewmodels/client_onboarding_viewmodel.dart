@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../therapy_approach/data/models/therapy_approach_model.dart';
@@ -19,6 +21,7 @@ class ClientOnboardingViewModel extends ChangeNotifier {
 
   bool isLoading = false;
   bool isSaving = false;
+  bool _isDisposed = false;
 
   String? error;
 
@@ -57,22 +60,33 @@ class ClientOnboardingViewModel extends ChangeNotifier {
     isLoading = true;
     error = null;
 
-    notifyListeners();
+    _notifyListeners();
 
     try {
-      final results = await Future.wait([
-        repository.getOnboarding(),
-        therapyApproachRepository.getPublicTherapyApproaches(),
-      ]);
+      onboarding = await repository.getOnboarding();
 
-      onboarding = results[0] as ClientOnboardingModel;
-
-      therapyApproaches = results[1] as List<TherapyApproachModel>;
+      unawaited(_loadTherapyApproaches());
     } catch (exception) {
       error = _normalizeError(exception);
     } finally {
       isLoading = false;
-      notifyListeners();
+      _notifyListeners();
+    }
+  }
+
+  Future<void> _loadTherapyApproaches() async {
+    try {
+      therapyApproaches = await therapyApproachRepository
+          .getPublicTherapyApproaches();
+    } catch (exception) {
+      if (kDebugMode) {
+        debugPrint(
+          'MindBloom onboarding: therapy approaches load failed with '
+          '${exception.runtimeType}: $exception',
+        );
+      }
+    } finally {
+      _notifyListeners();
     }
   }
 
@@ -85,7 +99,7 @@ class ClientOnboardingViewModel extends ChangeNotifier {
     error = null;
     fieldErrors = {};
 
-    notifyListeners();
+    _notifyListeners();
 
     try {
       onboarding = await repository.saveOnboarding(request);
@@ -97,6 +111,18 @@ class ClientOnboardingViewModel extends ChangeNotifier {
       return false;
     } finally {
       isSaving = false;
+      _notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  void _notifyListeners() {
+    if (!_isDisposed) {
       notifyListeners();
     }
   }

@@ -9,6 +9,15 @@ import '../../../../core/widgets/app_loading_widget.dart';
 import '../../../journal/presentation/constants/mood_options.dart';
 import '../viewmodels/private_journal_viewmodel.dart';
 
+const _privateDetailBackground = Color(0xFFFCFAFF);
+const _privateDetailSurface = Color(0xFFFFFFFF);
+const _privateDetailLavender = Color(0xFFF6F0FC);
+const _privateDetailBorder = Color(0xFFE7DDF1);
+const _privateDetailPrimary = Color(0xFF6D4F91);
+const _privateDetailText = Color(0xFF372D45);
+const _privateDetailMuted = Color(0xFF6C6278);
+const _privateDetailRadius = 20.0;
+
 class PrivateJournalEntryDetailsPage extends StatefulWidget {
   final int entryId;
 
@@ -105,8 +114,11 @@ class _PrivateJournalEntryDetailsPageState
     final entry = _viewModel.selectedEntry;
 
     return Scaffold(
+      backgroundColor: _privateDetailBackground,
       appBar: AppBar(
         title: const Text('Private journal entry'),
+        backgroundColor: _privateDetailBackground,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             onPressed: entry == null || _viewModel.isDeleting ? null : _edit,
@@ -160,7 +172,7 @@ class _PrivateJournalEntryDetailsPageState
       onRefresh: _reload,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
           if (_viewModel.detailsError != null)
             AppInlineError(
@@ -169,24 +181,66 @@ class _PrivateJournalEntryDetailsPageState
               onRetry: _reload,
               margin: const EdgeInsets.only(bottom: 16),
             ),
-          const Card(
-            child: ListTile(
-              leading: Icon(Icons.lock_outline),
-              title: Text('Private entry'),
-              subtitle: Text('This text is visible only to your account.'),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _privateDetailLavender,
+              borderRadius: BorderRadius.circular(_privateDetailRadius),
+              border: Border.all(color: _privateDetailBorder),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lock_outline, color: _privateDetailPrimary),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'This private journal text is visible only to your account.',
+                    style: TextStyle(
+                      color: _privateDetailText,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
           Text(
             entry.title,
-            style: const TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: _privateDetailText,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              height: 1.15,
+            ),
           ),
           const SizedBox(height: 8),
-          Text(DateFormat('dd.MM.yyyy.').format(entry.entryDateUtc.toLocal())),
-          const SizedBox(height: 24),
           Text(
-            entry.content,
-            style: const TextStyle(fontSize: 16, height: 1.55),
+            DateFormat('dd.MM.yyyy.').format(entry.entryDateUtc.toLocal()),
+            style: const TextStyle(
+              color: _privateDetailMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: _privateDetailSurface,
+              borderRadius: BorderRadius.circular(_privateDetailRadius),
+              border: Border.all(color: _privateDetailBorder),
+            ),
+            child: Text(
+              entry.content,
+              style: const TextStyle(
+                color: _privateDetailText,
+                fontSize: 16,
+                height: 1.65,
+              ),
+            ),
           ),
           if (entry.mood != null) ...[
             const SizedBox(height: 24),
@@ -225,6 +279,12 @@ class _PrivateJournalEntryDetailsPageState
     final moodOption = moodOptionFor(entry.mood!);
 
     return Card(
+      color: _privateDetailSurface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_privateDetailRadius),
+        side: const BorderSide(color: _privateDetailBorder),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -232,12 +292,19 @@ class _PrivateJournalEntryDetailsPageState
           children: [
             const Text(
               'Related mood entry',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: _privateDetailText,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 12),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(child: Icon(moodOption.icon)),
+              leading: CircleAvatar(
+                backgroundColor: _privateDetailLavender,
+                child: Icon(moodOption.icon, color: _privateDetailPrimary),
+              ),
               title: Text(moodOption.label),
               subtitle: Text(
                 entry.emotions.isEmpty

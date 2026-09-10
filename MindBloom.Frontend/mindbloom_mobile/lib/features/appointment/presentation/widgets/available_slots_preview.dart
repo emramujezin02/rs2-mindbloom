@@ -3,6 +3,14 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/widgets/app_loading_widget.dart';
 
+const _slotsSurface = Color(0xFFFFFFFF);
+const _slotsLavender = Color(0xFFF6F0FC);
+const _slotsBorder = Color(0xFFE7DDF1);
+const _slotsPrimary = Color(0xFF6D4F91);
+const _slotsText = Color(0xFF372D45);
+const _slotsMuted = Color(0xFF6C6278);
+const _slotsRadius = 18.0;
+
 class AvailableSlotsPreview extends StatelessWidget {
   final bool isLoading;
   final Map<DateTime, List<DateTime>> groupedSlots;
@@ -20,12 +28,9 @@ class AvailableSlotsPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: AppInlineLoadingIndicator(
-            message: 'Loading available appointments...',
-          ),
+      return const _SlotCard(
+        child: AppInlineLoadingIndicator(
+          message: 'Loading available appointments...',
         ),
       );
     }
@@ -34,26 +39,27 @@ class AvailableSlotsPreview extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Icon(Icons.event_busy_outlined, size: 38),
-                  SizedBox(height: 10),
-                  Text(
-                    'No available appointments were found in the next 14 days.',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+          const _SlotCard(
+            child: Column(
+              children: [
+                Icon(Icons.event_busy_outlined, size: 38, color: _slotsPrimary),
+                SizedBox(height: 10),
+                Text(
+                  'No available appointments were found in the next 14 days.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: _slotsMuted, height: 1.35),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: onShowAllSlots,
-            icon: const Icon(Icons.calendar_month_outlined),
-            label: const Text('Show all appointments'),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onShowAllSlots,
+              icon: const Icon(Icons.calendar_month_outlined),
+              label: const Text('Show all appointments'),
+            ),
           ),
         ],
       );
@@ -69,22 +75,38 @@ class AvailableSlotsPreview extends StatelessWidget {
           final date = group.key;
           final slots = group.value;
 
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _SlotCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today_outlined, size: 20),
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: _slotsLavender,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.calendar_today_outlined,
+                          size: 18,
+                          color: _slotsPrimary,
+                        ),
+                      ),
                       const SizedBox(width: 10),
-                      Text(
-                        _formatDate(date),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          _formatDate(date),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _slotsText,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ],
@@ -106,10 +128,13 @@ class AvailableSlotsPreview extends StatelessWidget {
             ),
           );
         }),
-        OutlinedButton.icon(
-          onPressed: onShowAllSlots,
-          icon: const Icon(Icons.calendar_month_outlined),
-          label: const Text('Show all appointments'),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: onShowAllSlots,
+            icon: const Icon(Icons.calendar_month_outlined),
+            label: const Text('Show all appointments'),
+          ),
         ),
       ],
     );
@@ -131,5 +156,32 @@ class AvailableSlotsPreview extends StatelessWidget {
     }
 
     return DateFormat('EEEE, dd.MM.yyyy.').format(date);
+  }
+}
+
+class _SlotCard extends StatelessWidget {
+  final Widget child;
+
+  const _SlotCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _slotsSurface,
+        borderRadius: BorderRadius.circular(_slotsRadius),
+        border: Border.all(color: _slotsBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
+    );
   }
 }

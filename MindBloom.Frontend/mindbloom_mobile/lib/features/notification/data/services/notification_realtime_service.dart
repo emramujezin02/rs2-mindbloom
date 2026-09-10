@@ -13,6 +13,8 @@ enum NotificationConnectionStatus {
 }
 
 class NotificationRealtimeService {
+  static const Duration _startTimeout = Duration(seconds: 10);
+
   final SessionStorageService sessionStorage;
 
   final Future<void> Function() onNotificationReceived;
@@ -63,7 +65,11 @@ class NotificationRealtimeService {
       _hubConnection ??= _createHubConnection();
 
       if (_hubConnection!.state == HubConnectionState.Disconnected) {
-        await _hubConnection!.start();
+        final startFuture = _hubConnection!.start();
+
+        if (startFuture != null) {
+          await startFuture.timeout(_startTimeout);
+        }
       }
 
       onConnectionStatusChanged(NotificationConnectionStatus.connected);

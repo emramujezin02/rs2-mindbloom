@@ -3,8 +3,20 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/appointment_model.dart';
 import '../viewmodels/my_appointments_viewmodel.dart';
+
+const _appointmentsBackground = Color(0xFFFCFAFF);
+const _appointmentsSurface = Color(0xFFFFFFFF);
+const _appointmentsLavender = Color(0xFFF6F0FC);
+const _appointmentsBorder = Color(0xFFE7DDF1);
+const _appointmentsPrimary = Color(0xFF6D4F91);
+const _appointmentsText = Color(0xFF372D45);
+const _appointmentsMuted = Color(0xFF6C6278);
+const _appointmentsRadius = 20.0;
 
 class MyAppointmentsPage extends StatefulWidget {
   const MyAppointmentsPage({super.key});
@@ -78,8 +90,11 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _appointmentsBackground,
       appBar: AppBar(
         title: const Text('My appointments'),
+        backgroundColor: _appointmentsBackground,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             onPressed: _viewModel.isLoading ? null : _refresh,
@@ -94,29 +109,27 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
 
   Widget _buildBody() {
     if (_viewModel.isLoading && _viewModel.appointments.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingWidget.skeleton(
+        message: 'Loading appointments...',
+        skeletonItemCount: 5,
+      );
     }
 
     if (_viewModel.error != null && _viewModel.appointments.isEmpty) {
-      return _ErrorState(message: _viewModel.error!, onRetry: _refresh);
+      return AppErrorWidget(
+        title: 'Appointments could not be loaded',
+        error: _viewModel.error,
+        onRetry: _refresh,
+      );
     }
 
     if (_viewModel.appointments.isEmpty) {
       return RefreshIndicator(
         onRefresh: _refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24),
-          children: const [
-            SizedBox(height: 100),
-            Icon(Icons.event_busy_outlined, size: 72),
-            SizedBox(height: 18),
-            Text(
-              'You do not have appointments yet.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-          ],
+        child: const AppEmptyStateWidget(
+          title: 'No appointments yet',
+          message: 'Your scheduled sessions will appear here.',
+          icon: Icons.event_busy_outlined,
         ),
       );
     }
@@ -125,7 +138,7 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
       onRefresh: _refresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           _buildFilters(),
 
@@ -168,6 +181,12 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
     final dateFormatter = DateFormat('dd.MM.yyyy.');
 
     return Card(
+      color: _appointmentsSurface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_appointmentsRadius),
+        side: const BorderSide(color: _appointmentsBorder),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -269,18 +288,25 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
       children: [
         Row(
           children: [
-            Icon(icon),
+            Icon(icon, color: _appointmentsPrimary),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 title,
                 style: const TextStyle(
+                  color: _appointmentsText,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-            Text('${appointments.length}'),
+            Text(
+              '${appointments.length}',
+              style: const TextStyle(
+                color: _appointmentsMuted,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
         ),
 
@@ -288,6 +314,12 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
 
         if (appointments.isEmpty)
           Card(
+            color: _appointmentsSurface,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(_appointmentsRadius),
+              side: const BorderSide(color: _appointmentsBorder),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(18),
               child: Text(emptyMessage, textAlign: TextAlign.center),
@@ -326,6 +358,12 @@ class _AppointmentCard extends StatelessWidget {
     final dateFormat = DateFormat('dd.MM.yyyy. HH:mm');
 
     return Card(
+      color: _appointmentsSurface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_appointmentsRadius),
+        side: const BorderSide(color: _appointmentsBorder),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -337,7 +375,13 @@ class _AppointmentCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const CircleAvatar(child: Icon(Icons.person_outline)),
+                  const CircleAvatar(
+                    backgroundColor: _appointmentsLavender,
+                    child: Icon(
+                      Icons.person_outline,
+                      color: _appointmentsPrimary,
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -345,13 +389,19 @@ class _AppointmentCard extends StatelessWidget {
                       children: [
                         Text(
                           appointment.therapistName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
+                            color: _appointmentsText,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(dateFormat.format(appointment.startUtc.toLocal())),
+                        Text(
+                          dateFormat.format(appointment.startUtc.toLocal()),
+                          style: const TextStyle(color: _appointmentsMuted),
+                        ),
                       ],
                     ),
                   ),
@@ -432,39 +482,11 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(visualDensity: VisualDensity.compact, label: Text(status));
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-  final Future<void> Function() onRetry;
-
-  const _ErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 64),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
-            ),
-          ],
-        ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 118),
+      child: Chip(
+        visualDensity: VisualDensity.compact,
+        label: Text(status, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );
   }

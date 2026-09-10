@@ -62,6 +62,11 @@ public sealed class RabbitMqConnectionFactory
                     _options
                         .RequestedHeartbeatSeconds),
 
+            RequestedConnectionTimeout =
+                TimeSpan.FromSeconds(
+                    _options
+                        .ConnectionTimeoutSeconds),
+
             ConsumerDispatchConcurrency =
                 consumerDispatchConcurrency
         };

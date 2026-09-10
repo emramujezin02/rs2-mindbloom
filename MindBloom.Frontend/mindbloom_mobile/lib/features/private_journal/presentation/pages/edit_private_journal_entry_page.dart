@@ -10,6 +10,11 @@ import '../../../journal/presentation/constants/mood_options.dart';
 import '../../data/models/private_journal_entry_model.dart';
 import '../viewmodels/private_journal_viewmodel.dart';
 
+const _privateEditorBackground = Color(0xFFFCFAFF);
+const _privateEditorSurface = Color(0xFFFFFFFF);
+const _privateEditorBorder = Color(0xFFE7DDF1);
+const _privateEditorRadius = 20.0;
+
 class EditPrivateJournalEntryPage extends StatefulWidget {
   final PrivateJournalEntryModel entry;
 
@@ -135,76 +140,94 @@ class _EditPrivateJournalEntryPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit private entry')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _titleController,
-                maxLength: 150,
-                enabled: !_viewModel.isSaving,
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                  border: OutlineInputBorder(),
+      backgroundColor: _privateEditorBackground,
+      appBar: AppBar(
+        title: const Text('Edit private entry'),
+        backgroundColor: _privateEditorBackground,
+        surfaceTintColor: Colors.transparent,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  controller: _titleController,
+                  maxLength: 150,
+                  enabled: !_viewModel.isSaving,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    return _viewModel.fieldError('Title') ??
+                        AppValidators.journalTitle(value);
+                  },
                 ),
-                validator: (value) {
-                  return _viewModel.fieldError('Title') ??
-                      AppValidators.journalTitle(value);
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _contentController,
-                minLines: 10,
-                maxLines: 20,
-                maxLength: 10000,
-                enabled: !_viewModel.isSaving,
-                decoration: const InputDecoration(
-                  labelText: 'Content',
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  return _viewModel.fieldError('Content') ??
-                      AppValidators.journalContent(value);
-                },
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.calendar_month),
-                  title: const Text('Entry date'),
-                  subtitle: Text(DateFormat('dd.MM.yyyy.').format(_entryDate)),
-                  onTap: _viewModel.isSaving ? null : _selectDate,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildMoodSelection(),
-              if (_viewModel.error != null) ...[
                 const SizedBox(height: 12),
-                AppInlineError(
-                  title: 'Private journal entry could not be updated',
-                  error: _viewModel.error,
-                  onRetry: _save,
+                TextFormField(
+                  controller: _contentController,
+                  minLines: 10,
+                  maxLines: 20,
+                  maxLength: 10000,
+                  enabled: !_viewModel.isSaving,
+                  decoration: const InputDecoration(
+                    labelText: 'Content',
+                    alignLabelWithHint: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    return _viewModel.fieldError('Content') ??
+                        AppValidators.journalContent(value);
+                  },
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  color: _privateEditorSurface,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(_privateEditorRadius),
+                    side: const BorderSide(color: _privateEditorBorder),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.calendar_month),
+                    title: const Text('Entry date'),
+                    subtitle: Text(
+                      DateFormat('dd.MM.yyyy.').format(_entryDate),
+                    ),
+                    onTap: _viewModel.isSaving ? null : _selectDate,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildMoodSelection(),
+                if (_viewModel.error != null) ...[
+                  const SizedBox(height: 12),
+                  AppInlineError(
+                    title: 'Private journal entry could not be updated',
+                    error: _viewModel.error,
+                    onRetry: _save,
+                  ),
+                ],
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: _viewModel.isSaving ? null : _save,
+                  icon: _viewModel.isSaving
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(
+                    _viewModel.isSaving ? 'Saving...' : 'Save changes',
+                  ),
                 ),
               ],
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: _viewModel.isSaving ? null : _save,
-                icon: _viewModel.isSaving
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save),
-                label: Text(_viewModel.isSaving ? 'Saving...' : 'Save changes'),
-              ),
-            ],
+            ),
           ),
         ),
       ),

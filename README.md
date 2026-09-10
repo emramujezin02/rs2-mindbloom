@@ -103,10 +103,10 @@ DOTNET_ENVIRONMENT=Development
 API_PORT=8080
 WORKER_HEALTH_PORT=8081
 
-API_URL=http://localhost:8080
+API_URL=http://localhost:5110
 
-MOBILE_API_BASE_URL=http://10.0.2.2:8080
-DESKTOP_API_BASE_URL=http://localhost:8080
+MOBILE_API_BASE_URL=http://10.0.2.2:5110
+DESKTOP_API_BASE_URL=http://localhost:5110
 
 SQL_SERVER_DATABASE=220075
 
@@ -134,12 +134,17 @@ Only `.env.example` containing safe placeholder values should be stored in sourc
 
 # API URL Configuration
 
-MindBloom uses port `8080` as the standard local Docker API port.
+MindBloom has two local API paths:
+
+- Visual Studio / `dotnet run` HTTP profile: `http://localhost:5110`
+- Docker API container: `http://localhost:8080`
+
+For everyday mobile development, prefer the Visual Studio HTTP profile on port `5110`.
 
 The backend is available from the host computer at:
 
 ```text
-http://localhost:8080
+http://localhost:5110
 ```
 
 Flutter applications receive the API address through:
@@ -157,13 +162,14 @@ Android Emulator cannot use `localhost` to access the API running on the host co
 Use:
 
 ```text
-http://10.0.2.2:8080
+http://10.0.2.2:5110
 ```
 
 Example:
 
-```bash
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
+```powershell
+cd MindBloom.Frontend
+.\scripts\run-mobile.ps1
 ```
 
 ## Desktop Application
@@ -171,16 +177,16 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
 When the desktop application and Docker API run on the same computer, use:
 
 ```text
-http://localhost:8080
+http://localhost:5110
 ```
 
 Example:
 
 ```bash
-flutter run -d windows --dart-define=API_BASE_URL=http://localhost:8080
+flutter run -d windows --dart-define=API_BASE_URL=http://localhost:5110
 ```
 
-The Flutter projects also contain platform-appropriate local defaults, but `--dart-define` is the recommended way to explicitly configure the API URL.
+The Docker-hosted API remains available on `http://localhost:8080` when the full compose stack is running.
 
 ---
 
@@ -337,10 +343,11 @@ flutter test
 
 ## Android Emulator
 
-Run:
+For normal Visual Studio + Android emulator development, start `MindBloom.API` with the `http` profile and then run:
 
-```bash
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
+```powershell
+cd MindBloom.Frontend
+.\scripts\run-mobile.ps1
 ```
 
 The Android emulator uses:
@@ -357,10 +364,16 @@ localhost
 
 to access services running on the host computer.
 
+The mobile development URL for this path is:
+
+```text
+http://10.0.2.2:5110
+```
+
 If Stripe mobile payments are being tested, also provide the Stripe sandbox publishable key:
 
-```bash
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080 --dart-define=STRIPE_PUBLISHABLE_KEY=pk_test_your_key
+```powershell
+.\scripts\run-mobile.ps1 -StripePublishableKey pk_test_your_key
 ```
 
 Only Stripe sandbox/test publishable keys should be used during development.
@@ -826,31 +839,34 @@ If Docker reports that a port is already allocated, stop the process using that 
 
 ## Mobile application cannot reach API
 
+For the normal Visual Studio HTTP profile, run:
+
+```powershell
+cd MindBloom.Frontend
+.\scripts\run-mobile.ps1
+```
+
+The script checks `http://localhost:5110/health/live` on the Windows host and passes `API_BASE_URL=http://10.0.2.2:5110` to Flutter.
+
 For Android Emulator, do not use:
 
 ```text
-http://localhost:8080
+http://localhost:5110
 ```
 
 Use:
 
 ```text
-http://10.0.2.2:8080
+http://10.0.2.2:5110
 ```
 
-Run:
-
-```bash
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
-```
-
-Also verify:
+If using the Docker API container instead, verify:
 
 ```bash
 docker compose ps
 ```
 
-and ensure that `mindbloom-api` is running and healthy.
+and use `http://10.0.2.2:8080`.
 
 ---
 
@@ -1152,22 +1168,22 @@ http://localhost:8080/swagger
 
 ## 7. Run Android mobile application
 
-From the mobile Flutter project:
+For the normal Visual Studio HTTP API profile:
 
-```bash
-flutter pub get
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
+```powershell
+cd MindBloom.Frontend
+.\scripts\run-mobile.ps1
 ```
 
 If testing Stripe payments:
 
-```bash
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080 --dart-define=STRIPE_PUBLISHABLE_KEY=pk_test_your_key
+```powershell
+.\scripts\run-mobile.ps1 -StripePublishableKey pk_test_your_key
 ```
 
 ## 8. Run desktop application
 
-From the desktop Flutter project:
+From the desktop Flutter project with the Docker API:
 
 ```bash
 flutter pub get
@@ -1199,10 +1215,11 @@ docker compose down
 
 | Component | URL |
 |---|---|
+| Visual Studio API HTTP profile | `http://localhost:5110` |
+| Android emulator to Visual Studio API | `http://10.0.2.2:5110` |
 | Docker API from host | `http://localhost:8080` |
-| Android Emulator API | `http://10.0.2.2:8080` |
-| Desktop API | `http://localhost:8080` |
-| Swagger | `http://localhost:8080/swagger` |
+| Android emulator to Docker API | `http://10.0.2.2:8080` |
+| Docker Swagger | `http://localhost:8080/swagger` |
 | RabbitMQ Management | `http://localhost:15672` |
 | Worker health port | `http://localhost:8081` |
 
@@ -1215,13 +1232,13 @@ API_BASE_URL
 Mobile:
 
 ```text
-API_BASE_URL=http://10.0.2.2:8080
+API_BASE_URL=http://10.0.2.2:5110
 ```
 
 Desktop:
 
 ```text
-API_BASE_URL=http://localhost:8080
+API_BASE_URL=http://localhost:5110
 ```
 
 This configuration allows MindBloom to be started on another development computer without modifying Flutter source code.

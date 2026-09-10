@@ -2,12 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../../../../core/widgets/app_empty_state_widget.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../../../../core/widgets/app_loading_widget.dart';
 import '../../../../core/widgets/public_footer.dart';
+import '../../data/models/article_model.dart';
 import '../viewmodels/article_viewmodel.dart';
+import '../widgets/article_image.dart';
+
+const _detailBackground = Color(0xFFFCFAFF);
+const _detailLavender = Color(0xFFF5EFFC);
+const _detailSurface = Color(0xFFFFFFFF);
+const _detailTint = Color(0xFFFAF7FE);
+const _detailBorder = Color(0xFFE8DEF3);
+const _detailPrimary = Color(0xFF6D4F91);
+const _detailText = Color(0xFF3E3152);
+const _detailBody = Color(0xFF625B6B);
+const _detailRadius = 22.0;
 
 class ArticleDetailsPage extends StatefulWidget {
   final int articleId;
@@ -43,24 +54,15 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     return _viewModel.loadArticleDetails(widget.articleId);
   }
 
-  String? _buildImageUrl(String imageUrl) {
-    final value = imageUrl.trim();
-
-    if (value.isEmpty) return null;
-
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
-    }
-
-    final normalizedPath = value.startsWith('/') ? value : '/$value';
-    return '${ApiConstants.baseUrl}$normalizedPath';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _detailBackground,
       appBar: AppBar(
         title: const Text('Article details'),
+        backgroundColor: _detailBackground,
+        foregroundColor: _detailText,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             tooltip: 'Refresh',
@@ -99,100 +101,197 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
       );
     }
 
-    final imageUrl = _buildImageUrl(article.imageUrl);
-
     return RefreshIndicator(
       onRefresh: _reload,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
         children: [
           if (_viewModel.detailsError != null)
             AppInlineError(
               title: 'Article could not be refreshed',
               error: _viewModel.detailsError,
               onRetry: _reload,
-              margin: const EdgeInsets.all(16),
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             ),
-          if (imageUrl != null)
-            Image.network(
-              imageUrl,
-              width: double.infinity,
-              height: 240,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return const SizedBox(
-                  height: 170,
-                  child: Center(child: Icon(Icons.broken_image, size: 50)),
-                );
-              },
-            ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  article.title,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
+          _ArticleHeader(article: article),
+          _ArticleBody(article: article),
+          const PublicFooter(),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArticleHeader extends StatelessWidget {
+  final ArticleModel article;
+
+  const _ArticleHeader({required this.article});
+
+  @override
+  Widget build(BuildContext context) {
+    final category = article.articleCategoryName.trim();
+    final author = article.authorName.trim();
+
+    return Container(
+      width: double.infinity,
+      color: _detailLavender,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 22),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 820),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(_detailRadius),
+                child: ArticleImage(
+                  imageUrl: article.imageUrl,
+                  aspectRatio: 16 / 10,
                 ),
+              ),
+              const SizedBox(height: 18),
+              if (category.isNotEmpty) ...[
+                _DetailMetaChip(icon: Icons.category_outlined, label: category),
                 const SizedBox(height: 12),
-                Text(
-                  article.description,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w500,
-                    height: 1.4,
-                  ),
+              ],
+              Text(
+                article.title,
+                style: const TextStyle(
+                  color: _detailText,
+                  fontSize: 28,
+                  height: 1.15,
+                  fontWeight: FontWeight.w800,
                 ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    const Icon(Icons.person, size: 18),
-                    const SizedBox(width: 6),
-                    Expanded(child: Text(article.authorName)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_month, size: 18),
-                    const SizedBox(width: 6),
-                    Text(
-                      DateFormat(
-                        'dd.MM.yyyy.',
-                      ).format(article.publishedAtUtc.toLocal()),
-                    ),
-                  ],
-                ),
-                if (article.articleCategoryName.trim().isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Chip(
-                    avatar: const Icon(Icons.category, size: 17),
-                    label: Text(article.articleCategoryName),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                children: [
+                  if (author.isNotEmpty)
+                    _DetailMetaChip(icon: Icons.person_outline, label: author),
+                  _DetailMetaChip(
+                    icon: Icons.calendar_today_outlined,
+                    label: DateFormat(
+                      'dd.MM.yyyy.',
+                    ).format(article.publishedAtUtc.toLocal()),
                   ),
                 ],
-                const Divider(height: 32),
-                ...article.content
-                    .split(RegExp(r'\n\s*\n'))
-                    .map((paragraph) => paragraph.trim())
-                    .where((paragraph) => paragraph.isNotEmpty)
-                    .map(
-                      (paragraph) => Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: SelectableText(
-                          paragraph,
-                          textAlign: TextAlign.justify,
-                          style: const TextStyle(fontSize: 16, height: 1.65),
-                        ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ArticleBody extends StatelessWidget {
+  final ArticleModel article;
+
+  const _ArticleBody({required this.article});
+
+  @override
+  Widget build(BuildContext context) {
+    final description = article.description.trim();
+    final paragraphs = article.content
+        .split(RegExp(r'\n\s*\n'))
+        .map((paragraph) => paragraph.trim())
+        .where((paragraph) => paragraph.isNotEmpty)
+        .toList();
+
+    return Container(
+      width: double.infinity,
+      color: _detailSurface,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 34),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (description.isNotEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: _detailTint,
+                    borderRadius: BorderRadius.circular(_detailRadius),
+                    border: Border.all(color: _detailBorder),
+                  ),
+                  child: Text(
+                    description,
+                    style: const TextStyle(
+                      color: _detailText,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      height: 1.55,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+              if (paragraphs.isEmpty)
+                const AppInlineEmptyState(
+                  message: 'This article has no body content yet.',
+                  icon: Icons.article_outlined,
+                )
+              else
+                ...paragraphs.map(
+                  (paragraph) => Padding(
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: SelectableText(
+                      paragraph,
+                      style: const TextStyle(
+                        color: _detailText,
+                        fontSize: 16,
+                        height: 1.7,
                       ),
                     ),
-              ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailMetaChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _DetailMetaChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 300),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _detailBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: _detailPrimary),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _detailBody,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          const PublicFooter(),
         ],
       ),
     );

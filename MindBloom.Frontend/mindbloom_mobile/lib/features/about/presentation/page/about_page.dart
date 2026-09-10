@@ -2,6 +2,16 @@ import 'package:flutter/material.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/widgets/public_footer.dart';
 
+const _aboutBackground = Color(0xFFFCFAFF);
+const _aboutLavender = Color(0xFFF5EFFC);
+const _aboutSurface = Color(0xFFFFFFFF);
+const _aboutTint = Color(0xFFFAF7FE);
+const _aboutBorder = Color(0xFFE8DEF3);
+const _aboutPrimary = Color(0xFF6D4F91);
+const _aboutText = Color(0xFF3E3152);
+const _aboutBody = Color(0xFF625B6B);
+const _aboutRadius = 20.0;
+
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
 
@@ -23,11 +33,12 @@ class AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFAFF),
+      backgroundColor: _aboutBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 1,
+        backgroundColor: _aboutBackground,
+        foregroundColor: _aboutText,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         titleSpacing: 8,
         title: const _MindBloomLogo(),
       ),
@@ -65,11 +76,11 @@ class _AboutHeroSection extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(
         horizontal: isDesktop ? 70 : 24,
-        vertical: isDesktop ? 90 : 55,
+        vertical: isDesktop ? 90 : 48,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFFAF7FF), Color(0xFFE9DDF7)],
+          colors: [_aboutBackground, _aboutLavender],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -81,11 +92,11 @@ class _AboutHeroSection extends StatelessWidget {
             children: [
               const CircleAvatar(
                 radius: 42,
-                backgroundColor: Color(0xFFDCCCEF),
+                backgroundColor: Color(0xFFE9DFFF),
                 child: Icon(
                   Icons.local_florist_outlined,
                   size: 45,
-                  color: Color(0xFF72559A),
+                  color: _aboutPrimary,
                 ),
               ),
               const SizedBox(height: 24),
@@ -93,8 +104,8 @@ class _AboutHeroSection extends StatelessWidget {
                 'About MindBloom',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: const Color(0xFF40334D),
-                  fontSize: isDesktop ? 48 : 36,
+                  color: _aboutText,
+                  fontSize: isDesktop ? 48 : 34,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -103,11 +114,7 @@ class _AboutHeroSection extends StatelessWidget {
                 'A safe digital space created to support mental wellbeing, '
                 'personal growth and easier access to professional help.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF625B6B),
-                  fontSize: 18,
-                  height: 1.6,
-                ),
+                style: TextStyle(color: _aboutBody, fontSize: 18, height: 1.6),
               ),
             ],
           ),
@@ -123,11 +130,11 @@ class _DescriptionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _AboutSection(
-      backgroundColor: Colors.white,
+      backgroundColor: _aboutSurface,
       eyebrow: 'WHO WE ARE',
       title: 'A place where your mind can breathe and grow',
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: 850),
+        constraints: BoxConstraints(maxWidth: 820),
         child: Text(
           'MindBloom is a digital mental health platform that connects clients '
           'with qualified psychotherapists. The platform also provides '
@@ -135,7 +142,7 @@ class _DescriptionSection extends StatelessWidget {
           'wellbeing. Our goal is to make professional support simpler, safer '
           'and more accessible.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF665F6C), fontSize: 17, height: 1.7),
+          style: TextStyle(color: _aboutBody, fontSize: 17, height: 1.65),
         ),
       ),
     );
@@ -148,7 +155,7 @@ class _MissionVisionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _AboutSection(
-      backgroundColor: const Color(0xFFF5EFFC),
+      backgroundColor: _aboutLavender,
       eyebrow: 'OUR PURPOSE',
       title: 'Mission and vision',
       child: LayoutBuilder(
@@ -178,14 +185,14 @@ class _MissionVisionSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: missionCard),
-                SizedBox(width: 20),
+                SizedBox(width: 18),
                 Expanded(child: visionCard),
               ],
             );
           }
 
           return Column(
-            children: [missionCard, SizedBox(height: 18), visionCard],
+            children: [missionCard, SizedBox(height: 14), visionCard],
           );
         },
       ),
@@ -222,7 +229,7 @@ class _ValuesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _AboutSection(
-      backgroundColor: Colors.white,
+      backgroundColor: _aboutSurface,
       eyebrow: 'OUR VALUES',
       title: 'The principles behind MindBloom',
       child: LayoutBuilder(
@@ -272,25 +279,25 @@ class _ValueCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF7FE),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE5DAF0)),
+        color: _aboutTint,
+        borderRadius: BorderRadius.circular(_aboutRadius),
+        border: Border.all(color: _aboutBorder),
       ),
       child: Column(
         children: [
           CircleAvatar(
             radius: 28,
             backgroundColor: const Color(0xFFE9DFFF),
-            child: Icon(icon, size: 29, color: const Color(0xFF72559A)),
+            child: Icon(icon, size: 29, color: _aboutPrimary),
           ),
           const SizedBox(height: 18),
           Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Color(0xFF40334D),
+              color: _aboutText,
               fontSize: 19,
               fontWeight: FontWeight.w800,
             ),
@@ -300,7 +307,7 @@ class _ValueCard extends StatelessWidget {
             description,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Color(0xFF68616D),
+              color: _aboutBody,
               fontSize: 15,
               height: 1.55,
             ),
@@ -326,27 +333,27 @@ class _InformationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: _aboutSurface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: Color(0xFFE3D7EF)),
+        borderRadius: BorderRadius.circular(_aboutRadius),
+        side: const BorderSide(color: _aboutBorder),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(22),
         child: Column(
           children: [
             CircleAvatar(
               radius: 29,
               backgroundColor: const Color(0xFFE9DFFF),
-              child: Icon(icon, size: 30, color: const Color(0xFF72559A)),
+              child: Icon(icon, size: 30, color: _aboutPrimary),
             ),
             const SizedBox(height: 20),
             Text(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: Color(0xFF40334D),
-                fontSize: 22,
+                color: _aboutText,
+                fontSize: 21,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -355,7 +362,7 @@ class _InformationCard extends StatelessWidget {
               description,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: Color(0xFF68616D),
+                color: _aboutBody,
                 fontSize: 16,
                 height: 1.6,
               ),
@@ -396,7 +403,7 @@ class _HowItWorksSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _AboutSection(
-      backgroundColor: Colors.white,
+      backgroundColor: _aboutSurface,
       eyebrow: 'HOW IT WORKS',
       title: 'Support in four simple steps',
       child: LayoutBuilder(
@@ -453,9 +460,9 @@ class _WorkStepCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF7FE),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE8DEF3)),
+        color: _aboutTint,
+        borderRadius: BorderRadius.circular(_aboutRadius),
+        border: Border.all(color: _aboutBorder),
       ),
       child: Column(
         children: [
@@ -463,7 +470,7 @@ class _WorkStepCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: const Color(0xFF72559A),
+                backgroundColor: _aboutPrimary,
                 child: Text(
                   number.toString(),
                   style: const TextStyle(
@@ -473,7 +480,7 @@ class _WorkStepCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Icon(icon, size: 31, color: const Color(0xFF8063A4)),
+              Icon(icon, size: 31, color: _aboutPrimary),
             ],
           ),
           const SizedBox(height: 22),
@@ -481,7 +488,7 @@ class _WorkStepCard extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Color(0xFF40334D),
+              color: _aboutText,
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
@@ -490,7 +497,7 @@ class _WorkStepCard extends StatelessWidget {
           Text(
             description,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF68616D), height: 1.5),
+            style: const TextStyle(color: _aboutBody, height: 1.5),
           ),
         ],
       ),
@@ -504,27 +511,27 @@ class _PrivacySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _AboutSection(
-      backgroundColor: const Color(0xFFF5EFFC),
+      backgroundColor: _aboutLavender,
       eyebrow: 'PRIVACY AND SECURITY',
       title: 'Your trust comes first',
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(30),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: const Color(0xFFE0D4EC)),
+          color: _aboutSurface,
+          borderRadius: BorderRadius.circular(_aboutRadius),
+          border: Border.all(color: _aboutBorder),
         ),
         child: Column(
           children: [
-            Icon(Icons.lock_outline, size: 52, color: Color(0xFF72559A)),
+            Icon(Icons.lock_outline, size: 52, color: _aboutPrimary),
             SizedBox(height: 18),
             Text(
               'Your personal information remains protected',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Color(0xFF40334D),
-                fontSize: 22,
+                color: _aboutText,
+                fontSize: 21,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -537,11 +544,7 @@ class _PrivacySection extends StatelessWidget {
                 'while authentication and role-based access help protect '
                 'sensitive data and communication.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF68616D),
-                  fontSize: 16,
-                  height: 1.7,
-                ),
+                style: TextStyle(color: _aboutBody, fontSize: 16, height: 1.7),
               ),
             ),
           ],
@@ -562,18 +565,18 @@ class _EmergencyNoticeSection extends StatelessWidget {
       width: double.infinity,
       color: const Color(0xFFFFF8F2),
       padding: EdgeInsets.symmetric(
-        horizontal: isDesktop ? 70 : 22,
-        vertical: isDesktop ? 55 : 42,
+        horizontal: isDesktop ? 70 : 20,
+        vertical: isDesktop ? 55 : 40,
       ),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1000),
           child: Container(
             width: double.infinity,
-            padding: EdgeInsets.all(isDesktop ? 30 : 22),
+            padding: EdgeInsets.all(isDesktop ? 30 : 20),
             decoration: BoxDecoration(
               color: const Color(0xFFFFFCF9),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(_aboutRadius),
               border: Border.all(color: const Color(0xFFF0CFB6)),
             ),
             child: LayoutBuilder(
@@ -658,21 +661,21 @@ class _AboutCallToAction extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 65),
+      color: _aboutSurface,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 58),
       child: Center(
         child: Container(
           width: double.infinity,
           constraints: const BoxConstraints(maxWidth: 1050),
           padding: EdgeInsets.symmetric(
             horizontal: isDesktop ? 42 : 24,
-            vertical: isDesktop ? 48 : 36,
+            vertical: isDesktop ? 48 : 34,
           ),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF6E5193), Color(0xFF8C70AE)],
+              colors: [_aboutPrimary, Color(0xFF8A6CAD)],
             ),
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(26),
           ),
           child: Column(
             children: [
@@ -687,7 +690,7 @@ class _AboutCallToAction extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 29,
+                  fontSize: 25,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -717,7 +720,7 @@ class _AboutCallToAction extends StatelessWidget {
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF664989),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
+                        horizontal: 18,
                         vertical: 15,
                       ),
                     ),
@@ -730,7 +733,7 @@ class _AboutCallToAction extends StatelessWidget {
                       foregroundColor: Colors.white,
                       side: const BorderSide(color: Colors.white),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
+                        horizontal: 18,
                         vertical: 15,
                       ),
                     ),
@@ -743,7 +746,7 @@ class _AboutCallToAction extends StatelessWidget {
                       foregroundColor: Colors.white,
                       side: const BorderSide(color: Colors.white),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
+                        horizontal: 18,
                         vertical: 15,
                       ),
                     ),
@@ -771,13 +774,13 @@ class _MindBloomLogo extends StatelessWidget {
         CircleAvatar(
           radius: 19,
           backgroundColor: Color(0xFFE9DFFF),
-          child: Icon(Icons.local_florist_outlined, color: Color(0xFF72559A)),
+          child: Icon(Icons.local_florist_outlined, color: _aboutPrimary),
         ),
         SizedBox(width: 10),
         Text(
           'MindBloom',
           style: TextStyle(
-            color: Color(0xFF5C477B),
+            color: _aboutPrimary,
             fontSize: 21,
             fontWeight: FontWeight.w800,
           ),
@@ -808,8 +811,8 @@ class _AboutSection extends StatelessWidget {
       width: double.infinity,
       color: backgroundColor,
       padding: EdgeInsets.symmetric(
-        horizontal: isDesktop ? 70 : 22,
-        vertical: isDesktop ? 75 : 55,
+        horizontal: isDesktop ? 70 : 20,
+        vertical: isDesktop ? 75 : 50,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -820,10 +823,10 @@ class _AboutSection extends StatelessWidget {
                 eyebrow,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Color(0xFF8063A4),
+                  color: _aboutPrimary,
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 1.3,
+                  letterSpacing: 0,
                 ),
               ),
               const SizedBox(height: 10),
@@ -831,7 +834,7 @@ class _AboutSection extends StatelessWidget {
                 title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: const Color(0xFF40334D),
+                  color: _aboutText,
                   fontSize: isDesktop ? 35 : 27,
                   fontWeight: FontWeight.w800,
                 ),

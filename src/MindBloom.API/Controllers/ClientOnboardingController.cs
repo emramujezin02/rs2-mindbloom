@@ -30,12 +30,14 @@ public sealed class ClientOnboardingController
 
     [HttpGet]
     public async Task<IActionResult>
-        GetMyOnboarding()
+        GetMyOnboarding(
+            CancellationToken cancellationToken)
     {
         var result =
             await _onboardingService
                 .GetAsync(
-                    GetCurrentUserId());
+                    GetCurrentUserId(),
+                    cancellationToken);
 
         return Ok(result);
     }
@@ -44,13 +46,15 @@ public sealed class ClientOnboardingController
     public async Task<IActionResult>
         SaveMyOnboarding(
             [FromBody]
-            SaveClientOnboardingDto request)
+            SaveClientOnboardingDto request,
+            CancellationToken cancellationToken)
     {
         var result =
             await _onboardingService
                 .SaveAsync(
                     GetCurrentUserId(),
-                    request);
+                    request,
+                    cancellationToken);
 
         return Ok(result);
     }

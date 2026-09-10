@@ -128,7 +128,7 @@ class AuthViewModel extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      _setError(error, fallback: 'Prijava nije uspjela.');
+      _setLoginError(error);
 
       final normalizedError = errorMessage?.toLowerCase() ?? '';
 
@@ -533,6 +533,30 @@ class AuthViewModel extends ChangeNotifier {
         .trim();
 
     errorMessage = normalizedMessage.isEmpty ? fallback : normalizedMessage;
+  }
+
+  void _setLoginError(Object error) {
+    if (error is AppException) {
+      final message = error.message.trim();
+      final normalizedMessage = message.toLowerCase();
+
+      if (error.statusCode == 401 ||
+          normalizedMessage.contains('invalid credentials')) {
+        errorMessage = 'Email ili lozinka nisu ispravni.';
+        fieldErrors = {};
+
+        return;
+      }
+
+      if (normalizedMessage.contains('email is not verified')) {
+        errorMessage = 'Email adresa nije potvrđena.';
+        fieldErrors = {};
+
+        return;
+      }
+    }
+
+    _setError(error, fallback: 'Prijava nije uspjela.');
   }
 
   String _normalizeFieldName(String value) {

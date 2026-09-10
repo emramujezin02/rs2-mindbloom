@@ -2,13 +2,23 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
-import '../../../../core/constants/api_constants.dart';
+import '../../../../core/widgets/app_empty_state_widget.dart';
+import '../../../../core/widgets/app_error_widget.dart';
+import '../../../../core/widgets/app_loading_widget.dart';
+import '../../../therapist/presentation/widgets/therapist_profile_image.dart';
 import '../../data/models/recommendation_reason_model.dart';
 import '../../data/models/therapist_recommendation_model.dart';
 import '../viewmodels/recommendation_viewmodel.dart';
-import '../../../../core/widgets/app_loading_widget.dart';
-import '../../../../core/widgets/app_error_widget.dart';
-import '../../../../core/widgets/app_empty_state_widget.dart';
+
+const _recommendationBackground = Color(0xFFFCFAFF);
+const _recommendationLavender = Color(0xFFF5EFFC);
+const _recommendationSurface = Color(0xFFFFFFFF);
+const _recommendationTint = Color(0xFFFAF7FE);
+const _recommendationBorder = Color(0xFFE8DEF3);
+const _recommendationPrimary = Color(0xFF6D4F91);
+const _recommendationText = Color(0xFF3E3152);
+const _recommendationBody = Color(0xFF625B6B);
+const _recommendationRadius = 20.0;
 
 class RecommendationPage extends StatefulWidget {
   const RecommendationPage({super.key});
@@ -59,27 +69,15 @@ class _RecommendationPageState extends State<RecommendationPage> {
     await _viewModel.loadRecommendations();
   }
 
-  String? _buildImageUrl(String? imagePath) {
-    final value = imagePath?.trim() ?? '';
-
-    if (value.isEmpty) {
-      return null;
-    }
-
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
-    }
-
-    final normalizedPath = value.startsWith('/') ? value : '/$value';
-
-    return '${ApiConstants.baseUrl}$normalizedPath';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _recommendationBackground,
       appBar: AppBar(
         title: const Text('Recommended therapists'),
+        backgroundColor: _recommendationBackground,
+        foregroundColor: _recommendationText,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             onPressed: _viewModel.isLoading ? null : _editPreferences,
@@ -102,6 +100,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
       return const AppLoadingWidget.skeleton(
         message: 'Finding the best therapists...',
         skeletonItemCount: 4,
+        padding: EdgeInsets.fromLTRB(16, 14, 16, 16),
       );
     }
 
@@ -119,68 +118,126 @@ class _RecommendationPageState extends State<RecommendationPage> {
     if (_viewModel.recommendations.isEmpty) {
       return RefreshIndicator(
         onRefresh: _refresh,
-        child: const AppEmptyStateWidget(
+        child: AppEmptyStateWidget(
           title: 'No recommendations',
           message:
               'Complete or update your preferences to receive therapist recommendations.',
           icon: Icons.psychology_outlined,
+          actionLabel: 'Edit preferences',
+          onAction: _editPreferences,
         ),
       );
     }
 
     return RefreshIndicator(
       onRefresh: _refresh,
-      child: ListView.builder(
+      child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(12),
-        itemCount: _viewModel.recommendations.length + 2,
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return const _RecommendationHeader();
-          }
-
-          if (index == 1 && _viewModel.error != null) {
-            return AppInlineError(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        children: [
+          _RecommendationHeader(
+            recommendationCount: _viewModel.recommendations.length,
+            onEditPreferences: _viewModel.isLoading ? null : _editPreferences,
+          ),
+          if (_viewModel.error != null)
+            AppInlineError(
               title: 'Recommendations could not be refreshed',
               error: _viewModel.error,
               onRetry: _refresh,
               margin: const EdgeInsets.only(bottom: 12),
-            );
-          }
-
-          final recommendation = _viewModel
-              .recommendations[index - (_viewModel.error != null ? 2 : 1)];
-
-          return _RecommendationCard(
-            recommendation: recommendation,
-            imageUrl: _buildImageUrl(recommendation.profileImageUrl),
-          );
-        },
+            ),
+          ..._viewModel.recommendations.map(
+            (recommendation) => _RecommendationCard(
+              recommendation: recommendation,
+              onOpenProfile: () {
+                Navigator.of(context).pushNamed(
+                  AppRouter.therapistDetails,
+                  arguments: recommendation.therapistId,
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _RecommendationHeader extends StatelessWidget {
-  const _RecommendationHeader();
+  final int recommendationCount;
+  final VoidCallback? onEditPreferences;
+
+  const _RecommendationHeader({
+    required this.recommendationCount,
+    required this.onEditPreferences,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(4, 8, 4, 20),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _recommendationLavender,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: _recommendationBorder),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Therapists selected for you',
-            style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE9DFFF),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: _recommendationPrimary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Therapists selected for you',
+                      style: TextStyle(
+                        color: _recommendationText,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '$recommendationCount recommendation'
+                      '${recommendationCount == 1 ? '' : 's'} found',
+                      style: const TextStyle(
+                        color: _recommendationPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 8),
-          Text(
-            'Recommendations are calculated using your '
-            'preferences, therapist experience, rating, '
-            'availability and previous activity.',
-            style: TextStyle(fontSize: 15, height: 1.4),
+          const SizedBox(height: 14),
+          const Text(
+            'Recommendations are calculated using your preferences, therapist experience, rating, availability and previous activity.',
+            style: TextStyle(color: _recommendationBody, height: 1.45),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: onEditPreferences,
+            icon: const Icon(Icons.tune),
+            label: const Text('Edit preferences'),
           ),
         ],
       ),
@@ -190,49 +247,45 @@ class _RecommendationHeader extends StatelessWidget {
 
 class _RecommendationCard extends StatelessWidget {
   final TherapistRecommendationModel recommendation;
-  final String? imageUrl;
+  final VoidCallback onOpenProfile;
 
   const _RecommendationCard({
     required this.recommendation,
-    required this.imageUrl,
+    required this.onOpenProfile,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
+      elevation: 0,
+      color: _recommendationSurface,
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_recommendationRadius),
+        side: const BorderSide(color: _recommendationBorder),
+      ),
       child: InkWell(
-        onTap: () {
-          Navigator.of(context).pushNamed(
-            AppRouter.therapistDetails,
-            arguments: recommendation.therapistId,
-          );
-        },
+        onTap: onOpenProfile,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildTherapistHeader(context),
-              const SizedBox(height: 16),
-              _buildScore(context),
+              _RecommendationTherapistHeader(recommendation: recommendation),
               const SizedBox(height: 14),
-              _buildDetails(),
+              _RecommendationScore(recommendation: recommendation),
+              const SizedBox(height: 14),
+              _RecommendationDetails(recommendation: recommendation),
               if (recommendation.reasons.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                _buildReasons(context),
+                const SizedBox(height: 10),
+                _RecommendationReasons(reasons: recommendation.reasons),
               ],
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pushNamed(
-                      AppRouter.therapistDetails,
-                      arguments: recommendation.therapistId,
-                    );
-                  },
+                  onPressed: onOpenProfile,
                   icon: const Icon(Icons.person_outline),
                   label: const Text('Open profile'),
                 ),
@@ -243,72 +296,103 @@ class _RecommendationCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildTherapistHeader(BuildContext context) {
+class _RecommendationTherapistHeader extends StatelessWidget {
+  final TherapistRecommendationModel recommendation;
+
+  const _RecommendationTherapistHeader({required this.recommendation});
+
+  @override
+  Widget build(BuildContext context) {
+    final specialization = recommendation.specialization.trim().isEmpty
+        ? 'Psychotherapist'
+        : recommendation.specialization.trim();
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CircleAvatar(
-          radius: 32,
-          foregroundImage: imageUrl != null ? NetworkImage(imageUrl!) : null,
-          child: imageUrl == null
-              ? Text(
-                  _buildInitials(recommendation.fullName),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                )
-              : null,
+        TherapistProfileImage(
+          fullName: recommendation.fullName,
+          profileImageUrl: recommendation.profileImageUrl,
+          radius: 36,
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 13),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      recommendation.fullName.trim().isEmpty
+                          ? 'Therapist'
+                          : recommendation.fullName.trim(),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _recommendationText,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                  if (recommendation.isFavorite) ...[
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.favorite,
+                      color: _recommendationPrimary,
+                      size: 22,
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 6),
               Text(
-                recommendation.fullName,
+                specialization,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  color: _recommendationPrimary,
+                  fontWeight: FontWeight.w700,
+                  height: 1.25,
                 ),
               ),
-              const SizedBox(height: 5),
-              Text(
-                recommendation.specialization.trim().isEmpty
-                    ? 'Psychotherapist'
-                    : recommendation.specialization,
-              ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.star, size: 19, color: Colors.amber),
-                  const SizedBox(width: 4),
-                  Text(
-                    recommendation.reviewCount == 0
-                        ? 'No reviews'
-                        : '${recommendation.averageRating.toStringAsFixed(1)} '
-                              '(${recommendation.reviewCount})',
-                  ),
-                ],
+              _InlineMetric(
+                icon: Icons.star_rounded,
+                iconColor: Color(0xFFF2B84B),
+                text: recommendation.reviewCount == 0
+                    ? 'No reviews'
+                    : '${recommendation.averageRating.toStringAsFixed(1)} '
+                          '(${recommendation.reviewCount})',
               ),
             ],
           ),
         ),
-        if (recommendation.isFavorite)
-          const Icon(Icons.favorite, color: Colors.red),
       ],
     );
   }
+}
 
-  Widget _buildScore(BuildContext context) {
+class _RecommendationScore extends StatelessWidget {
+  final TherapistRecommendationModel recommendation;
+
+  const _RecommendationScore({required this.recommendation});
+
+  @override
+  Widget build(BuildContext context) {
     final progress = (recommendation.matchPercentage / 100).clamp(0.0, 1.0);
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
+        color: _recommendationTint,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _recommendationBorder),
       ),
       child: Row(
         children: [
@@ -318,12 +402,18 @@ class _RecommendationCard extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                CircularProgressIndicator(value: progress, strokeWidth: 6),
+                CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 6,
+                  color: _recommendationPrimary,
+                  backgroundColor: const Color(0xFFE9DFFF),
+                ),
                 Text(
                   '${recommendation.matchPercentage}%',
                   style: const TextStyle(
+                    color: _recommendationText,
                     fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],
@@ -336,12 +426,18 @@ class _RecommendationCard extends StatelessWidget {
               children: [
                 const Text(
                   'Match with your needs',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: _recommendationText,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Recommendation score: '
                   '${recommendation.score.toStringAsFixed(1)}/100',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: _recommendationBody),
                 ),
               ],
             ),
@@ -350,86 +446,80 @@ class _RecommendationCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildDetails() {
+class _RecommendationDetails extends StatelessWidget {
+  final TherapistRecommendationModel recommendation;
+
+  const _RecommendationDetails({required this.recommendation});
+
+  @override
+  Widget build(BuildContext context) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        Chip(
-          avatar: const Icon(Icons.payments_outlined, size: 17),
-          label: Text(
-            '${recommendation.pricePerSession.toStringAsFixed(2)} KM',
-          ),
+        _MetaPill(
+          icon: Icons.payments_outlined,
+          label: '${recommendation.pricePerSession.toStringAsFixed(2)} KM',
         ),
-        Chip(
-          avatar: const Icon(Icons.workspace_premium_outlined, size: 17),
-          label: Text('${recommendation.experienceYears} years of experience'),
+        _MetaPill(
+          icon: Icons.workspace_premium_outlined,
+          label: recommendation.experienceYears == 1
+              ? '1 year experience'
+              : '${recommendation.experienceYears} years experience',
         ),
         if (recommendation.availableDays.isNotEmpty)
-          Chip(
-            avatar: const Icon(Icons.calendar_month_outlined, size: 17),
-            label: Text(
-              '${recommendation.availableDays.length} available days',
-            ),
+          _MetaPill(
+            icon: Icons.calendar_month_outlined,
+            label:
+                '${recommendation.availableDays.length} available day'
+                '${recommendation.availableDays.length == 1 ? '' : 's'}',
           ),
         if (recommendation.hasPreviousAppointment)
-          const Chip(
-            avatar: Icon(Icons.history, size: 17),
-            label: Text('Previously booked'),
-          ),
+          const _MetaPill(icon: Icons.history, label: 'Previously booked'),
       ],
     );
   }
+}
 
-  Widget _buildReasons(BuildContext context) {
-    final positiveReasons = recommendation.reasons
+class _RecommendationReasons extends StatelessWidget {
+  final List<RecommendationReasonModel> reasons;
+
+  const _RecommendationReasons({required this.reasons});
+
+  @override
+  Widget build(BuildContext context) {
+    final positiveReasons = reasons
         .where((reason) => reason.awardedPoints > 0)
         .take(3)
         .toList();
 
     final displayedReasons = positiveReasons.isNotEmpty
         ? positiveReasons
-        : recommendation.reasons.take(3).toList();
+        : reasons.take(3).toList();
 
-    if (displayedReasons.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 8),
-        child: Text(
-          'This therapist was selected based on the overall recommendation score.',
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(bottom: 4),
+        title: const Text(
+          'Why this therapist?',
+          style: TextStyle(
+            color: _recommendationText,
+            fontWeight: FontWeight.w800,
+          ),
         ),
-      );
-    }
-
-    return ExpansionTile(
-      tilePadding: EdgeInsets.zero,
-      childrenPadding: const EdgeInsets.only(bottom: 4),
-      title: const Text(
-        'Why is this therapist recommended?',
-        style: TextStyle(fontWeight: FontWeight.w600),
+        subtitle: const Text(
+          'Based on recommendation details from MindBloom',
+          style: TextStyle(color: _recommendationBody),
+        ),
+        children: displayedReasons
+            .map((reason) => _RecommendationReason(reason: reason))
+            .toList(),
       ),
-      children: displayedReasons
-          .map((reason) => _RecommendationReason(reason: reason))
-          .toList(),
     );
-  }
-
-  String _buildInitials(String fullName) {
-    final names = fullName
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((name) => name.isNotEmpty)
-        .toList();
-
-    if (names.isEmpty) {
-      return 'T';
-    }
-
-    if (names.length == 1) {
-      return names.first[0].toUpperCase();
-    }
-
-    return '${names.first[0]}${names.last[0]}'.toUpperCase();
   }
 }
 
@@ -450,7 +540,7 @@ class _RecommendationReason extends StatelessWidget {
             child: Icon(
               Icons.check_circle_outline,
               size: 18,
-              color: Colors.green,
+              color: _recommendationPrimary,
             ),
           ),
           const SizedBox(width: 8),
@@ -458,14 +548,110 @@ class _RecommendationReason extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(reason.explanation),
+                if (reason.criterion.trim().isNotEmpty) ...[
+                  Text(
+                    reason.criterion,
+                    style: const TextStyle(
+                      color: _recommendationText,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                ],
+                Text(
+                  reason.explanation,
+                  style: const TextStyle(
+                    color: _recommendationBody,
+                    height: 1.4,
+                  ),
+                ),
                 const SizedBox(height: 3),
                 Text(
                   '${reason.awardedPoints.toStringAsFixed(1)}'
                   '/${reason.maximumPoints.toStringAsFixed(1)} points',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: _recommendationBody,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MetaPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 250),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: _recommendationTint,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _recommendationBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: _recommendationPrimary),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _recommendationBody,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineMetric extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color iconColor;
+
+  const _InlineMetric({
+    required this.icon,
+    required this.text,
+    this.iconColor = _recommendationPrimary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 230),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: iconColor),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _recommendationText,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],

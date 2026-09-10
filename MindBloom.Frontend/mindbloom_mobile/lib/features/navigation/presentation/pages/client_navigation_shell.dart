@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../core/debug/mindbloom_debug_log.dart';
 import '../../../appointment/presentation/pages/my_appointments_page.dart';
 import '../../../dashboard/presentation/pages/client_dashboard_page.dart';
-import '../../../journal/presentation/pages/journal_page.dart';
 import '../../../notification/presentation/viewmodels/notification_scope.dart';
+import '../../../private_journal/presentation/pages/private_journal_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../../../therapist/presentation/pages/therapist_list_page.dart';
+
+const _shellBackground = Color(0xFFFCFAFF);
+const _shellSurface = Color(0xFFFFFFFF);
+const _shellLavender = Color(0xFFF5EFFC);
+const _shellBorder = Color(0xFFE8DEF3);
+const _shellPrimary = Color(0xFF6D4F91);
+const _shellText = Color(0xFF3E3152);
 
 class ClientNavigationShell extends StatefulWidget {
   const ClientNavigationShell({super.key});
@@ -19,16 +29,11 @@ class ClientNavigationShell extends StatefulWidget {
 
 class _ClientNavigationShellState extends State<ClientNavigationShell> {
   static const String _activeTabKey = 'mindbloom_client_active_navigation_tab';
+  static const int _pageCount = 5;
 
   int currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    ClientDashboardPage(),
-    TherapistListPage(),
-    MyAppointmentsPage(),
-    JournalPage(),
-    ProfilePage(),
-  ];
+  final Set<int> _visitedIndexes = <int>{0};
 
   final List<String> _titles = const [
     'Početna',
@@ -41,7 +46,17 @@ class _ClientNavigationShellState extends State<ClientNavigationShell> {
   @override
   void initState() {
     super.initState();
+    logWidget('ClientNavigationShell.initState');
     _loadActiveTab();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      logWidget('ClientNavigationShell starting notifications.initialize');
+      unawaited(NotificationScope.read(context).initialize());
+    });
   }
 
   Future<void> _loadActiveTab() async {
@@ -53,9 +68,10 @@ class _ClientNavigationShellState extends State<ClientNavigationShell> {
       return;
     }
 
-    if (savedIndex != null && savedIndex >= 0 && savedIndex < _pages.length) {
+    if (savedIndex != null && savedIndex >= 0 && savedIndex < _pageCount) {
       setState(() {
         currentIndex = savedIndex;
+        _visitedIndexes.add(savedIndex);
       });
     }
   }
@@ -67,6 +83,7 @@ class _ClientNavigationShellState extends State<ClientNavigationShell> {
 
     setState(() {
       currentIndex = index;
+      _visitedIndexes.add(index);
     });
 
     final preferences = await SharedPreferences.getInstance();
@@ -104,6 +121,21 @@ class _ClientNavigationShellState extends State<ClientNavigationShell> {
     Navigator.of(context).pushNamed(routeName);
   }
 
+  Widget _buildPage(int index) {
+    if (!_visitedIndexes.contains(index)) {
+      return const SizedBox.shrink();
+    }
+
+    return switch (index) {
+      0 => const ClientDashboardPage(showAppBar: false),
+      1 => const TherapistListPage(showAppBar: false),
+      2 => const MyAppointmentsPage(),
+      3 => const PrivateJournalPage(),
+      4 => const ProfilePage(),
+      _ => const SizedBox.shrink(),
+    };
+  }
+
   Future<void> _handleDrawerLogout() async {
     Navigator.of(context).pop();
 
@@ -113,6 +145,11 @@ class _ClientNavigationShellState extends State<ClientNavigationShell> {
   @override
   Widget build(BuildContext context) {
     final notifications = NotificationScope.of(context);
+
+    logWidget(
+      'ClientNavigationShell.build currentIndex=$currentIndex '
+      'unreadCount=${notifications.unreadCount}',
+    );
 
     return PopScope(
       canPop: currentIndex == 0,
@@ -126,8 +163,12 @@ class _ClientNavigationShellState extends State<ClientNavigationShell> {
         }
       },
       child: Scaffold(
+        backgroundColor: _shellBackground,
         appBar: AppBar(
           title: Text(_titles[currentIndex]),
+          backgroundColor: _shellBackground,
+          foregroundColor: _shellText,
+          surfaceTintColor: Colors.transparent,
           actions: [
             IconButton(
               tooltip: 'Chat',
@@ -150,31 +191,41 @@ class _ClientNavigationShellState extends State<ClientNavigationShell> {
           ],
         ),
         drawer: Drawer(
+          backgroundColor: _shellBackground,
           child: SafeArea(
             child: Column(
               children: [
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Color(0xFFE9DFFF),
-                        child: Icon(
-                          Icons.local_florist_outlined,
-                          color: Color(0xFF72559A),
+                Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: _shellSurface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: _shellBorder),
+                    ),
+                    child: const Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: Color(0xFFE9DFFF),
+                          child: Icon(
+                            Icons.local_florist_outlined,
+                            color: _shellPrimary,
+                          ),
                         ),
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        'MindBloom',
-                        style: TextStyle(
-                          color: Color(0xFF5C477B),
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                        SizedBox(width: 12),
+                        Text(
+                          'MindBloom',
+                          style: TextStyle(
+                            color: _shellPrimary,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const Divider(height: 1),
@@ -270,12 +321,15 @@ class _ClientNavigationShellState extends State<ClientNavigationShell> {
           ),
         ),
         body: SafeArea(
-  child: IndexedStack(
-    index: currentIndex,
-    children: _pages,
-  ),
-),
+          child: IndexedStack(
+            index: currentIndex,
+            children: List.generate(_pageCount, _buildPage),
+          ),
+        ),
         bottomNavigationBar: NavigationBar(
+          backgroundColor: _shellSurface,
+          indicatorColor: _shellLavender,
+          surfaceTintColor: Colors.transparent,
           selectedIndex: currentIndex,
           onDestinationSelected: _changeTab,
           destinations: const [
