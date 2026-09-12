@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/app_responsive_dialog_content.dart';
 import 'package:mindbloom_desktop/features/admin_audit/data/models/admin_audit_log_model.dart';
 
 class AdminAuditDetailsDialog extends StatelessWidget {
@@ -19,8 +20,8 @@ class AdminAuditDetailsDialog extends StatelessWidget {
           Text('Detalji audit zapisa'),
         ],
       ),
-      content: SizedBox(
-        width: 760,
+      content: AppResponsiveDialogContent(
+        preferredWidth: 760,
         child: SingleChildScrollView(
           child: SelectionArea(
             child: Column(
@@ -83,21 +84,37 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 175,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 520;
+
+        final labelWidget = Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        );
+
+        final valueWidget = SelectableText(value);
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    labelWidget,
+                    const SizedBox(height: 4),
+                    valueWidget,
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 175, child: labelWidget),
+                    Expanded(child: valueWidget),
+                  ],
+                ),
+        );
+      },
     );
   }
 }
@@ -132,6 +149,7 @@ class _JsonSection extends StatelessWidget {
           ),
           child: Text(
             normalized.isEmpty ? 'Nema sačuvanih podataka.' : normalized,
+            style: const TextStyle(fontFamily: 'monospace', height: 1.35),
           ),
         ),
       ],

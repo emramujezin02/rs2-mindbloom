@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_page_header.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_status_badge.dart';
 import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 import 'package:mindbloom_desktop/features/admin_audit/widgets/admin_audit_details_dialog.dart';
 
@@ -194,27 +196,15 @@ class _AdminAuditPageState extends State<AdminAuditPage> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      children: [
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Admin audit pregled',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 4),
-              Text('Pregled važnih administrativnih i sigurnosnih akcija.'),
-            ],
-          ),
-        ),
-        IconButton(
-          tooltip: 'Osvježi',
-          onPressed: _viewModel.isLoading ? null : _viewModel.refresh,
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
+    return AdminPageHeader(
+      title: 'Admin audit',
+      subtitle: 'Review important administrative and security actions.',
+      icon: Icons.manage_search_outlined,
+      trailing: OutlinedButton.icon(
+        onPressed: _viewModel.isLoading ? null : _viewModel.refresh,
+        icon: const Icon(Icons.refresh),
+        label: const Text('Refresh'),
+      ),
     );
   }
 
@@ -476,6 +466,11 @@ class _AdminAuditPageState extends State<AdminAuditPage> {
     return AdminTableContainer(
       minimumWidth: 1750,
       child: DataTable(
+        columnSpacing: 28,
+        horizontalMargin: 24,
+        headingRowHeight: 54,
+        dataRowMinHeight: 62,
+        dataRowMaxHeight: 76,
         columns: const [
           DataColumn(label: Text('Korisnik')),
           DataColumn(label: Text('Akcija')),
@@ -513,8 +508,21 @@ class _AdminAuditPageState extends State<AdminAuditPage> {
                   ),
                 ),
               ),
-              DataCell(Text(audit.action)),
-              DataCell(Text(audit.entityType)),
+              DataCell(
+                SizedBox(
+                  width: 170,
+                  child: Text(audit.action, overflow: TextOverflow.ellipsis),
+                ),
+              ),
+              DataCell(
+                SizedBox(
+                  width: 150,
+                  child: Text(
+                    audit.entityType,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
               DataCell(Text(audit.entityId ?? '—')),
               DataCell(Text(formatter.format(audit.occurredAtUtc.toLocal()))),
               DataCell(Text(audit.ipAddress ?? '—')),
@@ -525,13 +533,12 @@ class _AdminAuditPageState extends State<AdminAuditPage> {
                 ),
               ),
               DataCell(
-                Chip(
-                  avatar: Icon(
-                    audit.isSuccessful ? Icons.check_circle : Icons.error,
-                    size: 18,
-                  ),
-                  label: Text(audit.isSuccessful ? 'Uspješno' : 'Neuspješno'),
-                  visualDensity: VisualDensity.compact,
+                AdminStatusBadge(
+                  label: audit.isSuccessful ? 'Successful' : 'Failed',
+                  tone: audit.isSuccessful
+                      ? AdminStatusTone.success
+                      : AdminStatusTone.danger,
+                  icon: audit.isSuccessful ? Icons.check_circle : Icons.error,
                 ),
               ),
               DataCell(Text(audit.statusCode.toString())),

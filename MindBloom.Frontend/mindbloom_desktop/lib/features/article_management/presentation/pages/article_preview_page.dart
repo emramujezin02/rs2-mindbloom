@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/api_constants.dart';
+import '../../../../core/widgets/admin_status_badge.dart';
 
 class ArticlePreviewPage extends StatelessWidget {
   final String title;
@@ -44,15 +45,24 @@ class ArticlePreviewPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
-                    Chip(
-                      label: Text(
-                        categoryName.isEmpty ? 'No category' : categoryName,
-                      ),
+                    AdminStatusBadge(
+                      label: categoryName.isEmpty
+                          ? 'No category'
+                          : categoryName,
+                      tone: AdminStatusTone.info,
+                      icon: Icons.category_outlined,
                     ),
-                    const SizedBox(width: 12),
-                    Chip(label: Text(isPublished ? 'Published' : 'Draft')),
+                    AdminStatusBadge(
+                      label: isPublished ? 'Published' : 'Draft',
+                      tone: isPublished
+                          ? AdminStatusTone.success
+                          : AdminStatusTone.neutral,
+                      icon: isPublished ? Icons.public : Icons.public_off,
+                    ),
                   ],
                 ),
 

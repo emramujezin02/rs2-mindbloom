@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_page_header.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_status_badge.dart';
 import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 
 import '../../../../app/di/injection.dart';
@@ -119,106 +121,44 @@ class _TherapistVerificationPageState extends State<TherapistVerificationPage> {
     }
   }
 
+  AdminStatusTone _therapistStatusTone(String value) {
+    switch (value) {
+      case 'Approved':
+        return AdminStatusTone.success;
+      case 'Pending':
+      case 'RequiresChanges':
+        return AdminStatusTone.warning;
+      case 'Rejected':
+        return AdminStatusTone.danger;
+      default:
+        return AdminStatusTone.neutral;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Card(
-          margin: const EdgeInsets.all(24),
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: _viewModel.updateSearch,
-                    onSubmitted: (value) {
-                      _viewModel.searchTherapists(value);
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          child: AdminPageHeader(
+            title: 'Therapist Verification',
+            subtitle:
+                'Review therapist applications, documents and approval status.',
+            icon: Icons.verified_user_outlined,
+            trailing: OutlinedButton.icon(
+              onPressed: _viewModel.isLoading
+                  ? null
+                  : () {
+                      _viewModel.load();
                     },
-                    decoration: const InputDecoration(
-                      labelText: 'Pretraži terapeute',
-                      hintText: 'Ime, email ili specijalizacija',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                SizedBox(
-                  width: 210,
-                  child: DropdownButtonFormField<String?>(
-                    initialValue: _viewModel.status,
-                    decoration: const InputDecoration(
-                      labelText: 'Status',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('Svi statusi'),
-                      ),
-                      DropdownMenuItem<String?>(
-                        value: 'Pending',
-                        child: Text('Na čekanju'),
-                      ),
-                      DropdownMenuItem<String?>(
-                        value: 'Approved',
-                        child: Text('Odobren'),
-                      ),
-                      DropdownMenuItem<String?>(
-                        value: 'Rejected',
-                        child: Text('Odbijen'),
-                      ),
-                      DropdownMenuItem<String?>(
-                        value: 'RequiresChanges',
-                        child: Text('Potrebne izmjene'),
-                      ),
-                    ],
-                    onChanged: _viewModel.isLoading
-                        ? null
-                        : (value) {
-                            _viewModel.filterByStatus(value);
-                          },
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                ElevatedButton.icon(
-                  onPressed: _viewModel.isLoading
-                      ? null
-                      : () {
-                          _viewModel.searchTherapists(_searchController.text);
-                        },
-                  icon: const Icon(Icons.search),
-                  label: const Text('Pretraži'),
-                ),
-
-                const SizedBox(width: 10),
-
-                OutlinedButton.icon(
-                  onPressed: _viewModel.isLoading
-                      ? null
-                      : () async {
-                          _searchController.clear();
-
-                          await _viewModel.clearFilters();
-                        },
-                  icon: const Icon(Icons.filter_alt_off),
-                  label: const Text('Resetuj filtere'),
-                ),
-              ],
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh'),
             ),
           ),
         ),
-
-        // TAČKA 68: dodaje se odmah ispod filter Card-a.
+        _buildFilters(),
         _buildActiveFilters(),
-
-        // Error banner se prikazuje samo ako tabela već ima rezultate.
         if (_viewModel.errorMessage != null && _viewModel.therapists.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
@@ -227,11 +167,117 @@ class _TherapistVerificationPageState extends State<TherapistVerificationPage> {
               onDismiss: _viewModel.clearError,
             ),
           ),
-
         Expanded(child: _buildContent()),
-
-        _buildPagination(),
       ],
+    );
+  }
+
+  Widget _buildFilters() {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 920;
+
+            final searchField = TextField(
+              controller: _searchController,
+              onChanged: _viewModel.updateSearch,
+              onSubmitted: (value) {
+                _viewModel.searchTherapists(value);
+              },
+              decoration: const InputDecoration(
+                labelText: 'Pretraži terapeute',
+                hintText: 'Ime, email ili specijalizacija',
+                prefixIcon: Icon(Icons.search),
+              ),
+            );
+
+            final statusFilter = DropdownButtonFormField<String?>(
+              initialValue: _viewModel.status,
+              decoration: const InputDecoration(labelText: 'Status'),
+              items: const [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Svi statusi'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'Pending',
+                  child: Text('Na čekanju'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'Approved',
+                  child: Text('Odobren'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'Rejected',
+                  child: Text('Odbijen'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'RequiresChanges',
+                  child: Text('Potrebne izmjene'),
+                ),
+              ],
+              onChanged: _viewModel.isLoading
+                  ? null
+                  : (value) {
+                      _viewModel.filterByStatus(value);
+                    },
+            );
+
+            final searchButton = ElevatedButton.icon(
+              onPressed: _viewModel.isLoading
+                  ? null
+                  : () {
+                      _viewModel.searchTherapists(_searchController.text);
+                    },
+              icon: const Icon(Icons.search),
+              label: const Text('Pretraži'),
+            );
+
+            final resetButton = OutlinedButton.icon(
+              onPressed: _viewModel.isLoading
+                  ? null
+                  : () async {
+                      _searchController.clear();
+
+                      await _viewModel.clearFilters();
+                    },
+              icon: const Icon(Icons.filter_alt_off),
+              label: const Text('Resetuj filtere'),
+            );
+
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  searchField,
+                  const SizedBox(height: 12),
+                  statusFilter,
+                  const SizedBox(height: 12),
+                  searchButton,
+                  const SizedBox(height: 10),
+                  resetButton,
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 4, child: searchField),
+                const SizedBox(width: 12),
+                SizedBox(width: 220, child: statusFilter),
+                const SizedBox(width: 12),
+                SizedBox(height: 56, child: searchButton),
+                const SizedBox(width: 10),
+                SizedBox(height: 56, child: resetButton),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -261,90 +307,107 @@ class _TherapistVerificationPageState extends State<TherapistVerificationPage> {
 
     final formatter = DateFormat('dd.MM.yyyy. HH:mm');
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: AdminTableContainer(
-        minimumWidth: 1250,
-        child: DataTable(
-          columns: const [
-            DataColumn(label: Text('Terapeut')),
-            DataColumn(label: Text('Email')),
-            DataColumn(label: Text('Specijalizacija')),
-            DataColumn(label: Text('Iskustvo')),
-            DataColumn(label: Text('Dokumenti')),
-            DataColumn(label: Text('Status')),
-            DataColumn(label: Text('Prijavljen')),
-            DataColumn(label: Text('Akcije')),
-          ],
-          rows: _viewModel.therapists.map((therapist) {
-            return DataRow(
-              cells: [
-                DataCell(
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        child: Text(
-                          therapist.fullName.trim().isEmpty
-                              ? '?'
-                              : therapist.fullName.trim()[0].toUpperCase(),
+    return Column(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: AdminTableContainer(
+              minimumWidth: 1250,
+              child: DataTable(
+                columnSpacing: 28,
+                headingRowHeight: 54,
+                dataRowMinHeight: 60,
+                dataRowMaxHeight: 72,
+                columns: const [
+                  DataColumn(label: Text('Terapeut')),
+                  DataColumn(label: Text('Email')),
+                  DataColumn(label: Text('Specijalizacija')),
+                  DataColumn(label: Text('Iskustvo')),
+                  DataColumn(label: Text('Dokumenti')),
+                  DataColumn(label: Text('Status')),
+                  DataColumn(label: Text('Prijavljen')),
+                  DataColumn(label: Text('Akcije')),
+                ],
+                rows: _viewModel.therapists.map((therapist) {
+                  return DataRow(
+                    cells: [
+                      DataCell(
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              child: Text(
+                                therapist.fullName.trim().isEmpty
+                                    ? '?'
+                                    : therapist.fullName
+                                          .trim()[0]
+                                          .toUpperCase(),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            SizedBox(
+                              width: 180,
+                              child: Text(
+                                therapist.fullName,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      SizedBox(
-                        width: 180,
-                        child: Text(
-                          therapist.fullName,
-                          overflow: TextOverflow.ellipsis,
+                      DataCell(SelectableText(therapist.email)),
+                      DataCell(
+                        SizedBox(
+                          width: 190,
+                          child: Text(
+                            therapist.specialization,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      DataCell(Text('${therapist.experienceYears} god.')),
+                      DataCell(Text(therapist.documentCount.toString())),
+                      DataCell(
+                        AdminStatusBadge(
+                          label: _therapistStatusLabel(
+                            therapist.verificationStatus,
+                          ),
+                          tone: _therapistStatusTone(
+                            therapist.verificationStatus,
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          formatter.format(therapist.registeredAtUtc.toLocal()),
+                        ),
+                      ),
+                      DataCell(
+                        AdminTableActionMenu<String>(
+                          enabled: !_viewModel.isLoading,
+                          actions: const [
+                            AdminTableAction<String>(
+                              value: 'details',
+                              label: 'Pregledaj prijavu',
+                              icon: Icons.visibility_outlined,
+                            ),
+                          ],
+                          onSelected: (value) {
+                            if (value == 'details') {
+                              _openDetails(therapist.therapistId);
+                            }
+                          },
                         ),
                       ),
                     ],
-                  ),
-                ),
-                DataCell(SelectableText(therapist.email)),
-                DataCell(
-                  SizedBox(
-                    width: 190,
-                    child: Text(
-                      therapist.specialization,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-                DataCell(Text('${therapist.experienceYears} god.')),
-                DataCell(Text(therapist.documentCount.toString())),
-                DataCell(
-                  Chip(
-                    label: Text(
-                      _therapistStatusLabel(therapist.verificationStatus),
-                    ),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ),
-                DataCell(
-                  Text(formatter.format(therapist.registeredAtUtc.toLocal())),
-                ),
-                DataCell(
-                  AdminTableActionMenu<String>(
-                    enabled: !_viewModel.isLoading,
-                    actions: const [
-                      AdminTableAction<String>(
-                        value: 'details',
-                        label: 'Pregledaj prijavu',
-                        icon: Icons.visibility_outlined,
-                      ),
-                    ],
-                    onSelected: (value) {
-                      if (value == 'details') {
-                        _openDetails(therapist.therapistId);
-                      }
-                    },
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
         ),
-      ),
+        _buildPagination(),
+      ],
     );
   }
 

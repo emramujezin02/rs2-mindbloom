@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_page_header.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_status_badge.dart';
 import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 import '../../data/models/therapy_approach_model.dart';
 import '../../../../app/di/injection.dart';
@@ -11,6 +13,7 @@ import '../../../../core/widgets/app_error_banner.dart';
 import '../../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../../core/widgets/admin_table_container.dart';
 import '../../../../core/widgets/admin_table_state.dart';
+import '../../../../core/widgets/app_responsive_dialog_content.dart';
 
 enum _ReferenceDataSection {
   specializations,
@@ -620,51 +623,31 @@ class _ReferenceDataManagementPageState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Referentni podaci',
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    isSpecializations
-                        ? 'Manage therapist specializations used throughout the application.'
-                        : 'Manage therapy approaches used by therapists and clients.',
-                  ),
-                ],
-              ),
-            ),
-
-            ElevatedButton.icon(
-              onPressed: _viewModel.isActionLoading
-                  ? null
-                  : isSpecializations
-                  ? _openCreateDialog
-                  : isTherapyApproaches
-                  ? _openCreateTherapyApproachDialog
-                  : _openCreateArticleCategoryDialog,
-              icon: const Icon(Icons.add),
-              label: Text(
-                isSpecializations
-                    ? 'Dodaj specijalizaciju'
-                    : isTherapyApproaches
-                    ? 'Dodaj terapijski pravac'
-                    : 'Dodaj kategoriju članka',
-              ),
-            ),
-            Text(
+        AdminPageHeader(
+          title: 'Reference data',
+          subtitle: isSpecializations
+              ? 'Manage therapist specializations used throughout the application.'
+              : isTherapyApproaches
+              ? 'Manage therapy approaches used by therapists and clients.'
+              : 'Manage article categories used by educational articles.',
+          icon: Icons.tune_outlined,
+          trailing: FilledButton.icon(
+            onPressed: _viewModel.isActionLoading
+                ? null
+                : isSpecializations
+                ? _openCreateDialog
+                : isTherapyApproaches
+                ? _openCreateTherapyApproachDialog
+                : _openCreateArticleCategoryDialog,
+            icon: const Icon(Icons.add),
+            label: Text(
               isSpecializations
-                  ? 'Manage therapist specializations used throughout the application.'
+                  ? 'Add specialization'
                   : isTherapyApproaches
-                  ? 'Manage therapy approaches used by therapists and clients.'
-                  : 'Manage article categories used by educational articles.',
+                  ? 'Add therapy approach'
+                  : 'Add article category',
             ),
-          ],
+          ),
         ),
 
         const SizedBox(height: 20),
@@ -717,146 +700,166 @@ class _ReferenceDataManagementPageState
         ? _viewModel.therapyApproachPageSize
         : _viewModel.articleCategoryPageSize;
 
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        SizedBox(
-          width: 360,
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              labelText: isSpecializations
-                  ? 'Pretraži specijalizacije'
-                  : isTherapyApproaches
-                  ? 'Pretraži terapijske pravce'
-                  : 'Pretraži kategorije članaka',
-              hintText: 'Naziv ili opis',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Očisti pretragu',
-                      onPressed: () async {
-                        _searchController.clear();
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SizedBox(
+              width: 360,
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  labelText: isSpecializations
+                      ? 'Pretraži specijalizacije'
+                      : isTherapyApproaches
+                      ? 'Pretraži terapijske pravce'
+                      : 'Pretraži kategorije članaka',
+                  hintText: 'Naziv ili opis',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Očisti pretragu',
+                          onPressed: () async {
+                            _searchController.clear();
 
-                        setState(() {});
+                            setState(() {});
 
+                            if (isSpecializations) {
+                              await _viewModel.clearSearch();
+                            } else if (isTherapyApproaches) {
+                              _viewModel.therapyApproachSearch = '';
+
+                              await _viewModel.loadTherapyApproaches(
+                                requestedPage: 1,
+                              );
+                            } else {
+                              _viewModel.articleCategorySearch = '';
+
+                              await _viewModel.loadArticleCategories(
+                                requestedPage: 1,
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.clear),
+                        ),
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  setState(() {});
+
+                  if (isSpecializations) {
+                    _viewModel.updateSearch(value);
+                  } else if (isTherapyApproaches) {
+                    _viewModel.therapyApproachSearch = value.trim();
+
+                    _viewModel.loadTherapyApproaches(requestedPage: 1);
+                  } else {
+                    _viewModel.articleCategorySearch = value.trim();
+
+                    _viewModel.loadArticleCategories(requestedPage: 1);
+                  }
+                },
+              ),
+            ),
+
+            SizedBox(
+              width: 200,
+              child: DropdownButtonFormField<bool?>(
+                initialValue: activeFilter,
+                decoration: const InputDecoration(
+                  labelText: 'Status',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem<bool?>(
+                    value: null,
+                    child: Text('Svi statusi'),
+                  ),
+                  DropdownMenuItem<bool?>(value: true, child: Text('Aktivno')),
+                  DropdownMenuItem<bool?>(
+                    value: false,
+                    child: Text('Neaktivno'),
+                  ),
+                ],
+                onChanged: _viewModel.isLoading
+                    ? null
+                    : (value) async {
                         if (isSpecializations) {
-                          await _viewModel.clearSearch();
+                          await _viewModel.updateActiveFilter(value);
                         } else if (isTherapyApproaches) {
-                          _viewModel.therapyApproachSearch = '';
+                          _viewModel.therapyApproachActiveFilter = value;
 
                           await _viewModel.loadTherapyApproaches(
                             requestedPage: 1,
                           );
                         } else {
-                          _viewModel.articleCategorySearch = '';
+                          _viewModel.articleCategoryActiveFilter = value;
 
                           await _viewModel.loadArticleCategories(
                             requestedPage: 1,
                           );
                         }
                       },
-                      icon: const Icon(Icons.clear),
-                    ),
-              border: const OutlineInputBorder(),
+              ),
             ),
-            onChanged: (value) {
-              setState(() {});
 
-              if (isSpecializations) {
-                _viewModel.updateSearch(value);
-              } else if (isTherapyApproaches) {
-                _viewModel.therapyApproachSearch = value.trim();
+            SizedBox(
+              width: 130,
+              child: DropdownButtonFormField<int>(
+                initialValue: pageSize,
+                decoration: const InputDecoration(
+                  labelText: 'Page size',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 10, child: Text('10')),
+                  DropdownMenuItem(value: 20, child: Text('20')),
+                  DropdownMenuItem(value: 50, child: Text('50')),
+                ],
+                onChanged: _viewModel.isLoading
+                    ? null
+                    : (value) async {
+                        if (value == null) {
+                          return;
+                        }
 
-                _viewModel.loadTherapyApproaches(requestedPage: 1);
-              } else {
-                _viewModel.articleCategorySearch = value.trim();
+                        if (isSpecializations) {
+                          await _viewModel.changePageSize(value);
+                        } else if (isTherapyApproaches) {
+                          _viewModel.therapyApproachPageSize = value;
 
-                _viewModel.loadArticleCategories(requestedPage: 1);
-              }
-            },
-          ),
-        ),
+                          await _viewModel.loadTherapyApproaches(
+                            requestedPage: 1,
+                          );
+                        } else {
+                          _viewModel.articleCategoryPageSize = value;
 
-        SizedBox(
-          width: 200,
-          child: DropdownButtonFormField<bool?>(
-            initialValue: activeFilter,
-            decoration: const InputDecoration(
-              labelText: 'Status',
-              border: OutlineInputBorder(),
+                          await _viewModel.loadArticleCategories(
+                            requestedPage: 1,
+                          );
+                        }
+                      },
+              ),
             ),
-            items: const [
-              DropdownMenuItem<bool?>(value: null, child: Text('Svi statusi')),
-              DropdownMenuItem<bool?>(value: true, child: Text('Aktivno')),
-              DropdownMenuItem<bool?>(value: false, child: Text('Neaktivno')),
-            ],
-            onChanged: _viewModel.isLoading
-                ? null
-                : (value) async {
-                    if (isSpecializations) {
-                      await _viewModel.updateActiveFilter(value);
-                    } else if (isTherapyApproaches) {
-                      _viewModel.therapyApproachActiveFilter = value;
 
-                      await _viewModel.loadTherapyApproaches(requestedPage: 1);
-                    } else {
-                      _viewModel.articleCategoryActiveFilter = value;
-
-                      await _viewModel.loadArticleCategories(requestedPage: 1);
-                    }
-                  },
-          ),
-        ),
-
-        SizedBox(
-          width: 130,
-          child: DropdownButtonFormField<int>(
-            initialValue: pageSize,
-            decoration: const InputDecoration(
-              labelText: 'Page size',
-              border: OutlineInputBorder(),
+            IconButton(
+              tooltip: 'Refresh',
+              onPressed: _viewModel.isLoading
+                  ? null
+                  : () {
+                      _loadCurrentSection();
+                    },
+              icon: const Icon(Icons.refresh),
             ),
-            items: const [
-              DropdownMenuItem(value: 10, child: Text('10')),
-              DropdownMenuItem(value: 20, child: Text('20')),
-              DropdownMenuItem(value: 50, child: Text('50')),
-            ],
-            onChanged: _viewModel.isLoading
-                ? null
-                : (value) async {
-                    if (value == null) {
-                      return;
-                    }
-
-                    if (isSpecializations) {
-                      await _viewModel.changePageSize(value);
-                    } else if (isTherapyApproaches) {
-                      _viewModel.therapyApproachPageSize = value;
-
-                      await _viewModel.loadTherapyApproaches(requestedPage: 1);
-                    } else {
-                      _viewModel.articleCategoryPageSize = value;
-
-                      await _viewModel.loadArticleCategories(requestedPage: 1);
-                    }
-                  },
-          ),
+          ],
         ),
-
-        IconButton(
-          tooltip: 'Refresh',
-          onPressed: _viewModel.isLoading
-              ? null
-              : () {
-                  _loadCurrentSection();
-                },
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
+      ),
     );
   }
 
@@ -901,6 +904,11 @@ class _ReferenceDataManagementPageState
     return AdminTableContainer(
       minimumWidth: 1150,
       child: DataTable(
+        columnSpacing: 28,
+        horizontalMargin: 24,
+        headingRowHeight: 54,
+        dataRowMinHeight: 62,
+        dataRowMaxHeight: 74,
         columns: const [
           DataColumn(label: Text('Naziv')),
           DataColumn(label: Text('Opis')),
@@ -950,12 +958,12 @@ class _ReferenceDataManagementPageState
           ),
         ),
         DataCell(
-          Chip(
-            avatar: Icon(
-              category.isActive ? Icons.check_circle : Icons.block,
-              size: 18,
-            ),
-            label: Text(category.isActive ? 'Aktivno' : 'Neaktivno'),
+          AdminStatusBadge(
+            label: category.isActive ? 'Aktivno' : 'Neaktivno',
+            tone: category.isActive
+                ? AdminStatusTone.success
+                : AdminStatusTone.neutral,
+            icon: category.isActive ? Icons.check_circle : Icons.block,
           ),
         ),
         DataCell(Text(formatter.format(category.createdAtUtc.toLocal()))),
@@ -1031,6 +1039,11 @@ class _ReferenceDataManagementPageState
     return AdminTableContainer(
       minimumWidth: 1100,
       child: DataTable(
+        columnSpacing: 28,
+        horizontalMargin: 24,
+        headingRowHeight: 54,
+        dataRowMinHeight: 62,
+        dataRowMaxHeight: 74,
         columns: const [
           DataColumn(label: Text('Naziv')),
           DataColumn(label: Text('Opis')),
@@ -1072,6 +1085,11 @@ class _ReferenceDataManagementPageState
     return AdminTableContainer(
       minimumWidth: 1250,
       child: DataTable(
+        columnSpacing: 28,
+        horizontalMargin: 24,
+        headingRowHeight: 54,
+        dataRowMinHeight: 62,
+        dataRowMaxHeight: 74,
         columns: const [
           DataColumn(label: Text('Naziv')),
           DataColumn(label: Text('Opis')),
@@ -1115,12 +1133,12 @@ class _ReferenceDataManagementPageState
         ),
         DataCell(Text(specialization.therapistCount.toString())),
         DataCell(
-          Chip(
-            avatar: Icon(
-              specialization.isActive ? Icons.check_circle : Icons.block,
-              size: 18,
-            ),
-            label: Text(specialization.isActive ? 'Active' : 'Inactive'),
+          AdminStatusBadge(
+            label: specialization.isActive ? 'Active' : 'Inactive',
+            tone: specialization.isActive
+                ? AdminStatusTone.success
+                : AdminStatusTone.neutral,
+            icon: specialization.isActive ? Icons.check_circle : Icons.block,
           ),
         ),
         DataCell(Text(formatter.format(specialization.createdAtUtc.toLocal()))),
@@ -1214,12 +1232,12 @@ class _ReferenceDataManagementPageState
         ),
 
         DataCell(
-          Chip(
-            avatar: Icon(
-              approach.isActive ? Icons.check_circle : Icons.block,
-              size: 18,
-            ),
-            label: Text(approach.isActive ? 'Active' : 'Inactive'),
+          AdminStatusBadge(
+            label: approach.isActive ? 'Active' : 'Inactive',
+            tone: approach.isActive
+                ? AdminStatusTone.success
+                : AdminStatusTone.neutral,
+            icon: approach.isActive ? Icons.check_circle : Icons.block,
           ),
         ),
 
@@ -1417,8 +1435,8 @@ class _SpecializationFormDialogState extends State<_SpecializationFormDialog> {
       title: Text(
         _isEditing ? 'Uredi specijalizaciju' : 'Dodaj specijalizaciju',
       ),
-      content: SizedBox(
-        width: 560,
+      content: AppResponsiveDialogContent(
+        preferredWidth: 560,
         child: Form(
           key: _formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -1591,8 +1609,8 @@ class _TherapyApproachFormDialogState
       title: Text(
         _isEditing ? 'Uredi terapijski pravac' : 'Dodaj terapijski pravac',
       ),
-      content: SizedBox(
-        width: 560,
+      content: AppResponsiveDialogContent(
+        preferredWidth: 560,
         child: Form(
           key: _formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -1765,8 +1783,8 @@ class _ArticleCategoryFormDialogState
       title: Text(
         _isEditing ? 'Uredi kategoriju članka' : 'Dodaj kategoriju članka',
       ),
-      content: SizedBox(
-        width: 560,
+      content: AppResponsiveDialogContent(
+        preferredWidth: 560,
         child: Form(
           key: _formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,

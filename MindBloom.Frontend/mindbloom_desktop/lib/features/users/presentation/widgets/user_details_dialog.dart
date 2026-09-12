@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/widgets/admin_status_badge.dart';
 import '../../data/models/admin_user_audit_model.dart';
 import '../../data/models/admin_user_details_model.dart';
 import '../../../../core/widgets/app_responsive_dialog_content.dart';
@@ -12,39 +13,110 @@ class UserDetailsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final formatter = DateFormat('dd.MM.yyyy.');
+    final colors = Theme.of(context).colorScheme;
 
     return AlertDialog(
-      title: const Text('User details'),
+      title: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: colors.primaryContainer,
+            foregroundColor: colors.onPrimaryContainer,
+            child: Text(
+              user.fullName.trim().isEmpty
+                  ? '?'
+                  : user.fullName.trim()[0].toUpperCase(),
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(child: Text('User details')),
+        ],
+      ),
       content: AppResponsiveDialogContent(
-        preferredWidth: 520,
+        preferredWidth: 680,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _item('Full name', user.fullName),
-            _item('Email', user.email),
-            _item('Phone', user.phoneNumber ?? '-'),
-            _item('Role', user.role),
-            _item('Gender', user.gender),
-            _item(
-              'Date of birth',
-              formatter.format(user.dateOfBirth.toLocal()),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Wrap(
+                  spacing: 18,
+                  runSpacing: 14,
+                  children: [
+                    _item(context, 'Full name', user.fullName),
+                    _item(context, 'Email', user.email),
+                    _item(context, 'Phone', user.phoneNumber ?? '-'),
+                    _item(context, 'Gender', user.gender),
+                    _item(
+                      context,
+                      'Date of birth',
+                      formatter.format(user.dateOfBirth.toLocal()),
+                    ),
+                    _item(
+                      context,
+                      'Registered',
+                      formatter.format(user.createdAtUtc.toLocal()),
+                    ),
+                    _item(
+                      context,
+                      'Last login',
+                      user.lastLoginAtUtc == null
+                          ? 'Never'
+                          : formatter.format(user.lastLoginAtUtc!.toLocal()),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            _item('Registered', formatter.format(user.createdAtUtc.toLocal())),
-            _item(
-              'Last login',
-              user.lastLoginAtUtc == null
-                  ? 'Never'
-                  : formatter.format(user.lastLoginAtUtc!.toLocal()),
+            const SizedBox(height: 14),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    AdminStatusBadge(
+                      label: user.role,
+                      tone: user.role == 'Admin'
+                          ? AdminStatusTone.info
+                          : user.role == 'Therapist'
+                          ? AdminStatusTone.success
+                          : AdminStatusTone.neutral,
+                    ),
+                    AdminStatusBadge(
+                      label: user.isEmailVerified
+                          ? 'Email verified'
+                          : 'Email unverified',
+                      tone: user.isEmailVerified
+                          ? AdminStatusTone.success
+                          : AdminStatusTone.warning,
+                      icon: user.isEmailVerified
+                          ? Icons.verified_outlined
+                          : Icons.warning_amber_outlined,
+                    ),
+                    AdminStatusBadge(
+                      label: user.isTwoFactorEnabled
+                          ? 'Two factor enabled'
+                          : 'Two factor disabled',
+                      tone: user.isTwoFactorEnabled
+                          ? AdminStatusTone.success
+                          : AdminStatusTone.neutral,
+                    ),
+                    AdminStatusBadge(
+                      label: user.isBlocked ? 'Blocked' : 'Active',
+                      tone: user.isBlocked
+                          ? AdminStatusTone.danger
+                          : AdminStatusTone.success,
+                      icon: user.isBlocked
+                          ? Icons.block
+                          : Icons.check_circle_outline,
+                    ),
+                  ],
+                ),
+              ),
             ),
-            _item('Email verified', user.isEmailVerified ? 'Yes' : 'No'),
-            _item(
-              'Two factor',
-              user.isTwoFactorEnabled ? 'Enabled' : 'Disabled',
-            ),
-            _item('Account', user.isBlocked ? 'Blocked' : 'Active'),
-            const SizedBox(height: 12),
-            const Divider(),
-            const SizedBox(height: 12),
+            const SizedBox(height: 18),
             Text(
               'Audit history',
               style: Theme.of(
@@ -70,15 +142,21 @@ class UserDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _item(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+  Widget _item(BuildContext context, String title, String value) {
+    return SizedBox(
+      width: 300,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 3),
-          Text(value),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          SelectableText(value.isEmpty ? '-' : value),
         ],
       ),
     );
@@ -108,7 +186,9 @@ class UserDetailsDialog extends StatelessWidget {
                 ),
                 Text(
                   dateFormatter.format(audit.changedAtUtc.toLocal()),
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

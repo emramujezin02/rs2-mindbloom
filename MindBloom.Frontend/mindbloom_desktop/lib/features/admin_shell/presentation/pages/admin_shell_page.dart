@@ -351,13 +351,15 @@ class _AdminSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = expanded ? 250.0 : 82.0;
+    final colors = Theme.of(context).colorScheme;
+
+    final width = expanded ? 264.0 : 76.0;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       width: width,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: colors.surface,
         border: Border(
           right: BorderSide(color: Theme.of(context).dividerColor),
         ),
@@ -365,36 +367,45 @@ class _AdminSidebar extends StatelessWidget {
       child: Column(
         children: [
           SizedBox(
-            height: 72,
+            height: 76,
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: expanded ? 20 : 14),
+              padding: EdgeInsets.symmetric(horizontal: expanded ? 18 : 12),
               child: Row(
                 mainAxisAlignment: expanded
                     ? MainAxisAlignment.start
                     : MainAxisAlignment.center,
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 46,
+                    height: 46,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
+                      color: colors.primaryContainer,
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Icon(
-                      Icons.spa,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
+                    child: Icon(Icons.spa, color: colors.onPrimaryContainer),
                   ),
                   if (expanded) ...[
                     const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'MindBloom',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 21,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'MindBloom',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            'Admin portal',
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colors.onSurfaceVariant),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -402,10 +413,13 @@ class _AdminSidebar extends StatelessWidget {
               ),
             ),
           ),
-          const Divider(height: 1),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: expanded ? 16 : 12),
+            child: Divider(height: 1, color: Theme.of(context).dividerColor),
+          ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+              padding: const EdgeInsets.fromLTRB(10, 14, 10, 14),
               children: [
                 ..._mainSections.map((section) {
                   return _buildNavigationItem(context, section);
@@ -415,18 +429,50 @@ class _AdminSidebar extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 1),
-          if (expanded)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'MindBloom Administration',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12),
-              ),
-            )
-          else
-            const SizedBox(height: 16),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              expanded ? 16 : 12,
+              0,
+              expanded ? 16 : 12,
+              expanded ? 16 : 14,
+            ),
+            child: expanded
+                ? Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: colors.surfaceContainerHighest.withValues(
+                        alpha: 0.45,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: colors.outlineVariant),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.admin_panel_settings_outlined,
+                          size: 20,
+                          color: colors.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'MindBloom Administration',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colors.onSurfaceVariant),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Icon(
+                    Icons.admin_panel_settings_outlined,
+                    size: 22,
+                    color: colors.onSurfaceVariant,
+                  ),
+          ),
         ],
       ),
     );
@@ -437,7 +483,7 @@ class _AdminSidebar extends StatelessWidget {
 
     if (!expanded) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 5),
+        padding: const EdgeInsets.only(bottom: 6),
         child: PopupMenuButton<AdminSection>(
           tooltip: 'Reports',
           onSelected: onSectionSelected,
@@ -470,9 +516,18 @@ class _AdminSidebar extends StatelessWidget {
             color: hasSelectedReport
                 ? Theme.of(context).colorScheme.primaryContainer
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(
+                color: hasSelectedReport
+                    ? Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.22)
+                    : Colors.transparent,
+              ),
+            ),
             child: SizedBox(
-              height: 50,
+              height: 46,
               child: Center(
                 child: Icon(
                   hasSelectedReport
@@ -508,10 +563,19 @@ class _AdminSidebar extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontWeight: hasSelectedReport ? FontWeight.w700 : FontWeight.w500,
+              color: hasSelectedReport
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
             ),
           ),
-          tilePadding: const EdgeInsets.symmetric(horizontal: 14),
-          childrenPadding: const EdgeInsets.only(left: 12, bottom: 6),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+          childrenPadding: const EdgeInsets.only(left: 10, bottom: 6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          collapsedShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           children: _reportSections.map((section) {
             return _buildNavigationItem(context, section, indented: true);
           }).toList(),
@@ -526,35 +590,43 @@ class _AdminSidebar extends StatelessWidget {
     bool indented = false,
   }) {
     final isSelected = section == selectedSection;
+    final colors = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: 5, left: indented && expanded ? 12 : 0),
+      padding: EdgeInsets.only(bottom: 6, left: indented && expanded ? 10 : 0),
       child: Tooltip(
         message: expanded ? '' : section.title,
         child: Material(
-          color: isSelected
-              ? Theme.of(context).colorScheme.primaryContainer
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          color: isSelected ? colors.primaryContainer : Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: isSelected
+                  ? colors.primary.withValues(alpha: 0.22)
+                  : Colors.transparent,
+            ),
+          ),
           child: InkWell(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
+            hoverColor: colors.primaryContainer.withValues(alpha: 0.35),
             onTap: () {
               onSectionSelected(section);
             },
             child: SizedBox(
-              height: 50,
+              height: 46,
               child: Row(
                 mainAxisAlignment: expanded
                     ? MainAxisAlignment.start
                     : MainAxisAlignment.center,
                 children: [
                   SizedBox(
-                    width: expanded ? 48 : 60,
+                    width: expanded ? 46 : 54,
                     child: Icon(
                       isSelected ? section.selectedIcon : section.icon,
+                      size: 21,
                       color: isSelected
-                          ? Theme.of(context).colorScheme.onPrimaryContainer
-                          : null,
+                          ? colors.onPrimaryContainer
+                          : colors.onSurfaceVariant,
                     ),
                   ),
                   if (expanded)
@@ -567,8 +639,8 @@ class _AdminSidebar extends StatelessWidget {
                               ? FontWeight.w700
                               : FontWeight.w500,
                           color: isSelected
-                              ? Theme.of(context).colorScheme.onPrimaryContainer
-                              : null,
+                              ? colors.onPrimaryContainer
+                              : colors.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -605,6 +677,7 @@ class _AdminTopbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
+    final colors = Theme.of(context).colorScheme;
 
     final currentUser = session.currentUser;
 
@@ -619,37 +692,45 @@ class _AdminTopbar extends StatelessWidget {
         : displayName.trim()[0].toUpperCase();
 
     return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      height: 76,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: colors.surface,
         border: Border(
           bottom: BorderSide(color: Theme.of(context).dividerColor),
         ),
       ),
       child: Row(
         children: [
-          IconButton(
-            tooltip: isDesktop
-                ? isSidebarExpanded
-                      ? 'Collapse sidebar'
-                      : 'Expand sidebar'
-                : 'Open navigation',
-            onPressed: onMenuPressed,
-            icon: Icon(
-              isDesktop
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerHighest.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              tooltip: isDesktop
                   ? isSidebarExpanded
-                        ? Icons.menu_open
-                        : Icons.menu
-                  : Icons.menu,
+                        ? 'Collapse sidebar'
+                        : 'Expand sidebar'
+                  : 'Open navigation',
+              onPressed: onMenuPressed,
+              icon: Icon(
+                isDesktop
+                    ? isSidebarExpanded
+                          ? Icons.menu_open
+                          : Icons.menu
+                    : Icons.menu,
+              ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 14),
           Expanded(
             child: Text(
               title,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
           ),
           if (MediaQuery.sizeOf(context).width >= 700) ...[
@@ -669,14 +750,20 @@ class _AdminTopbar extends StatelessWidget {
                     email,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 12),
           ],
-          CircleAvatar(child: Text(initial)),
+          CircleAvatar(
+            backgroundColor: colors.primaryContainer,
+            foregroundColor: colors.onPrimaryContainer,
+            child: Text(initial),
+          ),
           const SizedBox(width: 8),
           PopupMenuButton<String>(
             tooltip: 'Account menu',

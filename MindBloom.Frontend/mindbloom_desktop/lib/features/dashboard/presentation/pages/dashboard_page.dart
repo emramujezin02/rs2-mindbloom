@@ -1,6 +1,9 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/app_empty_state.dart';
+import 'package:mindbloom_desktop/core/widgets/app_error_panel.dart';
+import 'package:mindbloom_desktop/core/widgets/app_loading_state.dart';
 import 'package:mindbloom_desktop/features/dashboard/data/models/admin_dahsboard_model.dart';
 
 import '../../../../app/di/injection.dart';
@@ -90,70 +93,134 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     if (_viewModel.isLoading && _viewModel.dashboard == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingState(message: 'Loading dashboard analytics...');
     }
 
     if (_viewModel.errorMessage != null && _viewModel.dashboard == null) {
-      return _DashboardErrorState(
+      return AppErrorPanel(
         message: _viewModel.errorMessage!,
         onRetry: _refresh,
+        retryLabel: 'Try again',
       );
     }
 
     final dashboard = _viewModel.dashboard;
 
     if (dashboard == null) {
-      return _DashboardErrorState(
+      return AppErrorPanel(
         message: 'Dashboard data could not be loaded.',
         onRetry: _refresh,
+        retryLabel: 'Try again',
       );
     }
 
     return RefreshIndicator(
       onRefresh: _refresh,
-      child: SingleChildScrollView(
-        key: const PageStorageKey<String>('admin-dashboard'),
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 900;
+          final horizontalPadding = constraints.maxWidth >= 1366
+              ? 32.0
+              : compact
+              ? 18.0
+              : 24.0;
 
-            const SizedBox(height: 22),
-
-            _buildPeriodFilter(),
-
-            if (_viewModel.errorMessage != null) ...[
-              const SizedBox(height: 16),
-              _InlineErrorMessage(message: _viewModel.errorMessage!),
-            ],
-
-            const SizedBox(height: 28),
-
-            if (!dashboard.hasAnyData)
-              const _DashboardEmptyState()
-            else ...[
-              _buildSummaryCards(dashboard),
-
-              const SizedBox(height: 28),
-
-              _buildStatusCharts(dashboard),
-
-              const SizedBox(height: 28),
-
-              _buildTimelineCharts(dashboard),
-              const SizedBox(height: 28),
-
-              _buildAdditionalAnalyticsCharts(dashboard),
-
-              const SizedBox(height: 28),
-
-              _buildSystemStatistics(dashboard),
-            ],
-          ],
-        ),
+          return SingleChildScrollView(
+            key: const PageStorageKey<String>('admin-dashboard'),
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              compact ? 20 : 28,
+              horizontalPadding,
+              32,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1560),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(),
+                    const SizedBox(height: 20),
+                    _buildPeriodFilter(),
+                    if (_viewModel.errorMessage != null) ...[
+                      const SizedBox(height: 16),
+                      _InlineErrorMessage(message: _viewModel.errorMessage!),
+                    ],
+                    const SizedBox(height: 24),
+                    if (!dashboard.hasAnyData)
+                      const AppEmptyState(
+                        title: 'No dashboard data available',
+                        message:
+                            'There is no system activity for the selected period.',
+                        icon: Icons.analytics_outlined,
+                      )
+                    else ...[
+                      _buildSummaryCards(dashboard),
+                      const SizedBox(height: 24),
+                      _buildStatusCharts(dashboard),
+                      const SizedBox(height: 24),
+                      _buildTimelineCharts(dashboard),
+                      const SizedBox(height: 24),
+                      _buildAdditionalAnalyticsCharts(dashboard),
+                      const SizedBox(height: 24),
+                      _buildSystemStatistics(dashboard),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
+    );
+  }
+
+  TextStyle? _sectionTitleStyle(BuildContext context) {
+    return Theme.of(
+      context,
+    ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800);
+  }
+
+  TextStyle? _mutedStyle(BuildContext context) {
+    return Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+  }
+
+  Widget _sectionHeader({
+    required String title,
+    required String subtitle,
+    IconData? icon,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (icon != null) ...[
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: colors.primaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 20, color: colors.onPrimaryContainer),
+          ),
+          const SizedBox(width: 12),
+        ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: _sectionTitleStyle(context)),
+              const SizedBox(height: 4),
+              Text(subtitle, style: _mutedStyle(context)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -177,14 +244,22 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             Text(
               'Welcome, $displayName',
-              style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+              maxLines: compact ? 2 : 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             Text(
               email.isEmpty
                   ? 'MindBloom system analytics'
                   : 'Signed in as $email',
-              style: Theme.of(context).textTheme.titleMedium,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         );
@@ -222,10 +297,10 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildPeriodFilter() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final compact = constraints.maxWidth < 900;
+            final compact = constraints.maxWidth < 940;
 
             final periodDropdown =
                 DropdownButtonFormField<AdminDashboardPeriod>(
@@ -286,6 +361,7 @@ class _DashboardPageState extends State<DashboardPage> {
             }
 
             return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(child: periodDropdown),
                 const SizedBox(width: 14),
@@ -293,7 +369,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 const SizedBox(width: 14),
                 Expanded(child: toField),
                 const SizedBox(width: 18),
-                applyButton,
+                SizedBox(height: 56, child: applyButton),
               ],
             );
           },
@@ -406,9 +482,11 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columnCount = constraints.maxWidth >= 1300
+        final columnCount = constraints.maxWidth >= 1320
             ? 4
-            : constraints.maxWidth >= 820
+            : constraints.maxWidth >= 900
+            ? 3
+            : constraints.maxWidth >= 620
             ? 2
             : 1;
 
@@ -528,14 +606,10 @@ class _DashboardPageState extends State<DashboardPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'System overview',
-              style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Calculated from the current reporting response.',
-              style: Theme.of(context).textTheme.bodyMedium,
+            _sectionHeader(
+              title: 'System overview',
+              subtitle: 'Calculated from the current reporting response.',
+              icon: Icons.monitor_heart_outlined,
             ),
             const SizedBox(height: 24),
             LayoutBuilder(
@@ -654,10 +728,11 @@ class _DashboardSummaryCard extends StatelessWidget {
 
     return SizedBox(
       width: width,
+      height: 148,
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(18),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -677,22 +752,32 @@ class _DashboardSummaryCard extends StatelessWidget {
                   children: [
                     Text(
                       data.title,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 7),
                     Text(
                       data.value,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: colors.onSurface,
+                          ),
                     ),
-                    const SizedBox(height: 4),
+                    const Spacer(),
                     Text(
                       data.description,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -712,6 +797,8 @@ class _AppointmentStatusChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     final items = dashboard.appointmentsByStatus;
 
     if (items.isEmpty) {
@@ -736,7 +823,15 @@ class _AppointmentStatusChart extends StatelessWidget {
             maxY: maximum <= 0 ? 1 : maximum * 1.25,
             alignment: BarChartAlignment.spaceAround,
             borderData: FlBorderData(show: false),
-            gridData: FlGridData(drawVerticalLine: false),
+            gridData: FlGridData(
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (value) {
+                return FlLine(
+                  color: colors.outlineVariant.withValues(alpha: 0.6),
+                  strokeWidth: 1,
+                );
+              },
+            ),
             titlesData: FlTitlesData(
               topTitles: const AxisTitles(
                 sideTitles: SideTitles(showTitles: false),
@@ -792,6 +887,7 @@ class _AppointmentStatusChart extends StatelessWidget {
                     BarChartRodData(
                       toY: items[index].count.toDouble(),
                       width: 25,
+                      color: colors.primary,
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(7),
                       ),
@@ -813,6 +909,8 @@ class _TherapistVerificationChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     final values = [
       dashboard.verifiedTherapists,
       dashboard.pendingTherapists,
@@ -838,16 +936,19 @@ class _TherapistVerificationChart extends StatelessWidget {
                         PieChartSectionData(
                           value: values[0].toDouble(),
                           title: values[0].toString(),
+                          color: colors.primary,
                           radius: 70,
                         ),
                         PieChartSectionData(
                           value: values[1].toDouble(),
                           title: values[1].toString(),
+                          color: colors.tertiary,
                           radius: 70,
                         ),
                         PieChartSectionData(
                           value: values[2].toDouble(),
                           title: values[2].toString(),
+                          color: colors.error,
                           radius: 70,
                         ),
                       ],
@@ -860,9 +961,18 @@ class _TherapistVerificationChart extends StatelessWidget {
                   runSpacing: 10,
                   alignment: WrapAlignment.center,
                   children: [
-                    Text('Verified: ${values[0]}'),
-                    Text('Pending: ${values[1]}'),
-                    Text('Other: ${values[2]}'),
+                    _ChartLegendItem(
+                      color: colors.primary,
+                      label: 'Verified: ${values[0]}',
+                    ),
+                    _ChartLegendItem(
+                      color: colors.tertiary,
+                      label: 'Pending: ${values[1]}',
+                    ),
+                    _ChartLegendItem(
+                      color: colors.error,
+                      label: 'Other: ${values[2]}',
+                    ),
                   ],
                 ),
               ],
@@ -882,6 +992,8 @@ class _RevenueByMonthChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     final items = dashboard.revenueByMonth;
 
     if (items.isEmpty) {
@@ -905,7 +1017,15 @@ class _RevenueByMonthChart extends StatelessWidget {
           BarChartData(
             maxY: maximum <= 0 ? 1 : maximum * 1.25,
             borderData: FlBorderData(show: false),
-            gridData: FlGridData(drawVerticalLine: false),
+            gridData: FlGridData(
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (value) {
+                return FlLine(
+                  color: colors.outlineVariant.withValues(alpha: 0.6),
+                  strokeWidth: 1,
+                );
+              },
+            ),
             barTouchData: BarTouchData(
               touchTooltipData: BarTouchTooltipData(
                 getTooltipItem: (group, groupIndex, rod, rodIndex) {
@@ -927,6 +1047,7 @@ class _RevenueByMonthChart extends StatelessWidget {
                     BarChartRodData(
                       toY: items[index].revenue,
                       width: 24,
+                      color: colors.primary,
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(7),
                       ),
@@ -948,6 +1069,8 @@ class _NewUsersByMonthChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     final items = dashboard.newUsersByMonth;
 
     if (items.isEmpty) {
@@ -972,7 +1095,15 @@ class _NewUsersByMonthChart extends StatelessWidget {
           LineChartData(
             minY: 0,
             borderData: FlBorderData(show: false),
-            gridData: FlGridData(drawVerticalLine: false),
+            gridData: FlGridData(
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (value) {
+                return FlLine(
+                  color: colors.outlineVariant.withValues(alpha: 0.6),
+                  strokeWidth: 1,
+                );
+              },
+            ),
             titlesData: _monthlyTitles(
               items.map((item) => item.label).toList(),
             ),
@@ -981,8 +1112,12 @@ class _NewUsersByMonthChart extends StatelessWidget {
                 spots: spots,
                 isCurved: true,
                 barWidth: 3,
+                color: colors.primary,
                 dotData: const FlDotData(show: true),
-                belowBarData: BarAreaData(show: true),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: colors.primaryContainer.withValues(alpha: 0.45),
+                ),
               ),
             ],
           ),
@@ -1037,6 +1172,8 @@ class _AppointmentsByTherapyApproachChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     final items = dashboard.appointmentsByTherapyApproach;
 
     if (items.isEmpty) {
@@ -1063,7 +1200,15 @@ class _AppointmentsByTherapyApproachChart extends StatelessWidget {
             maxY: maximum <= 0 ? 1 : maximum * 1.25,
             alignment: BarChartAlignment.spaceAround,
             borderData: FlBorderData(show: false),
-            gridData: FlGridData(drawVerticalLine: false),
+            gridData: FlGridData(
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (value) {
+                return FlLine(
+                  color: colors.outlineVariant.withValues(alpha: 0.6),
+                  strokeWidth: 1,
+                );
+              },
+            ),
             barTouchData: BarTouchData(
               enabled: true,
               touchTooltipData: BarTouchTooltipData(
@@ -1136,6 +1281,7 @@ class _AppointmentsByTherapyApproachChart extends StatelessWidget {
                     BarChartRodData(
                       toY: items[index].count.toDouble(),
                       width: 22,
+                      color: colors.primary,
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(7),
                       ),
@@ -1157,6 +1303,8 @@ class _VerifiedTherapistsByMonthChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     final items = dashboard.verifiedTherapistsByMonth;
 
     if (items.isEmpty) {
@@ -1188,7 +1336,15 @@ class _VerifiedTherapistsByMonthChart extends StatelessWidget {
             minY: 0,
             maxY: maximum <= 0 ? 1 : maximum * 1.25,
             borderData: FlBorderData(show: false),
-            gridData: FlGridData(drawVerticalLine: false),
+            gridData: FlGridData(
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (value) {
+                return FlLine(
+                  color: colors.outlineVariant.withValues(alpha: 0.6),
+                  strokeWidth: 1,
+                );
+              },
+            ),
             lineTouchData: LineTouchData(
               enabled: true,
               touchTooltipData: LineTouchTooltipData(
@@ -1217,8 +1373,12 @@ class _VerifiedTherapistsByMonthChart extends StatelessWidget {
                 spots: spots,
                 isCurved: items.length > 2,
                 barWidth: 3,
+                color: colors.primary,
                 dotData: const FlDotData(show: true),
-                belowBarData: BarAreaData(show: true),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: colors.primaryContainer.withValues(alpha: 0.45),
+                ),
               ),
             ],
           ),
@@ -1247,12 +1407,26 @@ class _DashboardChartCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 5),
-            Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 22),
             child,
           ],
@@ -1271,11 +1445,18 @@ class _ProgressStatistic extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final safeValue = value.clamp(0.0, 1.0);
+    final colors = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: colors.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 10),
         LinearProgressIndicator(
           value: safeValue,
@@ -1285,7 +1466,9 @@ class _ProgressStatistic extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           '${(safeValue * 100).toStringAsFixed(1)}%',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
       ],
     );
@@ -1300,15 +1483,48 @@ class _TextStatistic extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: colors.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 10),
         Text(
           value,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
+      ],
+    );
+  }
+}
+
+class _ChartLegendItem extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _ChartLegendItem({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 7),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
   }
@@ -1323,69 +1539,16 @@ class _EmptyChart extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 280,
-      child: Center(child: Text(message, textAlign: TextAlign.center)),
-    );
-  }
-}
-
-class _DashboardEmptyState extends StatelessWidget {
-  const _DashboardEmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 70),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.analytics_outlined, size: 64),
-            SizedBox(height: 16),
-            Text(
-              'No dashboard data available',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-            SizedBox(height: 8),
-            Text(
-              'There is no system activity for the selected period.',
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DashboardErrorState extends StatelessWidget {
-  final String message;
-  final Future<void> Function() onRetry;
-
-  const _DashboardErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 60),
-            const SizedBox(height: 16),
-            const Text(
-              'Dashboard could not be loaded',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
-            ),
-          ],
+          ),
         ),
       ),
     );

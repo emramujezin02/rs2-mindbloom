@@ -6,6 +6,7 @@ import '../../../../app/di/injection.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/validation/app_validators.dart';
 import '../../../../core/validation/file_validation.dart';
+import '../../../../core/widgets/admin_page_header.dart';
 import '../../../../core/widgets/app_error_banner.dart';
 import '../viewmodels/workshop_form_viewmodel.dart';
 import '../../../../core/widgets/app_error_panel.dart';
@@ -524,6 +525,17 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        AdminPageHeader(
+                          title: _isEditing
+                              ? 'Edit workshop'
+                              : 'Create workshop',
+                          subtitle:
+                              'Configure schedule, presenter, location and capacity.',
+                          icon: Icons.event_available_outlined,
+                        ),
+
+                        const SizedBox(height: 20),
+
                         TextFormField(
                           controller: _titleController,
                           enabled: !_isBusy,
@@ -566,16 +578,22 @@ class _WorkshopFormPageState extends State<WorkshopFormPage> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Row(
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 10,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              alignment: WrapAlignment.spaceBetween,
                               children: [
-                                Expanded(
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 520,
+                                  ),
                                   child: Text(
                                     _imageUrlController.text.trim().isEmpty
                                         ? 'Naslovna slika nije učitana.'
                                         : 'Naslovna slika je učitana.',
                                   ),
                                 ),
-                                const SizedBox(width: 12),
                                 OutlinedButton.icon(
                                   onPressed: _isBusy
                                       ? null

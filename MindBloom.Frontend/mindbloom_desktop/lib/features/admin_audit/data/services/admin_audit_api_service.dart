@@ -55,7 +55,7 @@ class AdminAuditApiService {
 
     final queryString = Uri(queryParameters: query).query;
 
-    final response = await apiClient.get('/api/admin/audit-logs?$queryString');
+    final response = await apiClient.get('/admin/audit-logs?$queryString');
 
     if (response is! Map) {
       throw const FormatException('Server je vratio neispravan audit odgovor.');
@@ -68,7 +68,7 @@ class AdminAuditApiService {
 
   Future<AdminAuditFilterOptionsModel> getFilterOptions() async {
     final response = await apiClient.get(
-      '/api/admin/audit-logs/filter-options',
+      '/admin/audit-logs/filter-options',
     );
 
     if (response is! Map) {

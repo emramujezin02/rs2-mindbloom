@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/admin_status_badge.dart';
+import '../../../../core/widgets/admin_table_state.dart';
 import '../viewmodels/payment_receipt_viewmodel.dart';
 
 class PaymentReceiptPage extends StatefulWidget {
@@ -49,7 +51,9 @@ class _PaymentReceiptPageState extends State<PaymentReceiptPage> {
   @override
   Widget build(BuildContext context) {
     if (_viewModel.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: AdminTableLoadingState(message: 'Loading payment receipt...'),
+      );
     }
 
     final receipt = _viewModel.receipt;
@@ -57,8 +61,14 @@ class _PaymentReceiptPageState extends State<PaymentReceiptPage> {
     if (receipt == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Receipt')),
-        body: Center(
-          child: Text(_viewModel.error ?? 'Receipt could not be loaded.'),
+        body: AdminTableErrorState(
+          message: _viewModel.error ?? 'Receipt could not be loaded.',
+          onRetry: () {
+            _viewModel.load(
+              paymentType: widget.paymentType,
+              paymentId: widget.paymentId,
+            );
+          },
         ),
       );
     }
@@ -68,27 +78,44 @@ class _PaymentReceiptPageState extends State<PaymentReceiptPage> {
     return Scaffold(
       appBar: AppBar(title: Text(receipt.invoiceNumber)),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(24),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
             child: Card(
               child: Padding(
-                padding: const EdgeInsets.all(36),
+                padding: const EdgeInsets.all(30),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(Icons.spa, size: 56),
+                    Icon(
+                      Icons.spa,
+                      size: 56,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'MindBloom',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Payment receipt',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    const Text('Payment receipt', textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: AdminStatusBadge(
+                        label: receipt.status,
+                        tone: _statusTone(receipt.status),
+                        icon: _statusIcon(receipt.status),
+                      ),
+                    ),
                     const SizedBox(height: 28),
                     _ReceiptRow(
                       label: 'Invoice number',
@@ -203,21 +230,80 @@ class _ReceiptRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 190,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 520;
+
+        final labelWidget = Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
           ),
-          Expanded(child: SelectableText(value, textAlign: TextAlign.right)),
-        ],
-      ),
+        );
+
+        final valueWidget = SelectableText(
+          value,
+          textAlign: compact ? TextAlign.left : TextAlign.right,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        );
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    labelWidget,
+                    const SizedBox(height: 4),
+                    valueWidget,
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 190, child: labelWidget),
+                    Expanded(child: valueWidget),
+                  ],
+                ),
+        );
+      },
     );
   }
+}
+
+AdminStatusTone _statusTone(String status) {
+  final normalized = status.trim().toLowerCase();
+
+  if (normalized == 'paid') {
+    return AdminStatusTone.success;
+  }
+
+  if (normalized == 'refunded') {
+    return AdminStatusTone.info;
+  }
+
+  if (normalized == 'failed' || normalized == 'refundfailed') {
+    return AdminStatusTone.danger;
+  }
+
+  return AdminStatusTone.warning;
+}
+
+IconData _statusIcon(String status) {
+  final normalized = status.trim().toLowerCase();
+
+  if (normalized == 'paid') {
+    return Icons.check_circle;
+  }
+
+  if (normalized == 'refunded') {
+    return Icons.replay;
+  }
+
+  if (normalized == 'failed' || normalized == 'refundfailed') {
+    return Icons.error_outline;
+  }
+
+  return Icons.schedule;
 }

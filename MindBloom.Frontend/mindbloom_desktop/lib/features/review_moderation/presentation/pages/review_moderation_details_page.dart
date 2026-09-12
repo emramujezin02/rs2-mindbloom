@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/admin_status_badge.dart';
+import '../../../../core/widgets/admin_table_state.dart';
+import '../../../../core/widgets/app_error_banner.dart';
+import '../../../../core/widgets/app_responsive_dialog_content.dart';
 import '../viewmodels/review_moderation_details_viewmodel.dart';
 
 class ReviewModerationDetailsPage extends StatefulWidget {
@@ -49,9 +53,12 @@ class _ReviewModerationDetailsPageState
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Approve review'),
-          content: const Text(
-            'Approve this review for public display? '
-            'The decision will be recorded in the moderation history.',
+          content: const AppResponsiveDialogContent(
+            preferredWidth: 460,
+            child: Text(
+              'Approve this review for public display? '
+              'The decision will be recorded in the moderation history.',
+            ),
           ),
           actions: [
             TextButton(
@@ -103,8 +110,8 @@ class _ReviewModerationDetailsPageState
       builder: (dialogContext) {
         return AlertDialog(
           title: Text(title),
-          content: SizedBox(
-            width: 500,
+          content: AppResponsiveDialogContent(
+            preferredWidth: 520,
             child: Form(
               key: formKey,
               child: TextFormField(
@@ -181,7 +188,10 @@ class _ReviewModerationDetailsPageState
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Confirm rejection'),
-          content: Text('Reject this review?\n\nReason: $reason'),
+          content: AppResponsiveDialogContent(
+            preferredWidth: 500,
+            child: Text('Reject this review?\n\nReason: $reason'),
+          ),
           actions: [
             TextButton(
               onPressed: () {
@@ -236,10 +246,13 @@ class _ReviewModerationDetailsPageState
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Confirm hiding review'),
-          content: Text(
-            'This review is currently public. '
-            'It will no longer be publicly visible.\n\n'
-            'Reason: $reason',
+          content: AppResponsiveDialogContent(
+            preferredWidth: 500,
+            child: Text(
+              'This review is currently public. '
+              'It will no longer be publicly visible.\n\n'
+              'Reason: $reason',
+            ),
           ),
           actions: [
             TextButton(
@@ -302,7 +315,9 @@ class _ReviewModerationDetailsPageState
   @override
   Widget build(BuildContext context) {
     if (_viewModel.isLoading && _viewModel.review == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: AdminTableLoadingState(message: 'Loading review details...'),
+      );
     }
 
     final review = _viewModel.review;
@@ -310,27 +325,11 @@ class _ReviewModerationDetailsPageState
     if (review == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Review details')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _viewModel.errorMessage ?? 'Review could not be loaded.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    _viewModel.load(widget.reviewId);
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Try again'),
-                ),
-              ],
-            ),
-          ),
+        body: AdminTableErrorState(
+          message: _viewModel.errorMessage ?? 'Review could not be loaded.',
+          onRetry: () {
+            _viewModel.load(widget.reviewId);
+          },
         ),
       );
     }
@@ -362,22 +361,49 @@ class _ReviewModerationDetailsPageState
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_viewModel.errorMessage != null) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _viewModel.errorMessage!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onErrorContainer,
-                      ),
-                    ),
-                  ),
+                  AppErrorBanner(message: _viewModel.errorMessage!),
                   const SizedBox(height: 16),
                 ],
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 16,
+                      runSpacing: 12,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Review #${review.id}',
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${review.clientName} -> ${review.therapistName}',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        _RatingBadge(rating: review.rating),
+                        AdminStatusBadge(
+                          label: review.moderationStatus,
+                          tone: _statusTone(review.moderationStatus),
+                          icon: _statusIcon(review.moderationStatus),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
 
                 Wrap(
                   spacing: 16,
@@ -422,9 +448,11 @@ class _ReviewModerationDetailsPageState
 
                 const SizedBox(height: 20),
 
-                const Text(
+                Text(
                   'Client comment',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
 
                 const SizedBox(height: 8),
@@ -441,9 +469,11 @@ class _ReviewModerationDetailsPageState
 
                 const SizedBox(height: 20),
 
-                const Text(
+                Text(
                   'Therapist reply',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
 
                 const SizedBox(height: 8),
@@ -484,9 +514,11 @@ class _ReviewModerationDetailsPageState
                     review.moderationReason != null) ...[
                   const SizedBox(height: 20),
 
-                  const Text(
+                  Text(
                     'Current moderation decision',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
 
                   const SizedBox(height: 8),
@@ -529,9 +561,11 @@ class _ReviewModerationDetailsPageState
 
                 const SizedBox(height: 20),
 
-                const Text(
+                Text(
                   'Moderation history',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
 
                 const SizedBox(height: 8),
@@ -568,7 +602,7 @@ class _ReviewModerationDetailsPageState
                     runSpacing: 12,
                     children: [
                       if (_isPending || _isRejected)
-                        ElevatedButton.icon(
+                        FilledButton.icon(
                           onPressed: _viewModel.isProcessing
                               ? null
                               : _approveReview,
@@ -577,7 +611,15 @@ class _ReviewModerationDetailsPageState
                         ),
 
                       if (_isPending)
-                        ElevatedButton.icon(
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.errorContainer,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onErrorContainer,
+                          ),
                           onPressed: _viewModel.isProcessing
                               ? null
                               : _rejectReview,
@@ -586,7 +628,15 @@ class _ReviewModerationDetailsPageState
                         ),
 
                       if (_isApproved)
-                        ElevatedButton.icon(
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.errorContainer,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onErrorContainer,
+                          ),
                           onPressed: _viewModel.isProcessing
                               ? null
                               : _hideReview,
@@ -595,9 +645,10 @@ class _ReviewModerationDetailsPageState
                         ),
 
                       if (_isHidden)
-                        const Chip(
-                          avatar: Icon(Icons.visibility_off),
-                          label: Text('Review is hidden'),
+                        const AdminStatusBadge(
+                          label: 'Review is hidden',
+                          tone: AdminStatusTone.neutral,
+                          icon: Icons.visibility_off,
                         ),
 
                       if (_viewModel.isProcessing)
@@ -617,6 +668,76 @@ class _ReviewModerationDetailsPageState
   }
 }
 
+class _RatingBadge extends StatelessWidget {
+  final int rating;
+
+  const _RatingBadge({required this.rating});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: colors.tertiaryContainer,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colors.tertiary.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.star, size: 18, color: colors.onTertiaryContainer),
+          const SizedBox(width: 6),
+          Text(
+            '$rating / 5',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: colors.onTertiaryContainer,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+AdminStatusTone _statusTone(String status) {
+  final normalized = status.trim().toLowerCase();
+
+  if (normalized == 'approved') {
+    return AdminStatusTone.success;
+  }
+
+  if (normalized == 'rejected') {
+    return AdminStatusTone.danger;
+  }
+
+  if (normalized == 'hidden') {
+    return AdminStatusTone.neutral;
+  }
+
+  return AdminStatusTone.warning;
+}
+
+IconData _statusIcon(String status) {
+  final normalized = status.trim().toLowerCase();
+
+  if (normalized == 'approved') {
+    return Icons.check_circle;
+  }
+
+  if (normalized == 'rejected') {
+    return Icons.cancel;
+  }
+
+  if (normalized == 'hidden') {
+    return Icons.visibility_off;
+  }
+
+  return Icons.hourglass_top;
+}
+
 class _DetailsCard extends StatelessWidget {
   final String title;
 
@@ -626,6 +747,8 @@ class _DetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return SizedBox(
       width: 330,
       child: Card(
@@ -636,10 +759,9 @@ class _DetailsCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
 
               const Divider(height: 24),
@@ -654,7 +776,8 @@ class _DetailsCard extends StatelessWidget {
                         width: 125,
                         child: Text(
                           entry.key,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colors.onSurfaceVariant),
                         ),
                       ),
                       Expanded(child: SelectableText(entry.value)),
@@ -679,23 +802,41 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 520;
 
-          const SizedBox(width: 16),
+        final labelWidget = Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        );
 
-          Expanded(child: SelectableText(value, textAlign: TextAlign.right)),
-        ],
-      ),
+        final valueWidget = SelectableText(
+          value,
+          textAlign: compact ? TextAlign.left : TextAlign.right,
+        );
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    labelWidget,
+                    const SizedBox(height: 4),
+                    valueWidget,
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: labelWidget),
+                    const SizedBox(width: 16),
+                    Expanded(child: valueWidget),
+                  ],
+                ),
+        );
+      },
     );
   }
 }

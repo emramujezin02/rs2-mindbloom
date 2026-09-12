@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_page_header.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_status_badge.dart';
 import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 
 import '../../../../app/di/injection.dart';
@@ -11,6 +13,7 @@ import '../../../../core/widgets/admin_table_container.dart';
 import '../../../../core/widgets/admin_table_state.dart';
 import '../../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../../core/widgets/app_error_banner.dart';
+import '../../../../core/widgets/app_responsive_dialog_content.dart';
 
 class WorkshopManagementPage extends StatefulWidget {
   const WorkshopManagementPage({super.key});
@@ -211,8 +214,8 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Cancel workshop'),
-          content: SizedBox(
-            width: 460,
+          content: AppResponsiveDialogContent(
+            preferredWidth: 480,
             child: Form(
               key: formKey,
               child: TextFormField(
@@ -327,31 +330,15 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 16,
-            runSpacing: 12,
-            children: [
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Workshops management',
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Create, edit, cancel and review workshop registrations.',
-                  ),
-                ],
-              ),
-              FilledButton.icon(
-                onPressed: _openCreatePage,
-                icon: const Icon(Icons.add),
-                label: const Text('Create workshop'),
-              ),
-            ],
+          AdminPageHeader(
+            title: 'Workshops management',
+            subtitle: 'Create, edit, cancel and review workshop registrations.',
+            icon: Icons.event_available_outlined,
+            trailing: FilledButton.icon(
+              onPressed: _openCreatePage,
+              icon: const Icon(Icons.add),
+              label: const Text('Create workshop'),
+            ),
           ),
           const SizedBox(height: 20),
           Card(
@@ -524,7 +511,11 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
     final formatter = DateFormat('dd.MM.yyyy. HH:mm');
 
     return DataTable(
-      columnSpacing: 24,
+      columnSpacing: 28,
+      horizontalMargin: 24,
+      headingRowHeight: 54,
+      dataRowMinHeight: 64,
+      dataRowMaxHeight: 78,
       columns: const [
         DataColumn(label: Text('Radionica')),
         DataColumn(label: Text('Tip')),
@@ -564,9 +555,10 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
             ),
             DataCell(Text(workshop.isOnline ? 'Online' : 'Uživo')),
             DataCell(
-              Chip(
-                label: Text(workshop.status),
-                visualDensity: VisualDensity.compact,
+              AdminStatusBadge(
+                label: workshop.status,
+                tone: _statusTone(workshop.status),
+                icon: _statusIcon(workshop.status),
               ),
             ),
             DataCell(Text(formatter.format(workshop.startUtc.toLocal()))),
@@ -669,4 +661,40 @@ class _WorkshopManagementPageState extends State<WorkshopManagementPage> {
       onPageSizeChanged: _viewModel.changePageSize,
     );
   }
+}
+
+AdminStatusTone _statusTone(String status) {
+  final normalized = status.trim().toLowerCase();
+
+  if (normalized == 'scheduled' || normalized == 'active') {
+    return AdminStatusTone.success;
+  }
+
+  if (normalized == 'completed') {
+    return AdminStatusTone.info;
+  }
+
+  if (normalized == 'cancelled' || normalized == 'inactive') {
+    return AdminStatusTone.danger;
+  }
+
+  return AdminStatusTone.neutral;
+}
+
+IconData _statusIcon(String status) {
+  final normalized = status.trim().toLowerCase();
+
+  if (normalized == 'scheduled' || normalized == 'active') {
+    return Icons.event_available;
+  }
+
+  if (normalized == 'completed') {
+    return Icons.check_circle;
+  }
+
+  if (normalized == 'cancelled' || normalized == 'inactive') {
+    return Icons.cancel;
+  }
+
+  return Icons.info_outline;
 }

@@ -5,6 +5,7 @@ import '../../../../app/di/injection.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/validation/app_validators.dart';
 import '../../../../core/validation/file_validation.dart';
+import '../../../../core/widgets/admin_page_header.dart';
 import '../../../../core/widgets/app_error_banner.dart';
 import '../viewmodels/article_form_viewmodel.dart';
 import 'article_preview_page.dart';
@@ -339,6 +340,15 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  AdminPageHeader(
+                    title: widget.isEditing ? 'Edit article' : 'Create article',
+                    subtitle:
+                        'Compose article content, assign a category and control publication.',
+                    icon: Icons.article_outlined,
+                  ),
+
+                  const SizedBox(height: 20),
+
                   TextFormField(
                     controller: _titleController,
                     enabled: !isBusy,
@@ -420,16 +430,20 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 10,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        alignment: WrapAlignment.spaceBetween,
                         children: [
-                          Expanded(
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 520),
                             child: Text(
                               _imageUrlController.text.trim().isEmpty
                                   ? 'Naslovna slika nije učitana.'
                                   : 'Naslovna slika je učitana.',
                             ),
                           ),
-                          const SizedBox(width: 12),
                           OutlinedButton.icon(
                             onPressed: isBusy ? null : _pickAndUploadImage,
                             icon: const Icon(Icons.upload_file),
@@ -487,8 +501,10 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
 
                   const SizedBox(height: 20),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 12,
+                    runSpacing: 10,
                     children: [
                       TextButton(
                         onPressed: isBusy
@@ -498,13 +514,11 @@ class _ArticleFormPageState extends State<ArticleFormPage> {
                               },
                         child: const Text('Odustani'),
                       ),
-                      const SizedBox(width: 12),
                       OutlinedButton.icon(
                         onPressed: isBusy ? null : _openPreview,
                         icon: const Icon(Icons.visibility_outlined),
                         label: const Text('Pregled'),
                       ),
-                      const SizedBox(width: 12),
                       FilledButton.icon(
                         onPressed: isBusy ? null : _save,
                         icon: const Icon(Icons.save),

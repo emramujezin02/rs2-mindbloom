@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/admin_status_badge.dart';
+import '../../../../core/widgets/app_error_banner.dart';
+import '../../../../core/widgets/app_error_panel.dart';
+import '../../../../core/widgets/app_loading_state.dart';
+import '../../../../core/widgets/app_responsive_dialog_content.dart';
+import '../../data/models/admin_appointment_details_model.dart';
 import '../viewmodels/appointment_management_details_viewmodel.dart';
 
 class AppointmentManagementDetailsPage extends StatefulWidget {
@@ -54,8 +60,8 @@ class _AppointmentManagementDetailsPageState
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Cancel appointment'),
-          content: SizedBox(
-            width: 500,
+          content: AppResponsiveDialogContent(
+            preferredWidth: 520,
             child: Form(
               key: formKey,
               child: TextFormField(
@@ -65,7 +71,6 @@ class _AppointmentManagementDetailsPageState
                 maxLength: 1000,
                 decoration: const InputDecoration(
                   labelText: 'Administrative reason',
-                  border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
                 validator: (value) {
@@ -91,7 +96,7 @@ class _AppointmentManagementDetailsPageState
               },
               child: const Text('Back'),
             ),
-            ElevatedButton(
+            FilledButton.icon(
               onPressed: () {
                 if (!formKey.currentState!.validate()) {
                   return;
@@ -99,7 +104,8 @@ class _AppointmentManagementDetailsPageState
 
                 Navigator.of(dialogContext).pop(controller.text.trim());
               },
-              child: const Text('Continue'),
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('Continue'),
             ),
           ],
         );
@@ -130,11 +136,12 @@ class _AppointmentManagementDetailsPageState
               },
               child: const Text('No'),
             ),
-            ElevatedButton(
+            FilledButton.icon(
               onPressed: () {
                 Navigator.of(dialogContext).pop(true);
               },
-              child: const Text('Yes, cancel appointment'),
+              icon: const Icon(Icons.cancel_outlined),
+              label: const Text('Yes, cancel appointment'),
             ),
           ],
         );
@@ -164,7 +171,9 @@ class _AppointmentManagementDetailsPageState
   @override
   Widget build(BuildContext context) {
     if (_viewModel.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: AppLoadingState(message: 'Loading appointment details...'),
+      );
     }
 
     final appointment = _viewModel.appointment;
@@ -172,8 +181,12 @@ class _AppointmentManagementDetailsPageState
     if (appointment == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Appointment details')),
-        body: Center(
-          child: Text(_viewModel.error ?? 'Appointment could not be loaded.'),
+        body: AppErrorPanel(
+          message: _viewModel.error ?? 'Appointment could not be loaded.',
+          onRetry: () {
+            _viewModel.load(widget.appointmentId);
+          },
+          retryLabel: 'Try again',
         ),
       );
     }
@@ -190,60 +203,82 @@ class _AppointmentManagementDetailsPageState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: [
-                    _DetailsCard(
-                      title: 'Client',
-                      rows: {
-                        'Name': appointment.clientName,
-                        'Email': appointment.clientEmail,
-                        'Client ID': appointment.clientId.toString(),
-                      },
-                    ),
-                    _DetailsCard(
-                      title: 'Therapist',
-                      rows: {
-                        'Name': appointment.therapistName,
-                        'Email': appointment.therapistEmail,
-                        'Therapist ID': appointment.therapistId.toString(),
-                      },
-                    ),
-                    _DetailsCard(
-                      title: 'Appointment',
-                      rows: {
-                        'Status': appointment.status,
-                        'Type': appointment.type,
-                        'Start': formatter.format(
-                          appointment.startUtc.toLocal(),
+                _AppointmentHero(appointment: appointment),
+                const SizedBox(height: 20),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cardWidth = constraints.maxWidth >= 1040
+                        ? (constraints.maxWidth - 32) / 3
+                        : constraints.maxWidth >= 700
+                        ? (constraints.maxWidth - 16) / 2
+                        : constraints.maxWidth;
+
+                    return Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: [
+                        _DetailsCard(
+                          width: cardWidth,
+                          title: 'Client',
+                          rows: {
+                            'Name': appointment.clientName,
+                            'Email': appointment.clientEmail,
+                            'Client ID': appointment.clientId.toString(),
+                          },
                         ),
-                        'End': formatter.format(appointment.endUtc.toLocal()),
-                        'Location': appointment.location ?? 'Not set',
-                        'Meeting link': appointment.meetingLink ?? 'Not set',
-                      },
-                    ),
-                    _DetailsCard(
-                      title: 'Payment',
-                      rows: {
-                        'Paid': appointment.isPaid ? 'Yes' : 'No',
-                        'Status': appointment.paymentStatus ?? 'No payment',
-                        'Amount': appointment.paymentAmount == null
-                            ? 'Not available'
-                            : appointment.paymentAmount!.toStringAsFixed(2),
-                        'Refund reason':
-                            appointment.refundReason ?? 'Not available',
-                      },
-                    ),
-                    _DetailsCard(
-                      title: 'Membership',
-                      rows: {
-                        'Used': appointment.hasMembershipUsage ? 'Yes' : 'No',
-                        'Usage status':
-                            appointment.membershipUsageStatus ?? 'Not used',
-                      },
-                    ),
-                  ],
+                        _DetailsCard(
+                          width: cardWidth,
+                          title: 'Therapist',
+                          rows: {
+                            'Name': appointment.therapistName,
+                            'Email': appointment.therapistEmail,
+                            'Therapist ID': appointment.therapistId.toString(),
+                          },
+                        ),
+                        _DetailsCard(
+                          width: cardWidth,
+                          title: 'Appointment',
+                          rows: {
+                            'Status': appointment.status,
+                            'Type': appointment.type,
+                            'Start': formatter.format(
+                              appointment.startUtc.toLocal(),
+                            ),
+                            'End': formatter.format(
+                              appointment.endUtc.toLocal(),
+                            ),
+                            'Location': appointment.location ?? 'Not set',
+                            'Meeting link':
+                                appointment.meetingLink ?? 'Not set',
+                          },
+                        ),
+                        _DetailsCard(
+                          width: cardWidth,
+                          title: 'Payment',
+                          rows: {
+                            'Paid': appointment.isPaid ? 'Yes' : 'No',
+                            'Status': appointment.paymentStatus ?? 'No payment',
+                            'Amount': appointment.paymentAmount == null
+                                ? 'Not available'
+                                : appointment.paymentAmount!.toStringAsFixed(2),
+                            'Refund reason':
+                                appointment.refundReason ?? 'Not available',
+                          },
+                        ),
+                        _DetailsCard(
+                          width: cardWidth,
+                          title: 'Membership',
+                          rows: {
+                            'Used': appointment.hasMembershipUsage
+                                ? 'Yes'
+                                : 'No',
+                            'Usage status':
+                                appointment.membershipUsageStatus ?? 'Not used',
+                          },
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
                 if (appointment.canAdminCancel)
@@ -262,10 +297,7 @@ class _AppointmentManagementDetailsPageState
                   ),
                 if (_viewModel.error != null) ...[
                   const SizedBox(height: 12),
-                  Text(
-                    _viewModel.error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
+                  AppErrorBanner(message: _viewModel.error!),
                 ],
                 const SizedBox(height: 28),
                 const Text(
@@ -316,12 +348,18 @@ class _DetailsCard extends StatelessWidget {
 
   final Map<String, String> rows;
 
-  const _DetailsCard({required this.title, required this.rows});
+  final double width;
+
+  const _DetailsCard({
+    required this.title,
+    required this.rows,
+    required this.width,
+  });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 330,
+      width: width,
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(18),
@@ -330,10 +368,9 @@ class _DetailsCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const Divider(height: 24),
               ...rows.entries.map(
@@ -346,7 +383,13 @@ class _DetailsCard extends StatelessWidget {
                         width: 105,
                         child: Text(
                           entry.key,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
                       ),
                       Expanded(child: SelectableText(entry.value)),
@@ -359,5 +402,159 @@ class _DetailsCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _AppointmentHero extends StatelessWidget {
+  final AdminAppointmentDetailsModel appointment;
+
+  const _AppointmentHero({required this.appointment});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final formatter = DateFormat('dd.MM.yyyy. HH:mm');
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 760;
+
+            final title = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Appointment #${appointment.id}',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${appointment.clientName} with ${appointment.therapistName}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    AdminStatusBadge(
+                      label: _appointmentStatusLabel(appointment.status),
+                      tone: _appointmentStatusTone(appointment.status),
+                    ),
+                    AdminStatusBadge(
+                      label: _appointmentTypeLabel(appointment.type),
+                      tone: AdminStatusTone.info,
+                    ),
+                    AdminStatusBadge(
+                      label: appointment.isPaid ? 'Paid' : 'Unpaid',
+                      tone: appointment.isPaid
+                          ? AdminStatusTone.success
+                          : AdminStatusTone.warning,
+                      icon: appointment.isPaid
+                          ? Icons.check_circle_outline
+                          : Icons.schedule_outlined,
+                    ),
+                  ],
+                ),
+              ],
+            );
+
+            final schedule = Column(
+              crossAxisAlignment: compact
+                  ? CrossAxisAlignment.start
+                  : CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'Starts',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  formatter.format(appointment.startUtc.toLocal()),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            );
+
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [title, const SizedBox(height: 18), schedule],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: title),
+                const SizedBox(width: 20),
+                schedule,
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+String _appointmentStatusLabel(String status) {
+  switch (status) {
+    case '0':
+      return 'Pending';
+    case '1':
+      return 'Accepted';
+    case '2':
+      return 'Rejected';
+    case '3':
+      return 'Completed';
+    case '4':
+      return 'Cancelled';
+    default:
+      return status;
+  }
+}
+
+String _appointmentTypeLabel(String type) {
+  switch (type) {
+    case '1':
+      return 'Online';
+    case '2':
+      return 'In person';
+    default:
+      return type;
+  }
+}
+
+AdminStatusTone _appointmentStatusTone(String status) {
+  switch (status) {
+    case '1':
+    case '3':
+    case 'Accepted':
+    case 'Completed':
+      return AdminStatusTone.success;
+    case '0':
+    case 'Pending':
+      return AdminStatusTone.warning;
+    case '2':
+    case '4':
+    case 'Rejected':
+    case 'Cancelled':
+      return AdminStatusTone.danger;
+    default:
+      return AdminStatusTone.neutral;
   }
 }

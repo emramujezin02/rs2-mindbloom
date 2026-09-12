@@ -4,6 +4,10 @@ import 'package:mindbloom_desktop/features/workshop_management/presentation/view
 import '../../../../core/constants/api_constants.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/admin_status_badge.dart';
+import '../../../../core/widgets/admin_table_state.dart';
+import '../../../../core/widgets/app_error_banner.dart';
+import '../../../../core/widgets/app_responsive_dialog_content.dart';
 import '../../data/models/workshop_model.dart';
 import '../../data/models/workshop_registration_model.dart';
 
@@ -63,8 +67,8 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Cancel workshop'),
-          content: SizedBox(
-            width: 460,
+          content: AppResponsiveDialogContent(
+            preferredWidth: 480,
             child: Form(
               key: formKey,
               child: TextFormField(
@@ -316,38 +320,28 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
 
   Widget _buildBody() {
     if (_viewModel.isLoading && _viewModel.workshop == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const AdminTableLoadingState(
+        message: 'Loading workshop details...',
+      );
     }
 
     if (_viewModel.error != null && _viewModel.workshop == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _viewModel.error!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () {
-                  _viewModel.load(widget.workshopId);
-                },
-                child: const Text('Try again'),
-              ),
-            ],
-          ),
-        ),
+      return AdminTableErrorState(
+        message: _viewModel.error!,
+        onRetry: () {
+          _viewModel.load(widget.workshopId);
+        },
       );
     }
 
     final workshop = _viewModel.workshop;
 
     if (workshop == null) {
-      return const Center(child: Text('Workshop was not found.'));
+      return const AdminTableEmptyState(
+        title: 'Workshop not found',
+        message: 'The selected workshop could not be displayed.',
+        icon: Icons.event_busy_outlined,
+      );
     }
 
     return RefreshIndicator(
@@ -415,10 +409,7 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
 
           if (_viewModel.error != null) ...[
             const SizedBox(height: 16),
-            Text(
-              _viewModel.error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
+            AppErrorBanner(message: _viewModel.error!),
           ],
 
           const SizedBox(height: 24),
@@ -443,11 +434,8 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
 
   Widget _buildRegistrations() {
     if (_viewModel.isLoading && _viewModel.registrations.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: CircularProgressIndicator(),
-        ),
+      return const AdminTableLoadingState(
+        message: 'Loading workshop registrations...',
       );
     }
 
@@ -464,6 +452,11 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
+          columnSpacing: 28,
+          horizontalMargin: 24,
+          headingRowHeight: 54,
+          dataRowMinHeight: 60,
+          dataRowMaxHeight: 72,
           columns: const [
             DataColumn(label: Text('Participant')),
             DataColumn(label: Text('Email')),
@@ -484,9 +477,31 @@ class _WorkshopDetailsPageState extends State<WorkshopDetailsPage> {
 
     return DataRow(
       cells: [
-        DataCell(Text(registration.clientName)),
-        DataCell(Text(registration.clientEmail)),
-        DataCell(Chip(label: Text(registration.status))),
+        DataCell(
+          SizedBox(
+            width: 180,
+            child: Text(
+              registration.clientName,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        DataCell(
+          SizedBox(
+            width: 220,
+            child: Text(
+              registration.clientEmail,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        DataCell(
+          AdminStatusBadge(
+            label: registration.status,
+            tone: _statusTone(registration.status),
+            icon: _statusIcon(registration.status),
+          ),
+        ),
         DataCell(
           Text(formatter.format(registration.registeredAtUtc.toLocal())),
         ),
@@ -622,8 +637,18 @@ class _WorkshopDetailsCard extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Chip(label: Text(workshop.status)),
-                Chip(label: Text(workshop.type)),
+                AdminStatusBadge(
+                  label: workshop.status,
+                  tone: _statusTone(workshop.status),
+                  icon: _statusIcon(workshop.status),
+                ),
+                AdminStatusBadge(
+                  label: workshop.type,
+                  tone: AdminStatusTone.info,
+                  icon: workshop.isOnline
+                      ? Icons.videocam_outlined
+                      : Icons.location_on_outlined,
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -700,21 +725,77 @@ class _DetailsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 190,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(child: SelectableText(value)),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 520;
+
+        final labelWidget = Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        );
+
+        final valueWidget = SelectableText(value);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    labelWidget,
+                    const SizedBox(height: 4),
+                    valueWidget,
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 190, child: labelWidget),
+                    Expanded(child: valueWidget),
+                  ],
+                ),
+        );
+      },
     );
   }
+}
+
+AdminStatusTone _statusTone(String status) {
+  final normalized = status.trim().toLowerCase();
+
+  if (normalized == 'scheduled' ||
+      normalized == 'active' ||
+      normalized == 'registered') {
+    return AdminStatusTone.success;
+  }
+
+  if (normalized == 'completed') {
+    return AdminStatusTone.info;
+  }
+
+  if (normalized == 'cancelled' || normalized == 'inactive') {
+    return AdminStatusTone.danger;
+  }
+
+  return AdminStatusTone.neutral;
+}
+
+IconData _statusIcon(String status) {
+  final normalized = status.trim().toLowerCase();
+
+  if (normalized == 'scheduled' ||
+      normalized == 'active' ||
+      normalized == 'registered') {
+    return Icons.event_available;
+  }
+
+  if (normalized == 'completed') {
+    return Icons.check_circle;
+  }
+
+  if (normalized == 'cancelled' || normalized == 'inactive') {
+    return Icons.cancel;
+  }
+
+  return Icons.info_outline;
 }

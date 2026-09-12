@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_page_header.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_status_badge.dart';
 import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 import 'package:mindbloom_desktop/features/review_moderation/presentation/viewmodels/review_moderation_viewmodel.dart';
 import '../../../../core/widgets/admin_table_action_menu.dart';
@@ -197,6 +199,25 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          child: AdminPageHeader(
+            title: 'Reviews',
+            subtitle:
+                'Moderate client feedback, ratings and therapist replies.',
+            icon: Icons.reviews_outlined,
+            trailing: OutlinedButton.icon(
+              onPressed: _viewModel.isLoading
+                  ? null
+                  : () {
+                      _viewModel.load();
+                    },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh'),
+            ),
+          ),
+        ),
+
         _buildFilters(),
 
         _buildActiveFilters(),
@@ -219,12 +240,12 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
 
   Widget _buildFilters() {
     return Card(
-      margin: const EdgeInsets.all(24),
+      margin: const EdgeInsets.fromLTRB(24, 20, 24, 12),
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final compact = constraints.maxWidth < 1150;
+            final compact = constraints.maxWidth < 1320;
 
             final search = TextField(
               controller: _searchController,
@@ -257,6 +278,7 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
 
             final rating = DropdownButtonFormField<int?>(
               key: ValueKey<int?>(_selectedRating),
+              isExpanded: true,
               initialValue: _selectedRating,
               decoration: const InputDecoration(
                 labelText: 'Rating',
@@ -281,6 +303,7 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
 
             final status = DropdownButtonFormField<int?>(
               key: ValueKey<int?>(_selectedStatus),
+              isExpanded: true,
               initialValue: _selectedStatus,
               decoration: const InputDecoration(
                 labelText: 'Moderation status',
@@ -306,6 +329,7 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
             );
 
             final reply = DropdownButtonFormField<String>(
+              isExpanded: true,
               initialValue: _selectedReply,
               decoration: const InputDecoration(
                 labelText: 'Therapist reply',
@@ -410,6 +434,11 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
       child: AdminTableContainer(
         minimumWidth: 1450,
         child: DataTable(
+          columnSpacing: 28,
+          horizontalMargin: 24,
+          headingRowHeight: 54,
+          dataRowMinHeight: 62,
+          dataRowMaxHeight: 74,
           columns: const [
             DataColumn(label: Text('ID')),
             DataColumn(label: Text('Klijent')),
@@ -461,8 +490,12 @@ class _ReviewModerationPageState extends State<ReviewModerationPage> {
                   _ModerationStatusChip(status: review.moderationStatus),
                 ),
                 DataCell(
-                  Icon(
-                    review.hasTherapistReply
+                  AdminStatusBadge(
+                    label: review.hasTherapistReply ? 'Replied' : 'No reply',
+                    tone: review.hasTherapistReply
+                        ? AdminStatusTone.success
+                        : AdminStatusTone.neutral,
+                    icon: review.hasTherapistReply
                         ? Icons.check_circle_outline
                         : Icons.remove_circle_outline,
                   ),
@@ -519,12 +552,27 @@ class _RatingStars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(
-        5,
-        (index) =>
-            Icon(index < rating ? Icons.star : Icons.star_border, size: 19),
+    final colors = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      width: 118,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            rating.toString(),
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(width: 6),
+          ...List.generate(
+            5,
+            (index) => Icon(
+              index < rating ? Icons.star : Icons.star_border,
+              size: 17,
+              color: index < rating ? colors.tertiary : colors.outline,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -540,29 +588,30 @@ class _ModerationStatusChip extends StatelessWidget {
     final normalized = status.trim().toLowerCase();
 
     IconData icon;
+    AdminStatusTone tone;
 
     switch (normalized) {
       case 'approved':
         icon = Icons.check_circle;
+        tone = AdminStatusTone.success;
         break;
 
       case 'rejected':
         icon = Icons.cancel;
+        tone = AdminStatusTone.danger;
         break;
 
       case 'hidden':
         icon = Icons.visibility_off;
+        tone = AdminStatusTone.neutral;
         break;
 
       default:
         icon = Icons.hourglass_top;
+        tone = AdminStatusTone.warning;
         break;
     }
 
-    return Chip(
-      avatar: Icon(icon, size: 17),
-      label: Text(status),
-      visualDensity: VisualDensity.compact,
-    );
+    return AdminStatusBadge(label: status, tone: tone, icon: icon);
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_page_header.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_status_badge.dart';
 import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 
 import '../../../../app/di/injection.dart';
@@ -243,146 +245,144 @@ class _ArticleManagementPageState extends State<ArticleManagementPage> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      children: [
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Upravljanje člancima',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Kreiranje, uređivanje, objavljivanje i uklanjanje članaka.',
-              ),
-            ],
-          ),
-        ),
-        ElevatedButton.icon(
-          onPressed: _viewModel.isActionLoading ? null : _openCreatePage,
-          icon: const Icon(Icons.add),
-          label: const Text('Kreiraj članak'),
-        ),
-      ],
+    return AdminPageHeader(
+      title: 'Article management',
+      subtitle: 'Create, edit, publish and remove educational articles.',
+      icon: Icons.article_outlined,
+      trailing: FilledButton.icon(
+        onPressed: _viewModel.isActionLoading ? null : _openCreatePage,
+        icon: const Icon(Icons.add),
+        label: const Text('Create article'),
+      ),
     );
   }
 
   Widget _buildFilters() {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        SizedBox(
-          width: 360,
-          child: TextField(
-            controller: _searchController,
-            enabled: !_viewModel.isLoading,
-            decoration: InputDecoration(
-              labelText: 'Pretraži članke',
-              hintText: 'Naslov, opis ili autor',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Očisti pretragu',
-                      onPressed: _viewModel.isLoading
-                          ? null
-                          : () async {
-                              _searchController.clear();
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SizedBox(
+              width: 360,
+              child: TextField(
+                controller: _searchController,
+                enabled: !_viewModel.isLoading,
+                decoration: InputDecoration(
+                  labelText: 'Pretraži članke',
+                  hintText: 'Naslov, opis ili autor',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Očisti pretragu',
+                          onPressed: _viewModel.isLoading
+                              ? null
+                              : () async {
+                                  _searchController.clear();
 
-                              if (mounted) {
-                                setState(() {});
-                              }
+                                  if (mounted) {
+                                    setState(() {});
+                                  }
 
-                              await _viewModel.clearSearch();
-                            },
-                      icon: const Icon(Icons.clear),
-                    ),
-              border: const OutlineInputBorder(),
-            ),
-            onChanged: (value) {
-              if (mounted) {
-                setState(() {});
-              }
+                                  await _viewModel.clearSearch();
+                                },
+                          icon: const Icon(Icons.clear),
+                        ),
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  if (mounted) {
+                    setState(() {});
+                  }
 
-              _viewModel.updateSearch(value);
-            },
-            onSubmitted: (_) {
-              _viewModel.loadArticles(
-                requestedPage: 1,
-                clearCurrentResults: true,
-              );
-            },
-          ),
-        ),
-        SizedBox(
-          width: 200,
-          child: DropdownButtonFormField<bool?>(
-            initialValue: _viewModel.publishedFilter,
-            decoration: const InputDecoration(
-              labelText: 'Status objave',
-              border: OutlineInputBorder(),
-            ),
-            items: const [
-              DropdownMenuItem<bool?>(value: null, child: Text('Svi članci')),
-              DropdownMenuItem<bool?>(value: true, child: Text('Objavljeni')),
-              DropdownMenuItem<bool?>(
-                value: false,
-                child: Text('Neobjavljeni'),
-              ),
-            ],
-            onChanged: _viewModel.isLoading
-                ? null
-                : (value) {
-                    _viewModel.updatePublishedFilter(value);
-                  },
-          ),
-        ),
-        SizedBox(
-          width: 220,
-          child: DropdownButtonFormField<int?>(
-            initialValue: _viewModel.categoryFilter,
-            decoration: const InputDecoration(
-              labelText: 'Kategorija članka',
-              border: OutlineInputBorder(),
-            ),
-            items: [
-              const DropdownMenuItem<int?>(
-                value: null,
-                child: Text('Sve kategorije'),
-              ),
-              ..._viewModel.categories.map((category) {
-                return DropdownMenuItem<int?>(
-                  value: category.id,
-                  child: Text(category.name),
-                );
-              }),
-            ],
-            onChanged: _viewModel.isLoading
-                ? null
-                : (value) {
-                    _viewModel.updateCategoryFilter(value);
-                  },
-          ),
-        ),
-        IconButton(
-          tooltip: 'Osvježi',
-          onPressed: _viewModel.isLoading
-              ? null
-              : () {
-                  _viewModel.loadArticles();
+                  _viewModel.updateSearch(value);
                 },
-          icon: const Icon(Icons.refresh),
+                onSubmitted: (_) {
+                  _viewModel.loadArticles(
+                    requestedPage: 1,
+                    clearCurrentResults: true,
+                  );
+                },
+              ),
+            ),
+            SizedBox(
+              width: 200,
+              child: DropdownButtonFormField<bool?>(
+                initialValue: _viewModel.publishedFilter,
+                decoration: const InputDecoration(
+                  labelText: 'Status objave',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem<bool?>(
+                    value: null,
+                    child: Text('Svi članci'),
+                  ),
+                  DropdownMenuItem<bool?>(
+                    value: true,
+                    child: Text('Objavljeni'),
+                  ),
+                  DropdownMenuItem<bool?>(
+                    value: false,
+                    child: Text('Neobjavljeni'),
+                  ),
+                ],
+                onChanged: _viewModel.isLoading
+                    ? null
+                    : (value) {
+                        _viewModel.updatePublishedFilter(value);
+                      },
+              ),
+            ),
+            SizedBox(
+              width: 220,
+              child: DropdownButtonFormField<int?>(
+                initialValue: _viewModel.categoryFilter,
+                decoration: const InputDecoration(
+                  labelText: 'Kategorija članka',
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  const DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text('Sve kategorije'),
+                  ),
+                  ..._viewModel.categories.map((category) {
+                    return DropdownMenuItem<int?>(
+                      value: category.id,
+                      child: Text(category.name),
+                    );
+                  }),
+                ],
+                onChanged: _viewModel.isLoading
+                    ? null
+                    : (value) {
+                        _viewModel.updateCategoryFilter(value);
+                      },
+              ),
+            ),
+            IconButton(
+              tooltip: 'Osvježi',
+              onPressed: _viewModel.isLoading
+                  ? null
+                  : () {
+                      _viewModel.loadArticles();
+                    },
+              icon: const Icon(Icons.refresh),
+            ),
+            OutlinedButton.icon(
+              onPressed: _viewModel.isLoading ? null : _clearFilters,
+              icon: const Icon(Icons.filter_alt_off),
+              label: const Text('Resetuj filtere'),
+            ),
+          ],
         ),
-        OutlinedButton.icon(
-          onPressed: _viewModel.isLoading ? null : _clearFilters,
-          icon: const Icon(Icons.filter_alt_off),
-          label: const Text('Resetuj filtere'),
-        ),
-      ],
+      ),
     );
   }
 
@@ -414,6 +414,11 @@ class _ArticleManagementPageState extends State<ArticleManagementPage> {
     return AdminTableContainer(
       minimumWidth: 1050,
       child: DataTable(
+        columnSpacing: 28,
+        horizontalMargin: 24,
+        headingRowHeight: 54,
+        dataRowMinHeight: 64,
+        dataRowMaxHeight: 78,
         columns: const [
           DataColumn(label: Text('Slika')),
           DataColumn(label: Text('Naslov')),
@@ -457,7 +462,12 @@ class _ArticleManagementPageState extends State<ArticleManagementPage> {
             ),
           ),
         ),
-        DataCell(Text(article.authorName)),
+        DataCell(
+          SizedBox(
+            width: 160,
+            child: Text(article.authorName, overflow: TextOverflow.ellipsis),
+          ),
+        ),
         DataCell(
           Text(
             article.articleCategoryName.trim().isEmpty
@@ -466,13 +476,12 @@ class _ArticleManagementPageState extends State<ArticleManagementPage> {
           ),
         ),
         DataCell(
-          Chip(
-            label: Text(article.isPublished ? 'Objavljen' : 'Neobjavljen'),
-            avatar: Icon(
-              article.isPublished ? Icons.public : Icons.public_off,
-              size: 18,
-            ),
-            visualDensity: VisualDensity.compact,
+          AdminStatusBadge(
+            label: article.isPublished ? 'Objavljen' : 'Neobjavljen',
+            tone: article.isPublished
+                ? AdminStatusTone.success
+                : AdminStatusTone.neutral,
+            icon: article.isPublished ? Icons.public : Icons.public_off,
           ),
         ),
         DataCell(

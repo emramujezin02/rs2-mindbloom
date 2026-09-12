@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_page_header.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_status_badge.dart';
 import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 
 import '../../../../app/di/injection.dart';
@@ -239,6 +241,21 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          child: AdminPageHeader(
+            title: 'Payments',
+            subtitle:
+                'Track payment status, references, receipts and refund state.',
+            icon: Icons.payments_outlined,
+            trailing: OutlinedButton.icon(
+              onPressed: _viewModel.isLoading ? null : _viewModel.reload,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh'),
+            ),
+          ),
+        ),
+
         _buildFilters(),
 
         if (_hasActiveFilters) ...[
@@ -248,7 +265,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
 
         if (_viewModel.error != null && _viewModel.payments.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
             child: AppErrorBanner(
               message: _viewModel.error!,
               onDismiss: _viewModel.clearError,
@@ -264,11 +281,11 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
     final formatter = DateFormat('dd.MM.yyyy.');
 
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(24, 20, 24, 12),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Wrap(
-          spacing: 12,
+          spacing: 10,
           runSpacing: 12,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
@@ -292,6 +309,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
               width: 190,
               child: DropdownButtonFormField<int?>(
                 key: ValueKey<int?>(_status),
+                isExpanded: true,
                 initialValue: _status,
                 decoration: const InputDecoration(
                   labelText: 'Status',
@@ -328,6 +346,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
               width: 190,
               child: DropdownButtonFormField<String?>(
                 key: ValueKey<String?>(_selectedPaymentType),
+                isExpanded: true,
                 initialValue: _selectedPaymentType,
                 decoration: const InputDecoration(
                   labelText: 'Payment type',
@@ -451,10 +470,15 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
       children: [
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: AdminTableContainer(
               minimumWidth: 1450,
               child: DataTable(
+                columnSpacing: 28,
+                horizontalMargin: 24,
+                headingRowHeight: 54,
+                dataRowMinHeight: 60,
+                dataRowMaxHeight: 72,
                 columns: const [
                   DataColumn(label: Text('ID')),
                   DataColumn(label: Text('Tip plaćanja')),
@@ -491,16 +515,34 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
                         ),
                       ),
                       DataCell(
-                        Tooltip(
-                          message: payment.clientEmail,
-                          child: Text(payment.clientName),
+                        SizedBox(
+                          width: 170,
+                          child: Tooltip(
+                            message: payment.clientEmail,
+                            child: Text(
+                              payment.clientName,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ),
                       ),
-                      DataCell(Text(payment.therapistName)),
                       DataCell(
-                        Text(
-                          '${payment.amount.toStringAsFixed(2)} '
-                          '${payment.currency.toUpperCase()}',
+                        SizedBox(
+                          width: 170,
+                          child: Text(
+                            payment.therapistName,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            '${payment.amount.toStringAsFixed(2)} '
+                            '${payment.currency.toUpperCase()}',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
                         ),
                       ),
                       DataCell(_PaymentStatusChip(status: payment.status)),
@@ -544,7 +586,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
         ),
 
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           child: AdminTablePagination(
             pageNumber: _viewModel.pageNumber,
             pageSize: _viewModel.pageSize,
@@ -573,19 +615,40 @@ class _PaymentStatusChip extends StatelessWidget {
     final normalized = status.trim().toLowerCase();
 
     IconData icon;
+    AdminStatusTone tone;
 
     if (normalized == 'paid') {
       icon = Icons.check_circle;
+      tone = AdminStatusTone.success;
     } else if (normalized == 'refunded') {
       icon = Icons.replay;
+      tone = AdminStatusTone.info;
     } else if (normalized == 'refundpending') {
       icon = Icons.hourglass_top;
+      tone = AdminStatusTone.warning;
     } else if (normalized == 'failed' || normalized == 'refundfailed') {
       icon = Icons.error;
+      tone = AdminStatusTone.danger;
     } else {
       icon = Icons.schedule;
+      tone = AdminStatusTone.warning;
     }
 
-    return Chip(avatar: Icon(icon, size: 18), label: Text(status));
+    return AdminStatusBadge(
+      label: _formatStatus(status),
+      tone: tone,
+      icon: icon,
+    );
+  }
+
+  String _formatStatus(String value) {
+    switch (value) {
+      case 'RefundPending':
+        return 'Refund pending';
+      case 'RefundFailed':
+        return 'Refund failed';
+      default:
+        return value;
+    }
   }
 }

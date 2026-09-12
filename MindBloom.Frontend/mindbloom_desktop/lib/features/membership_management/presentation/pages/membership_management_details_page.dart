@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/admin_status_badge.dart';
+import '../../../../core/widgets/admin_table_state.dart';
 import '../../data/models/admin_membership_details_model.dart';
 import '../viewmodels/membership_management_details_viewmodel.dart';
 
@@ -69,36 +71,28 @@ class _MembershipManagementDetailsPageState
 
   Widget _buildBody() {
     if (_viewModel.isLoading && _viewModel.membership == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const AdminTableLoadingState(
+        message: 'Loading membership details...',
+      );
     }
 
     if (_viewModel.error != null && _viewModel.membership == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 58),
-              const SizedBox(height: 12),
-              Text(_viewModel.error!, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: () {
-                  _viewModel.loadMembership(widget.membershipId);
-                },
-                child: const Text('Try again'),
-              ),
-            ],
-          ),
-        ),
+      return AdminTableErrorState(
+        message: _viewModel.error!,
+        onRetry: () {
+          _viewModel.loadMembership(widget.membershipId);
+        },
       );
     }
 
     final membership = _viewModel.membership;
 
     if (membership == null) {
-      return const Center(child: Text('Membership not found.'));
+      return const AdminTableEmptyState(
+        title: 'Membership not found',
+        message: 'The selected membership could not be displayed.',
+        icon: Icons.card_membership_outlined,
+      );
     }
 
     return SingleChildScrollView(
@@ -155,9 +149,10 @@ class _MembershipManagementDetailsPageState
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Chip(
-                  avatar: const Icon(Icons.card_membership, size: 18),
-                  label: Text(membership.membershipStatus),
+                AdminStatusBadge(
+                  label: _formatStatus(membership.membershipStatus),
+                  tone: _statusTone(membership.membershipStatus),
+                  icon: _statusIcon(membership.membershipStatus),
                 ),
               ],
             ),
@@ -311,7 +306,10 @@ class _MembershipManagementDetailsPageState
             _DetailsGrid(
               children: [
                 _DetailsItem(label: 'Payment ID', value: '#${payment.id}'),
-                _DetailsItem(label: 'Status', value: payment.status),
+                _DetailsItem(
+                  label: 'Status',
+                  value: _formatStatus(payment.status),
+                ),
                 _DetailsItem(
                   label: 'Amount',
                   value:
@@ -374,6 +372,11 @@ class _MembershipManagementDetailsPageState
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minWidth: constraints.maxWidth),
                     child: DataTable(
+                      columnSpacing: 28,
+                      horizontalMargin: 24,
+                      headingRowHeight: 54,
+                      dataRowMinHeight: 60,
+                      dataRowMaxHeight: 72,
                       columns: const [
                         DataColumn(label: Text('Usage ID')),
                         DataColumn(label: Text('Appointment')),
@@ -409,8 +412,20 @@ class _MembershipManagementDetailsPageState
         DataCell(Text('#${usage.id}')),
         DataCell(Text('#${usage.appointmentId}')),
         DataCell(Text(formatter.format(usage.appointmentStartUtc.toLocal()))),
-        DataCell(Text(usage.appointmentStatus)),
-        DataCell(Chip(label: Text(usage.status))),
+        DataCell(
+          AdminStatusBadge(
+            label: _formatStatus(usage.appointmentStatus),
+            tone: _statusTone(usage.appointmentStatus),
+            icon: _statusIcon(usage.appointmentStatus),
+          ),
+        ),
+        DataCell(
+          AdminStatusBadge(
+            label: _formatStatus(usage.status),
+            tone: _statusTone(usage.status),
+            icon: _statusIcon(usage.status),
+          ),
+        ),
         DataCell(Text(formatNullable(usage.reservedAtUtc))),
         DataCell(Text(formatNullable(usage.consumedAtUtc))),
         DataCell(Text(formatNullable(usage.restoredAtUtc))),
@@ -441,6 +456,79 @@ class _MembershipManagementDetailsPageState
       default:
         return planType;
     }
+  }
+}
+
+AdminStatusTone _statusTone(String status) {
+  final normalized = status.trim().toLowerCase();
+
+  if (normalized == 'active' ||
+      normalized == 'paid' ||
+      normalized == 'completed' ||
+      normalized == 'consumed') {
+    return AdminStatusTone.success;
+  }
+
+  if (normalized == 'pending' ||
+      normalized == 'pendingpayment' ||
+      normalized == 'scheduled' ||
+      normalized == 'reserved' ||
+      normalized == 'refundpending') {
+    return AdminStatusTone.warning;
+  }
+
+  if (normalized == 'refunded' || normalized == 'restored') {
+    return AdminStatusTone.info;
+  }
+
+  if (normalized == 'inactive' ||
+      normalized == 'expired' ||
+      normalized == 'depleted' ||
+      normalized == 'cancelled' ||
+      normalized == 'failed' ||
+      normalized == 'refundfailed') {
+    return AdminStatusTone.danger;
+  }
+
+  return AdminStatusTone.neutral;
+}
+
+IconData _statusIcon(String status) {
+  final normalized = status.trim().toLowerCase();
+
+  if (normalized == 'active' ||
+      normalized == 'paid' ||
+      normalized == 'completed' ||
+      normalized == 'consumed') {
+    return Icons.check_circle;
+  }
+
+  if (normalized == 'refunded' || normalized == 'restored') {
+    return Icons.replay;
+  }
+
+  if (normalized == 'inactive' ||
+      normalized == 'expired' ||
+      normalized == 'depleted' ||
+      normalized == 'cancelled' ||
+      normalized == 'failed' ||
+      normalized == 'refundfailed') {
+    return Icons.cancel;
+  }
+
+  return Icons.schedule;
+}
+
+String _formatStatus(String value) {
+  switch (value) {
+    case 'PendingPayment':
+      return 'Pending payment';
+    case 'RefundPending':
+      return 'Refund pending';
+    case 'RefundFailed':
+      return 'Refund failed';
+    default:
+      return value;
   }
 }
 

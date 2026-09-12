@@ -4,6 +4,11 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/admin_page_header.dart';
+import '../../../../core/widgets/admin_status_badge.dart';
+import '../../../../core/widgets/admin_table_container.dart';
+import '../../../../core/widgets/admin_table_state.dart';
+import '../../../../core/widgets/app_error_banner.dart';
 import '../../data/models/appointment_revenue_report_model.dart';
 import '../viewmodels/appointment_revenue_report_viewmodel.dart';
 
@@ -156,12 +161,12 @@ class _AppointmentRevenueReportPageState
 
           if (_viewModel.errorMessage != null) ...[
             const SizedBox(height: 16),
-            _buildErrorMessage(_viewModel.errorMessage!),
+            AppErrorBanner(message: _viewModel.errorMessage!),
           ],
 
           if (_viewModel.isLoading) ...[
             const SizedBox(height: 28),
-            const Center(child: CircularProgressIndicator()),
+            const AdminTableLoadingState(message: 'Generating report...'),
           ],
 
           if (_viewModel.report != null) ...[
@@ -179,82 +184,43 @@ class _AppointmentRevenueReportPageState
   }
 
   Widget _buildHeader() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 700;
-
-        final title = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Appointment revenue report',
-              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 6),
-
-            Text(
-              'Review appointment, payment, refund and '
-              'revenue data for a selected period.',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ],
-        );
-
-        final actions = Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            OutlinedButton.icon(
-              onPressed: _viewModel.pdfBytes == null || _viewModel.isSavingPdf
-                  ? null
-                  : _savePdf,
-              icon: _viewModel.isSavingPdf
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.download),
-              label: Text(
-                _viewModel.isSavingPdf ? 'Saving...' : 'Download PDF',
-              ),
-            ),
-
-            ElevatedButton.icon(
-              onPressed: _viewModel.pdfBytes == null || _viewModel.isPrintingPdf
-                  ? null
-                  : _printPdf,
-              icon: _viewModel.isPrintingPdf
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.print),
-              label: Text(
-                _viewModel.isPrintingPdf ? 'Opening print...' : 'Print',
-              ),
-            ),
-          ],
-        );
-
-        if (compact) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [title, const SizedBox(height: 18), actions],
-          );
-        }
-
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: title),
-            const SizedBox(width: 20),
-            actions,
-          ],
-        );
-      },
+    return AdminPageHeader(
+      title: 'Appointment revenue report',
+      subtitle: 'Review appointment, payment, refund and revenue data for a selected period.',
+      icon: Icons.payments_outlined,
+      trailing: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        alignment: WrapAlignment.end,
+        children: [
+          OutlinedButton.icon(
+            onPressed: _viewModel.pdfBytes == null || _viewModel.isSavingPdf
+                ? null
+                : _savePdf,
+            icon: _viewModel.isSavingPdf
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.download),
+            label: Text(_viewModel.isSavingPdf ? 'Saving...' : 'Download PDF'),
+          ),
+          FilledButton.icon(
+            onPressed: _viewModel.pdfBytes == null || _viewModel.isPrintingPdf
+                ? null
+                : _printPdf,
+            icon: _viewModel.isPrintingPdf
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.print),
+            label: Text(_viewModel.isPrintingPdf ? 'Opening print...' : 'Print'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -639,16 +605,20 @@ class _AppointmentRevenueReportPageState
             const SizedBox(height: 18),
 
             if (report.appointmentsByStatus.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text('No appointment data for the selected period.'),
-                ),
+              const AdminTableEmptyState(
+                title: 'No appointment data',
+                message: 'No appointment data for the selected period.',
+                icon: Icons.event_busy_outlined,
               )
             else
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
+              AdminTableContainer(
+                minimumWidth: 620,
                 child: DataTable(
+                  headingRowHeight: 54,
+                  dataRowMinHeight: 58,
+                  dataRowMaxHeight: 68,
+                  horizontalMargin: 24,
+                  columnSpacing: 28,
                   columns: const [
                     DataColumn(label: Text('Status')),
                     DataColumn(numeric: true, label: Text('Count')),
@@ -661,7 +631,13 @@ class _AppointmentRevenueReportPageState
 
                     return DataRow(
                       cells: [
-                        DataCell(Text(_formatStatus(item.status))),
+                        DataCell(
+                          AdminStatusBadge(
+                            label: _formatStatus(item.status),
+                            tone: _statusTone(item.status),
+                            icon: _statusIcon(item.status),
+                          ),
+                        ),
                         DataCell(Text(item.count.toString())),
                         DataCell(Text('${percentage.toStringAsFixed(1)}%')),
                       ],
@@ -738,33 +714,6 @@ class _AppointmentRevenueReportPageState
     );
   }
 
-  Widget _buildErrorMessage(String message) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: colorScheme.onErrorContainer),
-
-          const SizedBox(width: 12),
-
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: colorScheme.onErrorContainer),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _formatStatus(String value) {
     if (value.trim().isEmpty) {
       return 'Unknown';
@@ -783,6 +732,50 @@ class _AppointmentRevenueReportPageState
     }
 
     return normalized[0].toUpperCase() + normalized.substring(1);
+  }
+
+  AdminStatusTone _statusTone(String value) {
+    switch (value.toLowerCase()) {
+      case 'completed':
+      case 'paid':
+        return AdminStatusTone.success;
+      case 'pending':
+      case 'accepted':
+      case 'refundpending':
+        return AdminStatusTone.warning;
+      case 'cancelled':
+      case 'rejected':
+      case 'failed':
+      case 'refundfailed':
+        return AdminStatusTone.danger;
+      case 'refunded':
+      case 'online':
+      case 'inperson':
+        return AdminStatusTone.info;
+      default:
+        return AdminStatusTone.neutral;
+    }
+  }
+
+  IconData _statusIcon(String value) {
+    switch (value.toLowerCase()) {
+      case 'completed':
+      case 'paid':
+        return Icons.check_circle_outline;
+      case 'pending':
+      case 'accepted':
+      case 'refundpending':
+        return Icons.schedule;
+      case 'cancelled':
+      case 'rejected':
+      case 'failed':
+      case 'refundfailed':
+        return Icons.cancel_outlined;
+      case 'refunded':
+        return Icons.undo;
+      default:
+        return Icons.info_outline;
+    }
   }
 }
 

@@ -8,7 +8,7 @@ class AdminSettingsApiService {
   const AdminSettingsApiService({required this.apiClient});
 
   Future<AdminProfileModel> getProfile() async {
-    final response = await apiClient.get('/api/Users/me');
+    final response = await apiClient.get('/Users/me');
 
     if (response is! Map) {
       throw const FormatException(
@@ -26,7 +26,7 @@ class AdminSettingsApiService {
     required DateTime dateOfBirth,
   }) async {
     final response = await apiClient.put(
-      '/api/Users/me',
+      '/Users/me',
       body: {
         'firstName': firstName.trim(),
         'lastName': lastName.trim(),
@@ -72,7 +72,7 @@ class AdminSettingsApiService {
   }
 
   Future<AdminAccountSettingsModel> getAccountSettings() async {
-    final response = await apiClient.get('/api/user-settings/me');
+    final response = await apiClient.get('/user-settings/me');
 
     if (response is! Map) {
       throw const FormatException(
@@ -90,7 +90,7 @@ class AdminSettingsApiService {
     required bool showProfilePublicly,
   }) async {
     final response = await apiClient.put(
-      '/api/user-settings/me',
+      '/user-settings/me',
       body: {
         'notificationsEnabled': notificationsEnabled,
         'showProfilePublicly': showProfilePublicly,

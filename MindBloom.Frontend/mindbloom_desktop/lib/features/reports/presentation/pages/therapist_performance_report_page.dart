@@ -4,6 +4,11 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/widgets/admin_page_header.dart';
+import '../../../../core/widgets/admin_status_badge.dart';
+import '../../../../core/widgets/admin_table_container.dart';
+import '../../../../core/widgets/admin_table_state.dart';
+import '../../../../core/widgets/app_error_banner.dart';
 import '../../data/models/therapist_performance_report_item_model.dart';
 import '../viewmodels/therapist_performance_report_viewmodel.dart';
 
@@ -171,11 +176,11 @@ class _TherapistPerformanceReportPageState
           _buildFilterCard(),
           if (_viewModel.errorMessage != null) ...[
             const SizedBox(height: 16),
-            _buildErrorMessage(_viewModel.errorMessage!),
+            AppErrorBanner(message: _viewModel.errorMessage!),
           ],
           if (_viewModel.isLoading) ...[
             const SizedBox(height: 28),
-            const Center(child: CircularProgressIndicator()),
+            const AdminTableLoadingState(message: 'Generating report...'),
           ],
           if (_viewModel.report != null && !_viewModel.isLoading) ...[
             const SizedBox(height: 28),
@@ -199,78 +204,43 @@ class _TherapistPerformanceReportPageState
   }
 
   Widget _buildHeader() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 700;
-
-        final title = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Therapist performance report',
-              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Review therapist activity, completion rates, ratings, clients and revenue.',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ],
-        );
-
-        final actions = Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            OutlinedButton.icon(
-              onPressed: _viewModel.pdfBytes == null || _viewModel.isSavingPdf
-                  ? null
-                  : _savePdf,
-              icon: _viewModel.isSavingPdf
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.download),
-              label: Text(
-                _viewModel.isSavingPdf ? 'Saving...' : 'Download PDF',
-              ),
-            ),
-            ElevatedButton.icon(
-              onPressed: _viewModel.pdfBytes == null || _viewModel.isPrintingPdf
-                  ? null
-                  : _printPdf,
-              icon: _viewModel.isPrintingPdf
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.print),
-              label: Text(
-                _viewModel.isPrintingPdf ? 'Opening print...' : 'Print',
-              ),
-            ),
-          ],
-        );
-
-        if (compact) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [title, const SizedBox(height: 18), actions],
-          );
-        }
-
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: title),
-            const SizedBox(width: 20),
-            actions,
-          ],
-        );
-      },
+    return AdminPageHeader(
+      title: 'Therapist performance report',
+      subtitle: 'Review therapist activity, completion rates, ratings, clients and revenue.',
+      icon: Icons.insights_outlined,
+      trailing: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        alignment: WrapAlignment.end,
+        children: [
+          OutlinedButton.icon(
+            onPressed: _viewModel.pdfBytes == null || _viewModel.isSavingPdf
+                ? null
+                : _savePdf,
+            icon: _viewModel.isSavingPdf
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.download),
+            label: Text(_viewModel.isSavingPdf ? 'Saving...' : 'Download PDF'),
+          ),
+          FilledButton.icon(
+            onPressed: _viewModel.pdfBytes == null || _viewModel.isPrintingPdf
+                ? null
+                : _printPdf,
+            icon: _viewModel.isPrintingPdf
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.print),
+            label: Text(_viewModel.isPrintingPdf ? 'Opening print...' : 'Print'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -488,21 +458,28 @@ class _TherapistPerformanceReportPageState
               spacing: 10,
               runSpacing: 10,
               children: [
-                Chip(
-                  label: Text(
-                    'Period: '
-                    '${_dateFormatter.format(report.fromUtc)} - '
-                    '${_dateFormatter.format(report.toUtc)}',
-                  ),
+                AdminStatusBadge(
+                  label:
+                      'Period: ${_dateFormatter.format(report.fromUtc)} - ${_dateFormatter.format(report.toUtc)}',
+                  tone: AdminStatusTone.info,
+                  icon: Icons.date_range,
                 ),
-                Chip(label: Text('Therapist: $therapist')),
-                Chip(
-                  label: Text(
-                    'Minimum appointments: '
-                    '${report.minimumAppointmentsFilter}',
-                  ),
+                AdminStatusBadge(
+                  label: 'Therapist: $therapist',
+                  tone: AdminStatusTone.neutral,
+                  icon: Icons.psychology,
                 ),
-                Chip(label: Text('Status: $status')),
+                AdminStatusBadge(
+                  label:
+                      'Minimum appointments: ${report.minimumAppointmentsFilter}',
+                  tone: AdminStatusTone.neutral,
+                  icon: Icons.numbers,
+                ),
+                AdminStatusBadge(
+                  label: 'Status: $status',
+                  tone: _therapistStatusTone(status),
+                  icon: _therapistStatusIcon(status),
+                ),
               ],
             ),
           ],
@@ -594,9 +571,14 @@ class _TherapistPerformanceReportPageState
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 18),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+            AdminTableContainer(
+              minimumWidth: 1500,
               child: DataTable(
+                headingRowHeight: 54,
+                dataRowMinHeight: 62,
+                dataRowMaxHeight: 76,
+                horizontalMargin: 24,
+                columnSpacing: 28,
                 columns: const [
                   DataColumn(numeric: true, label: Text('Rank')),
                   DataColumn(label: Text('Therapist')),
@@ -627,9 +609,25 @@ class _TherapistPerformanceReportPageState
     return DataRow(
       cells: [
         DataCell(Text('#${therapist.rank}')),
-        DataCell(Text(therapist.therapistName)),
         DataCell(
-          SizedBox(width: 240, child: Text(therapist.therapyApproachesLabel)),
+          SizedBox(
+            width: 210,
+            child: Text(
+              therapist.therapistName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        DataCell(
+          SizedBox(
+            width: 260,
+            child: Text(
+              therapist.therapyApproachesLabel,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ),
         DataCell(Text(therapist.totalAppointments.toString())),
         DataCell(Text(therapist.completedAppointments.toString())),
@@ -649,33 +647,11 @@ class _TherapistPerformanceReportPageState
   }
 
   Widget _buildEmptyState() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(36),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(
-                Icons.insert_chart_outlined,
-                size: 54,
-                color: Theme.of(context).colorScheme.outline,
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'No therapist performance data',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'No therapists match the selected period and filters. '
-                'Try changing the therapist, verification status or minimum number of appointments.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-        ),
-      ),
+    return const AdminTableEmptyState(
+      title: 'No therapist performance data',
+      message:
+          'No therapists match the selected period and filters. Try changing the therapist, verification status or minimum number of appointments.',
+      icon: Icons.insert_chart_outlined,
     );
   }
 
@@ -744,29 +720,34 @@ class _TherapistPerformanceReportPageState
     );
   }
 
-  Widget _buildErrorMessage(String message) {
-    final colorScheme = Theme.of(context).colorScheme;
+  AdminStatusTone _therapistStatusTone(String value) {
+    switch (value.toLowerCase()) {
+      case 'approved':
+        return AdminStatusTone.success;
+      case 'pending':
+      case 'requireschanges':
+        return AdminStatusTone.warning;
+      case 'rejected':
+        return AdminStatusTone.danger;
+      case 'all statuses':
+        return AdminStatusTone.neutral;
+      default:
+        return AdminStatusTone.info;
+    }
+  }
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: colorScheme.onErrorContainer),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: colorScheme.onErrorContainer),
-            ),
-          ),
-        ],
-      ),
-    );
+  IconData _therapistStatusIcon(String value) {
+    switch (value.toLowerCase()) {
+      case 'approved':
+        return Icons.check_circle_outline;
+      case 'pending':
+      case 'requireschanges':
+        return Icons.schedule;
+      case 'rejected':
+        return Icons.cancel_outlined;
+      default:
+        return Icons.verified_user_outlined;
+    }
   }
 }
 

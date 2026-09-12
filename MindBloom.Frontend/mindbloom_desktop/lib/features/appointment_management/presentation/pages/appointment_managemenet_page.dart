@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_page_header.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_status_badge.dart';
 import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 
 import '../../../../app/di/injection.dart';
@@ -155,6 +157,26 @@ class _AppointmentManagementPageState extends State<AppointmentManagementPage> {
     }
   }
 
+  AdminStatusTone _appointmentStatusTone(String status) {
+    switch (status) {
+      case '1':
+      case '3':
+      case 'Accepted':
+      case 'Completed':
+        return AdminStatusTone.success;
+      case '0':
+      case 'Pending':
+        return AdminStatusTone.warning;
+      case '2':
+      case '4':
+      case 'Rejected':
+      case 'Cancelled':
+        return AdminStatusTone.danger;
+      default:
+        return AdminStatusTone.neutral;
+    }
+  }
+
   Widget _buildActiveFilters() {
     if (!_hasActiveFilters) {
       return const SizedBox.shrink();
@@ -163,7 +185,7 @@ class _AppointmentManagementPageState extends State<AppointmentManagementPage> {
     final formatter = DateFormat('dd.MM.yyyy.');
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
@@ -198,6 +220,20 @@ class _AppointmentManagementPageState extends State<AppointmentManagementPage> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          child: AdminPageHeader(
+            title: 'Appointments',
+            subtitle:
+                'Review scheduled sessions, payment state and administrative appointment actions.',
+            icon: Icons.calendar_month_outlined,
+            trailing: OutlinedButton.icon(
+              onPressed: _viewModel.isLoading ? null : _viewModel.reload,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh'),
+            ),
+          ),
+        ),
         _buildFilters(),
 
         if (_hasActiveFilters) ...[
@@ -207,7 +243,7 @@ class _AppointmentManagementPageState extends State<AppointmentManagementPage> {
 
         if (_viewModel.error != null && _viewModel.appointments.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
             child: AppErrorBanner(
               message: _viewModel.error!,
               onDismiss: _viewModel.clearError,
@@ -223,9 +259,9 @@ class _AppointmentManagementPageState extends State<AppointmentManagementPage> {
     final formatter = DateFormat('dd.MM.yyyy.');
 
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(24, 20, 24, 12),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -370,10 +406,14 @@ class _AppointmentManagementPageState extends State<AppointmentManagementPage> {
       children: [
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: AdminTableContainer(
               minimumWidth: 1100,
               child: DataTable(
+                columnSpacing: 28,
+                headingRowHeight: 54,
+                dataRowMinHeight: 60,
+                dataRowMaxHeight: 72,
                 columns: const [
                   DataColumn(label: Text('ID')),
                   DataColumn(label: Text('Klijent')),
@@ -388,18 +428,48 @@ class _AppointmentManagementPageState extends State<AppointmentManagementPage> {
                   return DataRow(
                     cells: [
                       DataCell(Text(appointment.id.toString())),
-                      DataCell(Text(appointment.clientName)),
-                      DataCell(Text(appointment.therapistName)),
+                      DataCell(
+                        SizedBox(
+                          width: 170,
+                          child: Text(
+                            appointment.clientName,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        SizedBox(
+                          width: 170,
+                          child: Text(
+                            appointment.therapistName,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
                       DataCell(
                         Text(formatter.format(appointment.startUtc.toLocal())),
                       ),
-                      DataCell(Text(appointment.status)),
-                      DataCell(Text(appointment.type)),
                       DataCell(
-                        Icon(
-                          appointment.isPaid
-                              ? Icons.check_circle
-                              : Icons.cancel,
+                        AdminStatusBadge(
+                          label: _appointmentStatusLabel(appointment.status),
+                          tone: _appointmentStatusTone(appointment.status),
+                        ),
+                      ),
+                      DataCell(
+                        AdminStatusBadge(
+                          label: _appointmentTypeLabel(appointment.type),
+                          tone: AdminStatusTone.info,
+                        ),
+                      ),
+                      DataCell(
+                        AdminStatusBadge(
+                          label: appointment.isPaid ? 'Paid' : 'Unpaid',
+                          tone: appointment.isPaid
+                              ? AdminStatusTone.success
+                              : AdminStatusTone.warning,
+                          icon: appointment.isPaid
+                              ? Icons.check_circle_outline
+                              : Icons.schedule_outlined,
                         ),
                       ),
                       DataCell(
@@ -439,7 +509,7 @@ class _AppointmentManagementPageState extends State<AppointmentManagementPage> {
         ),
 
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           child: AdminTablePagination(
             pageNumber: _viewModel.pageNumber,
             pageSize: _viewModel.pageSize,

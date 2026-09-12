@@ -214,7 +214,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
     return AlertDialog(
       title: const Text('Uredi korisnika'),
       content: AppResponsiveDialogContent(
-        preferredWidth: 520,
+        preferredWidth: 620,
         child: Form(
           key: _formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -222,6 +222,15 @@ class _EditUserDialogState extends State<EditUserDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                widget.user.email,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 18),
               TextFormField(
                 controller: _firstNameController,
                 enabled: !_isBusy,

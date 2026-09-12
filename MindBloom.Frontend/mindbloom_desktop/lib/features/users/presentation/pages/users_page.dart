@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_page_header.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_status_badge.dart';
 import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 
 import '../../../../app/di/injection.dart';
@@ -395,6 +397,20 @@ class _UsersPageState extends State<UsersPage> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          child: AdminPageHeader(
+            title: 'Users',
+            subtitle:
+                'Search accounts, review access status and manage admin-visible user data.',
+            icon: Icons.people_outline,
+            trailing: OutlinedButton.icon(
+              onPressed: _viewModel.isLoading ? null : _viewModel.loadUsers,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh'),
+            ),
+          ),
+        ),
         _buildFilters(),
         _buildActiveFilters(),
         if (_viewModel.errorMessage != null) _buildInlineError(),
@@ -405,7 +421,7 @@ class _UsersPageState extends State<UsersPage> {
 
   Widget _buildFilters() {
     return Card(
-      margin: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+      margin: const EdgeInsets.fromLTRB(24, 20, 24, 12),
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: LayoutBuilder(
@@ -648,9 +664,14 @@ class _UsersPageState extends State<UsersPage> {
             DataCell(SelectableText(user.email)),
             DataCell(_RoleBadge(role: user.role)),
             DataCell(
-              Icon(
-                user.isEmailVerified ? Icons.verified : Icons.warning_amber,
-                color: user.isEmailVerified ? Colors.green : Colors.orange,
+              AdminStatusBadge(
+                label: user.isEmailVerified ? 'Verified' : 'Unverified',
+                tone: user.isEmailVerified
+                    ? AdminStatusTone.success
+                    : AdminStatusTone.warning,
+                icon: user.isEmailVerified
+                    ? Icons.verified_outlined
+                    : Icons.warning_amber_outlined,
               ),
             ),
             DataCell(_StatusBadge(isActive: user.isActive)),
@@ -772,7 +793,14 @@ class _RoleBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(label: Text(role), visualDensity: VisualDensity.compact);
+    final tone = switch (role) {
+      'Admin' => AdminStatusTone.info,
+      'Therapist' => AdminStatusTone.success,
+      'Client' => AdminStatusTone.neutral,
+      _ => AdminStatusTone.neutral,
+    };
+
+    return AdminStatusBadge(label: role, tone: tone);
   }
 }
 
@@ -783,14 +811,10 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      avatar: Icon(
-        isActive ? Icons.check_circle : Icons.block,
-        size: 18,
-        color: isActive ? Colors.green : Colors.red,
-      ),
-      label: Text(isActive ? 'Active' : 'Deactivated'),
-      visualDensity: VisualDensity.compact,
+    return AdminStatusBadge(
+      label: isActive ? 'Active' : 'Deactivated',
+      tone: isActive ? AdminStatusTone.success : AdminStatusTone.danger,
+      icon: isActive ? Icons.check_circle_outline : Icons.block,
     );
   }
 }

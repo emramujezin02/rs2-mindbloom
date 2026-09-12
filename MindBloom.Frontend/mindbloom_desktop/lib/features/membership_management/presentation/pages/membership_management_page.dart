@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_page_header.dart';
+import 'package:mindbloom_desktop/core/widgets/admin_status_badge.dart';
 import 'package:mindbloom_desktop/core/widgets/app_table_pagination.dart';
 
 import '../../../../app/di/injection.dart';
@@ -623,28 +625,20 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
       context: context,
       builder: (dialogContext) {
         final formatter = DateFormat('dd.MM.yyyy. HH:mm');
-        final screenSize = MediaQuery.sizeOf(dialogContext);
-
-        final width = screenSize.width > 850
-            ? 750.0
-            : (screenSize.width - 80).clamp(280.0, 750.0);
-
-        final height = screenSize.height > 700
-            ? 500.0
-            : (screenSize.height * 0.62).clamp(220.0, 500.0);
-
         return AlertDialog(
           title: Text(
             'History — ${plan.name}',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          content: SizedBox(
-            width: width,
-            height: height,
+          content: AppResponsiveDialogContent(
+            preferredWidth: 750,
+            maximumHeightFactor: 0.72,
             child: _planViewModel.history.isEmpty
                 ? const Center(child: Text('No change history available.'))
                 : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                     itemCount: _planViewModel.history.length,
                     separatorBuilder: (_, _) => const Divider(),
                     itemBuilder: (context, index) {
@@ -803,7 +797,7 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -820,9 +814,9 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
 
           const SizedBox(height: 16),
 
-          const Text(
-            'User memberships',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          _buildSectionTitle(
+            title: 'User memberships',
+            subtitle: 'Browse active and historical memberships by client.',
           ),
 
           const SizedBox(height: 12),
@@ -845,7 +839,7 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
 
           const SizedBox(height: 16),
 
-          Expanded(child: _buildContent()),
+          _buildContent(),
 
           const SizedBox(height: 12),
 
@@ -856,28 +850,63 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
   }
 
   Widget _buildHeader() {
-    return Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 16,
-      runSpacing: 12,
-      children: [
-        const Column(
+    return AdminPageHeader(
+      title: 'Membership management',
+      subtitle: 'Review memberships, payments and session usage.',
+      icon: Icons.card_membership_outlined,
+      trailing: AdminStatusBadge(
+        label: '${_viewModel.totalCount} memberships',
+        tone: AdminStatusTone.info,
+        icon: Icons.card_membership,
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle({
+    required String title,
+    required String subtitle,
+    Widget? trailing,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final titleBlock = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Membership management',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
-            SizedBox(height: 4),
-            Text('Review memberships, payments and session usage.'),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
-        ),
-        Chip(
-          avatar: const Icon(Icons.card_membership, size: 18),
-          label: Text('${_viewModel.totalCount} memberships'),
-        ),
-      ],
+        );
+
+        if (trailing == null) {
+          return titleBlock;
+        }
+
+        if (constraints.maxWidth < 620) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [titleBlock, const SizedBox(height: 12), trailing],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: titleBlock),
+            const SizedBox(width: 16),
+            trailing,
+          ],
+        );
+      },
     );
   }
 
@@ -888,57 +917,47 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Membership plans',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                FilledButton.icon(
-                  onPressed: _planViewModel.isSaving
-                      ? null
-                      : () {
-                          _showPlanDialog();
-                        },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Create plan'),
-                ),
-              ],
+            _buildSectionTitle(
+              title: 'Membership plans',
+              subtitle: 'Manage the existing packages offered to clients.',
+              trailing: FilledButton.icon(
+                onPressed: _planViewModel.isSaving
+                    ? null
+                    : () {
+                        _showPlanDialog();
+                      },
+                icon: const Icon(Icons.add),
+                label: const Text('Create plan'),
+              ),
             ),
 
             const SizedBox(height: 16),
 
             if (_planViewModel.isLoading && _planViewModel.plans.isEmpty)
-              const Center(child: CircularProgressIndicator())
+              const AdminTableLoadingState(
+                message: 'Loading membership plans...',
+              )
             else if (_planViewModel.error != null &&
                 _planViewModel.plans.isEmpty)
-              Column(
-                children: [
-                  Text(
-                    _planViewModel.error!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: _planViewModel.loadPlans,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Try again'),
-                  ),
-                ],
+              AdminTableErrorState(
+                message: _planViewModel.error!,
+                onRetry: _planViewModel.loadPlans,
               )
             else if (_planViewModel.plans.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(20),
-                child: Center(child: Text('No membership plans found.')),
+              const AdminTableEmptyState(
+                title: 'No membership plans found',
+                message: 'Create a membership plan to make it available here.',
+                icon: Icons.inventory_2_outlined,
               )
             else
               AdminTableContainer(
                 minimumWidth: 1100,
                 child: DataTable(
+                  columnSpacing: 28,
+                  horizontalMargin: 24,
+                  headingRowHeight: 54,
+                  dataRowMinHeight: 62,
+                  dataRowMaxHeight: 72,
                   columns: const [
                     DataColumn(label: Text('Naziv')),
                     DataColumn(label: Text('Tip')),
@@ -995,12 +1014,12 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
         DataCell(Text('${plan.discountPercentage.toStringAsFixed(2)}%')),
 
         DataCell(
-          Chip(
-            avatar: Icon(
-              plan.isActive ? Icons.check_circle : Icons.cancel,
-              size: 18,
-            ),
-            label: Text(plan.isActive ? 'Active' : 'Inactive'),
+          AdminStatusBadge(
+            label: plan.isActive ? 'Active' : 'Inactive',
+            tone: plan.isActive
+                ? AdminStatusTone.success
+                : AdminStatusTone.neutral,
+            icon: plan.isActive ? Icons.check_circle : Icons.cancel,
           ),
         ),
 
@@ -1251,6 +1270,11 @@ class _MembershipManagementPageState extends State<MembershipManagementPage> {
       minimumWidth: 1450,
       child: DataTable(
         showCheckboxColumn: false,
+        columnSpacing: 28,
+        horizontalMargin: 24,
+        headingRowHeight: 54,
+        dataRowMinHeight: 62,
+        dataRowMaxHeight: 74,
         columns: const [
           DataColumn(label: Text('ID')),
           DataColumn(label: Text('Klijent')),
@@ -1392,7 +1416,7 @@ class _PersonCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 170),
+      constraints: const BoxConstraints(minWidth: 170, maxWidth: 190),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1421,12 +1445,14 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     IconData icon;
+    AdminStatusTone tone;
 
     switch (value.toLowerCase()) {
       case 'active':
       case 'paid':
       case 'consumed':
         icon = Icons.check_circle;
+        tone = AdminStatusTone.success;
         break;
 
       case 'pending':
@@ -1434,11 +1460,13 @@ class _StatusChip extends StatelessWidget {
       case 'refundpending':
       case 'reserved':
         icon = Icons.schedule;
+        tone = AdminStatusTone.warning;
         break;
 
       case 'restored':
       case 'refunded':
         icon = Icons.replay;
+        tone = AdminStatusTone.info;
         break;
 
       case 'expired':
@@ -1447,13 +1475,15 @@ class _StatusChip extends StatelessWidget {
       case 'failed':
       case 'refundfailed':
         icon = Icons.cancel;
+        tone = AdminStatusTone.danger;
         break;
 
       default:
         icon = Icons.info_outline;
+        tone = AdminStatusTone.neutral;
     }
 
-    return Chip(avatar: Icon(icon, size: 17), label: Text(_formatValue(value)));
+    return AdminStatusBadge(label: _formatValue(value), tone: tone, icon: icon);
   }
 
   String _formatValue(String value) {

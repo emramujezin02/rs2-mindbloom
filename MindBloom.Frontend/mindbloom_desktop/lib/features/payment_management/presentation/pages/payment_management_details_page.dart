@@ -3,6 +3,10 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/widgets/admin_status_badge.dart';
+import '../../../../core/widgets/admin_table_state.dart';
+import '../../../../core/widgets/app_error_banner.dart';
+import '../../../../core/widgets/app_responsive_dialog_content.dart';
 import '../../data/models/payment_route_arguments.dart';
 import '../viewmodels/payment_management_details_viewmodel.dart';
 
@@ -77,8 +81,8 @@ class _PaymentManagementDetailsPageState
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Refund payment'),
-          content: SizedBox(
-            width: 500,
+          content: AppResponsiveDialogContent(
+            preferredWidth: 520,
             child: Form(
               key: formKey,
               child: TextFormField(
@@ -146,10 +150,13 @@ class _PaymentManagementDetailsPageState
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Confirm Stripe refund'),
-          content: const Text(
-            'This action will send a full refund request to Stripe '
-            'for the actually charged amount. The same payment cannot '
-            'be refunded twice. Do you want to continue?',
+          content: const AppResponsiveDialogContent(
+            preferredWidth: 500,
+            child: Text(
+              'This action will send a full refund request to Stripe '
+              'for the actually charged amount. The same payment cannot '
+              'be refunded twice. Do you want to continue?',
+            ),
           ),
           actions: [
             TextButton(
@@ -194,7 +201,9 @@ class _PaymentManagementDetailsPageState
   @override
   Widget build(BuildContext context) {
     if (_viewModel.isLoading && _viewModel.payment == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: AdminTableLoadingState(message: 'Loading payment details...'),
+      );
     }
 
     final payment = _viewModel.payment;
@@ -202,31 +211,14 @@ class _PaymentManagementDetailsPageState
     if (payment == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Payment details')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _viewModel.error ?? 'Payment could not be loaded.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    _viewModel.load(
-                      paymentType: widget.paymentType,
-                      paymentId: widget.paymentId,
-                    );
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Try again'),
-                ),
-              ],
-            ),
-          ),
+        body: AdminTableErrorState(
+          message: _viewModel.error ?? 'Payment could not be loaded.',
+          onRetry: () {
+            _viewModel.load(
+              paymentType: widget.paymentType,
+              paymentId: widget.paymentId,
+            );
+          },
         ),
       );
     }
@@ -265,22 +257,54 @@ class _PaymentManagementDetailsPageState
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_viewModel.error != null) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _viewModel.error!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onErrorContainer,
-                      ),
-                    ),
-                  ),
+                  AppErrorBanner(message: _viewModel.error!),
                   const SizedBox(height: 16),
                 ],
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 18,
+                      runSpacing: 14,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${payment.paymentType} payment #${payment.id}',
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              payment.purpose,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        AdminStatusBadge(
+                          label: _formatStatus(payment.status),
+                          tone: _statusTone(payment.status),
+                          icon: _statusIcon(payment.status),
+                        ),
+                        Text(
+                          '${payment.amount.toStringAsFixed(2)} '
+                          '${payment.currency.toUpperCase()}',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Wrap(
                   spacing: 16,
                   runSpacing: 16,
@@ -291,7 +315,7 @@ class _PaymentManagementDetailsPageState
                         'Payment ID': payment.id.toString(),
                         'Payment type': payment.paymentType,
                         'Purpose': payment.purpose,
-                        'Status': payment.status,
+                        'Status': _formatStatus(payment.status),
                         'Amount':
                             '${payment.amount.toStringAsFixed(2)} '
                             '${payment.currency.toUpperCase()}',
@@ -425,16 +449,25 @@ class _PaymentManagementDetailsPageState
                   ),
                 ],
                 const SizedBox(height: 24),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
                   children: [
-                    ElevatedButton.icon(
+                    FilledButton.icon(
                       onPressed: _openReceipt,
                       icon: const Icon(Icons.receipt_long),
                       label: const Text('View receipt'),
                     ),
-                    const SizedBox(width: 12),
                     if (payment.canRefund)
-                      ElevatedButton.icon(
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.errorContainer,
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.onErrorContainer,
+                        ),
                         onPressed: _viewModel.isRefunding
                             ? null
                             : _refundPayment,
@@ -467,6 +500,53 @@ class _PaymentManagementDetailsPageState
   }
 }
 
+AdminStatusTone _statusTone(String status) {
+  final normalized = status.trim().toLowerCase();
+
+  if (normalized == 'paid') {
+    return AdminStatusTone.success;
+  }
+
+  if (normalized == 'refunded') {
+    return AdminStatusTone.info;
+  }
+
+  if (normalized == 'failed' || normalized == 'refundfailed') {
+    return AdminStatusTone.danger;
+  }
+
+  return AdminStatusTone.warning;
+}
+
+IconData _statusIcon(String status) {
+  final normalized = status.trim().toLowerCase();
+
+  if (normalized == 'paid') {
+    return Icons.check_circle;
+  }
+
+  if (normalized == 'refunded') {
+    return Icons.replay;
+  }
+
+  if (normalized == 'failed' || normalized == 'refundfailed') {
+    return Icons.error_outline;
+  }
+
+  return Icons.schedule;
+}
+
+String _formatStatus(String value) {
+  switch (value) {
+    case 'RefundPending':
+      return 'Refund pending';
+    case 'RefundFailed':
+      return 'Refund failed';
+    default:
+      return value;
+  }
+}
+
 class _DetailsCard extends StatelessWidget {
   final String title;
   final Map<String, String> rows;
@@ -475,6 +555,8 @@ class _DetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return SizedBox(
       width: 330,
       child: Card(
@@ -485,10 +567,9 @@ class _DetailsCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const Divider(height: 24),
               ...rows.entries.map(
@@ -501,7 +582,8 @@ class _DetailsCard extends StatelessWidget {
                         width: 120,
                         child: Text(
                           entry.key,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colors.onSurfaceVariant),
                         ),
                       ),
                       Expanded(child: SelectableText(entry.value)),
