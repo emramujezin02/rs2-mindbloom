@@ -3581,7 +3581,7 @@ public class AdminService : IAdminService
 
             await _context.SaveChangesAsync();
         }
-        catch (Exception exception)
+        catch (Exception)
         {
             var currentStatus =
                 await _context.Payments

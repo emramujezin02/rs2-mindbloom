@@ -43,7 +43,6 @@ using MindBloom.Application.Features.Auth.Validators;
 using MindBloom.Application.Features.Security.Interfaces;
 using MindBloom.Application.Features.Privacy.Interfaces;
 using MindBloom.Infrastructure.Configuration;
-using MindBloom.Infrastructure.Observability;
 using Microsoft.Extensions.Logging;
 
 namespace MindBloom.Infrastructure.DependencyInjection;
@@ -1024,9 +1023,6 @@ configuration[
         services.AddSingleton<
     StripeClientProvider>();
 
-        services.AddSingleton<
-    StripeClientProvider>();
-
         services.AddScoped<
             StripeVerificationService>();
 
@@ -1041,7 +1037,6 @@ configuration[
         services.AddScoped<IWorkshopService, WorkshopService>();
         services.AddTransient<
     CorrelationIdDelegatingHandler>();
-        services.AddScoped<StripeVerificationService>();
         services.AddScoped<IChatService,ChatService>();
 
         services.AddScoped<IBusinessNotificationService, BusinessNotificationService>();

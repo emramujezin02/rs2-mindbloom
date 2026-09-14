@@ -22,7 +22,6 @@ using MindBloom.Infrastructure.Services;
 using MindBloom.Application.Features.PrivateJournalEntries.Validators;
 using MindBloom.Application.Features.ClientOnboarding.Interfaces;
 using MindBloom.Application.Features.ClientOnboarding.Validators;
-using MindBloom.Application.Features.Users.Interfaces;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using MindBloom.Shared.Constants;
@@ -170,12 +169,6 @@ builder.Services
 builder.Services
     .AddValidatorsFromAssemblyContaining<
         CreatePrivateJournalEntryDtoValidator>();
-
-
-
-builder.Services.AddScoped<
-    IUserSettingsService,
-    UserSettingsService>();
 
 builder.Services
     .AddControllers(options =>

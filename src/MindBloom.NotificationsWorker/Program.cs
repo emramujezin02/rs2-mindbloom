@@ -107,20 +107,6 @@ if (!builder.Environment
                 "worker",
                 "external",
                 "email"
-             })
-
-     .AddCheck<
-         FirebaseHealthCheck>(
-         name:
-             "firebase",
-         failureStatus:
-             HealthStatus.Degraded,
-         tags:
-             new[]
-             {
-                "worker",
-                "external",
-                "firebase"
              });
 }
 
