@@ -284,7 +284,19 @@ class _TherapistSettingsPageState extends State<TherapistSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      backgroundColor: const Color(0xFFF7F3FB),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Settings',
+          style: TextStyle(
+            color: Color(0xFF40334D),
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
       body: _viewModel.isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -309,130 +321,107 @@ class _TherapistSettingsPageState extends State<TherapistSettingsPage> {
                     const SizedBox(height: 16),
                   ],
 
-                  const _SectionTitle(title: 'Security'),
+                  _SettingsSection(
+                    title: 'Security',
+                    children: [
+                      _SettingsActionTile(
+                        icon: Icons.lock_outline,
+                        title: 'Change password',
+                        description: 'Update your account password.',
+                        onTap: () {
+                          Navigator.of(
+                            context,
+                          ).pushNamed(AppRouter.changePassword);
+                        },
+                      ),
+                    ],
+                  ),
 
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.lock_outline),
-                      title: const Text('Change password'),
-                      subtitle: const Text('Update your account password.'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.of(
-                          context,
-                        ).pushNamed(AppRouter.changePassword);
-                      },
+                  const SizedBox(height: 20),
+
+                  _SettingsSection(
+                    title: 'Notifications',
+                    children: [
+                      _SettingsSwitchTile(
+                        icon: Icons.notifications_outlined,
+                        title: 'Enable notifications',
+                        description:
+                            'Receive appointment, message and account notifications.',
+                        value: _viewModel.notificationsEnabled,
+                        onChanged: _viewModel.setNotificationsEnabled,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  _SettingsSection(
+                    title: 'Privacy',
+                    children: [
+                      _SettingsSwitchTile(
+                        icon: Icons.public_outlined,
+                        title: 'Public profile',
+                        description:
+                            'Allow clients to find and view your therapist profile.',
+                        value: _viewModel.showProfilePublicly,
+                        onChanged: _viewModel.setShowProfilePublicly,
+                      ),
+                      const Divider(height: 1, color: Color(0xFFE7DDF0)),
+                      _SettingsActionTile(
+                        icon: Icons.privacy_tip_outlined,
+                        title: 'Privacy & consents',
+                        description:
+                            'Review accepted privacy documents and consent versions.',
+                        onTap: () {
+                          Navigator.of(
+                            context,
+                          ).pushNamed(AppRouter.privacyConsents);
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _viewModel.isSaving ? null : _save,
+                      icon: _viewModel.isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_outlined),
+                      label: Text(
+                        _viewModel.isSaving ? 'Saving...' : 'Save settings',
+                      ),
                     ),
                   ),
 
                   const SizedBox(height: 24),
 
-                  const _SectionTitle(title: 'Notifications'),
-
-                  Card(
-                    child: SwitchListTile(
-                      secondary: const Icon(Icons.notifications_outlined),
-                      title: const Text('Enable notifications'),
-                      subtitle: const Text(
-                        'Receive appointment, message and account notifications.',
+                  _SettingsSection(
+                    title: 'Account',
+                    children: [
+                      _SettingsActionTile(
+                        icon: Icons.delete_forever_outlined,
+                        title: 'Delete account',
+                        description:
+                            'Permanently delete and anonymize your account data.',
+                        isDestructive: true,
+                        onTap: _deleteAccount,
                       ),
-                      value: _viewModel.notificationsEnabled,
-                      onChanged: _viewModel.setNotificationsEnabled,
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  const _SectionTitle(title: 'Privacy'),
-
-                  Card(
-                    child: SwitchListTile(
-                      secondary: const Icon(Icons.public_outlined),
-                      title: const Text('Public profile'),
-                      subtitle: const Text(
-                        'Allow clients to find and view your therapist profile.',
+                      const Divider(height: 1, color: Color(0xFFE7DDF0)),
+                      _SettingsActionTile(
+                        icon: Icons.logout,
+                        title: 'Log out',
+                        description: 'End this therapist session.',
+                        isDestructive: true,
+                        onTap: _logout,
                       ),
-                      value: _viewModel.showProfilePublicly,
-                      onChanged: _viewModel.setShowProfilePublicly,
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.privacy_tip_outlined),
-                      title: const Text('Privacy & consents'),
-                      subtitle: const Text(
-                        'Review accepted privacy documents and consent versions.',
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.of(
-                          context,
-                        ).pushNamed(AppRouter.privacyConsents);
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  FilledButton.icon(
-                    onPressed: _viewModel.isSaving ? null : _save,
-                    icon: _viewModel.isSaving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.save_outlined),
-                    label: Text(
-                      _viewModel.isSaving ? 'Saving...' : 'Save settings',
-                    ),
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  const _SectionTitle(title: 'Account'),
-
-                  Card(
-                    child: ListTile(
-                      leading: Icon(
-                        Icons.delete_forever_outlined,
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                      title: Text(
-                        'Delete account',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      subtitle: const Text(
-                        'Permanently delete and anonymize your account data.',
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: _deleteAccount,
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Card(
-                    child: ListTile(
-                      leading: Icon(
-                        Icons.logout,
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                      title: Text(
-                        'Log out',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      onTap: _logout,
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -441,21 +430,143 @@ class _TherapistSettingsPageState extends State<TherapistSettingsPage> {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
+class _SettingsSection extends StatelessWidget {
   final String title;
+  final List<Widget> children;
 
-  const _SectionTitle({required this.title});
+  const _SettingsSection({required this.title, required this.children});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: Color(0xFF40334D),
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE7DDF0)),
+          ),
+          child: Column(children: children),
+        ),
+      ],
+    );
+  }
+}
+
+class _SettingsActionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+  final bool isDestructive;
+  final VoidCallback onTap;
+
+  const _SettingsActionTile({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.onTap,
+    this.isDestructive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isDestructive
+        ? Theme.of(context).colorScheme.error
+        : const Color(0xFF72559A);
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      leading: _SettingsIcon(icon: icon, color: color),
+      title: Text(
         title,
-        style: Theme.of(
-          context,
-        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: isDestructive ? color : const Color(0xFF40334D),
+          fontWeight: FontWeight.w800,
+        ),
       ),
+      subtitle: Text(
+        description,
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(color: Color(0xFF756D79), height: 1.35),
+      ),
+      trailing: const Icon(Icons.chevron_right, color: Color(0xFF8063A4)),
+      onTap: onTap,
+    );
+  }
+}
+
+class _SettingsSwitchTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _SettingsSwitchTile({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      secondary: _SettingsIcon(icon: icon, color: const Color(0xFF72559A)),
+      title: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Color(0xFF40334D),
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      subtitle: Text(
+        description,
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(color: Color(0xFF756D79), height: 1.35),
+      ),
+      value: value,
+      onChanged: onChanged,
+    );
+  }
+}
+
+class _SettingsIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+
+  const _SettingsIcon({required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.11),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(icon, color: color),
     );
   }
 }

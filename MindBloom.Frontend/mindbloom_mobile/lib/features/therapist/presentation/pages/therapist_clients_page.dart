@@ -487,6 +487,8 @@ class _ClientCard extends StatelessWidget {
                       children: [
                         Text(
                           client.fullName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Color(0xFF40334D),
                             fontSize: 18,
@@ -496,6 +498,8 @@ class _ClientCard extends StatelessWidget {
                         const SizedBox(height: 5),
                         Text(
                           client.email,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Color(0xFF766F7A),
                             fontSize: 13,
@@ -645,22 +649,31 @@ class _ClientStatistic extends StatelessWidget {
         children: [
           Icon(icon, size: 20, color: const Color(0xFF8063A4)),
           const SizedBox(width: 9),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Color(0xFF40334D),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF40334D),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              Text(
-                label,
-                style: const TextStyle(color: Color(0xFF756D79), fontSize: 12),
-              ),
-            ],
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF756D79),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

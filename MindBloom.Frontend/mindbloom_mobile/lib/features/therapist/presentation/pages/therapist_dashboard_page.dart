@@ -8,6 +8,17 @@ import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/therapist_dashboard_model.dart';
 import '../viewmodels/therapist_dashboard_viewmodel.dart';
 
+const _dashboardBackground = Color(0xFFF7F3FB);
+const _dashboardSurface = Color(0xFFFFFFFF);
+const _dashboardLavender = Color(0xFFF6F0FC);
+const _dashboardMint = Color(0xFFEAF7F4);
+const _dashboardBorder = Color(0xFFE7DDF1);
+const _dashboardPrimary = Color(0xFF6D4F91);
+const _dashboardAccent = Color(0xFF6FA8A2);
+const _dashboardText = Color(0xFF372D45);
+const _dashboardMuted = Color(0xFF6C6278);
+const _dashboardRadius = 22.0;
+
 class TherapistDashboardPage extends StatefulWidget {
   const TherapistDashboardPage({super.key});
 
@@ -70,6 +81,7 @@ class _TherapistDashboardPageState extends State<TherapistDashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _dashboardBackground,
       body: RefreshIndicator(
         onRefresh: _viewModel.refresh,
         child: _buildBody(),
@@ -105,71 +117,134 @@ class _TherapistDashboardPageState extends State<TherapistDashboardPage> {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
       children: [
-        if (_viewModel.errorMessage != null) ...[
-          AppInlineError(
-            title: 'Podaci nisu mogli biti osvježeni',
-            error: _viewModel.errorMessage,
-            onRetry: _viewModel.refresh,
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_viewModel.errorMessage != null) ...[
+                  AppInlineError(
+                    title: 'Podaci nisu mogli biti osvježeni',
+                    error: _viewModel.errorMessage,
+                    onRetry: _viewModel.refresh,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                _WelcomeCard(dashboard: dashboard),
+                const SizedBox(height: 22),
+                _DashboardStatistics(dashboard: dashboard),
+                const SizedBox(height: 26),
+                _WorkTrendSection(workTrend: dashboard.workTrend),
+                const SizedBox(height: 26),
+                _QuickActions(
+                  onAppointments: _openAppointments,
+                  onClients: _openClients,
+                  onProfile: _openProfile,
+                  onAvailability: _openAvailability,
+                  onChat: _openChat,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-        ],
-        const _WelcomeCard(),
-        const SizedBox(height: 24),
-        _DashboardStatistics(dashboard: dashboard),
-        const SizedBox(height: 28),
-        _WorkTrendSection(workTrend: dashboard.workTrend),
-        const SizedBox(height: 28),
-        _QuickActions(
-          onAppointments: _openAppointments,
-          onClients: _openClients,
-          onProfile: _openProfile,
-          onAvailability: _openAvailability,
-          onChat: _openChat,
         ),
-        const SizedBox(height: 28),
       ],
     );
   }
 }
 
 class _WelcomeCard extends StatelessWidget {
-  const _WelcomeCard();
+  final TherapistDashboardModel dashboard;
+
+  const _WelcomeCard({required this.dashboard});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF6D5291), Color(0xFF9175B2)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_dashboardPrimary, Color(0xFF8063A4)],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: _dashboardPrimary.withValues(alpha: 0.22),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.local_florist_outlined, color: Colors.white, size: 40),
-          SizedBox(height: 14),
-          Text(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.22),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.local_florist_outlined,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const Spacer(),
+              _HeroPill(
+                icon: Icons.mark_chat_unread_outlined,
+                label: '${dashboard.unreadMessages} poruka',
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          const Text(
             'Dobro došli',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: Colors.white,
-              fontSize: 27,
+              fontSize: 28,
               fontWeight: FontWeight.w800,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            'Pregledajte termine, klijente, '
-            'poruke i rezultate svoga rada.',
-            style: TextStyle(
-              color: Color(0xFFF0EAF7),
+            dashboard.todayAppointments == 0
+                ? 'Danas nemate zakazanih termina. Iskoristite prostor za pripremu, klijente i poruke.'
+                : 'Danas imate ${dashboard.todayAppointments} termina i ${dashboard.upcomingAppointments} nadolazećih obaveza.',
+            style: const TextStyle(
+              color: Color(0xFFF4EDF8),
               fontSize: 15,
               height: 1.45,
             ),
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _HeroPill(
+                icon: Icons.today_outlined,
+                label: '${dashboard.todayAppointments} danas',
+              ),
+              _HeroPill(
+                icon: Icons.people_outline,
+                label: '${dashboard.activeClients} aktivnih klijenata',
+              ),
+            ],
           ),
         ],
       ),
@@ -184,17 +259,34 @@ class _DashboardStatistics extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cards = [
+    final primaryCards = [
       _DashboardCardData(
         title: 'Današnji termini',
         value: dashboard.todayAppointments.toString(),
         icon: Icons.today_outlined,
+        tone: _MetricTone.mint,
       ),
       _DashboardCardData(
         title: 'Nadolazeći termini',
         value: dashboard.upcomingAppointments.toString(),
         icon: Icons.event_available_outlined,
+        tone: _MetricTone.lavender,
       ),
+      _DashboardCardData(
+        title: 'Aktivni klijenti',
+        value: dashboard.activeClients.toString(),
+        icon: Icons.groups_2_outlined,
+        tone: _MetricTone.mint,
+      ),
+      _DashboardCardData(
+        title: 'Prosječna ocjena',
+        value: dashboard.averageRating.toStringAsFixed(1),
+        icon: Icons.star_outline,
+        tone: _MetricTone.gold,
+      ),
+    ];
+
+    final secondaryCards = [
       _DashboardCardData(
         title: 'Ukupan broj klijenata',
         value: dashboard.totalClients.toString(),
@@ -204,16 +296,6 @@ class _DashboardStatistics extends StatelessWidget {
         title: 'Novi klijenti ovog mjeseca',
         value: dashboard.newClients.toString(),
         icon: Icons.person_add_alt_1_outlined,
-      ),
-      _DashboardCardData(
-        title: 'Aktivni klijenti',
-        value: dashboard.activeClients.toString(),
-        icon: Icons.groups_2_outlined,
-      ),
-      _DashboardCardData(
-        title: 'Prosjek termina mjesečno',
-        value: dashboard.averageAppointmentsPerMonth.toStringAsFixed(1),
-        icon: Icons.analytics_outlined,
       ),
       _DashboardCardData(
         title: 'Novi zahtjevi',
@@ -226,78 +308,59 @@ class _DashboardStatistics extends StatelessWidget {
         icon: Icons.mark_chat_unread_outlined,
       ),
       _DashboardCardData(
-        title: 'Prosječna ocjena',
-        value: dashboard.averageRating.toStringAsFixed(1),
-        icon: Icons.star_outline,
+        title: 'Prosjek termina mjesečno',
+        value: dashboard.averageAppointmentsPerMonth.toStringAsFixed(1),
+        icon: Icons.analytics_outlined,
+      ),
+      _DashboardCardData(
+        title: 'Završeni termini',
+        value: dashboard.completedAppointments.toString(),
+        icon: Icons.task_alt_outlined,
+      ),
+      _DashboardCardData(
+        title: 'Otkazani termini',
+        value: dashboard.cancelledAppointments.toString(),
+        icon: Icons.event_busy_outlined,
       ),
       _DashboardCardData(
         title: 'Ukupna zarada',
         value: '${dashboard.totalEarnings.toStringAsFixed(2)} KM',
         icon: Icons.payments_outlined,
       ),
-
       _DashboardCardData(
-        title: 'Monthly earnings',
+        title: 'Mjesečna zarada',
         value: '${dashboard.monthlyEarnings.toStringAsFixed(2)} KM',
         icon: Icons.calendar_month_outlined,
       ),
       _DashboardCardData(
-        title: 'Weekly earnings',
+        title: 'Sedmična zarada',
         value: '${dashboard.weeklyEarnings.toStringAsFixed(2)} KM',
         icon: Icons.date_range_outlined,
-      ),
-      _DashboardCardData(
-        title: 'Completed appointments',
-        value: dashboard.completedAppointments.toString(),
-        icon: Icons.task_alt_outlined,
-      ),
-      _DashboardCardData(
-        title: 'Cancelled appointments',
-        value: dashboard.cancelledAppointments.toString(),
-        icon: Icons.event_busy_outlined,
       ),
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Pregled',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Aktuelni podaci vaše terapeutske prakse.',
-          style: Theme.of(context).textTheme.bodyMedium,
+        const _SectionHeader(
+          title: 'Pregled',
+          subtitle: 'Aktuelni podaci vaše terapeutske prakse.',
         ),
         const SizedBox(height: 16),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final columnCount = constraints.maxWidth >= 900
-                ? 3
-                : constraints.maxWidth >= 560
-                ? 2
-                : 1;
-
-            const spacing = 14.0;
-
-            final width =
-                (constraints.maxWidth - ((columnCount - 1) * spacing)) /
-                columnCount;
-
-            return Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              children: cards.map((card) {
-                return SizedBox(
-                  width: width,
-                  child: _DashboardCard(data: card),
-                );
-              }).toList(),
-            );
-          },
+        _ResponsiveGrid(
+          minItemWidth: 148,
+          spacing: 12,
+          children: primaryCards
+              .map((card) => _DashboardCard(data: card, isPrimary: true))
+              .toList(),
+        ),
+        const SizedBox(height: 12),
+        _ResponsiveGrid(
+          minItemWidth: 156,
+          spacing: 12,
+          children: secondaryCards
+              .map((card) => _DashboardCard(data: card))
+              .toList(),
         ),
       ],
     );
@@ -320,56 +383,45 @@ class _WorkTrendSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Trend rada',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Broj završenih termina tokom posljednjih šest mjeseci.',
-          style: Theme.of(context).textTheme.bodyMedium,
+        const _SectionHeader(
+          title: 'Trend rada',
+          subtitle: 'Broj završenih termina tokom posljednjih šest mjeseci.',
         ),
         const SizedBox(height: 16),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE7DDF0)),
-          ),
+        _DashboardSurface(
           child: workTrend.isEmpty
               ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
+                  padding: EdgeInsets.symmetric(vertical: 18),
                   child: Column(
                     children: [
                       Icon(
                         Icons.bar_chart_outlined,
                         size: 42,
-                        color: Color(0xFF9175B2),
+                        color: _dashboardPrimary,
                       ),
                       SizedBox(height: 12),
                       Text(
                         'Podaci o trendu rada nisu dostupni.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Color(0xFF756D79)),
+                        style: TextStyle(color: _dashboardMuted),
                       ),
                     ],
                   ),
                 )
               : Column(
-                  children: workTrend.map((item) {
-                    final progress = maximumAppointments == 0
-                        ? 0.0
-                        : item.completedAppointments / maximumAppointments;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _WorkTrendRow(item: item, progress: progress),
-                    );
-                  }).toList(),
+                  children: [
+                    for (var index = 0; index < workTrend.length; index++) ...[
+                      _WorkTrendRow(
+                        item: workTrend[index],
+                        progress: maximumAppointments == 0
+                            ? 0
+                            : workTrend[index].completedAppointments /
+                                  maximumAppointments,
+                      ),
+                      if (index != workTrend.length - 1)
+                        const SizedBox(height: 14),
+                    ],
+                  ],
                 ),
         ),
       ],
@@ -388,12 +440,14 @@ class _WorkTrendRow extends StatelessWidget {
     return Row(
       children: [
         SizedBox(
-          width: 82,
+          width: 74,
           child: Text(
             item.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              color: Color(0xFF5D5264),
-              fontWeight: FontWeight.w600,
+              color: _dashboardText,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -403,13 +457,13 @@ class _WorkTrendRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             child: Container(
               height: 12,
-              color: const Color(0xFFEDE5FA),
+              color: _dashboardLavender,
               alignment: Alignment.centerLeft,
               child: FractionallySizedBox(
-                widthFactor: progress,
+                widthFactor: progress.clamp(0, 1),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF72559A),
+                    color: _dashboardAccent,
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
@@ -419,69 +473,17 @@ class _WorkTrendRow extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         SizedBox(
-          width: 30,
+          width: 34,
           child: Text(
             item.completedAppointments.toString(),
             textAlign: TextAlign.end,
             style: const TextStyle(
-              color: Color(0xFF40334D),
+              color: _dashboardPrimary,
               fontWeight: FontWeight.w800,
             ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _DashboardCard extends StatelessWidget {
-  final _DashboardCardData data;
-
-  const _DashboardCard({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE7DDF0)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEDE5FA),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(data.icon, color: const Color(0xFF72559A)),
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  data.value,
-                  style: const TextStyle(
-                    color: Color(0xFF40334D),
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  data.title,
-                  style: const TextStyle(color: Color(0xFF756D79)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -530,45 +532,83 @@ class _QuickActions extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Brze akcije',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Brzo otvorite najčešće korištene sekcije.',
-          style: Theme.of(context).textTheme.bodyMedium,
+        const _SectionHeader(
+          title: 'Brze akcije',
+          subtitle: 'Brzo otvorite najčešće korištene sekcije.',
         ),
         const SizedBox(height: 16),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final columnCount = constraints.maxWidth >= 800
-                ? 5
-                : constraints.maxWidth >= 500
-                ? 3
-                : 2;
-
-            const spacing = 12.0;
-
-            final width =
-                (constraints.maxWidth - ((columnCount - 1) * spacing)) /
-                columnCount;
-
-            return Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              children: actions.map((action) {
-                return SizedBox(
-                  width: width,
-                  child: _QuickActionCard(data: action),
-                );
-              }).toList(),
-            );
-          },
+        _ResponsiveGrid(
+          minItemWidth: 136,
+          spacing: 12,
+          children: actions
+              .map((action) => _QuickActionCard(data: action))
+              .toList(),
         ),
       ],
+    );
+  }
+}
+
+class _DashboardCard extends StatelessWidget {
+  final _DashboardCardData data;
+  final bool isPrimary;
+
+  const _DashboardCard({required this.data, this.isPrimary = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = data.tone.palette;
+
+    return _DashboardSurface(
+      padding: EdgeInsets.all(isPrimary ? 16 : 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: isPrimary ? 42 : 38,
+                height: isPrimary ? 42 : 38,
+                decoration: BoxDecoration(
+                  color: palette.background,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(data.icon, color: palette.foreground, size: 22),
+              ),
+              const Spacer(),
+              if (isPrimary)
+                Icon(
+                  Icons.trending_flat,
+                  color: palette.foreground.withValues(alpha: 0.72),
+                  size: 20,
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            data.value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: _dashboardText,
+              fontSize: isPrimary ? 25 : 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            data.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: _dashboardMuted,
+              fontSize: isPrimary ? 13 : 12,
+              height: 1.25,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -581,27 +621,40 @@ class _QuickActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
+      color: _dashboardSurface,
+      borderRadius: BorderRadius.circular(_dashboardRadius),
       child: InkWell(
         onTap: data.onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(_dashboardRadius),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+          height: 112,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE7DDF0)),
+            borderRadius: BorderRadius.circular(_dashboardRadius),
+            border: Border.all(color: _dashboardBorder),
           ),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(data.icon, size: 29, color: const Color(0xFF72559A)),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: _dashboardLavender,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(data.icon, size: 23, color: _dashboardPrimary),
+              ),
               const SizedBox(height: 10),
               Text(
                 data.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Color(0xFF493B55),
+                  color: _dashboardText,
                   fontWeight: FontWeight.w700,
+                  height: 1.2,
                 ),
               ),
             ],
@@ -612,15 +665,151 @@ class _QuickActionCard extends StatelessWidget {
   }
 }
 
+class _ResponsiveGrid extends StatelessWidget {
+  final List<Widget> children;
+  final double minItemWidth;
+  final double spacing;
+
+  const _ResponsiveGrid({
+    required this.children,
+    required this.minItemWidth,
+    required this.spacing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = (constraints.maxWidth / minItemWidth)
+            .floor()
+            .clamp(1, 3);
+
+        final itemWidth =
+            (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: children
+              .map((child) => SizedBox(width: itemWidth, child: child))
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class _DashboardSurface extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  const _DashboardSurface({
+    required this.child,
+    this.padding = const EdgeInsets.all(18),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: _dashboardSurface,
+        borderRadius: BorderRadius.circular(_dashboardRadius),
+        border: Border.all(color: _dashboardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SectionHeader({required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: _dashboardText,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: _dashboardMuted,
+            height: 1.35,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _HeroPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 16),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DashboardCardData {
   final String title;
   final String value;
   final IconData icon;
+  final _MetricTone tone;
 
   const _DashboardCardData({
     required this.title,
     required this.value,
     required this.icon,
+    this.tone = _MetricTone.lavender,
   });
 }
 
@@ -633,5 +822,38 @@ class _QuickActionData {
     required this.title,
     required this.icon,
     required this.onTap,
+  });
+}
+
+enum _MetricTone {
+  lavender,
+  mint,
+  gold;
+
+  _MetricPalette get palette {
+    return switch (this) {
+      _MetricTone.lavender => const _MetricPalette(
+        background: _dashboardLavender,
+        foreground: _dashboardPrimary,
+      ),
+      _MetricTone.mint => const _MetricPalette(
+        background: _dashboardMint,
+        foreground: Color(0xFF3E8F86),
+      ),
+      _MetricTone.gold => const _MetricPalette(
+        background: Color(0xFFFFF4D8),
+        foreground: Color(0xFFB7791F),
+      ),
+    };
+  }
+}
+
+class _MetricPalette {
+  final Color background;
+  final Color foreground;
+
+  const _MetricPalette({
+    required this.background,
+    required this.foreground,
   });
 }

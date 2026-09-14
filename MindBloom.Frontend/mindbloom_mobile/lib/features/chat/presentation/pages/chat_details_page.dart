@@ -200,6 +200,7 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
                   border: Border.all(color: _chatBorder),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       _viewModel.isConnected ? Icons.wifi : Icons.wifi_off,
@@ -207,12 +208,17 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
                       color: _chatPrimary,
                     ),
                     const SizedBox(width: 5),
-                    Text(
-                      _viewModel.connectionStatusText,
-                      style: const TextStyle(
-                        color: _chatMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 104),
+                      child: Text(
+                        _viewModel.connectionStatusText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _chatMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
@@ -306,16 +312,29 @@ class _ChatDetailsPageState extends State<ChatDetailsPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 1.5),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${conversation.otherParticipantName} is typing...',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontStyle: FontStyle.italic,
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.sizeOf(context).width - 64,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 1.5),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            '${conversation.otherParticipantName} is typing...',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(fontStyle: FontStyle.italic),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -452,6 +471,8 @@ class _MessageBubble extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Text(
                     message.senderName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: _chatMuted,
                       fontWeight: FontWeight.bold,
@@ -461,7 +482,7 @@ class _MessageBubble extends StatelessWidget {
                 ),
 
               Text(
-                message.content,
+                _withSoftBreaks(message.content),
                 softWrap: true,
                 style: TextStyle(
                   color: message.isMine ? Colors.white : _chatText,
@@ -535,7 +556,9 @@ class _MessageBubble extends StatelessWidget {
                 const SizedBox(height: 6),
 
                 Text(
-                  message.sendingError ?? 'Message could not be sent.',
+                  _withSoftBreaks(
+                    message.sendingError ?? 'Message could not be sent.',
+                  ),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onErrorContainer,
                     fontSize: 11,
@@ -554,4 +577,32 @@ class _MessageBubble extends StatelessWidget {
       ),
     );
   }
+}
+
+String _withSoftBreaks(String value) {
+  const chunkLength = 32;
+
+  return value.splitMapJoin(
+    RegExp(r'(\s+)'),
+    onMatch: (match) => match.group(0)!,
+    onNonMatch: (segment) {
+      if (segment.length <= chunkLength) {
+        return segment;
+      }
+
+      final buffer = StringBuffer();
+
+      for (var index = 0; index < segment.length; index += chunkLength) {
+        final end = (index + chunkLength).clamp(0, segment.length);
+
+        buffer.write(segment.substring(index, end));
+
+        if (end < segment.length) {
+          buffer.write('\u200B');
+        }
+      }
+
+      return buffer.toString();
+    },
+  );
 }

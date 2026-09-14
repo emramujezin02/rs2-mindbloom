@@ -86,6 +86,8 @@ class _TherapistEmotionalAnalyticsPageState
             if (widget.clientName?.trim().isNotEmpty == true)
               Text(
                 widget.clientName!.trim(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Color(0xFF756D79),
                   fontSize: 12,
@@ -556,8 +558,10 @@ class _MoodLineChartCard extends StatelessWidget {
             ),
           if (points.isNotEmpty) ...[
             const SizedBox(height: 14),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
               children: [
                 _MoodScaleLabel(value: '1', label: 'Very low'),
                 _MoodScaleLabel(value: '3', label: 'Neutral'),
@@ -858,7 +862,11 @@ class _EmotionAnalyticsCard extends StatelessWidget {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      SizedBox(width: 300, height: 300, child: chart),
+                      SizedBox(
+                        width: math.min(300, constraints.maxWidth * 0.42),
+                        height: 300,
+                        child: chart,
+                      ),
                       const SizedBox(width: 28),
                       Expanded(child: list),
                     ],
@@ -1181,6 +1189,8 @@ class _TrendPeriodValue extends StatelessWidget {
           Expanded(
             child: Text(
               title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Color(0xFF625B68),
                 fontWeight: FontWeight.w600,

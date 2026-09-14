@@ -217,18 +217,24 @@ class _NotificationPageState extends State<NotificationPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text(notification.title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(notification.message),
-              const SizedBox(height: 16),
-              Text(
-                formatter.format(notification.createdAtUtc.toLocal()),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
+          title: Text(
+            notification.title,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(notification.message),
+                const SizedBox(height: 16),
+                Text(
+                  formatter.format(notification.createdAtUtc.toLocal()),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -287,6 +293,7 @@ class _NotificationPageState extends State<NotificationPage> {
                   border: Border.all(color: _notificationBorder),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       viewModel.isRealtimeConnected ? Icons.wifi : Icons.sync,
@@ -294,12 +301,17 @@ class _NotificationPageState extends State<NotificationPage> {
                       color: _notificationPrimary,
                     ),
                     const SizedBox(width: 5),
-                    Text(
-                      viewModel.connectionStatusText,
-                      style: const TextStyle(
-                        color: _notificationMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 96),
+                      child: Text(
+                        viewModel.connectionStatusText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _notificationMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
@@ -564,12 +576,18 @@ class _NotificationTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Icon(
-                notification.isRead ? Icons.done_all : Icons.circle,
-                size: notification.isRead ? 20 : 12,
-                color: notification.isRead
-                    ? _notificationMuted
-                    : _notificationPrimary,
+              SizedBox(
+                width: 22,
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: Icon(
+                    notification.isRead ? Icons.done_all : Icons.circle,
+                    size: notification.isRead ? 20 : 12,
+                    color: notification.isRead
+                        ? _notificationMuted
+                        : _notificationPrimary,
+                  ),
+                ),
               ),
             ],
           ),

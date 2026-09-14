@@ -705,6 +705,8 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
                             '${widget.profile.firstName} '
                             '${widget.profile.lastName}',
                             textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Color(0xFF40334D),
                               fontSize: 21,
@@ -715,6 +717,8 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
                           Text(
                             widget.profile.email,
                             textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Color(0xFF756D79)),
                           ),
                         ],
@@ -1148,28 +1152,44 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
 
                           const SizedBox(height: 12),
 
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _languageController,
-                                  textInputAction: TextInputAction.done,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Add language',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  onFieldSubmitted: (_) => _addLanguage(),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final languageField = TextFormField(
+                                controller: _languageController,
+                                textInputAction: TextInputAction.done,
+                                decoration: const InputDecoration(
+                                  hintText: 'Add language',
+                                  border: OutlineInputBorder(),
                                 ),
-                              ),
+                                onFieldSubmitted: (_) => _addLanguage(),
+                              );
 
-                              const SizedBox(width: 12),
-
-                              FilledButton.icon(
+                              final addButton = FilledButton.icon(
                                 onPressed: _addLanguage,
                                 icon: const Icon(Icons.add),
                                 label: const Text('Add'),
-                              ),
-                            ],
+                              );
+
+                              if (constraints.maxWidth >= 420) {
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: languageField),
+                                    const SizedBox(width: 12),
+                                    addButton,
+                                  ],
+                                );
+                              }
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  languageField,
+                                  const SizedBox(height: 12),
+                                  addButton,
+                                ],
+                              );
+                            },
                           ),
 
                           const SizedBox(height: 16),
@@ -1414,44 +1434,43 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
 
         const SizedBox(height: 14),
 
-        Row(
-          children: [
-            Expanded(
-              child: InkWell(
-                onTap: _viewModel.isManagingAvailability
-                    ? null
-                    : _selectStartTime,
-                borderRadius: BorderRadius.circular(12),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Start time',
-                    prefixIcon: Icon(Icons.access_time),
-                    border: OutlineInputBorder(),
-                  ),
-                  child: Text(_selectedStartTime.format(context)),
-                ),
-              ),
-            ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final startTimeField = _AvailabilityTimeField(
+              label: 'Start time',
+              icon: Icons.access_time,
+              value: _selectedStartTime.format(context),
+              enabled: !_viewModel.isManagingAvailability,
+              onTap: _selectStartTime,
+            );
 
-            const SizedBox(width: 12),
+            final endTimeField = _AvailabilityTimeField(
+              label: 'End time',
+              icon: Icons.access_time_filled_outlined,
+              value: _selectedEndTime.format(context),
+              enabled: !_viewModel.isManagingAvailability,
+              onTap: _selectEndTime,
+            );
 
-            Expanded(
-              child: InkWell(
-                onTap: _viewModel.isManagingAvailability
-                    ? null
-                    : _selectEndTime,
-                borderRadius: BorderRadius.circular(12),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'End time',
-                    prefixIcon: Icon(Icons.access_time_filled_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  child: Text(_selectedEndTime.format(context)),
-                ),
-              ),
-            ),
-          ],
+            if (constraints.maxWidth >= 420) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: startTimeField),
+                  const SizedBox(width: 12),
+                  Expanded(child: endTimeField),
+                ],
+              );
+            }
+
+            return Column(
+              children: [
+                startTimeField,
+                const SizedBox(height: 12),
+                endTimeField,
+              ],
+            );
+          },
         ),
 
         const SizedBox(height: 14),
@@ -1491,26 +1510,119 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
           )
         else
           ...availabilities.map((availability) {
-            return Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              child: ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.schedule)),
-                title: Text(
-                  availability.dayName,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(availability.formattedTime),
-                trailing: IconButton(
-                  tooltip: 'Delete availability',
-                  onPressed: _viewModel.isManagingAvailability
-                      ? null
-                      : () => _deleteAvailability(availability),
-                  icon: const Icon(Icons.delete_outline),
-                ),
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _AvailabilitySlotCard(
+                availability: availability,
+                isDisabled: _viewModel.isManagingAvailability,
+                onDelete: () => _deleteAvailability(availability),
               ),
             );
           }),
       ],
+    );
+  }
+}
+
+class _AvailabilityTimeField extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final String value;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _AvailabilityTimeField({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon),
+          border: const OutlineInputBorder(),
+          enabled: enabled,
+        ),
+        child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
+    );
+  }
+}
+
+class _AvailabilitySlotCard extends StatelessWidget {
+  final TherapistProfileAvailabilityModel availability;
+  final bool isDisabled;
+  final VoidCallback onDelete;
+
+  const _AvailabilitySlotCard({
+    required this.availability,
+    required this.isDisabled,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE7DDF0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDE5FA),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.schedule, color: Color(0xFF72559A)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  availability.dayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF40334D),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  availability.formattedTime,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Color(0xFF756D79)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            tooltip: isDisabled
+                ? 'Availability action in progress'
+                : 'Delete availability',
+            onPressed: isDisabled ? null : onDelete,
+            icon: const Icon(Icons.delete_outline),
+            color: Theme.of(context).colorScheme.error,
+          ),
+        ],
+      ),
     );
   }
 }

@@ -271,6 +271,8 @@ class _ClientInformation extends StatelessWidget {
       children: [
         Text(
           client.fullName,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: Color(0xFF40334D),
             fontSize: 24,
@@ -499,7 +501,12 @@ class _AppointmentHistoryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              _AppointmentStatusBadge(status: appointment.status),
+              Flexible(
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: _AppointmentStatusBadge(status: appointment.status),
+                ),
+              ),
             ],
           ),
           if (appointment.type.trim().isNotEmpty) ...[
@@ -578,6 +585,7 @@ class _AppointmentStatusBadge extends StatelessWidget {
     }
 
     return Container(
+      constraints: const BoxConstraints(maxWidth: 150),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: backgroundColor,
@@ -588,12 +596,16 @@ class _AppointmentStatusBadge extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: foregroundColor),
           const SizedBox(width: 5),
-          Text(
-            status.trim().isEmpty ? 'Pending' : status,
-            style: TextStyle(
-              color: foregroundColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              status.trim().isEmpty ? 'Pending' : status,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: foregroundColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -781,6 +793,8 @@ class _MembershipCard extends StatelessWidget {
                   children: [
                     Text(
                       _formatPlanType(membership.planType),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Color(0xFF40334D),
                         fontSize: 17,
@@ -791,27 +805,37 @@ class _MembershipCard extends StatelessWidget {
                     Text(
                       '${membership.remainingSessions} of '
                       '${membership.totalSessions} sessions remaining',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Color(0xFF756D79)),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: statusBackground,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(
-                    color: statusForeground,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+              Flexible(
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 140),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusBackground,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Text(
+                      statusText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: statusForeground,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -900,6 +924,7 @@ class _MembershipDetailChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: const BoxConstraints(maxWidth: 230),
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFF4EEFA),
@@ -910,12 +935,16 @@ class _MembershipDetailChip extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: const Color(0xFF72559A)),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF625B68),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF625B68),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -1008,29 +1037,37 @@ class _ClientReviewCard extends StatelessWidget {
                   }),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: review.isApproved
-                      ? const Color(0xFFE4F5E9)
-                      : const Color(0xFFFFF3D9),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Text(
-                  review.moderationStatus.trim().isEmpty
-                      ? review.isApproved
-                            ? 'Approved'
-                            : 'Pending moderation'
-                      : review.moderationStatus,
-                  style: TextStyle(
-                    color: review.isApproved
-                        ? const Color(0xFF287A42)
-                        : const Color(0xFF9A6A00),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+              Flexible(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 170),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: review.isApproved
+                          ? const Color(0xFFE4F5E9)
+                          : const Color(0xFFFFF3D9),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Text(
+                      review.moderationStatus.trim().isEmpty
+                          ? review.isApproved
+                                ? 'Approved'
+                                : 'Pending moderation'
+                          : review.moderationStatus,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: review.isApproved
+                            ? const Color(0xFF287A42)
+                            : const Color(0xFF9A6A00),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1548,8 +1585,10 @@ class _MoodTrendCard extends StatelessWidget {
             ),
           if (points.isNotEmpty) ...[
             const SizedBox(height: 14),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
               children: [
                 Text(
                   '1 – Very low',
