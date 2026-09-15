@@ -36,7 +36,7 @@
 # Tests
 # =========================================================
 
-MindBloom.SecurityTests
+backend/src/MindBloom.SecurityTests
 tests
 
 
@@ -44,9 +44,7 @@ tests
 # Frontend
 # =========================================================
 
-MindBloom.Frontend
-clients
-lib
+frontend
 
 **/node_modules
 **/.dart_tool

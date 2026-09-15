@@ -39,7 +39,7 @@ Write-Host ""
 Write-Host "Building API image..."
 
 docker build `
-    --file "src/MindBloom.API/Dockerfile" `
+    --file "backend/src/MindBloom.API/Dockerfile" `
     --tag "${ApiImage}:${Version}" `
     --tag "${ApiImage}:${GitCommit}" `
     --tag "${ApiImage}:latest" `
@@ -53,7 +53,7 @@ Write-Host ""
 Write-Host "Building Worker image..."
 
 docker build `
-    --file "src/MindBloom.NotificationsWorker/Dockerfile" `
+    --file "backend/src/MindBloom.NotificationsWorker/Dockerfile" `
     --tag "${WorkerImage}:${Version}" `
     --tag "${WorkerImage}:${GitCommit}" `
     --tag "${WorkerImage}:latest" `

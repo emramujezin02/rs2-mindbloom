@@ -75,7 +75,7 @@ jobs:
 
       - name: Run security tests
         run: >
-          dotnet test ./MindBloom.SecurityTests/MindBloom.SecurityTests.csproj
+          dotnet test ./backend/src/MindBloom.SecurityTests/MindBloom.SecurityTests.csproj
           --no-build
           --configuration Release
           --logger "console;verbosity=normal"

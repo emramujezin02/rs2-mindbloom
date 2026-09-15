@@ -107,7 +107,7 @@ services:
 
     build:
       context: .
-      dockerfile: src/MindBloom.API/Dockerfile
+      dockerfile: backend/src/MindBloom.API/Dockerfile
 
     container_name: mindbloom-api
     restart: unless-stopped
@@ -252,7 +252,7 @@ services:
 
     build:
       context: .
-      dockerfile: src/MindBloom.NotificationsWorker/Dockerfile
+      dockerfile: backend/src/MindBloom.NotificationsWorker/Dockerfile
 
     container_name: mindbloom-notifications-worker
     restart: unless-stopped

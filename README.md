@@ -168,7 +168,7 @@ http://10.0.2.2:5110
 Example:
 
 ```powershell
-cd MindBloom.Frontend
+cd frontend
 .\scripts\run-mobile.ps1
 ```
 
@@ -320,7 +320,7 @@ The mobile Flutter application communicates with the ASP.NET Core API.
 Navigate to the mobile project directory:
 
 ```powershell
-cd MindBloom.Frontend\mindbloom_mobile
+cd frontend\mindbloom_mobile
 ```
 
 Install dependencies:
@@ -346,7 +346,7 @@ flutter test
 For normal Visual Studio + Android emulator development, start `MindBloom.API` with the `http` profile and then run:
 
 ```powershell
-cd MindBloom.Frontend
+cd frontend
 .\scripts\run-mobile.ps1
 ```
 
@@ -385,7 +385,7 @@ Only Stripe sandbox/test publishable keys should be used during development.
 Navigate to the desktop project directory:
 
 ```powershell
-cd MindBloom.Frontend\mindbloom_desktop
+cd frontend\mindbloom_desktop
 ```
 
 Install dependencies:
@@ -842,7 +842,7 @@ If Docker reports that a port is already allocated, stop the process using that 
 For the normal Visual Studio HTTP profile, run:
 
 ```powershell
-cd MindBloom.Frontend
+cd frontend
 .\scripts\run-mobile.ps1
 ```
 
@@ -1171,7 +1171,7 @@ http://localhost:8080/swagger
 For the normal Visual Studio HTTP API profile:
 
 ```powershell
-cd MindBloom.Frontend
+cd frontend
 .\scripts\run-mobile.ps1
 ```
 
