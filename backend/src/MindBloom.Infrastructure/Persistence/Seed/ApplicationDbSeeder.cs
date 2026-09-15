@@ -589,6 +589,88 @@ public static class ApplicationDbSeeder
                 RoleConstants.Therapist);
         }
 
+        var secondaryTherapistUser =
+            await userManager.FindByNameAsync(
+                "therapist.nejra");
+
+        if (secondaryTherapistUser == null)
+        {
+            secondaryTherapistUser =
+                new ApplicationUser
+                {
+                    UserName =
+                        "therapist.nejra",
+
+                    Email =
+                        "nejra@mindbloom.com",
+
+                    FirstName =
+                        "Nejra",
+
+                    LastName =
+                        "Kovač",
+
+                    DateOfBirth =
+                        new DateTime(
+                            1988,
+                            3,
+                            22,
+                            0,
+                            0,
+                            0,
+                            DateTimeKind.Utc),
+
+                    Gender =
+                        "Female",
+
+                    ProfileImageUrl =
+                        "https://images.unsplash.com/photo-1551836022-d5d88e9218df",
+
+                    EmailConfirmed =
+                        true,
+
+                    IsEmailVerified =
+                        true,
+
+                    IsActive =
+                        true,
+
+                    IsBlocked =
+                        false,
+
+                    CreatedAtUtc =
+                        DateTime.UtcNow
+                            .AddDays(-20)
+                };
+
+            var result =
+                await userManager.CreateAsync(
+                    secondaryTherapistUser,
+                    DemoPassword);
+
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    "Could not create secondary "
+                    + "demonstration Therapist user: "
+                    + string.Join(
+                        "; ",
+                        result.Errors.Select(
+                            error =>
+                                error.Description)));
+            }
+        }
+
+        if (!await userManager
+                .IsInRoleAsync(
+                    secondaryTherapistUser,
+                    RoleConstants.Therapist))
+        {
+            await userManager.AddToRoleAsync(
+                secondaryTherapistUser,
+                RoleConstants.Therapist);
+        }
+
         var anxietySpecialization =
     await context
         .TherapistSpecializations
@@ -774,6 +856,85 @@ public static class ApplicationDbSeeder
             await context.SaveChangesAsync();
         }
 
+        var secondaryTherapist =
+            await context.Therapists
+                .FirstOrDefaultAsync(
+                    therapist =>
+                        therapist.UserId ==
+                        secondaryTherapistUser.Id);
+
+        if (secondaryTherapist == null)
+        {
+            secondaryTherapist =
+                new Therapist
+                {
+                    UserId =
+                        secondaryTherapistUser.Id,
+
+                    Biography =
+                        "Approved therapist profile used to "
+                        + "demonstrate recommendation ranking, "
+                        + "stress support and online sessions.",
+
+                    Specialization =
+                        stressSpecialization.Name,
+
+                    SpecializationId =
+                        stressSpecialization.Id,
+
+                    PricePerSession =
+                        65m,
+
+                    HourlyRate =
+                        65m,
+
+                    ExperienceYears =
+                        7,
+
+                    VerificationStatus =
+                        TherapistVerificationStatus.Approved,
+
+                    VerificationNotes =
+                        "Approved demo therapist for recommendation ranking.",
+
+                    Location =
+                        "Sarajevo",
+
+                    Country =
+                        "Bosnia and Herzegovina",
+
+                    City =
+                        "Sarajevo",
+
+                    Address =
+                        "Zmaja od Bosne 15",
+
+                    Latitude =
+                        43.8563,
+
+                    Longitude =
+                        18.4131,
+
+                    OffersOnline =
+                        true,
+
+                    OffersInPerson =
+                        true,
+
+                    Languages =
+                        "Bosnian, English",
+
+                    Education =
+                        "MA in Clinical Psychology, "
+                        + "ACT practitioner training"
+                };
+
+            context.Therapists.Add(
+                secondaryTherapist);
+
+            await context.SaveChangesAsync();
+        }
+
         var cognitiveBehavioral =
     await context.TherapyApproaches
         .FirstAsync(
@@ -863,6 +1024,80 @@ public static class ApplicationDbSeeder
 
         await context.SaveChangesAsync();
 
+
+        foreach (var approach in new[]
+                 {
+                     acceptanceCommitment,
+                     personCentered
+                 })
+        {
+            if (!await context
+                    .TherapistTherapyApproaches
+                    .AnyAsync(
+                        link =>
+                            link.TherapistId ==
+                                secondaryTherapist.Id &&
+                            link.TherapyApproachId ==
+                                approach.Id))
+            {
+                context
+                    .TherapistTherapyApproaches
+                    .Add(
+                        new TherapistTherapyApproach
+                        {
+                            TherapistId =
+                                secondaryTherapist.Id,
+
+                            TherapyApproachId =
+                                approach.Id
+                        });
+            }
+        }
+
+        foreach (var approach in new[]
+                 {
+                     cognitiveBehavioral,
+                     personCentered
+                 })
+        {
+            if (!await context
+                    .ClientTherapyApproaches
+                    .AnyAsync(
+                        link =>
+                            link.ClientId ==
+                                seededClient.Id &&
+                            link.TherapyApproachId ==
+                                approach.Id))
+            {
+                context
+                    .ClientTherapyApproaches
+                    .Add(
+                        new ClientTherapyApproach
+                        {
+                            ClientId =
+                                seededClient.Id,
+
+                            TherapyApproachId =
+                                approach.Id
+                        });
+            }
+        }
+
+        if (!await context.Favorites.AnyAsync(
+                favorite =>
+                    favorite.ClientId == seededClient.Id &&
+                    favorite.TherapistId == approvedTherapist.Id &&
+                    !favorite.IsDeleted))
+        {
+            context.Favorites.Add(
+                new Favorite
+                {
+                    ClientId = seededClient.Id,
+                    TherapistId = approvedTherapist.Id
+                });
+        }
+
+        await context.SaveChangesAsync();
 
         var approvedAvailabilitySeeds =
     new[]
@@ -1017,6 +1252,70 @@ public static class ApplicationDbSeeder
                         {
                             TherapistId =
                                 pendingTherapist.Id,
+
+                            DayOfWeek =
+                                availability.Day,
+
+                            StartTime =
+                                availability.Start,
+
+                            EndTime =
+                                availability.End
+                        });
+            }
+        }
+
+        await context.SaveChangesAsync();
+
+        var secondaryAvailabilitySeeds =
+            new[]
+            {
+                new
+                {
+                    Day = DayOfWeek.Monday,
+                    Start = new TimeSpan(13, 0, 0),
+                    End = new TimeSpan(17, 0, 0)
+                },
+                new
+                {
+                    Day = DayOfWeek.Thursday,
+                    Start = new TimeSpan(9, 0, 0),
+                    End = new TimeSpan(13, 0, 0)
+                },
+                new
+                {
+                    Day = DayOfWeek.Saturday,
+                    Start = new TimeSpan(10, 0, 0),
+                    End = new TimeSpan(12, 0, 0)
+                }
+            };
+
+        foreach (var availability
+                 in secondaryAvailabilitySeeds)
+        {
+            var exists =
+                await context
+                    .TherapistAvailabilities
+                    .AnyAsync(
+                        item =>
+                            item.TherapistId ==
+                                secondaryTherapist.Id &&
+                            item.DayOfWeek ==
+                                availability.Day &&
+                            item.StartTime ==
+                                availability.Start &&
+                            item.EndTime ==
+                                availability.End);
+
+            if (!exists)
+            {
+                context
+                    .TherapistAvailabilities
+                    .Add(
+                        new TherapistAvailability
+                        {
+                            TherapistId =
+                                secondaryTherapist.Id,
 
                             DayOfWeek =
                                 availability.Day,
@@ -1426,6 +1725,83 @@ public static class ApplicationDbSeeder
             await context.SaveChangesAsync();
         }
 
+
+        var refundedPayment =
+            await context.Payments
+                .FirstOrDefaultAsync(
+                    payment =>
+                        payment.AppointmentId ==
+                        cancelledAppointment.Id);
+
+        if (refundedPayment == null)
+        {
+            context.Payments.Add(
+                new Payment
+                {
+                    AppointmentId =
+                        cancelledAppointment.Id,
+
+                    Amount =
+                        cancelledAppointment.Price,
+
+                    Status =
+                        PaymentStatus.Refunded,
+
+                    StripePaymentIntentId =
+                        "pi_demo_refunded_001",
+
+                    PaidAtUtc =
+                        cancelledAppointment.StartUtc
+                            .AddDays(-1),
+
+                    StripeRefundId =
+                        "re_demo_refunded_001",
+
+                    RefundReason =
+                        "Demo refund after appointment cancellation.",
+
+                    RefundRequestedAtUtc =
+                        cancelledAppointment.StartUtc
+                            .AddHours(-4),
+
+                    RefundedAtUtc =
+                        cancelledAppointment.StartUtc
+                            .AddHours(-3)
+                });
+
+            await context.SaveChangesAsync();
+        }
+
+        var failedPayment =
+            await context.Payments
+                .FirstOrDefaultAsync(
+                    payment =>
+                        payment.AppointmentId ==
+                        rejectedAppointment.Id);
+
+        if (failedPayment == null)
+        {
+            context.Payments.Add(
+                new Payment
+                {
+                    AppointmentId =
+                        rejectedAppointment.Id,
+
+                    Amount =
+                        rejectedAppointment.Price,
+
+                    Status =
+                        PaymentStatus.Failed,
+
+                    StripePaymentIntentId =
+                        "pi_demo_failed_001",
+
+                    PaidAtUtc =
+                        null
+                });
+
+            await context.SaveChangesAsync();
+        }
 
         var approvedReview =
     await context.Reviews
@@ -2069,6 +2445,38 @@ public static class ApplicationDbSeeder
             await context.SaveChangesAsync();
         }
 
+        var moodTimeline =
+            new[]
+            {
+                new
+                {
+                    Entry = moodEntryOne,
+                    CreatedAtUtc = DateTime.UtcNow.AddDays(-10)
+                },
+                new
+                {
+                    Entry = moodEntryTwo,
+                    CreatedAtUtc = DateTime.UtcNow.AddDays(-6)
+                },
+                new
+                {
+                    Entry = moodEntryThree,
+                    CreatedAtUtc = DateTime.UtcNow.AddDays(-2)
+                }
+            };
+
+        foreach (var moodSeed in moodTimeline)
+        {
+            if (moodSeed.Entry.CreatedAtUtc.Date !=
+                moodSeed.CreatedAtUtc.Date)
+            {
+                moodSeed.Entry.CreatedAtUtc =
+                    moodSeed.CreatedAtUtc;
+            }
+        }
+
+        await context.SaveChangesAsync();
+
         var journalEntry =
     await context.PrivateJournalEntries
         .FirstOrDefaultAsync(
@@ -2105,6 +2513,42 @@ public static class ApplicationDbSeeder
 
             context.PrivateJournalEntries.Add(
                 journalEntry);
+
+            await context.SaveChangesAsync();
+        }
+
+        var stressJournalEntry =
+            await context.PrivateJournalEntries
+                .FirstOrDefaultAsync(
+                    entry =>
+                        entry.ClientId ==
+                            seededClient.Id &&
+                        entry.Title ==
+                            "Managing stress this week");
+
+        if (stressJournalEntry == null)
+        {
+            context.PrivateJournalEntries.Add(
+                new PrivateJournalEntry
+                {
+                    ClientId =
+                        seededClient.Id,
+
+                    Title =
+                        "Managing stress this week",
+
+                    Content =
+                        "This week I noticed stress building up "
+                        + "around work and sleep. Writing it down "
+                        + "helps me prepare topics for therapy.",
+
+                    EntryDateUtc =
+                        DateTime.UtcNow
+                            .AddDays(-6),
+
+                    MoodEntryId =
+                        moodEntryTwo.Id
+                });
 
             await context.SaveChangesAsync();
         }
@@ -2854,6 +3298,48 @@ public static class ApplicationDbSeeder
             }
 
             await context.SaveChangesAsync();
+
+            var registeredWorkshop =
+                await context.Workshops
+                    .FirstOrDefaultAsync(
+                        workshop =>
+                            workshop.Title ==
+                            "Managing Everyday Anxiety");
+
+            if (registeredWorkshop != null)
+            {
+                var registrationExists =
+                    await context.WorkshopRegistrations
+                        .AnyAsync(
+                            registration =>
+                                registration.WorkshopId ==
+                                    registeredWorkshop.Id &&
+                                registration.ClientId ==
+                                    seededClient.Id &&
+                                !registration.IsDeleted);
+
+                if (!registrationExists)
+                {
+                    context.WorkshopRegistrations.Add(
+                        new WorkshopRegistration
+                        {
+                            WorkshopId =
+                                registeredWorkshop.Id,
+
+                            ClientId =
+                                seededClient.Id,
+
+                            Status =
+                                WorkshopRegistrationStatus.Registered,
+
+                            RegisteredAtUtc =
+                                DateTime.UtcNow
+                                    .AddDays(-1)
+                        });
+
+                    await context.SaveChangesAsync();
+                }
+            }
         }
     }
 }
