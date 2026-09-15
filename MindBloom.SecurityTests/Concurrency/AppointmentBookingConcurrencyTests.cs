@@ -11,6 +11,7 @@ using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Messaging.Outbox;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Services;
+using MindBloom.SecurityTests.Infrastructure;
 using MindBloom.Shared.Observability;
 using Xunit;
 
@@ -25,6 +26,9 @@ public sealed class AppointmentBookingConcurrencyTests
     public async Task
         CreateAsync_WhenTwoClientsBookSameSlotConcurrently_OnlyOneAppointmentIsCreated()
     {
+        TestEnvironmentLoader.LoadRootDotEnv();
+        TestEnvironmentLoader.ConfigureSqlConnectionFromDotEnv();
+
         var baseConnectionString =
             Environment.GetEnvironmentVariable(
                 "TEST_SQL_CONNECTION")

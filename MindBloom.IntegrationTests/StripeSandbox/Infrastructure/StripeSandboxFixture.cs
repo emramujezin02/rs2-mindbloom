@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.IntegrationTests.Infrastructure;
 using Stripe;
 using Testcontainers.MsSql;
 
@@ -46,6 +47,8 @@ public sealed class StripeSandboxFixture
 
     public async Task InitializeAsync()
     {
+        TestEnvironmentLoader.LoadRootDotEnv();
+
         StripeSecretKey =
             Environment.GetEnvironmentVariable(
                 "STRIPE_SANDBOX_SECRET_KEY")

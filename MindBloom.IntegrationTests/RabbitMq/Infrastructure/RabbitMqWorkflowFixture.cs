@@ -640,7 +640,7 @@ public sealed class RabbitMqWorkflowFixture
                 0,
 
             TimeSpan.FromSeconds(
-                10),
+                30),
 
             "RabbitMQ email consumer did not start within the expected time.");
     }

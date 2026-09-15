@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 using MindBloom.API.Configuration;
+using MindBloom.API.Documentation;
 using MindBloom.API.Filters;
 using MindBloom.API.Messaging.DependencyInjection;
 using MindBloom.API.Middlewares;
@@ -347,8 +348,10 @@ builder.Services.AddSwaggerGen(options =>
             In =
                 ParameterLocation.Header,
             Description =
-                "Enter JWT access token."
+                "Enter a valid Bearer JWT access token."
         });
+
+    options.OperationFilter<MindBloomOpenApiOperationFilter>();
 
     options.AddSecurityRequirement(
         new OpenApiSecurityRequirement
