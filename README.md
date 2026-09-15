@@ -1,606 +1,375 @@
 # MindBloom
 
-MindBloom is a mental health platform that connects clients, therapists and administrators through a mobile application, desktop administration application and ASP.NET Core backend.
+MindBloom je aplikacija za mentalno zdravlje koja povezuje klijente, terapeute i administraciju kroz mobilnu aplikaciju, desktop administrativni portal i .NET backend. Sistem podrzava registraciju i autentifikaciju korisnika, terapijske profile, zakazivanje termina, placanja, clanarine, chat, notifikacije, preporuke terapeuta, edukativni sadrzaj, radionice i administratorske izvjestaje.
 
-The system includes:
+Repository je organizovan tako da su aktivni source projekti jasno odvojeni:
 
-- ASP.NET Core Web API
-- Flutter mobile application
-- Flutter desktop administration application
-- SQL Server
-- RabbitMQ
-- Notifications Worker
-- Stripe sandbox payments
-- Firebase push notifications
-- email notifications
-- SignalR realtime communication
-- recommendation system
-- PDF reporting
-- Docker Compose infrastructure
+```text
+MindBloom/
+├── backend/
+│   └── src/
+│       ├── MindBloom.API/
+│       ├── MindBloom.Application/
+│       ├── MindBloom.Domain/
+│       ├── MindBloom.Infrastructure/
+│       ├── MindBloom.Messaging.Contracts/
+│       ├── MindBloom.NotificationsWorker/
+│       ├── MindBloom.Shared/
+│       ├── MindBloom.IntegrationTests/
+│       ├── MindBloom.SecurityTests/
+│       └── MindBloom.UnitTests/
+├── frontend/
+│   ├── mindbloom_mobile/
+│   ├── mindbloom_desktop/
+│   └── scripts/
+├── docs/
+├── docker-compose.yml
+├── build-images.ps1
+├── MindBloom.sln
+└── README.md
+```
 
----
+## Arhitektura ukratko
 
-# Local Development Setup
+Backend je .NET 9 rjesenje organizovano po slojevima:
 
-## Prerequisites
+- `MindBloom.API` izlaže REST API, Swagger/OpenAPI dokumentaciju, JWT autentifikaciju, authorization politike, health check endpoint-e, metrics endpoint i SignalR hubove.
+- `MindBloom.Application` sadrzi DTO-e, validatore, service abstrakcije i use-case ugovore.
+- `MindBloom.Domain` sadrzi domenske entitete, enum-e i osnovne poslovne koncepte.
+- `MindBloom.Infrastructure` implementira EF Core persistence, SQL Server pristup, Identity, Stripe, RabbitMQ publishing, SignalR servise, upload/geocoding i druge tehnicke servise.
+- `MindBloom.Messaging.Contracts` dijeli message contract tipove izmedju API-ja i Worker procesa.
+- `MindBloom.NotificationsWorker` je zaseban background proces koji konzumira RabbitMQ poruke i obradjuje email/push/integration-event delivery izvan HTTP request flow-a.
 
-Before starting the project, install:
+Frontend se sastoji od dvije Flutter aplikacije:
+
+- `frontend/mindbloom_mobile` - mobilna aplikacija za klijente i terapeute.
+- `frontend/mindbloom_desktop` - desktop administrativni portal.
+
+Tipican sinhroni flow:
+
+```text
+Flutter Mobile/Desktop -> MindBloom.API -> Application -> Infrastructure -> SQL Server
+```
+
+Tipican asinhroni notification flow:
+
+```text
+MindBloom.API -> RabbitMQ -> Notifications Worker -> Email/Firebase push/SQL status
+```
+
+Realtime flow:
+
+```text
+Flutter client <-> SignalR hubs (/hubs/notifications, /hubs/chat) <-> Backend services
+```
+
+Detaljniji opis sistema je u [docs/system-architecture.md](docs/system-architecture.md).
+
+## Preduslovi
+
+Za lokalni razvoj preporuceno je imati:
 
 - Git
-- Docker Desktop
-- Docker Compose
-- .NET SDK 9
+- Docker Desktop sa Docker Compose podrskom
+- .NET SDK 9.x
 - Flutter SDK
+- Android Studio / Android SDK za mobilni emulator
+- Visual Studio 2022 sa Windows desktop workloadom za Flutter Windows build
+- Stripe CLI za lokalno testiranje webhook-a
+- Firebase service account JSON ako se testiraju stvarne push notifikacije
 
-Depending on the functionality being tested, you may also need:
+Provjera osnovnih alata:
 
-- Android Studio / Android Emulator
-- Stripe CLI
-- Firebase service account credentials
-- Gmail application password
-
-Verify the main tools:
-
-```bash
+```powershell
 git --version
+dotnet --version
 docker --version
 docker compose version
-dotnet --version
 flutter --version
 ```
 
-When using the complete Docker Compose environment, a locally installed SQL Server or RabbitMQ instance is not required.
+## Environment konfiguracija
 
----
+Root `.env` fajl se koristi za Docker Compose i backend konfiguraciju. Nemoj commitati stvarne tajne vrijednosti.
 
-# Environment Configuration
-
-The repository contains an `.env.example` file with all required configuration keys and safe placeholder values.
-
-Create a local `.env` file from it.
-
-## Windows PowerShell
+Kreiranje lokalnog `.env` fajla:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-## Windows Command Prompt
+Minimalno provjeri i popuni vrijednosti za:
 
-```cmd
-copy .env.example .env
-```
+- SQL Server: `SQL_SERVER_PORT`, `SQL_SERVER_DATABASE`, `SQL_SERVER_PASSWORD`, `DB_CONNECTION`
+- JWT: `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_EXPIRATION_MINUTES`
+- RabbitMQ: `RABBITMQ_USERNAME`, `RABBITMQ_PASSWORD`, `RABBITMQ_VIRTUAL_HOST` i queue/exchange varijable
+- Email: `EMAIL_USERNAME`, `EMAIL_PASSWORD`
+- Stripe backend: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+- Firebase Worker: `FIREBASE_CREDENTIALS_PATH`, `FIREBASE_BATCH_SIZE`, `FIREBASE_RETRY_COUNT`, `FIREBASE_RETRY_DELAY_SECONDS`
+- Google Maps: `GOOGLE_MAPS_API_KEY`, `GOOGLE_MAPS_GEOCODING_URL`
+- Uploads: `UPLOAD_ROOT_PATH`, `UPLOAD_MAX_IMAGE_SIZE_MB`, `UPLOAD_MAX_DOCUMENT_SIZE_MB`
+- Docker image tag: `IMAGE_VERSION`
 
-## Linux / macOS
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and replace the placeholder values where required.
-
-Important configuration groups include:
-
-- application environment
-- API port
-- SQL Server
-- JWT
-- RabbitMQ
-- SMTP / email
-- Stripe
-- Firebase
-- Google Maps
-- CORS
-- uploads
-- Docker image versioning
-
-Example:
-
-```env
-ASPNETCORE_ENVIRONMENT=Development
-DOTNET_ENVIRONMENT=Development
-
-API_PORT=8080
-WORKER_HEALTH_PORT=8081
-
-API_URL=http://localhost:5110
-
-MOBILE_API_BASE_URL=http://10.0.2.2:5110
-DESKTOP_API_BASE_URL=http://localhost:5110
-
-SQL_SERVER_DATABASE=220075
-
-IMAGE_VERSION=1.0.0
-
-The required MindBloom demonstration database name is:
+Demo baza koristi naziv:
 
 ```text
 220075
-
-JWT_SECRET=replace-with-a-random-secret-with-at-least-32-characters
-
-EMAIL_USERNAME=your-email@example.com
-EMAIL_PASSWORD=your-email-app-password
-
-STRIPE_SECRET_KEY=your-stripe-test-secret-key
-STRIPE_WEBHOOK_SECRET=your-stripe-test-webhook-secret
 ```
 
-Do not commit the real `.env` file.
-
-Only `.env.example` containing safe placeholder values should be stored in source control.
-
----
-
-# API URL Configuration
-
-MindBloom has two local API paths:
-
-- Visual Studio / `dotnet run` HTTP profile: `http://localhost:5110`
-- Docker API container: `http://localhost:8080`
-
-For everyday mobile development, prefer the Visual Studio HTTP profile on port `5110`.
-
-The backend is available from the host computer at:
-
-```text
-http://localhost:5110
-```
-
-Flutter applications receive the API address through:
-
-```text
---dart-define=API_BASE_URL=<url>
-```
-
-This means the source code does not need to be changed when the API address changes.
-
-## Android Emulator
-
-Android Emulator cannot use `localhost` to access the API running on the host computer.
-
-Use:
-
-```text
-http://10.0.2.2:5110
-```
-
-Example:
+Za Stripe sandbox integration testove koristi se dodatna process environment varijabla:
 
 ```powershell
-cd frontend
-.\scripts\run-mobile.ps1
+$env:STRIPE_SANDBOX_SECRET_KEY="<YOUR_STRIPE_TEST_SECRET_KEY>"
 ```
 
-## Desktop Application
+Ta vrijednost mora biti Stripe test secret key koji pocinje sa `sk_test_`. Ne upisuj live key i ne commitaj test secret u repository.
 
-When the desktop application and Docker API run on the same computer, use:
+## Docker backend okruzenje
 
-```text
-http://localhost:5110
-```
+Docker Compose definise cetiri glavna servisa:
 
-Example:
+- `sql-server` - SQL Server 2022, port iz `SQL_SERVER_PORT` ili `1433`
+- `rabbitmq` - RabbitMQ sa management pluginom, portovi `5672` i `15672`
+- `api` - MindBloom API image `mindbloom-api:${IMAGE_VERSION:-1.0.0}`, lokalni port iz `API_PORT` ili `8080`
+- `notifications-worker` - Worker image `mindbloom-worker:${IMAGE_VERSION:-1.0.0}`, health port iz `WORKER_HEALTH_PORT` ili `8081`
 
-```bash
-flutter run -d windows --dart-define=API_BASE_URL=http://localhost:5110
-```
+Provjera Compose konfiguracije:
 
-The Docker-hosted API remains available on `http://localhost:8080` when the full compose stack is running.
-
----
-
-# Docker Environment
-
-The Docker environment contains:
-
-- MindBloom API
-- MindBloom Notifications Worker
-- SQL Server
-- RabbitMQ
-- RabbitMQ Management UI
-- persistent Docker volumes
-
-Docker Compose exposes the API on port:
-
-```text
-8080
-```
-
-The Worker health endpoint is exposed on:
-
-```text
-8081
-```
-
----
-
-# Validate Docker Compose
-
-Before starting the environment, validate the Compose configuration:
-
-```bash
+```powershell
 docker compose config
 ```
 
-Display configured services:
+Pokretanje kompletnog backend okruzenja:
 
-```bash
-docker compose config --services
-```
-
-Expected services include:
-
-```text
-sql-server
-rabbitmq
-notifications-worker
-api
-```
-
----
-
-# Build the Docker Environment
-
-From the repository root:
-
-```bash
-docker compose build
-```
-
-To rebuild without Docker cache:
-
-```bash
-docker compose build --no-cache
-```
-
----
-
-# Start the Docker Environment
-
-Build and start all services:
-
-```bash
+```powershell
 docker compose up -d --build
 ```
 
-Check container status:
+Provjera statusa:
 
-```bash
+```powershell
 docker compose ps
 ```
 
-Required services should eventually report a running or healthy state.
+Zaustavljanje bez brisanja podataka:
 
-Expected services:
-
-```text
-mindbloom-sql-server
-mindbloom-rabbitmq
-mindbloom-api
-mindbloom-notifications-worker
-```
-
----
-
-# Stop the Docker Environment
-
-Stop containers while preserving Docker volumes:
-
-```bash
+```powershell
 docker compose down
 ```
 
-Persisted SQL Server and RabbitMQ data remain available for the next startup.
+Zaustavljanje sa brisanjem Docker volume podataka:
 
----
-
-# Reset the Local Docker Environment
-
-> WARNING: The following command removes Docker volumes and deletes persisted local Docker data.
-
-```bash
+```powershell
 docker compose down -v
 ```
 
-Then recreate the environment:
-
-```bash
-docker compose up -d --build
-```
-
-Use this only when the local Docker data can safely be deleted.
-
----
-
-# MindBloom Mobile Application
-
-The mobile Flutter application communicates with the ASP.NET Core API.
-
-Navigate to the mobile project directory:
-
-```powershell
-cd frontend\mindbloom_mobile
-```
-
-Install dependencies:
-
-```bash
-flutter pub get
-```
-
-Run static analysis:
-
-```bash
-flutter analyze
-```
-
-Run tests:
-
-```bash
-flutter test
-```
-
-## Android Emulator
-
-For normal Visual Studio + Android emulator development, start `MindBloom.API` with the `http` profile and then run:
-
-```powershell
-cd frontend
-.\scripts\run-mobile.ps1
-```
-
-The Android emulator uses:
+Docker build kontekst je root repository-ja, a Dockerfile putanje su:
 
 ```text
-10.0.2.2
+backend/src/MindBloom.API/Dockerfile
+backend/src/MindBloom.NotificationsWorker/Dockerfile
 ```
 
-instead of:
+## Backend lokalno
+
+Restore, build i test iz root foldera:
+
+```powershell
+dotnet restore MindBloom.sln
+dotnet build MindBloom.sln
+dotnet test MindBloom.sln
+```
+
+Pokretanje API-ja lokalno:
+
+```powershell
+dotnet run --project backend/src/MindBloom.API/MindBloom.API.csproj
+```
+
+Pokretanje Worker procesa lokalno:
+
+```powershell
+dotnet run --project backend/src/MindBloom.NotificationsWorker/MindBloom.Worker.csproj
+```
+
+Backend iz koda podrzava:
+
+- REST API controller-e pod `/api`
+- Swagger UI u Development modu
+- health check endpoint-e `/health/live` i `/health/ready`
+- metrics endpoint `/metrics`
+- SignalR hubove `/hubs/notifications` i `/hubs/chat`
+- JWT Bearer autentifikaciju i role/policy authorization
+- rate limiting middleware
+
+Ako se API pokrece kroz Docker Compose, standardni URL je:
 
 ```text
-localhost
+http://localhost:8080
 ```
 
-to access services running on the host computer.
-
-The mobile development URL for this path is:
+Ako se API pokrece lokalno kroz Visual Studio/http profil, mobilni skript po defaultu cilja:
 
 ```text
 http://10.0.2.2:5110
 ```
 
-If Stripe mobile payments are being tested, also provide the Stripe sandbox publishable key:
+## Swagger/OpenAPI
 
-```powershell
-.\scripts\run-mobile.ps1 -StripePublishableKey pk_test_your_key
-```
-
-Only Stripe sandbox/test publishable keys should be used during development.
-
----
-
-# MindBloom Desktop Application
-
-Navigate to the desktop project directory:
-
-```powershell
-cd frontend\mindbloom_desktop
-```
-
-Install dependencies:
-
-```bash
-flutter pub get
-```
-
-Run static analysis:
-
-```bash
-flutter analyze
-```
-
-Run tests:
-
-```bash
-flutter test
-```
-
-Run the Windows desktop application:
-
-```bash
-flutter run -d windows --dart-define=API_BASE_URL=http://localhost:8080
-```
-
-The desktop application should use:
-
-```text
-http://localhost:8080
-```
-
-when the Docker API runs on the same computer.
-
----
-
-# API and Swagger
-
-The API is available locally at:
-
-```text
-http://localhost:8080
-```
-
-In the Development environment, Swagger is available at:
+Swagger UI je dostupan u Development modu:
 
 ```text
 http://localhost:8080/swagger
 ```
 
-Swagger availability depends on the application environment and must not be assumed to be enabled in Production.
-
----
-
-# Health Checks
-
-The API exposes health endpoints used by Docker.
-
-The API container internally checks:
+Za lokalni `dotnet run` port moze zavisiti od launch profila. Ako se koristi HTTP profil na portu `5110`, Swagger je:
 
 ```text
-http://localhost:8080/health/ready
+http://localhost:5110/swagger
 ```
 
-The Notifications Worker also exposes a health endpoint through Docker.
+REST API dokumentacija za odbranu nalazi se u [docs/api-documentation.md](docs/api-documentation.md).
 
-Check all container states with:
+## RabbitMQ i Notifications Worker
 
-```bash
-docker compose ps
-```
+RabbitMQ se koristi za asinhronu obradu notifikacija i integration event poruka. API objavljuje poruke, a `MindBloom.NotificationsWorker` ih konzumira iz RabbitMQ queue-ova. Worker zatim obradjuje delivery kroz email, Firebase push i povezane persistence/integration tokove.
 
----
-
-# RabbitMQ
-
-RabbitMQ is used for asynchronous communication between the API and Notifications Worker.
-
-The main local ports are:
-
-```text
-AMQP:
-5672
-
-Management UI:
-15672
-```
-
-Open the RabbitMQ Management UI:
+Compose koristi RabbitMQ management UI na:
 
 ```text
 http://localhost:15672
 ```
 
-RabbitMQ credentials are configured through `.env`.
+Queue/exchange/routing key vrijednosti konfigurisane su preko `.env` varijabli sa prefiksom `RABBITMQ_`, ukljucujuci notification exchange, email queue, integration-event queue, retry exchange i dead-letter queue konfiguraciju.
 
-The Management UI can be used to inspect:
+## SQL Server
 
-- exchanges
-- queues
-- bindings
-- consumers
-- connections
-- message rates
-- retry queues
-- dead-letter queues
+SQL Server je primarni persistence store za backend. EF Core model, Identity tabele, poslovne tabele, chat, notifikacije, placanja, clanarine, radionice, clanke, journaling/mood podatke i referentne podatke dokumentuje:
 
-Do not use default development credentials in Production.
+[docs/database-schema.md](docs/database-schema.md)
 
----
-
-# Notifications Worker
-
-MindBloom uses a separate Notifications Worker for asynchronous processing.
-
-The Worker handles functionality such as:
-
-- notification integration events
-- email notification processing
-- push notification processing
-- RabbitMQ retry flows
-- dead-letter handling
-- duplicate-event protection
-- monitoring
-
-The Worker connects to SQL Server and RabbitMQ through Docker service hostnames.
-
-Firebase configuration is optional for Worker startup.
-
-If valid Firebase credentials are configured, the Firebase push service is enabled.
-
-If Firebase credentials are not configured, the Worker continues running without Firebase push delivery instead of terminating the complete Worker process.
-
-Firebase credentials are configured with:
+Lokalni SQL Server port dolazi iz:
 
 ```text
-FIREBASE_CREDENTIALS_PATH
+SQL_SERVER_PORT
 ```
 
-The real Firebase service-account JSON file must never be committed to source control.
-
----
-
-# SMTP / Email
-
-Email configuration is supplied through environment variables.
-
-Important variables include:
+Database name za demo okruzenje:
 
 ```text
-SMTP_HOST
-SMTP_PORT
-SMTP_ENABLE_SSL
-EMAIL_USERNAME
-EMAIL_PASSWORD
+220075
 ```
 
-For Gmail, an application-specific password may be required instead of the normal Google account password.
+## Flutter Mobile
 
-Never commit a real email application password.
-
----
-
-# Stripe Sandbox
-
-MindBloom payment functionality uses Stripe sandbox/test mode during development.
-
-Backend configuration:
+Mobilna aplikacija se nalazi u:
 
 ```text
-STRIPE_SECRET_KEY
-STRIPE_WEBHOOK_SECRET
+frontend/mindbloom_mobile
 ```
 
-The secret key must be a Stripe test key.
+Osnovne komande:
 
-Never commit Stripe secret keys.
-
-## Stripe CLI
-
-Install Stripe CLI if local webhook testing is required.
-
-Login:
-
-```bash
-stripe login
+```powershell
+cd frontend/mindbloom_mobile
+flutter pub get
+flutter analyze
+flutter test
 ```
 
-Forward local Stripe webhook events to the API:
+Pokretanje preko projekta:
 
-```bash
+```powershell
+flutter run -d <device-id> --dart-define=API_BASE_URL=http://10.0.2.2:5110 --dart-define=STRIPE_PUBLISHABLE_KEY=<YOUR_STRIPE_TEST_PUBLISHABLE_KEY>
+```
+
+Pokretanje preko helper skripta:
+
+```powershell
+cd frontend
+.\scripts\run-mobile.ps1
+```
+
+`run-mobile.ps1` koristi default `API_BASE_URL=http://10.0.2.2:5110`. Stripe publishable key cita iz parametra, environment varijable `STRIPE_PUBLISHABLE_KEY` ili `frontend\.env.local`.
+
+Primjer sa eksplicitnim vrijednostima:
+
+```powershell
+.\scripts\run-mobile.ps1 -ApiBaseUrl "http://10.0.2.2:5110" -StripePublishableKey "<YOUR_STRIPE_TEST_PUBLISHABLE_KEY>"
+```
+
+Mobile `STRIPE_PUBLISHABLE_KEY` mora poceti sa `pk_test_`. Ako nije postavljen, aplikacija se pokrece, ali payment flow ostaje nedostupan za taj run.
+
+## Flutter Desktop
+
+Desktop administrativni portal se nalazi u:
+
+```text
+frontend/mindbloom_desktop
+```
+
+Osnovne komande:
+
+```powershell
+cd frontend/mindbloom_desktop
+flutter pub get
+flutter analyze
+flutter test
+```
+
+Pokretanje:
+
+```powershell
+flutter run -d windows --dart-define=API_BASE_URL=http://localhost:8080
+```
+
+Desktop aplikacija po defaultu koristi:
+
+```text
+http://localhost:8080
+```
+
+Ako API pokreces lokalno na drugom portu, proslijedi odgovarajuci `API_BASE_URL`.
+
+## Dart define vrijednosti
+
+Aktivni Flutter projekti koriste sljedece compile-time vrijednosti:
+
+| Projekat | Vrijednost | Svrha |
+| --- | --- | --- |
+| Mobile | `API_BASE_URL` | Base URL backend API-ja |
+| Mobile | `STRIPE_PUBLISHABLE_KEY` | Stripe test publishable key za mobile payment sheet |
+| Desktop | `API_BASE_URL` | Base URL backend API-ja |
+| Desktop | `APP_ENV` | Prikaz environment oznake u admin settings dijelu |
+
+## Stripe sandbox
+
+Backend Stripe integracija koristi:
+
+- `STRIPE_SECRET_KEY` - Stripe secret key za backend PaymentIntent/refund operacije
+- `STRIPE_WEBHOOK_SECRET` - webhook signing secret za validaciju Stripe webhook dogadjaja
+
+Mobile Stripe integracija koristi:
+
+- `STRIPE_PUBLISHABLE_KEY` - publishable key koji pocinje sa `pk_test_`
+
+Sandbox integration testovi koriste:
+
+- `STRIPE_SANDBOX_SECRET_KEY` - test secret key koji pocinje sa `sk_test_`
+
+Lokalni webhook primjer sa Stripe CLI:
+
+```powershell
 stripe listen --forward-to http://localhost:8080/api/stripe/webhook
 ```
 
-Stripe CLI provides a webhook signing secret beginning with:
+Webhook signing secret koji Stripe CLI ispise postavi u `.env` kao `STRIPE_WEBHOOK_SECRET`. Ne koristi publishable key ili Stripe API secret kao webhook secret.
 
-```text
-whsec_
-```
+## Firebase push notifikacije
 
-Configure that value locally as:
+Notifications Worker koristi Firebase Admin/FCM ako je konfigurisan `FIREBASE_CREDENTIALS_PATH`. Ako path nije konfigurisan, kod registruje no-op push notification servis, pa backend moze raditi bez stvarnog Firebase credential fajla, ali realne push notifikacije tada nisu aktivne.
 
-```env
-STRIPE_WEBHOOK_SECRET=whsec_your_local_secret
-```
-
-Do not commit the real webhook secret.
-
----
-
-# Firebase
-
-Firebase is used for push notifications.
-
-Configure:
+Konfiguracijske vrijednosti:
 
 ```text
 FIREBASE_CREDENTIALS_PATH
@@ -609,636 +378,137 @@ FIREBASE_RETRY_COUNT
 FIREBASE_RETRY_DELAY_SECONDS
 ```
 
-`FIREBASE_CREDENTIALS_PATH` must point to a valid Firebase service-account JSON file when Firebase push notifications are enabled.
+Ne commitaj Firebase service account JSON.
 
-The credential file must not be committed to source control.
+## Demo korisnici
 
-Without Firebase credentials, the Notifications Worker can continue operating using the configured graceful fallback behavior.
+Seeder kreira sljedece demo korisnike kada je seed ukljucen:
 
----
+| Uloga | Username | Email | Password | Napomena |
+| --- | --- | --- | --- | --- |
+| Admin | `desktop` | `desktop@mindbloom.com` | `MindBloom123!` | Desktop admin portal |
+| Client | `mobile` | `mobile@mindbloom.com` | `MindBloom123!` | Mobile client demo |
+| Therapist | `therapist.amina` | `amina@mindbloom.com` | `MindBloom123!` | Approved therapist |
+| Therapist | `therapist.haris` | `haris@mindbloom.com` | `MindBloom123!` | Pending therapist |
 
-# Google Maps
+Ove vrijednosti su demo seed podaci, ne produkcijske tajne.
 
-Google Maps functionality uses:
+## Testovi
 
-```text
-GOOGLE_MAPS_API_KEY
-GOOGLE_MAPS_GEOCODING_URL
-```
-
-The API key must be supplied through local configuration.
-
-Do not hardcode or commit a private Google Maps API key.
-
----
-
-# Upload Configuration
-
-Upload limits are configured using:
-
-```text
-UPLOAD_MAX_IMAGE_SIZE_MB
-UPLOAD_MAX_DOCUMENT_SIZE_MB
-UPLOAD_ROOT_PATH
-```
-
-Example:
-
-```env
-UPLOAD_MAX_IMAGE_SIZE_MB=5
-UPLOAD_MAX_DOCUMENT_SIZE_MB=10
-UPLOAD_ROOT_PATH=uploads
-```
-
----
-
-# Demonstration Accounts
-
-The Development seed contains demonstration users for the main application roles.
-
-## Administrator
-
-```text
-Username: desktop
-Email: desktop@mindbloom.com
-Password: MindBloom123!
-Role: Admin
-```
-
-## Client
-
-```text
-Username: mobile
-Email: mobile@mindbloom.com
-Password: MindBloom123!
-Role: Client
-```
-
-## Approved Therapist
-
-```text
-Username: therapist.amina
-Email: amina@mindbloom.com
-Password: MindBloom123!
-Role: Therapist
-Status: Approved
-```
-
-## Pending Therapist
-
-```text
-Username: therapist.haris
-Email: haris@mindbloom.com
-Password: MindBloom123!
-Role: Therapist
-Status: Pending
-```
-
-These accounts are intended only for demonstration and development.
-
-The Development seed also creates representative data such as:
-
-- therapist profiles
-- therapy approaches
-- therapist specializations
-- therapist availability
-- appointments
-- payments
-- memberships
-- reviews
-- articles
-- workshops
-- mood entries
-- journal data
-- notifications
-- chat examples
-
-The seed process is designed to be idempotent so restarting the Development environment does not intentionally create duplicate demonstration data.
-
----
-
-# Logs
-
-Show logs for all Docker services:
-
-```bash
-docker compose logs
-```
-
-Follow logs continuously:
-
-```bash
-docker compose logs -f
-```
-
-## API
-
-```bash
-docker compose logs -f api
-```
-
-## Notifications Worker
-
-```bash
-docker compose logs -f notifications-worker
-```
-
-## SQL Server
-
-```bash
-docker compose logs -f sql-server
-```
-
-## RabbitMQ
-
-```bash
-docker compose logs -f rabbitmq
-```
-
-Docker logging uses log rotation to prevent container logs from growing without limit.
-
----
-
-# Rebuild a Single Service
-
-It is not necessary to rebuild the complete Docker environment after changing only one backend service.
-
-## API
-
-```bash
-docker compose build api
-docker compose up -d api
-```
-
-Or:
-
-```bash
-docker compose up -d --build api
-```
-
-## Notifications Worker
-
-```bash
-docker compose build notifications-worker
-docker compose up -d notifications-worker
-```
-
-Or:
-
-```bash
-docker compose up -d --build notifications-worker
-```
-
----
-
-# Recreate a Single Container
-
-API:
-
-```bash
-docker compose up -d --force-recreate api
-```
-
-Notifications Worker:
-
-```bash
-docker compose up -d --force-recreate notifications-worker
-```
-
----
-
-# Common Problems
-
-## Docker daemon is not running
-
-Start Docker Desktop and wait until Docker reports that it is ready.
-
-Then retry:
-
-```bash
-docker compose up -d
-```
-
----
-
-## Port is already in use
-
-Default local ports:
-
-```text
-API: 8080
-Worker health endpoint: 8081
-SQL Server: 1433
-RabbitMQ: 5672
-RabbitMQ Management: 15672
-```
-
-If Docker reports that a port is already allocated, stop the process using that port or change the corresponding host-side configuration.
-
----
-
-## Mobile application cannot reach API
-
-For the normal Visual Studio HTTP profile, run:
+Backend:
 
 ```powershell
-cd frontend
-.\scripts\run-mobile.ps1
+dotnet test MindBloom.sln
 ```
 
-The script checks `http://localhost:5110/health/live` on the Windows host and passes `API_BASE_URL=http://10.0.2.2:5110` to Flutter.
-
-For Android Emulator, do not use:
-
-```text
-http://localhost:5110
-```
-
-Use:
-
-```text
-http://10.0.2.2:5110
-```
-
-If using the Docker API container instead, verify:
-
-```bash
-docker compose ps
-```
-
-and use `http://10.0.2.2:8080`.
-
----
-
-## Desktop application cannot reach API
-
-Use:
-
-```text
-http://localhost:8080
-```
-
-Run:
-
-```bash
-flutter run -d windows --dart-define=API_BASE_URL=http://localhost:8080
-```
-
-Verify that the API container is running:
-
-```bash
-docker compose ps
-```
-
----
-
-## SQL Server does not become ready
-
-Check status:
-
-```bash
-docker compose ps
-```
-
-Inspect logs:
-
-```bash
-docker compose logs sql-server
-```
-
-Verify SQL Server configuration in `.env`.
-
----
-
-## Database migration fails
-
-Inspect API logs:
-
-```bash
-docker compose logs api
-```
-
-After correcting the problem:
-
-```bash
-docker compose up -d api
-```
-
-For a disposable local environment, Docker volumes can be reset:
-
-```bash
-docker compose down -v
-docker compose up -d --build
-```
-
-> WARNING: This deletes persisted local Docker data.
-
----
-
-## RabbitMQ connection fails
-
-Check RabbitMQ:
-
-```bash
-docker compose ps
-docker compose logs rabbitmq
-```
-
-Verify:
-
-```text
-RABBITMQ_HOST
-RABBITMQ_PORT
-RABBITMQ_USERNAME
-RABBITMQ_PASSWORD
-RABBITMQ_VIRTUAL_HOST
-```
-
-Inside Docker Compose, services communicate using Docker service hostnames rather than using `localhost` to refer to another container.
-
----
-
-## Startup configuration validation fails
-
-MindBloom validates critical configuration during startup.
-
-Inspect API logs:
-
-```bash
-docker compose logs api
-```
-
-or Worker logs:
-
-```bash
-docker compose logs notifications-worker
-```
-
-The startup error should identify the missing configuration setting without exposing its secret value.
-
----
-
-## JWT configuration error
-
-Verify:
-
-```text
-JWT_SECRET
-JWT_ISSUER
-JWT_AUDIENCE
-JWT_EXPIRATION_MINUTES
-```
-
-Use a sufficiently long random JWT secret.
-
-Example placeholder:
-
-```env
-JWT_SECRET=replace-with-a-random-secret-with-at-least-32-characters
-```
-
-Never store real production JWT secrets in README or `.env.example`.
-
----
-
-## Email sending fails
-
-Verify:
-
-```text
-EMAIL_USERNAME
-EMAIL_PASSWORD
-SMTP_HOST
-SMTP_PORT
-SMTP_ENABLE_SSL
-```
-
-For Gmail, ensure that a valid application-specific password is being used.
-
----
-
-## Stripe requests fail
-
-Verify:
-
-```text
-STRIPE_SECRET_KEY
-STRIPE_WEBHOOK_SECRET
-```
-
-Use Stripe sandbox/test credentials in Development.
-
-For webhook testing:
-
-```bash
-stripe listen --forward-to http://localhost:8080/api/stripe/webhook
-```
-
----
-
-## Firebase notifications fail
-
-Verify:
-
-```text
-FIREBASE_CREDENTIALS_PATH
-```
-
-If Firebase is expected to be enabled, ensure that the service-account file exists at the configured path.
-
-If Firebase is intentionally not configured, the Notifications Worker should continue running without Firebase push delivery.
-
----
-
-# Docker Image Versioning
-
-MindBloom API and Notifications Worker use separate Docker image names:
-
-```text
-mindbloom-api
-mindbloom-worker
-```
-
-Recommended image tags include:
-
-- semantic version, for example `1.0.0`
-- current Git commit hash
-- `latest` only as an additional convenience tag
-
-Example:
-
-```text
-mindbloom-api:1.0.0
-mindbloom-api:<git-commit>
-mindbloom-api:latest
-
-mindbloom-worker:1.0.0
-mindbloom-worker:<git-commit>
-mindbloom-worker:latest
-```
-
-The Docker Compose image version is configured through:
-
-```env
-IMAGE_VERSION=1.0.0
-```
-
-Using explicit versions makes rollback and reproducible deployment easier.
-
----
-
-# Production Notes
-
-The local Docker workflow is primarily intended for Development.
-
-Production deployment must use production-specific:
-
-- secrets
-- database credentials
-- RabbitMQ credentials
-- SMTP configuration
-- Stripe credentials
-- Firebase credentials
-- CORS origins
-- HTTPS
-- resource limits
-- retry settings
-- persistent storage
-- Docker image versions
-
-Development-only functionality such as demonstration seed data, local Stripe forwarding and Development Swagger configuration must not be relied upon in Production.
-
-Real secrets must never be stored in:
-
-- source code
-- README
-- `.env.example`
-- Git history
-
----
-
-# Quick Start
-
-## 1. Clone repository
-
-```bash
-git clone <repository-url>
-cd <repository-directory>
-```
-
-## 2. Create environment file
-
-Linux/macOS:
-
-```bash
-cp .env.example .env
-```
-
-Windows PowerShell:
+Ciljani test projekti:
 
 ```powershell
-Copy-Item .env.example .env
+dotnet test backend/src/MindBloom.UnitTests/MindBloom.UnitTests.csproj
+dotnet test backend/src/MindBloom.IntegrationTests/MindBloom.IntegrationTests.csproj
+dotnet test backend/src/MindBloom.SecurityTests/MindBloom.SecurityTests.csproj
 ```
 
-Configure the required local secrets in `.env`.
-
-## 3. Validate Docker configuration
-
-```bash
-docker compose config
-```
-
-## 4. Start backend infrastructure
-
-```bash
-docker compose up -d --build
-```
-
-## 5. Check status
-
-```bash
-docker compose ps
-```
-
-## 6. Open Swagger
-
-```text
-http://localhost:8080/swagger
-```
-
-## 7. Run Android mobile application
-
-For the normal Visual Studio HTTP API profile:
+Stripe sandbox testovi zahtijevaju `STRIPE_SANDBOX_SECRET_KEY` u process environmentu:
 
 ```powershell
-cd frontend
-.\scripts\run-mobile.ps1
+$env:STRIPE_SANDBOX_SECRET_KEY="<YOUR_STRIPE_TEST_SECRET_KEY>"
+dotnet test backend/src/MindBloom.IntegrationTests/MindBloom.IntegrationTests.csproj --filter "FullyQualifiedName~StripeSandboxWorkflowTests"
 ```
 
-If testing Stripe payments:
+Flutter:
 
 ```powershell
-.\scripts\run-mobile.ps1 -StripePublishableKey pk_test_your_key
+cd frontend/mindbloom_mobile
+flutter test
+
+cd ../mindbloom_desktop
+flutter test
 ```
 
-## 8. Run desktop application
+## Build komande
 
-From the desktop Flutter project with the Docker API:
+Backend Docker images:
 
-```bash
-flutter pub get
-flutter run -d windows --dart-define=API_BASE_URL=http://localhost:8080
+```powershell
+docker compose build api notifications-worker
 ```
 
-## 9. Useful local addresses
+Mobile Android APK:
+
+```powershell
+cd frontend/mindbloom_mobile
+flutter build apk --release --dart-define=API_BASE_URL=http://10.0.2.2:5110 --dart-define=STRIPE_PUBLISHABLE_KEY=<YOUR_STRIPE_TEST_PUBLISHABLE_KEY>
+```
+
+Desktop Windows build:
+
+```powershell
+cd frontend/mindbloom_desktop
+flutter build windows --release --dart-define=API_BASE_URL=http://localhost:8080
+```
+
+Ako Windows build ima path/cache problem na OneDrive lokaciji, koristi kraci path ili prethodno dogovoreni `subst` workflow i ne mijenjaj aplikacijski kod zbog environment problema.
+
+## Troubleshooting
+
+`docker compose config` prijavljuje missing variable:
+
+- Provjeri da root `.env` postoji.
+- Uporedi `.env` sa `.env.example`.
+- Ne kopiraj stvarne secret vrijednosti u README ili dokumentaciju.
+
+API container nije healthy:
+
+- Provjeri `docker compose ps`.
+- Provjeri SQL Server i RabbitMQ health status.
+- Provjeri `docker compose logs api`.
+
+Mobile emulator ne moze dohvatiti API:
+
+- Za Android emulator koristi `http://10.0.2.2:<port>`.
+- Za Docker API default je `http://10.0.2.2:8080`.
+- Za lokalni Visual Studio/http profil default skripta je `http://10.0.2.2:5110`.
+
+Desktop ne moze dohvatiti API:
+
+- Za Docker API koristi `http://localhost:8080`.
+- Ako API radi na lokalnom launch profilu, proslijedi taj port kroz `--dart-define=API_BASE_URL=...`.
+
+Stripe payment flow nije dostupan u mobile aplikaciji:
+
+- Provjeri da je `STRIPE_PUBLISHABLE_KEY` postavljen i da pocinje sa `pk_test_`.
+- Provjeri da backend ima `STRIPE_SECRET_KEY` i `STRIPE_WEBHOOK_SECRET`.
+
+Stripe sandbox testovi padaju zbog missing key:
+
+- Postavi `STRIPE_SANDBOX_SECRET_KEY` u istoj PowerShell sesiji u kojoj pokreces test.
+
+Firebase push ne salje stvarne notifikacije:
+
+- Provjeri `FIREBASE_CREDENTIALS_PATH`.
+- Provjeri da JSON credential fajl postoji lokalno i nije commitan.
+
+## Dokumentacija
+
+- [System architecture](docs/system-architecture.md)
+- [Database schema](docs/database-schema.md)
+- [REST API documentation](docs/api-documentation.md)
+- [Recommender dokumentacija](docs/recommender-dokumentacija.md)
+
+## Git sigurnost
+
+Ne commitaj:
+
+- `.env`
+- Firebase service account JSON
+- Stripe secret keys
+- webhook signing secrets
+- SQL passwords
+- lokalne emulator/debug/cache fajlove
+
+Predlozeni commit za README finalizaciju:
 
 ```text
-API:
-http://localhost:8080
-
-Swagger:
-http://localhost:8080/swagger
-
-RabbitMQ Management:
-http://localhost:15672
+docs: finalize readme
 ```
-
-## 10. Stop environment
-
-```bash
-docker compose down
-```
-
----
-
-# Standard Local URLs
-
-| Component | URL |
-|---|---|
-| Visual Studio API HTTP profile | `http://localhost:5110` |
-| Android emulator to Visual Studio API | `http://10.0.2.2:5110` |
-| Docker API from host | `http://localhost:8080` |
-| Android emulator to Docker API | `http://10.0.2.2:8080` |
-| Docker Swagger | `http://localhost:8080/swagger` |
-| RabbitMQ Management | `http://localhost:15672` |
-| Worker health port | `http://localhost:8081` |
-
-The standard Flutter configuration variable is:
-
-```text
-API_BASE_URL
-```
-
-Mobile:
-
-```text
-API_BASE_URL=http://10.0.2.2:5110
-```
-
-Desktop:
-
-```text
-API_BASE_URL=http://localhost:5110
-```
-
-This configuration allows MindBloom to be started on another development computer without modifying Flutter source code.
