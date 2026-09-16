@@ -1,5 +1,7 @@
 ﻿using MindBloom.Application.Features.Memberships.DTOs;
 
+using MindBloom.Application.Common.Models;
+
 namespace MindBloom.Application.Features.Memberships.Interfaces;
 
 public interface IMembershipService
@@ -18,9 +20,11 @@ public interface IMembershipService
             int clientUserId,
             ConfirmMembershipPaymentDto request);
 
-    Task<List<MembershipResponseDto>>
+    Task<PagedResponse<MembershipResponseDto>>
         GetMyMembershipsAsync(
-            int clientUserId);
+            int clientUserId,
+            int pageNumber,
+            int pageSize);
 
     Task<MembershipReceiptDto>
         GetReceiptAsync(

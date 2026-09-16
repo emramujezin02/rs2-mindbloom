@@ -552,7 +552,9 @@ public sealed class MembershipServiceTests
 
         await service
             .GetMyMembershipsAsync(
-                client.UserId);
+                client.UserId,
+                pageNumber: 1,
+                pageSize: 10);
 
         Assert.False(
             membership.IsActive);
@@ -629,10 +631,110 @@ public sealed class MembershipServiceTests
 
         await service
             .GetMyMembershipsAsync(
-                client.UserId);
+                client.UserId,
+                pageNumber: 1,
+                pageSize: 10);
 
         Assert.False(
             membership.IsActive);
+    }
+
+    [Fact]
+    public async Task
+        GetMyMembershipsAsync_ReturnsPagedMembershipHistory()
+    {
+        await using var context =
+            CreateContext();
+
+        var client =
+            await SeedClientAsync(
+                context);
+
+        var therapist =
+            await SeedTherapistAsync(
+                context);
+
+        var baseDate =
+            DateTime.UtcNow;
+
+        for (var i = 0; i < 55; i++)
+        {
+            context.ClientMemberships.Add(
+                new ClientMembership
+                {
+                    ClientId =
+                        client.Id,
+
+                    TherapistId =
+                        therapist.Id,
+
+                    PlanType =
+                        MembershipPlanType.TenSessions,
+
+                    TotalSessions =
+                        10,
+
+                    RemainingSessions =
+                        10,
+
+                    Price =
+                        400m,
+
+                    DurationMonths =
+                        6,
+
+                    IsActive =
+                        true,
+
+                    PurchasedAtUtc =
+                        baseDate
+                            .AddDays(-i),
+
+                    ExpiresAtUtc =
+                        baseDate
+                            .AddMonths(6)
+                            .AddDays(-i)
+                });
+        }
+
+        await context.SaveChangesAsync();
+
+        var service =
+            CreateService(
+                context);
+
+        var page =
+            await service
+                .GetMyMembershipsAsync(
+                    client.UserId,
+                    pageNumber: 2,
+                    pageSize: 1000);
+
+        Assert.Equal(
+            2,
+            page.PageNumber);
+
+        Assert.Equal(
+            50,
+            page.PageSize);
+
+        Assert.Equal(
+            55,
+            page.TotalCount);
+
+        Assert.Equal(
+            2,
+            page.TotalPages);
+
+        Assert.Equal(
+            5,
+            page.Items.Count);
+
+        Assert.True(
+            page.HasPreviousPage);
+
+        Assert.False(
+            page.HasNextPage);
     }
 
     private static MembershipService

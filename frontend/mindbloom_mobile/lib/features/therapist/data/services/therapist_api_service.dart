@@ -1,5 +1,6 @@
 import 'package:mindbloom_mobile/features/therapist/data/models/create_unavailable_date_request.dart';
 
+import '../../../../core/models/paged_response.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/therapist_details_model.dart';
 import '../models/therapist_filter_request.dart';
@@ -65,41 +66,27 @@ class TherapistApiService {
     return TherapistDashboardModel.fromJson(response as Map<String, dynamic>);
   }
 
-  Future<List<TherapistClientModel>> getTherapistClients({
+  Future<PagedResponse<TherapistClientModel>> getTherapistClients({
     String? search,
+    required int pageNumber,
+    required int pageSize,
   }) async {
     final normalizedSearch = search?.trim() ?? '';
 
-    final path = normalizedSearch.isEmpty
-        ? '/Therapists/clients'
-        : '/Therapists/clients'
-              '?search=${Uri.encodeQueryComponent(normalizedSearch)}';
+    final query = <String, String>{
+      'pageNumber': pageNumber.toString(),
+      'pageSize': pageSize.toString(),
+      if (normalizedSearch.isNotEmpty) 'search': normalizedSearch,
+    };
 
-    final response = await apiClient.get(path);
+    final response = await apiClient.get(
+      Uri(path: '/Therapists/clients', queryParameters: query).toString(),
+    );
 
-    if (response == null) {
-      return [];
-    }
-
-    final dynamic items;
-
-    if (response is Map<String, dynamic>) {
-      items = response['items'] ?? response['data'] ?? [];
-    } else {
-      items = response;
-    }
-
-    if (items is! List) {
-      return [];
-    }
-
-    return items
-        .whereType<Map>()
-        .map(
-          (item) =>
-              TherapistClientModel.fromJson(Map<String, dynamic>.from(item)),
-        )
-        .toList();
+    return PagedResponse.fromJson(
+      response as Map<String, dynamic>,
+      TherapistClientModel.fromJson,
+    );
   }
 
   Future<TherapistClientDetailsModel> getTherapistClientDetails(
@@ -256,24 +243,29 @@ class TherapistApiService {
     await apiClient.post('/Therapists/availability', body: request.toJson());
   }
 
-  Future<List<UnavailableDateModel>> getUnavailableDates(
-    int therapistId,
-  ) async {
+  Future<PagedResponse<UnavailableDateModel>> getUnavailableDates({
+    required int therapistId,
+    required DateTime fromUtc,
+    required DateTime toUtc,
+    int pageNumber = 1,
+    int pageSize = 50,
+  }) async {
     final response = await apiClient.get(
-      '/Therapists/$therapistId/unavailable-dates',
+      Uri(
+        path: '/Therapists/$therapistId/unavailable-dates',
+        queryParameters: {
+          'pageNumber': pageNumber.toString(),
+          'pageSize': pageSize.toString(),
+          'fromUtc': fromUtc.toUtc().toIso8601String(),
+          'toUtc': toUtc.toUtc().toIso8601String(),
+        },
+      ).toString(),
     );
 
-    if (response is! List) {
-      return [];
-    }
-
-    return response
-        .whereType<Map>()
-        .map(
-          (item) =>
-              UnavailableDateModel.fromJson(Map<String, dynamic>.from(item)),
-        )
-        .toList();
+    return PagedResponse.fromJson(
+      response as Map<String, dynamic>,
+      UnavailableDateModel.fromJson,
+    );
   }
 
   Future<void> addUnavailableDate(CreateUnavailableDateRequest request) async {

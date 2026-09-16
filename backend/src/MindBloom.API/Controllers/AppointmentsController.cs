@@ -41,13 +41,24 @@ public class AppointmentsController : ControllerBase
 
     [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     [HttpGet("mine")]
-    public async Task<IActionResult> Mine()
+    public async Task<IActionResult> Mine(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? status = null,
+        [FromQuery] DateTime? fromUtc = null,
+        [FromQuery] DateTime? toUtc = null)
     {
 
 
         var result =
             await _appointmentService
-                .GetMyAppointmentsAsync(GetCurrentUserId());
+                .GetMyAppointmentsAsync(
+                    GetCurrentUserId(),
+                    pageNumber,
+                    pageSize,
+                    status,
+                    fromUtc,
+                    toUtc);
 
         return Ok(result);
     }
@@ -72,13 +83,23 @@ public class AppointmentsController : ControllerBase
     [HttpGet("therapist")]
     [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     public async Task<IActionResult>
-    GetTherapistAppointments()
+    GetTherapistAppointments(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? status = null,
+        [FromQuery] DateTime? fromUtc = null,
+        [FromQuery] DateTime? toUtc = null)
     {
 
         var result =
             await _appointmentService
                 .GetTherapistAppointmentsAsync(
-                    GetCurrentUserId());
+                    GetCurrentUserId(),
+                    pageNumber,
+                    pageSize,
+                    status,
+                    fromUtc,
+                    toUtc);
 
         return Ok(result);
     }

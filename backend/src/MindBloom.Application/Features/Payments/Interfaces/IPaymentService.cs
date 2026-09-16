@@ -1,5 +1,7 @@
 ﻿using MindBloom.Application.Features.Payments.DTOs;
 
+using MindBloom.Application.Common.Models;
+
 namespace MindBloom.Application.Features.Payments.Interfaces;
 
 public interface IPaymentService
@@ -13,9 +15,12 @@ public interface IPaymentService
         int clientUserId,
         ConfirmPaymentDto request);
 
-    Task<List<PaymentHistoryDto>>
+    Task<PagedResponse<PaymentHistoryDto>>
         GetMyPaymentsAsync(
-            int clientUserId);
+            int clientUserId,
+            int pageNumber,
+            int pageSize,
+            int? appointmentId);
 
     Task<PaymentReceiptDto>
         GetReceiptAsync(

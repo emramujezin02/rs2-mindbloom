@@ -4,6 +4,9 @@ using MindBloom.Application.Features.Favorites.DTOs;
 using MindBloom.Application.Features.Favorites.Interfaces;
 using MindBloom.Infrastructure.Persistence.Context;
 
+using MindBloom.Application.Common.Models;
+using MindBloom.Application.Common.Pagination;
+
 namespace MindBloom.Infrastructure.Services;
 
 public class FavoriteService : IFavoriteService
@@ -98,8 +101,12 @@ public class FavoriteService : IFavoriteService
         await _context.SaveChangesAsync();
     }
 
-    public async Task<List<FavoriteResponseDto>>
-        GetMyFavoritesAsync(int clientUserId)
+    public async Task<PagedResponse<FavoriteResponseDto>>
+        GetMyFavoritesAsync(
+            int clientUserId,
+            int pageNumber,
+            int pageSize,
+            int? therapistId)
     {
         var client =
             await _context.Clients
@@ -112,10 +119,30 @@ public class FavoriteService : IFavoriteService
                 "Client not found.");
         }
 
-        return await _context.Favorites
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
+        var query =
+            _context.Favorites
             .Include(x => x.Therapist)
             .ThenInclude(x => x.User)
-            .Where(x => x.ClientId == client.Id)
+            .Where(x =>
+                x.ClientId == client.Id &&
+                (!therapistId.HasValue ||
+                    x.TherapistId == therapistId.Value))
+            .OrderBy(x => x.Therapist.User.FirstName)
+            .ThenBy(x => x.Therapist.User.LastName)
+            .ThenBy(x => x.TherapistId);
+
+        var totalCount =
+            await query.CountAsync();
+
+        var favorites =
+            await query
+            .Skip(pagination.Skip)
+            .Take(pagination.PageSize)
             .Select(x => new FavoriteResponseDto
             {
                 TherapistId =
@@ -130,5 +157,12 @@ public class FavoriteService : IFavoriteService
                     x.Therapist.Specialization
             })
             .ToListAsync();
+
+        return PagedResponse<FavoriteResponseDto>
+            .Create(
+                favorites,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 }

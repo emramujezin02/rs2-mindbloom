@@ -175,12 +175,21 @@ public class TherapistsController : ControllerBase
 
     [AllowAnonymous]
     [HttpGet("{therapistId}/unavailable-dates")]
-    public async Task<IActionResult> GetUnavailableDates(int therapistId)
+    public async Task<IActionResult> GetUnavailableDates(
+        int therapistId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] DateTime? fromUtc = null,
+        [FromQuery] DateTime? toUtc = null)
     {
         var result =
             await _therapistService
                 .GetUnavailableDatesAsync(
-                    therapistId);
+                    therapistId,
+                    pageNumber,
+                    pageSize,
+                    fromUtc,
+                    toUtc);
 
         return Ok(result);
     }
@@ -228,12 +237,16 @@ public class TherapistsController : ControllerBase
     [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
     [HttpGet("{therapistId}/documents")]
     public async Task<IActionResult> GetDocuments(
-        int therapistId)
+        int therapistId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
         var result =
             await _therapistService
                 .GetDocumentsAsync(
-                    therapistId);
+                    therapistId,
+                    pageNumber,
+                    pageSize);
 
         return Ok(result);
     }
@@ -256,13 +269,17 @@ public class TherapistsController : ControllerBase
     [HttpGet("clients")]
     public async Task<IActionResult>
     GetClients(
-        [FromQuery] string? search)
+        [FromQuery] string? search,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
         var result =
             await _therapistService
                 .GetClientsAsync(
                     GetCurrentUserId(),
-                    search);
+                    search,
+                    pageNumber,
+                    pageSize);
 
         return Ok(result);
     }

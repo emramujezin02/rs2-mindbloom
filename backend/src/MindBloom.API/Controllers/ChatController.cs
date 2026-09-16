@@ -123,7 +123,9 @@ await _chatService.GetMessagesAsync(
 
     [HttpGet("conversations")]
     public async Task<IActionResult>
-    GetMyConversations()
+    GetMyConversations(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
         var userId =
             GetCurrentUserId();
@@ -131,7 +133,9 @@ await _chatService.GetMessagesAsync(
         var result =
             await _chatService
                 .GetMyConversationsAsync(
-                    userId);
+                    userId,
+                    pageNumber,
+                    pageSize);
 
         return Ok(result);
     }

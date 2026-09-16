@@ -1,4 +1,5 @@
 import '../../../../core/network/api_client.dart';
+import '../../../../core/models/paged_response.dart';
 import '../models/confirm_membership_payment_request.dart';
 import '../models/membership_model.dart';
 import '../models/membership_payment_intent_response.dart';
@@ -68,12 +69,18 @@ class MembershipApiService {
     return MembershipModel.fromJson(response as Map<String, dynamic>);
   }
 
-  Future<List<MembershipModel>> getMyMemberships() async {
-    final response = await apiClient.get('/Memberships/mine');
+  Future<PagedResponse<MembershipModel>> getMyMemberships({
+    required int pageNumber,
+    required int pageSize,
+  }) async {
+    final response = await apiClient.get(
+      '/Memberships/mine?pageNumber=$pageNumber&pageSize=$pageSize',
+    );
 
-    return (response as List)
-        .map((item) => MembershipModel.fromJson(item as Map<String, dynamic>))
-        .toList();
+    return PagedResponse.fromJson(
+      response as Map<String, dynamic>,
+      MembershipModel.fromJson,
+    );
   }
 
   Future<MembershipReceiptModel> getReceipt(int membershipId) async {

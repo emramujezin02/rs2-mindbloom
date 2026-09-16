@@ -122,7 +122,12 @@ class _ChatListPageState extends State<ChatListPage> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         itemCount:
             _viewModel.conversations.length +
-            (_viewModel.errorMessage != null ? 1 : 0),
+            (_viewModel.errorMessage != null ? 1 : 0) +
+            (_viewModel.isLoadingMore ||
+                    _viewModel.loadMoreErrorMessage != null ||
+                    _viewModel.hasMorePages
+                ? 1
+                : 0),
         separatorBuilder: (context, index) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
           if (_viewModel.errorMessage != null && index == 0) {
@@ -135,6 +140,29 @@ class _ChatListPageState extends State<ChatListPage> {
 
           final conversationIndex =
               index - (_viewModel.errorMessage != null ? 1 : 0);
+
+          if (conversationIndex >= _viewModel.conversations.length) {
+            if (_viewModel.isLoadingMore) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 18),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            if (_viewModel.loadMoreErrorMessage != null) {
+              return AppInlineError(
+                title: 'More conversations could not be loaded',
+                error: _viewModel.loadMoreErrorMessage,
+                onRetry: _viewModel.loadMoreConversations,
+              );
+            }
+
+            return OutlinedButton.icon(
+              onPressed: _viewModel.loadMoreConversations,
+              icon: const Icon(Icons.expand_more),
+              label: const Text('Load more'),
+            );
+          }
 
           final conversation = _viewModel.conversations[conversationIndex];
 

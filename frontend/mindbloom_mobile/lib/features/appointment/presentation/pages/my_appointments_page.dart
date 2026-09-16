@@ -157,7 +157,9 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
               emptyMessage:
                   'There are no upcoming appointments matching the selected filters.',
               hasMore: _viewModel.hasMoreUpcoming,
-              onLoadMore: _viewModel.loadMoreUpcoming,
+              onLoadMore: () {
+                _viewModel.loadMoreUpcoming();
+              },
             ),
 
             const SizedBox(height: 26),
@@ -169,8 +171,26 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
               emptyMessage:
                   'There are no past appointments matching the selected filters.',
               hasMore: _viewModel.hasMorePast,
-              onLoadMore: _viewModel.loadMorePast,
+              onLoadMore: () {
+                _viewModel.loadMorePast();
+              },
             ),
+            if (_viewModel.isLoadingMore)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 18),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_viewModel.loadMoreError != null)
+              _InlineError(message: _viewModel.loadMoreError!)
+            else if (_viewModel.hasMorePages)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                child: OutlinedButton.icon(
+                  onPressed: _viewModel.loadMoreAppointments,
+                  icon: const Icon(Icons.expand_more),
+                  label: const Text('Load more'),
+                ),
+              ),
           ],
         ],
       ),
@@ -223,7 +243,9 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
                   ),
                 ),
               ],
-              onChanged: _viewModel.setStatusFilter,
+              onChanged: (status) {
+                _viewModel.setStatusFilter(status);
+              },
             ),
 
             const SizedBox(height: 12),
@@ -241,7 +263,9 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
             if (_viewModel.hasActiveFilters) ...[
               const SizedBox(height: 8),
               TextButton.icon(
-                onPressed: _viewModel.clearFilters,
+                onPressed: () {
+                  _viewModel.clearFilters();
+                },
                 icon: const Icon(Icons.clear),
                 label: const Text('Clear filters'),
               ),
@@ -266,7 +290,9 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
             ),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: _viewModel.clearFilters,
+              onPressed: () {
+                _viewModel.clearFilters();
+              },
               child: const Text('Clear filters'),
             ),
           ],

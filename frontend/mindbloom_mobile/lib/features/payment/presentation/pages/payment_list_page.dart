@@ -180,6 +180,27 @@ class _PaymentListPageState extends State<PaymentListPage> {
               ),
             );
           }),
+          if (_viewModel.isLoadingMore)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_viewModel.loadMoreError != null)
+            AppInlineError(
+              title: 'More payments could not be loaded',
+              error: _viewModel.loadMoreError,
+              onRetry: _viewModel.loadMorePayments,
+              margin: const EdgeInsets.only(top: 6),
+            )
+          else if (_viewModel.hasMorePages)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: OutlinedButton.icon(
+                onPressed: _viewModel.loadMorePayments,
+                icon: const Icon(Icons.expand_more),
+                label: const Text('Load more'),
+              ),
+            ),
         ],
       ),
     );

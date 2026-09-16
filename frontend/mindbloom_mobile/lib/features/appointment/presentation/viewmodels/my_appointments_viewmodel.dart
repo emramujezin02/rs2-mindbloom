@@ -4,22 +4,26 @@ import '../../data/models/appointment_model.dart';
 import '../../data/repositories/appointment_repository.dart';
 
 class MyAppointmentsViewModel extends ChangeNotifier {
-  static const int pageSize = 5;
+  static const int pageSize = 10;
 
   final AppointmentRepository repository;
 
   MyAppointmentsViewModel({required this.repository});
 
   bool isLoading = false;
+  bool isLoadingMore = false;
   String? error;
+  String? loadMoreError;
 
   List<AppointmentModel> appointments = [];
 
   String? selectedStatus;
   DateTime? selectedDate;
 
-  int _visibleUpcomingCount = pageSize;
-  int _visiblePastCount = pageSize;
+  int pageNumber = 1;
+  int totalPages = 0;
+
+  bool get hasMorePages => pageNumber < totalPages;
 
   Future<void> loadAppointments() async {
     if (isLoading) {
@@ -28,16 +32,25 @@ class MyAppointmentsViewModel extends ChangeNotifier {
 
     isLoading = true;
     error = null;
+    loadMoreError = null;
+    pageNumber = 1;
     notifyListeners();
 
     try {
-      appointments = await repository.getMyAppointments();
+      final response = await repository.getMyAppointments(
+        pageNumber: 1,
+        pageSize: pageSize,
+        status: selectedStatus,
+        fromUtc: _selectedDateStartUtc,
+        toUtc: _selectedDateEndUtc,
+      );
 
+      appointments = response.items;
+      pageNumber = response.pageNumber;
+      totalPages = response.totalPages;
       appointments.sort(
         (first, second) => first.startUtc.compareTo(second.startUtc),
       );
-
-      _resetVisibleCounts();
     } catch (exception) {
       error = _friendlyError(exception);
     } finally {
@@ -46,36 +59,52 @@ class MyAppointmentsViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> loadMoreAppointments() async {
+    if (isLoading || isLoadingMore || !hasMorePages) {
+      return;
+    }
+
+    isLoadingMore = true;
+    loadMoreError = null;
+    notifyListeners();
+
+    try {
+      final response = await repository.getMyAppointments(
+        pageNumber: pageNumber + 1,
+        pageSize: pageSize,
+        status: selectedStatus,
+        fromUtc: _selectedDateStartUtc,
+        toUtc: _selectedDateEndUtc,
+      );
+
+      final existingIds =
+          appointments.map((appointment) => appointment.id).toSet();
+
+      appointments.addAll(
+        response.items.where(
+          (appointment) => !existingIds.contains(appointment.id),
+        ),
+      );
+
+      pageNumber = response.pageNumber;
+      totalPages = response.totalPages;
+      appointments.sort(
+        (first, second) => first.startUtc.compareTo(second.startUtc),
+      );
+    } catch (exception) {
+      loadMoreError = _friendlyError(exception);
+    } finally {
+      isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
   List<String> get statusOptions {
-    final statuses = appointments
-        .map((appointment) => appointment.status.trim())
-        .where((status) => status.isNotEmpty)
-        .toSet()
-        .toList();
-
-    statuses.sort();
-
-    return statuses;
+    return const ['Pending', 'Accepted', 'Rejected', 'Completed', 'Cancelled'];
   }
 
   List<AppointmentModel> get filteredAppointments {
-    return appointments.where((appointment) {
-      if (selectedStatus != null &&
-          appointment.status.trim().toLowerCase() !=
-              selectedStatus!.trim().toLowerCase()) {
-        return false;
-      }
-
-      if (selectedDate != null) {
-        final localStart = appointment.startUtc.toLocal();
-
-        if (!_isSameDate(localStart, selectedDate!)) {
-          return false;
-        }
-      }
-
-      return true;
-    }).toList();
+    return appointments;
   }
 
   List<AppointmentModel> get upcomingAppointments {
@@ -99,19 +128,19 @@ class MyAppointmentsViewModel extends ChangeNotifier {
   }
 
   List<AppointmentModel> get visibleUpcomingAppointments {
-    return upcomingAppointments.take(_visibleUpcomingCount).toList();
+    return upcomingAppointments;
   }
 
   List<AppointmentModel> get visiblePastAppointments {
-    return pastAppointments.take(_visiblePastCount).toList();
+    return pastAppointments;
   }
 
   bool get hasMoreUpcoming {
-    return _visibleUpcomingCount < upcomingAppointments.length;
+    return false;
   }
 
   bool get hasMorePast {
-    return _visiblePastCount < pastAppointments.length;
+    return false;
   }
 
   bool get hasActiveFilters {
@@ -122,47 +151,47 @@ class MyAppointmentsViewModel extends ChangeNotifier {
     return upcomingAppointments.isEmpty && pastAppointments.isEmpty;
   }
 
-  void setStatusFilter(String? status) {
+  Future<void> setStatusFilter(String? status) async {
     selectedStatus = status;
-    _resetVisibleCounts();
-    notifyListeners();
+    await loadAppointments();
   }
 
-  void setDateFilter(DateTime? date) {
+  Future<void> setDateFilter(DateTime? date) async {
     selectedDate = date == null
         ? null
         : DateTime(date.year, date.month, date.day);
 
-    _resetVisibleCounts();
-    notifyListeners();
+    await loadAppointments();
   }
 
-  void clearFilters() {
+  Future<void> clearFilters() async {
     selectedStatus = null;
     selectedDate = null;
-    _resetVisibleCounts();
-    notifyListeners();
+    await loadAppointments();
   }
 
-  void loadMoreUpcoming() {
-    _visibleUpcomingCount += pageSize;
-    notifyListeners();
+  Future<void> loadMoreUpcoming() {
+    return loadMoreAppointments();
   }
 
-  void loadMorePast() {
-    _visiblePastCount += pageSize;
-    notifyListeners();
+  Future<void> loadMorePast() {
+    return loadMoreAppointments();
   }
 
-  void _resetVisibleCounts() {
-    _visibleUpcomingCount = pageSize;
-    _visiblePastCount = pageSize;
+  DateTime? get _selectedDateStartUtc {
+    final date = selectedDate;
+
+    if (date == null) {
+      return null;
+    }
+
+    return DateTime(date.year, date.month, date.day).toUtc();
   }
 
-  bool _isSameDate(DateTime first, DateTime second) {
-    return first.year == second.year &&
-        first.month == second.month &&
-        first.day == second.day;
+  DateTime? get _selectedDateEndUtc {
+    final start = _selectedDateStartUtc;
+
+    return start?.add(const Duration(days: 1));
   }
 
   String _friendlyError(Object exception) {

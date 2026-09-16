@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Common.Models;
+using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Features.Therapists.DTOs;
 using MindBloom.Application.Features.Therapists.Interfaces;
 using MindBloom.Domain.Entities;
@@ -10,7 +11,6 @@ using Microsoft.AspNetCore.Hosting;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.Interfaces;
 using System.Threading;
-using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Features.Security.DTOs;
 using MindBloom.Application.Features.Security.Interfaces;
 using Microsoft.Extensions.Options;
@@ -20,6 +20,8 @@ namespace MindBloom.Infrastructure.Services;
 
 public class TherapistService : ITherapistService
 {
+    private const int MaximumUnavailableDateRangeDays = 370;
+
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _environment;
     private readonly ITherapistClientAccessService _therapistClientAccessService;
@@ -1936,16 +1938,75 @@ public class TherapistService : ITherapistService
     }
 
     public async Task<
-    List<UnavailableDateResponseDto>>
+    PagedResponse<UnavailableDateResponseDto>>
     GetUnavailableDatesAsync(
-        int therapistId)
+        int therapistId,
+        int pageNumber,
+        int pageSize,
+        DateTime? fromUtc,
+        DateTime? toUtc)
     {
-        return await _context
+        var rangeStart =
+            fromUtc?.ToUniversalTime();
+
+        var rangeEnd =
+            toUtc?.ToUniversalTime();
+
+        if (rangeStart.HasValue &&
+            rangeEnd.HasValue &&
+            rangeEnd <= rangeStart)
+        {
+            throw new BusinessException(
+                "Unavailable date range end must be after the start.");
+        }
+
+        if (rangeStart.HasValue &&
+            rangeEnd.HasValue &&
+            rangeEnd.Value - rangeStart.Value >
+            TimeSpan.FromDays(MaximumUnavailableDateRangeDays))
+        {
+            throw new BusinessException(
+                "Unavailable date range cannot exceed 370 days.");
+        }
+
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
+        var query =
+            _context
             .TherapistUnavailableDates
-.Where(x =>
-    x.TherapistId == therapistId &&
-    !x.IsDeleted)
+            .Where(x =>
+                x.TherapistId == therapistId &&
+                !x.IsDeleted);
+
+        if (rangeStart.HasValue)
+        {
+            query =
+                query.Where(x =>
+                    x.EndUtc > rangeStart.Value);
+        }
+
+        if (rangeEnd.HasValue)
+        {
+            query =
+                query.Where(x =>
+                    x.StartUtc < rangeEnd.Value);
+        }
+
+        query =
+            query
             .OrderBy(x => x.StartUtc)
+            .ThenBy(x => x.Id);
+
+        var totalCount =
+            await query.CountAsync();
+
+        var dates =
+            await query
+            .Skip(pagination.Skip)
+            .Take(pagination.PageSize)
             .Select(x =>
                 new UnavailableDateResponseDto
                 {
@@ -1955,6 +2016,13 @@ public class TherapistService : ITherapistService
                     Reason = x.Reason
                 })
             .ToListAsync();
+
+        return PagedResponse<UnavailableDateResponseDto>
+            .Create(
+                dates,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task DeleteUnavailableDateAsync(
@@ -2083,11 +2151,19 @@ public class TherapistService : ITherapistService
     }
 
     public async Task<
-    List<TherapistDocumentResponseDto>>
+    PagedResponse<TherapistDocumentResponseDto>>
     GetDocumentsAsync(
-        int therapistId)
+        int therapistId,
+        int pageNumber,
+        int pageSize)
     {
-        return await _context
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
+        var query =
+            _context
             .TherapistDocuments
             .AsNoTracking()
             .Where(x =>
@@ -2096,6 +2172,16 @@ public class TherapistService : ITherapistService
                 !x.IsDeleted)
             .OrderByDescending(x =>
                 x.CreatedAtUtc)
+            .ThenByDescending(x =>
+                x.Id);
+
+        var totalCount =
+            await query.CountAsync();
+
+        var documents =
+            await query
+            .Skip(pagination.Skip)
+            .Take(pagination.PageSize)
             .Select(x =>
                 new TherapistDocumentResponseDto
                 {
@@ -2115,6 +2201,13 @@ public class TherapistService : ITherapistService
                         x.IsApproved
                 })
             .ToListAsync();
+
+        return PagedResponse<TherapistDocumentResponseDto>
+            .Create(
+                documents,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<
@@ -2355,10 +2448,12 @@ public class TherapistService : ITherapistService
         await _context.SaveChangesAsync();
     }
 
-    public async Task<List<TherapistClientListDto>>
+    public async Task<PagedResponse<TherapistClientListDto>>
     GetClientsAsync(
         int therapistUserId,
-        string? search)
+        string? search,
+        int pageNumber,
+        int pageSize)
     {
         var therapist =
             await _context.Therapists
@@ -2420,8 +2515,13 @@ public class TherapistService : ITherapistService
                     .Contains(normalizedSearch));
         }
 
-        var clients =
-            await appointments
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
+        var clientQuery =
+            appointments
                 .GroupBy(x => new
                 {
                     ClientId =
@@ -2507,9 +2607,24 @@ public class TherapistService : ITherapistService
                     x.LastAppointmentDate)
                 .ThenBy(x =>
                     x.FullName)
+                .ThenBy(x =>
+                    x.ClientId);
+
+        var totalCount =
+            await clientQuery.CountAsync();
+
+        var clients =
+            await clientQuery
+                .Skip(pagination.Skip)
+                .Take(pagination.PageSize)
                 .ToListAsync();
 
-        return clients;
+        return PagedResponse<TherapistClientListDto>
+            .Create(
+                clients,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<TherapistClientDetailsDto>

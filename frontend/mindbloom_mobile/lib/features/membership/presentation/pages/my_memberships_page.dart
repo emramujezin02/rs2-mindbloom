@@ -167,6 +167,27 @@ class _MyMembershipsPageState extends State<MyMembershipsPage> {
                 ),
               ),
             ),
+          if (_viewModel.isLoadingMore)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_viewModel.loadMoreError != null)
+            AppInlineError(
+              title: 'More memberships could not be loaded',
+              error: _viewModel.loadMoreError,
+              onRetry: _viewModel.loadMoreMemberships,
+              margin: const EdgeInsets.only(top: 6),
+            )
+          else if (_viewModel.hasMorePages)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: OutlinedButton.icon(
+                onPressed: _viewModel.loadMoreMemberships,
+                icon: const Icon(Icons.expand_more),
+                label: const Text('Load more'),
+              ),
+            ),
         ],
       ),
     );

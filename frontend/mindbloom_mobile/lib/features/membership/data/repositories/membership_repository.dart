@@ -1,4 +1,5 @@
 import '../models/confirm_membership_payment_request.dart';
+import '../../../../core/models/paged_response.dart';
 import '../models/membership_model.dart';
 import '../models/membership_payment_intent_response.dart';
 import '../models/membership_plan_model.dart';
@@ -66,8 +67,14 @@ class MembershipRepository {
     }
   }
 
-  Future<List<MembershipModel>> getMyMemberships() {
-    return apiService.getMyMemberships();
+  Future<PagedResponse<MembershipModel>> getMyMemberships({
+    required int pageNumber,
+    required int pageSize,
+  }) {
+    return apiService.getMyMemberships(
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+    );
   }
 
   Future<MembershipReceiptModel> getReceipt(int membershipId) {

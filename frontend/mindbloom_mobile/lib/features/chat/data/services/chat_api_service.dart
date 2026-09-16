@@ -1,4 +1,5 @@
 import '../../../../core/network/api_client.dart';
+import '../../../../core/models/paged_response.dart';
 import '../models/chat_message_model.dart';
 import '../models/chat_message_paged_response.dart';
 import '../models/conversation_details_model.dart';
@@ -10,13 +11,18 @@ class ChatApiService {
 
   ChatApiService({required this.apiClient});
 
-  Future<List<ConversationModel>> getMyConversations() async {
-    final response = await apiClient.get('/Chat/conversations');
+  Future<PagedResponse<ConversationModel>> getMyConversations({
+    required int pageNumber,
+    required int pageSize,
+  }) async {
+    final response = await apiClient.get(
+      '/Chat/conversations?pageNumber=$pageNumber&pageSize=$pageSize',
+    );
 
-    return (response as List)
-        .whereType<Map<String, dynamic>>()
-        .map(ConversationModel.fromJson)
-        .toList();
+    return PagedResponse.fromJson(
+      response as Map<String, dynamic>,
+      ConversationModel.fromJson,
+    );
   }
 
   Future<ConversationDetailsModel> getOrCreateConversation(

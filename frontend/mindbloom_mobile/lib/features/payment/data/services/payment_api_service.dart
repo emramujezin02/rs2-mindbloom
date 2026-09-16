@@ -1,4 +1,5 @@
 import '../../../../core/network/api_client.dart';
+import '../../../../core/models/paged_response.dart';
 import '../models/confirm_payment_request.dart';
 import '../models/create_payment_intent_request.dart';
 import '../models/payment_intent_response.dart';
@@ -11,12 +12,25 @@ class PaymentApiService {
 
   PaymentApiService({required this.apiClient});
 
-  Future<List<PaymentModel>> getMyPayments() async {
-    final response = await apiClient.get('/Payments/mine');
+  Future<PagedResponse<PaymentModel>> getMyPayments({
+    required int pageNumber,
+    required int pageSize,
+    int? appointmentId,
+  }) async {
+    final query = <String, String>{
+      'pageNumber': pageNumber.toString(),
+      'pageSize': pageSize.toString(),
+      if (appointmentId != null) 'appointmentId': appointmentId.toString(),
+    };
 
-    return (response as List)
-        .map((item) => PaymentModel.fromJson(item as Map<String, dynamic>))
-        .toList();
+    final response = await apiClient.get(
+      Uri(path: '/Payments/mine', queryParameters: query).toString(),
+    );
+
+    return PagedResponse.fromJson(
+      response as Map<String, dynamic>,
+      PaymentModel.fromJson,
+    );
   }
 
   Future<PaymentIntentResponse> createPaymentIntent(

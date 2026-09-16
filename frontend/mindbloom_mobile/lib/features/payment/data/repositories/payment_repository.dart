@@ -1,4 +1,5 @@
 import '../models/confirm_payment_request.dart';
+import '../../../../core/models/paged_response.dart';
 import '../models/create_payment_intent_request.dart';
 import '../models/payment_intent_response.dart';
 import '../models/payment_model.dart';
@@ -12,8 +13,14 @@ class PaymentRepository {
 
   PaymentRepository({required this.apiService});
 
-  Future<List<PaymentModel>> getMyPayments() {
-    return apiService.getMyPayments();
+  Future<PagedResponse<PaymentModel>> getMyPayments({
+    required int pageNumber,
+    required int pageSize,
+  }) {
+    return apiService.getMyPayments(
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+    );
   }
 
   Future<PaymentIntentResponse> createPaymentIntent(int appointmentId) async {
@@ -47,9 +54,13 @@ class PaymentRepository {
   }
 
   Future<PaymentModel?> getPaymentForAppointment(int appointmentId) async {
-    final payments = await apiService.getMyPayments();
+    final payments = await apiService.getMyPayments(
+      pageNumber: 1,
+      pageSize: 1,
+      appointmentId: appointmentId,
+    );
 
-    for (final payment in payments) {
+    for (final payment in payments.items) {
       if (payment.appointmentId == appointmentId) {
         return payment;
       }

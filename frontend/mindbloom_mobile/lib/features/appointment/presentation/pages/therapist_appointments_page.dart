@@ -311,12 +311,22 @@ class _TherapistAppointmentsPageState extends State<TherapistAppointmentsPage> {
                   selectedDateFilter: viewModel.selectedDateFilter,
                   selectedDate: viewModel.selectedDate,
                   hasActiveFilters: viewModel.hasActiveFilters,
-                  onStatusSelected: viewModel.selectStatusFilter,
-                  onAllDatesSelected: viewModel.selectAllDates,
-                  onTodaySelected: viewModel.selectToday,
-                  onThisWeekSelected: viewModel.selectThisWeek,
+                  onStatusSelected: (status) {
+                    viewModel.selectStatusFilter(status);
+                  },
+                  onAllDatesSelected: () {
+                    viewModel.selectAllDates();
+                  },
+                  onTodaySelected: () {
+                    viewModel.selectToday();
+                  },
+                  onThisWeekSelected: () {
+                    viewModel.selectThisWeek();
+                  },
                   onCustomDateSelected: _selectDate,
-                  onClearFilters: viewModel.clearFilters,
+                  onClearFilters: () {
+                    viewModel.clearFilters();
+                  },
                 ),
                 const SizedBox(height: 20),
                 const _SectionHeader(
@@ -367,6 +377,28 @@ class _TherapistAppointmentsPageState extends State<TherapistAppointmentsPage> {
                       ),
                     );
                   }),
+                if (viewModel.isLoadingMore)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (viewModel.loadMoreErrorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: _ErrorState(
+                      message: viewModel.loadMoreErrorMessage!,
+                      onRetry: viewModel.loadMoreAppointments,
+                    ),
+                  )
+                else if (viewModel.hasMorePages)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    child: OutlinedButton.icon(
+                      onPressed: viewModel.loadMoreAppointments,
+                      icon: const Icon(Icons.expand_more),
+                      label: const Text('Load more'),
+                    ),
+                  ),
               ],
             ),
           ),

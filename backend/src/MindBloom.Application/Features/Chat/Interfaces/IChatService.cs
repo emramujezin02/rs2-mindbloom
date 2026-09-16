@@ -30,7 +30,9 @@ public interface IChatService
         int currentUserId,
         int conversationId);
 
-    Task<List<ConversationListItemDto>>
+    Task<PagedResponse<ConversationListItemDto>>
         GetMyConversationsAsync(
-            int currentUserId);
+            int currentUserId,
+            int pageNumber,
+            int pageSize);
 }

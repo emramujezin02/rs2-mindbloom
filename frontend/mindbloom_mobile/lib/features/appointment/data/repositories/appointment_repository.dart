@@ -1,4 +1,5 @@
 import '../../../therapist/data/models/therapist_availability_model.dart';
+import '../../../../core/models/paged_response.dart';
 import '../models/appointment_create_request.dart';
 import '../models/appointment_model.dart';
 import '../models/cancel_appointment_request.dart';
@@ -37,12 +38,36 @@ class AppointmentRepository {
     }
   }
 
-  Future<List<AppointmentModel>> getMyAppointments() {
-    return apiService.getMyAppointments();
+  Future<PagedResponse<AppointmentModel>> getMyAppointments({
+    required int pageNumber,
+    required int pageSize,
+    String? status,
+    DateTime? fromUtc,
+    DateTime? toUtc,
+  }) {
+    return apiService.getMyAppointments(
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+      status: status,
+      fromUtc: fromUtc,
+      toUtc: toUtc,
+    );
   }
 
-  Future<List<AppointmentModel>> getTherapistAppointments() {
-    return apiService.getTherapistAppointments();
+  Future<PagedResponse<AppointmentModel>> getTherapistAppointments({
+    required int pageNumber,
+    required int pageSize,
+    String? status,
+    DateTime? fromUtc,
+    DateTime? toUtc,
+  }) {
+    return apiService.getTherapistAppointments(
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+      status: status,
+      fromUtc: fromUtc,
+      toUtc: toUtc,
+    );
   }
 
   Future<void> updateTherapistAppointmentStatus({
@@ -71,10 +96,16 @@ class AppointmentRepository {
     return apiService.getTherapistAvailabilities(therapistId);
   }
 
-  Future<List<UnavailableDateModel>> getTherapistUnavailableDates(
-    int therapistId,
-  ) {
-    return apiService.getTherapistUnavailableDates(therapistId);
+  Future<PagedResponse<UnavailableDateModel>> getTherapistUnavailableDates({
+    required int therapistId,
+    required DateTime fromUtc,
+    required DateTime toUtc,
+  }) {
+    return apiService.getTherapistUnavailableDates(
+      therapistId: therapistId,
+      fromUtc: fromUtc,
+      toUtc: toUtc,
+    );
   }
 
   Future<List<OccupiedSlotModel>> getOccupiedSlots({

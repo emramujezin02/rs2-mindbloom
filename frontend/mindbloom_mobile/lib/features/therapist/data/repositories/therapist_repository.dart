@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import '../../../../core/models/paged_response.dart';
 import 'package:mindbloom_mobile/features/therapist/data/models/create_unavailable_date_request.dart';
 
 import '../models/create_therapist_availability_request.dart';
@@ -42,8 +43,16 @@ class TherapistRepository {
     return therapistApiService.getDashboard();
   }
 
-  Future<List<TherapistClientModel>> getTherapistClients({String? search}) {
-    return therapistApiService.getTherapistClients(search: search);
+  Future<PagedResponse<TherapistClientModel>> getTherapistClients({
+    String? search,
+    required int pageNumber,
+    required int pageSize,
+  }) {
+    return therapistApiService.getTherapistClients(
+      search: search,
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+    );
   }
 
   Future<TherapistClientDetailsModel> getTherapistClientDetails(int clientId) {
@@ -100,8 +109,16 @@ class TherapistRepository {
     return therapistApiService.getOwnAvailabilities(therapistId);
   }
 
-  Future<List<UnavailableDateModel>> getUnavailableDates(int therapistId) {
-    return therapistApiService.getUnavailableDates(therapistId);
+  Future<PagedResponse<UnavailableDateModel>> getUnavailableDates({
+    required int therapistId,
+    required DateTime fromUtc,
+    required DateTime toUtc,
+  }) {
+    return therapistApiService.getUnavailableDates(
+      therapistId: therapistId,
+      fromUtc: fromUtc,
+      toUtc: toUtc,
+    );
   }
 
   Future<void> addUnavailableDate(CreateUnavailableDateRequest request) {

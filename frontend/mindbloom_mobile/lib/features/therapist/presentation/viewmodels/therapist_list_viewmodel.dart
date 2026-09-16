@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/widgets/app_error_message.dart';
-import '../../../favorite/data/models/favorite_model.dart';
 import '../../../favorite/data/repositories/favorite_repository.dart';
 import '../../data/models/therapist_filter_request.dart';
 import '../../data/models/therapist_model.dart';
@@ -155,6 +154,8 @@ class TherapistListViewModel extends ChangeNotifier {
         pageSize: pageSize,
       );
 
+      await _tryLoadFavoriteIds();
+
       loadMoreErrorMessage = null;
     } catch (error) {
       loadMoreErrorMessage = AppErrorMessage.from(
@@ -197,11 +198,24 @@ class TherapistListViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadFavoriteIdsWithoutNotification() async {
-    final favorites = await favoriteRepository.getMyFavorites();
+    final loadedTherapistIds =
+        therapists.map((therapist) => therapist.id).toSet();
+
+    final favoriteChecks = await Future.wait(
+      loadedTherapistIds.map((therapistId) async {
+        final isFavorite = await favoriteRepository.isFavorite(therapistId);
+
+        return (therapistId, isFavorite);
+      }),
+    );
 
     favoriteTherapistIds
       ..clear()
-      ..addAll(favorites.map((FavoriteModel favorite) => favorite.therapistId));
+      ..addAll(
+        favoriteChecks
+            .where((check) => check.$2)
+            .map((check) => check.$1),
+      );
   }
 
   Future<void> _tryLoadFavoriteIds() async {

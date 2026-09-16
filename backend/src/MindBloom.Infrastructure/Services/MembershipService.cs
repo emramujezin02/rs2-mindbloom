@@ -15,6 +15,9 @@ using MindBloom.Messaging.Contracts.Memberships;
 using MindBloom.Messaging.Contracts.Payments;
 using MindBloom.Messaging.Contracts.Notifications;
 
+using MindBloom.Application.Common.Models;
+using MindBloom.Application.Common.Pagination;
+
 namespace MindBloom.Infrastructure.Services;
 
 public class MembershipService : IMembershipService
@@ -727,9 +730,11 @@ public class MembershipService : IMembershipService
             membershipPayment);
     }
 
-    public async Task<List<MembershipResponseDto>>
+    public async Task<PagedResponse<MembershipResponseDto>>
     GetMyMembershipsAsync(
-        int clientUserId)
+        int clientUserId,
+        int pageNumber,
+        int pageSize)
     {
         var client =
             await _context.Clients
@@ -746,17 +751,21 @@ public class MembershipService : IMembershipService
         var nowUtc =
             DateTime.UtcNow;
 
-        var memberships =
+        var membershipsToCheck =
             await _context.ClientMemberships
                 .Include(x => x.Therapist)
                     .ThenInclude(x => x.User)
-                .Include(x => x.Payment)
                 .Where(x =>
                     x.ClientId == client.Id &&
-                    !x.IsDeleted)
-                .OrderByDescending(x =>
-                    x.PurchasedAtUtc ??
-                    x.CreatedAtUtc)
+                    !x.IsDeleted &&
+                    x.IsActive &&
+                    (
+                        (
+                            x.ExpiresAtUtc != null &&
+                            x.ExpiresAtUtc <= nowUtc
+                        ) ||
+                        x.RemainingSessions <= 0
+                    ))
                 .ToListAsync();
 
         var stateChanged =
@@ -765,7 +774,7 @@ public class MembershipService : IMembershipService
         var expiredMemberships =
             new List<ClientMembership>();
 
-        foreach (var membership in memberships)
+        foreach (var membership in membershipsToCheck)
         {
             var isExpired =
                 membership.ExpiresAtUtc != null &&
@@ -848,7 +857,37 @@ public class MembershipService : IMembershipService
             }
         }
 
-        return memberships
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
+        var query =
+            _context.ClientMemberships
+                .AsNoTracking()
+                .Include(x => x.Therapist)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.Payment)
+                .Where(x =>
+                    x.ClientId == client.Id &&
+                    !x.IsDeleted)
+                .OrderByDescending(x =>
+                    x.PurchasedAtUtc ??
+                    x.CreatedAtUtc)
+                .ThenByDescending(x =>
+                    x.Id);
+
+        var totalCount =
+            await query.CountAsync();
+
+        var memberships =
+            await query
+                .Skip(pagination.Skip)
+                .Take(pagination.PageSize)
+                .ToListAsync();
+
+        var items =
+            memberships
             .Select(x =>
             {
                 var isExpired =
@@ -917,6 +956,13 @@ public class MembershipService : IMembershipService
                 };
             })
             .ToList();
+
+        return PagedResponse<MembershipResponseDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<MembershipReceiptDto>

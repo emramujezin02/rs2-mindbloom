@@ -1,6 +1,8 @@
 ﻿using MindBloom.Application.Features.Appointments.DTOs;
 using MindBloom.Application.Features.Therapists.DTOs;
 
+using MindBloom.Application.Common.Models;
+
 namespace MindBloom.Application.Features.Appointments.Interfaces;
 
 public interface IAppointmentService
@@ -9,15 +11,25 @@ public interface IAppointmentService
         int clientUserId,
         CreateAppointmentDto request);
 
-    Task<List<AppointmentResponseDto>> GetMyAppointmentsAsync(
-        int userId);
+    Task<PagedResponse<AppointmentResponseDto>> GetMyAppointmentsAsync(
+        int userId,
+        int pageNumber,
+        int pageSize,
+        string? status,
+        DateTime? fromUtc,
+        DateTime? toUtc);
 
     Task<AppointmentResponseDto> GetClientAppointmentDetailsAsync(
         int clientUserId,
         int appointmentId);
 
-    Task<List<AppointmentResponseDto>> GetTherapistAppointmentsAsync(
-        int therapistUserId);
+    Task<PagedResponse<AppointmentResponseDto>> GetTherapistAppointmentsAsync(
+        int therapistUserId,
+        int pageNumber,
+        int pageSize,
+        string? status,
+        DateTime? fromUtc,
+        DateTime? toUtc);
 
     Task UpdateStatusAsync(
         int therapistUserId,

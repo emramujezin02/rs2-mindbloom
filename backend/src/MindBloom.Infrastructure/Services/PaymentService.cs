@@ -12,6 +12,9 @@ using MindBloom.Application.Common.BusinessRules;
 using MindBloom.Messaging.Contracts.Common;
 using MindBloom.Messaging.Contracts.Payments;
 
+using MindBloom.Application.Common.Models;
+using MindBloom.Application.Common.Pagination;
+
 namespace MindBloom.Infrastructure.Services;
 
 public class PaymentService : IPaymentService
@@ -606,9 +609,12 @@ public class PaymentService : IPaymentService
                 NotificationActionType.Payment);
     }
 
-    public async Task<List<PaymentHistoryDto>>
+    public async Task<PagedResponse<PaymentHistoryDto>>
     GetMyPaymentsAsync(
-        int clientUserId)
+        int clientUserId,
+        int pageNumber,
+        int pageSize,
+        int? appointmentId)
     {
         var client =
             await _context.Clients
@@ -622,8 +628,16 @@ public class PaymentService : IPaymentService
                 "Client not found.");
         }
 
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
+        var currency =
+            PaymentCurrency.ToUpperInvariant();
+
         var appointmentPayments =
-            await _context.Payments
+            _context.Payments
                 .AsNoTracking()
                 .Include(x => x.Appointment)
                     .ThenInclude(x => x.Therapist)
@@ -631,7 +645,9 @@ public class PaymentService : IPaymentService
                 .Where(x =>
                     x.Appointment.ClientId ==
                         client.Id &&
-                    !x.IsDeleted)
+                    !x.IsDeleted &&
+                    (!appointmentId.HasValue ||
+                        x.AppointmentId == appointmentId.Value))
                 .Select(x =>
                     new PaymentHistoryDto
                     {
@@ -651,8 +667,7 @@ public class PaymentService : IPaymentService
                             x.Amount,
 
                         Currency =
-                            PaymentCurrency
-                                .ToUpperInvariant(),
+                            currency,
 
                         Purpose =
                             "Therapy appointment with "
@@ -689,11 +704,10 @@ public class PaymentService : IPaymentService
 
                         RefundFailureReason =
                             x.RefundFailureReason
-                    })
-                .ToListAsync();
+                    });
 
         var membershipPayments =
-            await _context.MembershipPayments
+            _context.MembershipPayments
                 .AsNoTracking()
                 .Include(x =>
                     x.ClientMembership)
@@ -705,7 +719,8 @@ public class PaymentService : IPaymentService
                     x.ClientMembership.ClientId ==
                         client.Id &&
                     !x.IsDeleted &&
-                    !x.ClientMembership.IsDeleted)
+                    !x.ClientMembership.IsDeleted &&
+                    !appointmentId.HasValue)
                 .Select(x =>
                     new PaymentHistoryDto
                     {
@@ -765,15 +780,34 @@ public class PaymentService : IPaymentService
 
                         RefundFailureReason =
                             null
-                    })
-                .ToListAsync();
+                    });
 
-        return appointmentPayments
+        var query =
+            appointmentPayments
             .Concat(membershipPayments)
             .OrderByDescending(x =>
                 x.PaidAtUtc ??
                 x.CreatedAtUtc)
-            .ToList();
+            .ThenBy(x =>
+                x.PaymentType)
+            .ThenByDescending(x =>
+                x.Id);
+
+        var totalCount =
+            await query.CountAsync();
+
+        var payments =
+            await query
+                .Skip(pagination.Skip)
+                .Take(pagination.PageSize)
+                .ToListAsync();
+
+        return PagedResponse<PaymentHistoryDto>
+            .Create(
+                payments,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<PaymentReceiptDto>

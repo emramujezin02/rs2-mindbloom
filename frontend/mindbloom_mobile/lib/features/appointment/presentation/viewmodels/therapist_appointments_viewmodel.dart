@@ -7,6 +7,8 @@ import '../../data/repositories/appointment_repository.dart';
 enum TherapistAppointmentDateFilter { all, today, thisWeek, custom }
 
 class TherapistAppointmentsViewModel extends ChangeNotifier {
+  static const int pageSize = 10;
+
   final AppointmentRepository repository;
 
   TherapistAppointmentsViewModel({required this.repository});
@@ -14,11 +16,13 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
   final List<AppointmentModel> _appointments = [];
 
   bool isLoading = false;
+  bool isLoadingMore = false;
   bool isUpdatingStatus = false;
 
   int? updatingAppointmentId;
 
   String? errorMessage;
+  String? loadMoreErrorMessage;
 
   TherapistAppointmentStatus? selectedStatusFilter;
 
@@ -27,11 +31,13 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
 
   DateTime? selectedDate;
 
+  int pageNumber = 1;
+  int totalPages = 0;
+
+  bool get hasMorePages => pageNumber < totalPages;
+
   List<AppointmentModel> get appointments {
-    final filteredAppointments = _appointments.where((appointment) {
-      return _matchesStatusFilter(appointment) &&
-          _matchesDateFilter(appointment);
-    }).toList();
+    final filteredAppointments = _appointments.toList();
 
     filteredAppointments.sort((first, second) {
       return second.startUtc.compareTo(first.startUtc);
@@ -111,44 +117,44 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
     }
   }
 
-  void selectStatusFilter(TherapistAppointmentStatus? filter) {
+  Future<void> selectStatusFilter(TherapistAppointmentStatus? filter) async {
     if (selectedStatusFilter == filter) {
       return;
     }
 
     selectedStatusFilter = filter;
-    notifyListeners();
+    await loadAppointments();
   }
 
-  void selectAllDates() {
+  Future<void> selectAllDates() async {
     selectedDateFilter = TherapistAppointmentDateFilter.all;
     selectedDate = null;
-    notifyListeners();
+    await loadAppointments();
   }
 
-  void selectToday() {
+  Future<void> selectToday() async {
     selectedDateFilter = TherapistAppointmentDateFilter.today;
     selectedDate = null;
-    notifyListeners();
+    await loadAppointments();
   }
 
-  void selectThisWeek() {
+  Future<void> selectThisWeek() async {
     selectedDateFilter = TherapistAppointmentDateFilter.thisWeek;
     selectedDate = null;
-    notifyListeners();
+    await loadAppointments();
   }
 
-  void selectCustomDate(DateTime date) {
+  Future<void> selectCustomDate(DateTime date) async {
     selectedDateFilter = TherapistAppointmentDateFilter.custom;
     selectedDate = DateTime(date.year, date.month, date.day);
-    notifyListeners();
+    await loadAppointments();
   }
 
-  void clearFilters() {
+  Future<void> clearFilters() async {
     selectedStatusFilter = null;
     selectedDateFilter = TherapistAppointmentDateFilter.all;
     selectedDate = null;
-    notifyListeners();
+    await loadAppointments();
   }
 
   void clearError() {
@@ -157,62 +163,91 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
   }
 
   Future<void> _reloadAppointments() async {
-    final result = await repository.getTherapistAppointments();
+    loadMoreErrorMessage = null;
+    pageNumber = 1;
+
+    final result = await repository.getTherapistAppointments(
+      pageNumber: 1,
+      pageSize: pageSize,
+      status: selectedStatusFilter?.label,
+      fromUtc: _dateRange?.$1,
+      toUtc: _dateRange?.$2,
+    );
 
     _appointments
       ..clear()
-      ..addAll(result);
+      ..addAll(result.items);
+
+    pageNumber = result.pageNumber;
+    totalPages = result.totalPages;
   }
 
-  bool _matchesStatusFilter(AppointmentModel appointment) {
-    final filter = selectedStatusFilter;
-
-    if (filter == null) {
-      return true;
+  Future<void> loadMoreAppointments() async {
+    if (isLoading || isLoadingMore || !hasMorePages) {
+      return;
     }
 
-    return appointment.status.trim().toLowerCase() ==
-        filter.label.toLowerCase();
+    isLoadingMore = true;
+    loadMoreErrorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await repository.getTherapistAppointments(
+        pageNumber: pageNumber + 1,
+        pageSize: pageSize,
+        status: selectedStatusFilter?.label,
+        fromUtc: _dateRange?.$1,
+        toUtc: _dateRange?.$2,
+      );
+
+      final existingIds =
+          _appointments.map((appointment) => appointment.id).toSet();
+
+      _appointments.addAll(
+        result.items.where(
+          (appointment) => !existingIds.contains(appointment.id),
+        ),
+      );
+
+      pageNumber = result.pageNumber;
+      totalPages = result.totalPages;
+    } catch (error) {
+      loadMoreErrorMessage = _cleanError(error);
+    } finally {
+      isLoadingMore = false;
+      notifyListeners();
+    }
   }
 
-  bool _matchesDateFilter(AppointmentModel appointment) {
-    final appointmentDate = appointment.startUtc.toLocal();
-
-    final normalizedAppointmentDate = DateTime(
-      appointmentDate.year,
-      appointmentDate.month,
-      appointmentDate.day,
-    );
-
+  (DateTime, DateTime)? get _dateRange {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
     switch (selectedDateFilter) {
       case TherapistAppointmentDateFilter.all:
-        return true;
+        return null;
 
       case TherapistAppointmentDateFilter.today:
-        return normalizedAppointmentDate == today;
+        final start = today.toUtc();
+        return (start, start.add(const Duration(days: 1)));
 
       case TherapistAppointmentDateFilter.thisWeek:
         final startOfWeek = today.subtract(
           Duration(days: today.weekday - DateTime.monday),
         );
 
-        final endOfWeek = startOfWeek.add(const Duration(days: 7));
-
-        return !normalizedAppointmentDate.isBefore(startOfWeek) &&
-            normalizedAppointmentDate.isBefore(endOfWeek);
+        final start = startOfWeek.toUtc();
+        return (start, start.add(const Duration(days: 7)));
 
       case TherapistAppointmentDateFilter.custom:
         final date = selectedDate;
 
         if (date == null) {
-          return true;
+          return null;
         }
 
-        return normalizedAppointmentDate ==
-            DateTime(date.year, date.month, date.day);
+        final start = DateTime(date.year, date.month, date.day).toUtc();
+        return (start, start.add(const Duration(days: 1)));
     }
   }
 

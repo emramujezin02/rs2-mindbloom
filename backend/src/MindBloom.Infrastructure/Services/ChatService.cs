@@ -33,12 +33,19 @@ public sealed class ChatService : IChatService
             integrationEventPublisher;
     }
 
-    public async Task<List<ConversationListItemDto>>
+    public async Task<PagedResponse<ConversationListItemDto>>
     GetMyConversationsAsync(
-        int currentUserId)
+        int currentUserId,
+        int pageNumber,
+        int pageSize)
     {
-        var conversations =
-            await _context.Conversations
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
+        var baseQuery =
+            _context.Conversations
                 .AsNoTracking()
                 .Where(x =>
                     !x.IsDeleted &&
@@ -47,7 +54,13 @@ public sealed class ChatService : IChatService
                             participant.UserId ==
                                 currentUserId &&
                             participant.IsActive &&
-                            !participant.IsDeleted))
+                            !participant.IsDeleted));
+
+        var totalCount =
+            await baseQuery.CountAsync();
+
+        var conversations =
+            await baseQuery
                 .Select(x =>
                     new
                     {
@@ -137,9 +150,14 @@ public sealed class ChatService : IChatService
                     x.LastMessage != null
                         ? x.LastMessage.SentAtUtc
                         : x.Conversation.CreatedAtUtc)
+                .ThenByDescending(x =>
+                    x.Conversation.Id)
+                .Skip(pagination.Skip)
+                .Take(pagination.PageSize)
                 .ToListAsync();
 
-        return conversations
+        var items =
+            conversations
             .Select(x =>
                 new ConversationListItemDto
                 {
@@ -169,6 +187,13 @@ public sealed class ChatService : IChatService
                         x.Conversation.IsClosed
                 })
             .ToList();
+
+        return PagedResponse<ConversationListItemDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
     public async Task<ConversationResponseDto>

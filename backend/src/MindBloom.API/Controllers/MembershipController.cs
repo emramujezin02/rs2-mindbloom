@@ -84,7 +84,9 @@ public class MembershipsController : ControllerBase
     [HttpGet("mine")]
     [Authorize(Policy = AuthorizationPolicyConstants.ClientOnly)]
     public async Task<IActionResult>
-        GetMyMemberships()
+        GetMyMemberships(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
     {
         var userId =
             GetAuthenticatedUserId();
@@ -92,7 +94,9 @@ public class MembershipsController : ControllerBase
         var result =
             await _membershipService
                 .GetMyMembershipsAsync(
-                    userId);
+                    userId,
+                    pageNumber,
+                    pageSize);
 
         return Ok(result);
     }

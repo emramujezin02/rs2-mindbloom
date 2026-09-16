@@ -1,5 +1,7 @@
 ﻿using MindBloom.Application.Features.Favorites.DTOs;
 
+using MindBloom.Application.Common.Models;
+
 namespace MindBloom.Application.Features.Favorites.Interfaces;
 
 public interface IFavoriteService
@@ -12,6 +14,10 @@ public interface IFavoriteService
         int clientUserId,
         int therapistId);
 
-    Task<List<FavoriteResponseDto>>
-        GetMyFavoritesAsync(int clientUserId);
+    Task<PagedResponse<FavoriteResponseDto>>
+        GetMyFavoritesAsync(
+            int clientUserId,
+            int pageNumber,
+            int pageSize,
+            int? therapistId);
 }

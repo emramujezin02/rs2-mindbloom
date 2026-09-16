@@ -11,18 +11,27 @@ import '../../data/models/use_membership_request.dart';
 import '../../data/repositories/membership_repository.dart';
 
 class MembershipViewModel extends ChangeNotifier {
+  static const int pageSize = 10;
+
   final MembershipRepository repository;
 
   MembershipViewModel({required this.repository});
 
   bool isLoading = false;
+  bool isLoadingMore = false;
   bool isPurchasing = false;
   bool isUsingMembership = false;
 
   String? error;
+  String? loadMoreError;
 
   List<MembershipModel> memberships = [];
   List<MembershipPlanModel> plans = [];
+
+  int pageNumber = 1;
+  int totalPages = 0;
+
+  bool get hasMorePages => pageNumber < totalPages;
 
   List<MembershipModel> get activeMemberships {
     return memberships
@@ -53,17 +62,58 @@ class MembershipViewModel extends ChangeNotifier {
 
     isLoading = true;
     error = null;
+    loadMoreError = null;
+    pageNumber = 1;
     notifyListeners();
 
     try {
-      final loadedMemberships = await repository.getMyMemberships();
+      final response = await repository.getMyMemberships(
+        pageNumber: 1,
+        pageSize: pageSize,
+      );
 
-      memberships = loadedMemberships;
+      memberships = response.items;
+      pageNumber = response.pageNumber;
+      totalPages = response.totalPages;
       error = null;
     } catch (exception) {
       error = AppErrorMessage.from(exception);
     } finally {
       isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadMoreMemberships() async {
+    if (isLoading || isLoadingMore || !hasMorePages) {
+      return;
+    }
+
+    isLoadingMore = true;
+    loadMoreError = null;
+    notifyListeners();
+
+    try {
+      final response = await repository.getMyMemberships(
+        pageNumber: pageNumber + 1,
+        pageSize: pageSize,
+      );
+
+      final existingIds =
+          memberships.map((membership) => membership.id).toSet();
+
+      memberships.addAll(
+        response.items.where(
+          (membership) => !existingIds.contains(membership.id),
+        ),
+      );
+
+      pageNumber = response.pageNumber;
+      totalPages = response.totalPages;
+    } catch (exception) {
+      loadMoreError = AppErrorMessage.from(exception);
+    } finally {
+      isLoadingMore = false;
       notifyListeners();
     }
   }

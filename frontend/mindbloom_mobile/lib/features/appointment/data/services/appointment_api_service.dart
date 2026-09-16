@@ -1,4 +1,5 @@
 import '../../../../core/network/api_client.dart';
+import '../../../../core/models/paged_response.dart';
 import '../../../therapist/data/models/therapist_availability_model.dart';
 import '../models/appointment_create_request.dart';
 import '../models/appointment_model.dart';
@@ -24,16 +25,54 @@ class AppointmentApiService {
     );
   }
 
-  Future<List<AppointmentModel>> getMyAppointments() async {
-    final response = await apiClient.get('/Appointments/mine');
+  Future<PagedResponse<AppointmentModel>> getMyAppointments({
+    required int pageNumber,
+    required int pageSize,
+    String? status,
+    DateTime? fromUtc,
+    DateTime? toUtc,
+  }) async {
+    final query = <String, String>{
+      'pageNumber': pageNumber.toString(),
+      'pageSize': pageSize.toString(),
+      if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+      if (fromUtc != null) 'fromUtc': fromUtc.toUtc().toIso8601String(),
+      if (toUtc != null) 'toUtc': toUtc.toUtc().toIso8601String(),
+    };
 
-    return _mapAppointments(response);
+    final response = await apiClient.get(
+      Uri(path: '/Appointments/mine', queryParameters: query).toString(),
+    );
+
+    return PagedResponse.fromJson(
+      response as Map<String, dynamic>,
+      AppointmentModel.fromJson,
+    );
   }
 
-  Future<List<AppointmentModel>> getTherapistAppointments() async {
-    final response = await apiClient.get('/Appointments/therapist');
+  Future<PagedResponse<AppointmentModel>> getTherapistAppointments({
+    required int pageNumber,
+    required int pageSize,
+    String? status,
+    DateTime? fromUtc,
+    DateTime? toUtc,
+  }) async {
+    final query = <String, String>{
+      'pageNumber': pageNumber.toString(),
+      'pageSize': pageSize.toString(),
+      if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+      if (fromUtc != null) 'fromUtc': fromUtc.toUtc().toIso8601String(),
+      if (toUtc != null) 'toUtc': toUtc.toUtc().toIso8601String(),
+    };
 
-    return _mapAppointments(response);
+    final response = await apiClient.get(
+      Uri(path: '/Appointments/therapist', queryParameters: query).toString(),
+    );
+
+    return PagedResponse.fromJson(
+      response as Map<String, dynamic>,
+      AppointmentModel.fromJson,
+    );
   }
 
   Future<void> updateTherapistAppointmentStatus({
@@ -73,18 +112,29 @@ class AppointmentApiService {
         .toList();
   }
 
-  Future<List<UnavailableDateModel>> getTherapistUnavailableDates(
-    int therapistId,
-  ) async {
+  Future<PagedResponse<UnavailableDateModel>> getTherapistUnavailableDates({
+    required int therapistId,
+    required DateTime fromUtc,
+    required DateTime toUtc,
+    int pageNumber = 1,
+    int pageSize = 50,
+  }) async {
     final response = await apiClient.get(
-      '/Therapists/$therapistId/unavailable-dates',
+      Uri(
+        path: '/Therapists/$therapistId/unavailable-dates',
+        queryParameters: {
+          'pageNumber': pageNumber.toString(),
+          'pageSize': pageSize.toString(),
+          'fromUtc': fromUtc.toUtc().toIso8601String(),
+          'toUtc': toUtc.toUtc().toIso8601String(),
+        },
+      ).toString(),
     );
 
-    return (response as List)
-        .map(
-          (item) => UnavailableDateModel.fromJson(item as Map<String, dynamic>),
-        )
-        .toList();
+    return PagedResponse.fromJson(
+      response as Map<String, dynamic>,
+      UnavailableDateModel.fromJson,
+    );
   }
 
   Future<List<OccupiedSlotModel>> getOccupiedSlots({
@@ -104,31 +154,6 @@ class AppointmentApiService {
 
     return (response as List)
         .map((item) => OccupiedSlotModel.fromJson(item as Map<String, dynamic>))
-        .toList();
-  }
-
-  List<AppointmentModel> _mapAppointments(dynamic response) {
-    if (response == null) {
-      return [];
-    }
-
-    final dynamic items;
-
-    if (response is Map<String, dynamic>) {
-      items = response['items'] ?? response['data'] ?? [];
-    } else {
-      items = response;
-    }
-
-    if (items is! List) {
-      return [];
-    }
-
-    return items
-        .whereType<Map>()
-        .map(
-          (item) => AppointmentModel.fromJson(Map<String, dynamic>.from(item)),
-        )
         .toList();
   }
 

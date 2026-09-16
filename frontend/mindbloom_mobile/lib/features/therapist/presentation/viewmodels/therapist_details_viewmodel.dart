@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/widgets/app_error_message.dart';
-import '../../../favorite/data/models/favorite_model.dart';
 import '../../../favorite/data/repositories/favorite_repository.dart';
 import '../../data/models/therapist_details_model.dart';
 import '../../data/repositories/therapist_repository.dart';
@@ -37,16 +36,12 @@ class TherapistDetailsViewModel extends ChangeNotifier {
     try {
       final results = await Future.wait([
         repository.getTherapistById(therapistId),
-        favoriteRepository.getMyFavorites(),
+        favoriteRepository.isFavorite(therapistId),
       ]);
 
       therapist = results[0] as TherapistDetailsModel;
 
-      final favorites = results[1] as List<FavoriteModel>;
-
-      isFavorite = favorites.any(
-        (favorite) => favorite.therapistId == therapistId,
-      );
+      isFavorite = results[1] as bool;
 
       errorMessage = null;
     } catch (error) {

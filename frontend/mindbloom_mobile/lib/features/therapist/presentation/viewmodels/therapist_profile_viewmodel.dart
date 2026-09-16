@@ -78,7 +78,7 @@ class TherapistProfileViewModel extends ChangeNotifier {
       final currentProfile = _profile;
 
       if (currentProfile != null) {
-        _unavailableDates = await repository.getUnavailableDates(
+        _unavailableDates = await _loadUnavailableDates(
           currentProfile.therapistId,
         );
       }
@@ -474,7 +474,7 @@ class TherapistProfileViewModel extends ChangeNotifier {
       final currentProfile = _profile;
 
       if (currentProfile != null) {
-        _unavailableDates = await repository.getUnavailableDates(
+        _unavailableDates = await _loadUnavailableDates(
           currentProfile.therapistId,
         );
       }
@@ -579,6 +579,23 @@ class TherapistProfileViewModel extends ChangeNotifier {
       _isManagingAvailability = false;
       notifyListeners();
     }
+  }
+
+  Future<List<UnavailableDateModel>> _loadUnavailableDates(
+    int therapistId,
+  ) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final fromUtc = today.subtract(const Duration(days: 30)).toUtc();
+    final toUtc = today.add(const Duration(days: 340)).toUtc();
+
+    final response = await repository.getUnavailableDates(
+      therapistId: therapistId,
+      fromUtc: fromUtc,
+      toUtc: toUtc,
+    );
+
+    return response.items;
   }
 
   void clearErrorMessage() {

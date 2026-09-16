@@ -37,20 +37,30 @@ public interface ITherapistService
 
     Task AddUnavailableDateAsync( int therapistUserId, CreateUnavailableDateDto request);
 
-    Task<List<UnavailableDateResponseDto>> GetUnavailableDatesAsync(int therapistId);
+    Task<PagedResponse<UnavailableDateResponseDto>> GetUnavailableDatesAsync(
+        int therapistId,
+        int pageNumber,
+        int pageSize,
+        DateTime? fromUtc,
+        DateTime? toUtc);
     Task UploadDocumentAsync(int therapistUserId,IFormFile file);
 
-    Task<List<TherapistDocumentResponseDto>>GetDocumentsAsync(int therapistId);
+    Task<PagedResponse<TherapistDocumentResponseDto>>GetDocumentsAsync(
+        int therapistId,
+        int pageNumber,
+        int pageSize);
 
     Task DeleteDocumentAsync(
         int therapistUserId,
         int documentId);
     Task DeleteUnavailableDateAsync(int therapistUserId, int unavailableDateId);
 
-    Task<List<TherapistClientListDto>>
+    Task<PagedResponse<TherapistClientListDto>>
         GetClientsAsync(
             int therapistUserId,
-            string? search);
+            string? search,
+            int pageNumber,
+            int pageSize);
 
     Task<TherapistClientDetailsDto>
         GetClientDetailsAsync(

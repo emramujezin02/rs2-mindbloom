@@ -52,7 +52,7 @@ class AppointmentCreateViewModel extends ChangeNotifier {
     try {
       final results = await Future.wait([
         repository.getTherapistAvailabilities(therapistId),
-        repository.getTherapistUnavailableDates(therapistId),
+        _loadUnavailableDates(therapistId),
       ]);
 
       availabilities = results[0] as List<TherapistAvailabilityModel>;
@@ -80,7 +80,10 @@ class AppointmentCreateViewModel extends ChangeNotifier {
       if (availabilities.isEmpty) {
         final results = await Future.wait([
           repository.getTherapistAvailabilities(therapistId),
-          repository.getTherapistUnavailableDates(therapistId),
+          _loadUnavailableDates(
+            therapistId,
+            daysAhead: daysAhead,
+          ),
         ]);
 
         availabilities = results[0] as List<TherapistAvailabilityModel>;
@@ -358,6 +361,23 @@ class AppointmentCreateViewModel extends ChangeNotifier {
 
   static int _toBackendDayOfWeek(int dartWeekday) {
     return dartWeekday == DateTime.sunday ? 0 : dartWeekday;
+  }
+
+  Future<List<UnavailableDateModel>> _loadUnavailableDates(
+    int therapistId, {
+    int daysAhead = 370,
+  }) async {
+    final now = DateTime.now();
+    final rangeStart = DateTime(now.year, now.month, now.day).toUtc();
+    final rangeEnd = rangeStart.add(Duration(days: daysAhead));
+
+    final response = await repository.getTherapistUnavailableDates(
+      therapistId: therapistId,
+      fromUtc: rangeStart,
+      toUtc: rangeEnd,
+    );
+
+    return response.items;
   }
 
   static (int, int)? _parseTime(String value) {

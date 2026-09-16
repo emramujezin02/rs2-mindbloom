@@ -140,7 +140,12 @@ class _MyFavoritesPageState extends State<MyFavoritesPage> {
         padding: const EdgeInsets.all(16),
         itemCount:
             _viewModel.favorites.length +
-            (_viewModel.errorMessage != null ? 1 : 0),
+            (_viewModel.errorMessage != null ? 1 : 0) +
+            (_viewModel.isLoadingMore ||
+                    _viewModel.loadMoreErrorMessage != null ||
+                    _viewModel.hasMorePages
+                ? 1
+                : 0),
         separatorBuilder: (context, index) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           if (_viewModel.errorMessage != null && index == 0) {
@@ -153,6 +158,29 @@ class _MyFavoritesPageState extends State<MyFavoritesPage> {
 
           final favoriteIndex =
               index - (_viewModel.errorMessage != null ? 1 : 0);
+
+          if (favoriteIndex >= _viewModel.favorites.length) {
+            if (_viewModel.isLoadingMore) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 18),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            if (_viewModel.loadMoreErrorMessage != null) {
+              return AppInlineError(
+                title: 'More favorites could not be loaded',
+                error: _viewModel.loadMoreErrorMessage,
+                onRetry: _viewModel.loadMoreFavorites,
+              );
+            }
+
+            return OutlinedButton.icon(
+              onPressed: _viewModel.loadMoreFavorites,
+              icon: const Icon(Icons.expand_more),
+              label: const Text('Load more'),
+            );
+          }
 
           final favorite = _viewModel.favorites[favoriteIndex];
 

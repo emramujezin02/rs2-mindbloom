@@ -5,6 +5,8 @@ using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Domain.Enums;
 using MindBloom.Application.Common.Interfaces;
+using MindBloom.Application.Common.Models;
+using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Features.Therapists.DTOs;
 using MindBloom.Application.Features.Payments.Interfaces;
 using MindBloom.Application.Features.Memberships.Interfaces;
@@ -613,8 +615,14 @@ public class AppointmentService : IAppointmentService
         await _context.SaveChangesAsync();
     }
 
-    public async Task<List<AppointmentResponseDto>>
-     GetMyAppointmentsAsync(int userId)
+    public async Task<PagedResponse<AppointmentResponseDto>>
+     GetMyAppointmentsAsync(
+         int userId,
+         int pageNumber,
+         int pageSize,
+         string? status,
+         DateTime? fromUtc,
+         DateTime? toUtc)
     {
         await AutoCompleteAppointmentsAsync();
         var client =
@@ -627,14 +635,40 @@ public class AppointmentService : IAppointmentService
             throw new NotFoundException("Client profile not found.");
         }
 
-        return await _context.Appointments
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
+        var query =
+            _context.Appointments
             .AsNoTracking()
             .Include(x => x.Therapist)
                 .ThenInclude(x => x.User)
             .Where(x =>
-                x.ClientId == client.Id)
+                x.ClientId == client.Id);
+
+        query =
+            ApplyAppointmentFilters(
+                query,
+                status,
+                fromUtc,
+                toUtc);
+
+        query =
+            query
             .OrderBy(x =>
                 x.StartUtc)
+            .ThenBy(x =>
+                x.Id);
+
+        var totalCount =
+            await query.CountAsync();
+
+        var appointments =
+            await query
+            .Skip(pagination.Skip)
+            .Take(pagination.PageSize)
             .Select(x =>
                 new AppointmentResponseDto
                 {
@@ -680,12 +714,25 @@ public class AppointmentService : IAppointmentService
         : null
                 })
             .ToListAsync();
+
+        return PagedResponse<AppointmentResponseDto>
+            .Create(
+                appointments,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
     }
 
 
 
-    public async Task<List<AppointmentResponseDto>>
-    GetTherapistAppointmentsAsync(int therapistUserId)
+    public async Task<PagedResponse<AppointmentResponseDto>>
+    GetTherapistAppointmentsAsync(
+        int therapistUserId,
+        int pageNumber,
+        int pageSize,
+        string? status,
+        DateTime? fromUtc,
+        DateTime? toUtc)
     {
         await AutoCompleteAppointmentsAsync();
         var therapist =
@@ -698,11 +745,37 @@ public class AppointmentService : IAppointmentService
             throw new NotFoundException("Therapist not found.");
         }
 
-        return await _context.Appointments
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
+        var query =
+            _context.Appointments
             .AsNoTracking()
             .Include(x => x.Client)
             .ThenInclude(x => x.User)
-            .Where(x => x.TherapistId == therapist.Id)
+            .Where(x => x.TherapistId == therapist.Id);
+
+        query =
+            ApplyAppointmentFilters(
+                query,
+                status,
+                fromUtc,
+                toUtc);
+
+        query =
+            query
+            .OrderBy(x => x.StartUtc)
+            .ThenBy(x => x.Id);
+
+        var totalCount =
+            await query.CountAsync();
+
+        var appointments =
+            await query
+            .Skip(pagination.Skip)
+            .Take(pagination.PageSize)
             .Select(x => new AppointmentResponseDto
             {
                 Id = x.Id,
@@ -747,6 +820,48 @@ public class AppointmentService : IAppointmentService
 
             })
             .ToListAsync();
+
+        return PagedResponse<AppointmentResponseDto>
+            .Create(
+                appointments,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
+    }
+
+    private static IQueryable<Appointment>
+        ApplyAppointmentFilters(
+            IQueryable<Appointment> query,
+            string? status,
+            DateTime? fromUtc,
+            DateTime? toUtc)
+    {
+        if (!string.IsNullOrWhiteSpace(status) &&
+            Enum.TryParse<AppointmentStatus>(
+                status.Trim(),
+                ignoreCase: true,
+                out var parsedStatus))
+        {
+            query =
+                query.Where(x =>
+                    x.Status == parsedStatus);
+        }
+
+        if (fromUtc.HasValue)
+        {
+            query =
+                query.Where(x =>
+                    x.StartUtc >= fromUtc.Value);
+        }
+
+        if (toUtc.HasValue)
+        {
+            query =
+                query.Where(x =>
+                    x.StartUtc < toUtc.Value);
+        }
+
+        return query;
     }
 
     public async Task UpdateStatusAsync(

@@ -7,6 +7,8 @@ import '../../data/models/therapist_client_model.dart';
 import '../../data/repositories/therapist_repository.dart';
 
 class TherapistClientsViewModel extends ChangeNotifier {
+  static const int pageSize = 10;
+
   final TherapistRepository repository;
 
   TherapistClientsViewModel({required this.repository});
@@ -16,14 +18,22 @@ class TherapistClientsViewModel extends ChangeNotifier {
   Timer? _searchDebounce;
 
   bool isLoading = false;
+  bool isLoadingMore = false;
   String? errorMessage;
+  String? loadMoreErrorMessage;
   String searchQuery = '';
+
+  int pageNumber = 1;
+  int totalPages = 0;
+  int totalCount = 0;
 
   List<TherapistClientModel> get clients => List.unmodifiable(_clients);
 
-  int get totalClients => _clients.length;
+  int get totalClients => totalCount;
 
   bool get hasSearch => searchQuery.trim().isNotEmpty;
+
+  bool get hasMorePages => pageNumber < totalPages;
 
   Future<void> loadClients({String? search}) async {
     if (isLoading) {
@@ -32,15 +42,24 @@ class TherapistClientsViewModel extends ChangeNotifier {
 
     isLoading = true;
     errorMessage = null;
+    loadMoreErrorMessage = null;
+    pageNumber = 1;
     notifyListeners();
 
     try {
-      final result = await repository.getTherapistClients(search: search);
+      final result = await repository.getTherapistClients(
+        search: search,
+        pageNumber: 1,
+        pageSize: pageSize,
+      );
 
       _clients
         ..clear()
-        ..addAll(result);
+        ..addAll(result.items);
 
+      pageNumber = result.pageNumber;
+      totalPages = result.totalPages;
+      totalCount = result.totalCount;
       errorMessage = null;
     } catch (error) {
       errorMessage = AppErrorMessage.from(
@@ -49,6 +68,42 @@ class TherapistClientsViewModel extends ChangeNotifier {
       );
     } finally {
       isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadMoreClients() async {
+    if (isLoading || isLoadingMore || !hasMorePages) {
+      return;
+    }
+
+    isLoadingMore = true;
+    loadMoreErrorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await repository.getTherapistClients(
+        search: searchQuery,
+        pageNumber: pageNumber + 1,
+        pageSize: pageSize,
+      );
+
+      final existingIds = _clients.map((client) => client.clientId).toSet();
+
+      _clients.addAll(
+        result.items.where((client) => !existingIds.contains(client.clientId)),
+      );
+
+      pageNumber = result.pageNumber;
+      totalPages = result.totalPages;
+      totalCount = result.totalCount;
+    } catch (error) {
+      loadMoreErrorMessage = AppErrorMessage.from(
+        error,
+        fallback: 'More clients could not be loaded.',
+      );
+    } finally {
+      isLoadingMore = false;
       notifyListeners();
     }
   }

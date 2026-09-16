@@ -59,7 +59,10 @@ public class PaymentsController : ControllerBase
 
     [HttpGet("mine")]
     public async Task<IActionResult>
-        GetMyPayments()
+        GetMyPayments(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] int? appointmentId = null)
     {
         var userId =
             GetAuthenticatedUserId();
@@ -67,7 +70,10 @@ public class PaymentsController : ControllerBase
         var result =
             await _paymentService
                 .GetMyPaymentsAsync(
-                    userId);
+                    userId,
+                    pageNumber,
+                    pageSize,
+                    appointmentId);
 
         return Ok(result);
     }

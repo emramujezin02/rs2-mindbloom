@@ -58,14 +58,21 @@ public class FavoritesController : ControllerBase
 
     [HttpGet("mine")]
     public async Task<IActionResult>
-        GetMyFavorites()
+        GetMyFavorites(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] int? therapistId = null)
     {
         var userId =
             GetCurrentUserId();
 
         var result =
             await _favoriteService
-                .GetMyFavoritesAsync(userId);
+                .GetMyFavoritesAsync(
+                    userId,
+                    pageNumber,
+                    pageSize,
+                    therapistId);
 
         return Ok(result);
     }

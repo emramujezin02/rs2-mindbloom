@@ -1,4 +1,5 @@
 import '../models/chat_message_model.dart';
+import '../../../../core/models/paged_response.dart';
 import '../models/chat_message_paged_response.dart';
 import '../models/conversation_details_model.dart';
 import '../models/conversation_model.dart';
@@ -10,8 +11,14 @@ class ChatRepository {
 
   ChatRepository({required this.apiService});
 
-  Future<List<ConversationModel>> getMyConversations() {
-    return apiService.getMyConversations();
+  Future<PagedResponse<ConversationModel>> getMyConversations({
+    required int pageNumber,
+    required int pageSize,
+  }) {
+    return apiService.getMyConversations(
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+    );
   }
 
   Future<ConversationDetailsModel> getOrCreateConversation(int appointmentId) {

@@ -166,6 +166,29 @@ class _TherapistClientsPageState extends State<TherapistClientsPage> {
                       ),
                     );
                   }),
+                if (viewModel.isLoadingMore)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (viewModel.loadMoreErrorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: AppInlineError(
+                      title: 'More clients could not be loaded',
+                      error: viewModel.loadMoreErrorMessage,
+                      onRetry: viewModel.loadMoreClients,
+                    ),
+                  )
+                else if (viewModel.hasMorePages)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    child: OutlinedButton.icon(
+                      onPressed: viewModel.loadMoreClients,
+                      icon: const Icon(Icons.expand_more),
+                      label: const Text('Load more'),
+                    ),
+                  ),
               ],
             ),
           ),
