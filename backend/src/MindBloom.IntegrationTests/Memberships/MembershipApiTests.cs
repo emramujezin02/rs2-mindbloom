@@ -1,5 +1,6 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
+using MindBloom.Application.Common.Models;
 using MindBloom.Application.Features.Memberships.DTOs;
 using MindBloom.IntegrationTests.Infrastructure;
 using MindBloom.Shared.Constants;
@@ -129,12 +130,12 @@ public sealed class MembershipApiTests
         var result =
             await response.Content
                 .ReadFromJsonAsync<
-                    List<MembershipResponseDto>>();
+                    PagedResponse<MembershipResponseDto>>();
 
         Assert.NotNull(result);
 
         Assert.Contains(
-            result!,
+            result!.Items,
             item =>
                 item.Id ==
                 membershipId);

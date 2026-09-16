@@ -1,5 +1,6 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
+using MindBloom.Application.Common.Models;
 using MindBloom.Application.Features.Appointments.DTOs;
 using MindBloom.Domain.Enums;
 using MindBloom.IntegrationTests.Infrastructure;
@@ -132,12 +133,12 @@ public sealed class AppointmentApiTests
         var body =
             await response.Content
                 .ReadFromJsonAsync<
-                    List<AppointmentResponseDto>>();
+                    PagedResponse<AppointmentResponseDto>>();
 
         Assert.NotNull(body);
 
         var appointment =
-            Assert.Single(body!);
+            Assert.Single(body!.Items);
 
         Assert.Equal(
             firstAppointmentId,

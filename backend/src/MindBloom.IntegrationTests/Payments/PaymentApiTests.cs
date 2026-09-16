@@ -1,6 +1,7 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
+using MindBloom.Application.Common.Models;
+using MindBloom.Application.Features.Payments.DTOs;
 using MindBloom.Domain.Enums;
 using MindBloom.IntegrationTests.Infrastructure;
 using MindBloom.Shared.Constants;
@@ -117,23 +118,21 @@ public sealed class PaymentApiTests
             HttpStatusCode.OK,
             response.StatusCode);
 
-        var json =
+        var body =
             await response.Content
                 .ReadFromJsonAsync<
-                    JsonElement>();
+                    PagedResponse<PaymentHistoryDto>>();
 
-        Assert.Equal(
-            JsonValueKind.Array,
-            json.ValueKind);
+        Assert.NotNull(
+            body);
 
         Assert.True(
-            json.GetArrayLength() >= 1);
+            body!.Items.Count >= 1);
 
         Assert.Contains(
-            json.EnumerateArray(),
+            body.Items,
             item =>
-                item.GetProperty("id")
-                    .GetInt32() ==
+                item.Id ==
                 paymentId);
     }
 
