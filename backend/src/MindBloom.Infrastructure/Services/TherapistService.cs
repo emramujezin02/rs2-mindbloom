@@ -519,17 +519,33 @@ public class TherapistService : ITherapistService
                             request.AvailableDay.Value));
         }
 
-        query =
+        var sortBy =
             request.SortBy?
                 .Trim()
-                .ToLower() switch
+                .ToLowerInvariant();
+
+        var sortDirection =
+            request.SortDirection?
+                .Trim()
+                .ToLowerInvariant();
+
+        var descending =
+            sortDirection == "desc" ||
+            (
+                string.IsNullOrWhiteSpace(sortDirection) &&
+                sortBy is "rating" or "experience"
+            );
+
+        query =
+            sortBy switch
             {
-                "rating" =>
+                "rating" when descending =>
                     query
                         .OrderByDescending(x =>
                             x.Reviews
 .Where(review =>
-    !review.IsDeleted)
+    !review.IsDeleted &&
+    review.IsApproved)
                                 .Any()
                                 ? x.Reviews
                                     .Where(review =>
@@ -541,6 +557,31 @@ public class TherapistService : ITherapistService
                         .ThenBy(x =>
                             x.Id),
 
+                "rating" =>
+                    query
+                        .OrderBy(x =>
+                            x.Reviews
+.Where(review =>
+    !review.IsDeleted &&
+    review.IsApproved)
+                                .Any()
+                                ? x.Reviews
+                                    .Where(review =>
+                                        !review.IsDeleted &&
+                                        review.IsApproved)
+                                    .Average(review =>
+                                        review.Rating)
+                                : 0)
+                        .ThenBy(x =>
+                            x.Id),
+
+                "price" when descending =>
+                    query
+                        .OrderByDescending(x =>
+                            x.HourlyRate)
+                        .ThenBy(x =>
+                            x.Id),
+
                 "price" =>
                     query
                         .OrderBy(x =>
@@ -548,9 +589,16 @@ public class TherapistService : ITherapistService
                         .ThenBy(x =>
                             x.Id),
 
-                "experience" =>
+                "experience" when descending =>
                     query
                         .OrderByDescending(x =>
+                            x.ExperienceYears)
+                        .ThenBy(x =>
+                            x.Id),
+
+                "experience" =>
+                    query
+                        .OrderBy(x =>
                             x.ExperienceYears)
                         .ThenBy(x =>
                             x.Id),

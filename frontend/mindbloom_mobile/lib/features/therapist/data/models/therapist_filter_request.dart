@@ -11,6 +11,7 @@ class TherapistFilterRequest {
   final double? minRating;
   final String? availableDay;
   final String? sortBy;
+  final String? sortDirection;
   final int pageNumber;
   final int pageSize;
 
@@ -27,6 +28,7 @@ class TherapistFilterRequest {
     this.minRating,
     this.availableDay,
     this.sortBy,
+    this.sortDirection,
     this.pageNumber = 1,
     this.pageSize = 10,
   });
@@ -48,6 +50,7 @@ class TherapistFilterRequest {
       minRating: minRating,
       availableDay: availableDay,
       sortBy: sortBy,
+      sortDirection: sortDirection,
       pageNumber: pageNumber ?? this.pageNumber,
       pageSize: pageSize ?? this.pageSize,
     );
@@ -137,6 +140,15 @@ class TherapistFilterRequest {
     if (normalizedSortBy != null &&
         normalizedSortBy.isNotEmpty) {
       params['sortBy'] = normalizedSortBy;
+    }
+
+    final normalizedSortDirection =
+        sortDirection?.trim();
+
+    if (normalizedSortDirection != null &&
+        normalizedSortDirection.isNotEmpty) {
+      params['sortDirection'] =
+          normalizedSortDirection;
     }
 
     return params;

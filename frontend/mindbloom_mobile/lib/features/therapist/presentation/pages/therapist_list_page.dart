@@ -59,6 +59,7 @@ class _TherapistListPageState extends State<TherapistListPage> {
   String? _selectedAvailableDay;
   double? _selectedMinRating;
   String? _sortBy;
+  String? _sortDirection;
 
   int? _selectedTherapyApproachId;
   String? _selectedTherapyApproachName;
@@ -141,6 +142,7 @@ class _TherapistListPageState extends State<TherapistListPage> {
       minRating: _selectedMinRating,
       availableDay: _selectedAvailableDay,
       sortBy: _sortBy,
+      sortDirection: _sortDirection,
       resetPage: true,
     );
   }
@@ -172,6 +174,7 @@ class _TherapistListPageState extends State<TherapistListPage> {
       _selectedAvailableDay = null;
       _selectedMinRating = null;
       _sortBy = null;
+      _sortDirection = null;
 
       _selectedTherapyApproachId = null;
       _selectedTherapyApproachName = null;
@@ -193,6 +196,24 @@ class _TherapistListPageState extends State<TherapistListPage> {
         _selectedAvailableDay != null ||
         _selectedMinRating != null ||
         _sortBy != null;
+  }
+
+  String? get _selectedSortValue {
+    final sortBy = _sortBy;
+
+    if (sortBy == null) {
+      return null;
+    }
+
+    final direction = _sortDirection ??
+        switch (sortBy) {
+          'price' => 'asc',
+          'rating' => 'desc',
+          'experience' => 'desc',
+          _ => null,
+        };
+
+    return direction == null ? sortBy : '$sortBy:$direction';
   }
 
   int get _activeFilterCount {
@@ -398,20 +419,37 @@ class _TherapistListPageState extends State<TherapistListPage> {
           ),
           const SizedBox(height: 10),
           _FilterDropdown<String>(
-            value: _sortBy,
+            value: _selectedSortValue,
             labelText: 'Sort by',
             icon: Icons.sort,
             items: const [
-              DropdownMenuItem(value: 'rating', child: Text('Highest rating')),
-              DropdownMenuItem(value: 'price', child: Text('Lowest price')),
               DropdownMenuItem(
-                value: 'experience',
+                value: 'price:asc',
+                child: Text('Price: low to high'),
+              ),
+              DropdownMenuItem(
+                value: 'price:desc',
+                child: Text('Price: high to low'),
+              ),
+              DropdownMenuItem(
+                value: 'rating:asc',
+                child: Text('Rating: low to high'),
+              ),
+              DropdownMenuItem(
+                value: 'rating:desc',
+                child: Text('Rating: high to low'),
+              ),
+              DropdownMenuItem(
+                value: 'experience:desc',
                 child: Text('Most experience'),
               ),
             ],
             onChanged: (value) {
+              final parts = value?.split(':') ?? [];
+
               setState(() {
-                _sortBy = value;
+                _sortBy = parts.isNotEmpty ? parts[0] : null;
+                _sortDirection = parts.length > 1 ? parts[1] : null;
               });
 
               _applyFilters();
@@ -609,9 +647,11 @@ class _TherapistListPageState extends State<TherapistListPage> {
 
     if (_sortBy != null) {
       final sortLabel = switch (_sortBy) {
-        'rating' => 'Highest rating',
-        'price' => 'Lowest price',
         'experience' => 'Most experience',
+        'price' when _sortDirection == 'desc' => 'Price: high to low',
+        'price' => 'Price: low to high',
+        'rating' when _sortDirection == 'asc' => 'Rating: low to high',
+        'rating' => 'Rating: high to low',
         _ => _sortBy!,
       };
 
@@ -620,6 +660,7 @@ class _TherapistListPageState extends State<TherapistListPage> {
         onDeleted: () {
           setState(() {
             _sortBy = null;
+            _sortDirection = null;
           });
 
           _applyFilters();

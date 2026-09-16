@@ -27,6 +27,12 @@ public static class TherapistValidationRules
         "experience"
     ];
 
+    public static readonly string[] AllowedSortDirections =
+    [
+        "asc",
+        "desc"
+    ];
+
     public static readonly string[] AllowedDocumentContentTypes =
     [
         "image/jpeg",
@@ -322,6 +328,17 @@ public sealed class SearchTherapistsDtoValidator
                             .ToLowerInvariant()))
             .WithMessage(
                 "Sort field must be rating, price or experience.");
+
+        RuleFor(x => x.SortDirection)
+            .Must(sortDirection =>
+                string.IsNullOrWhiteSpace(sortDirection) ||
+                TherapistValidationRules
+                    .AllowedSortDirections
+                    .Contains(
+                        sortDirection.Trim()
+                            .ToLowerInvariant()))
+            .WithMessage(
+                "Sort direction must be asc or desc.");
     }
 }
 

@@ -59,6 +59,7 @@ class TherapistListViewModel extends ChangeNotifier {
     double? minRating,
     String? availableDay,
     String? sortBy,
+    String? sortDirection,
     bool resetPage = true,
   }) async {
     if (isLoading || isLoadingMore) {
@@ -80,6 +81,7 @@ class TherapistListViewModel extends ChangeNotifier {
       minRating: minRating,
       availableDay: availableDay,
       sortBy: sortBy,
+      sortDirection: sortDirection,
       pageNumber: requestedPage,
       pageSize: pageSize,
     );
