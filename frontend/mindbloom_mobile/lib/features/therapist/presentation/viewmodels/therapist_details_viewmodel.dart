@@ -34,14 +34,13 @@ class TherapistDetailsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final results = await Future.wait([
-        repository.getTherapistById(therapistId),
-        favoriteRepository.isFavorite(therapistId),
-      ]);
+      therapist = await repository.getTherapistById(therapistId);
 
-      therapist = results[0] as TherapistDetailsModel;
-
-      isFavorite = results[1] as bool;
+      try {
+        isFavorite = await favoriteRepository.isFavorite(therapistId);
+      } catch (_) {
+        isFavorite = false;
+      }
 
       errorMessage = null;
     } catch (error) {
