@@ -54,10 +54,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final session = SessionScope.of(context);
 
+    _viewModel.loadProfile();
+
     if (session.isTherapist) {
       _therapistProfileViewModel.loadProfile();
-    } else {
-      _viewModel.loadProfile();
     }
   }
 

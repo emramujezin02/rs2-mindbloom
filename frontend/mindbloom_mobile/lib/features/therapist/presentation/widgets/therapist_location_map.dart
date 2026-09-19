@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -22,11 +24,55 @@ class TherapistLocationMap extends StatefulWidget {
 }
 
 class _TherapistLocationMapState extends State<TherapistLocationMap> {
+  static const _mapReadyTimeout = Duration(seconds: 8);
+
   GoogleMapController? _controller;
   bool _isMapReady = false;
+  bool _showFallback = false;
+  Timer? _mapReadyTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startMapReadyTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant TherapistLocationMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final oldMapData = oldWidget.mapData;
+    final currentMapData = widget.mapData;
+
+    if (oldMapData.latitude != currentMapData.latitude ||
+        oldMapData.longitude != currentMapData.longitude ||
+        oldMapData.address != currentMapData.address) {
+      _isMapReady = false;
+      _showFallback = false;
+      _startMapReadyTimer();
+    }
+  }
 
   LatLng get _therapistPosition {
     return LatLng(widget.mapData.latitude, widget.mapData.longitude);
+  }
+
+  void _startMapReadyTimer() {
+    _mapReadyTimer?.cancel();
+
+    if (!widget.mapData.hasValidCoordinates) {
+      return;
+    }
+
+    _mapReadyTimer = Timer(_mapReadyTimeout, () {
+      if (!mounted || _isMapReady) {
+        return;
+      }
+
+      setState(() {
+        _showFallback = true;
+      });
+    });
   }
 
   Set<Marker> get _markers {
@@ -76,13 +122,14 @@ class _TherapistLocationMapState extends State<TherapistLocationMap> {
 
   @override
   void dispose() {
+    _mapReadyTimer?.cancel();
     _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.mapData.hasValidCoordinates) {
+    if (!widget.mapData.hasValidCoordinates || _showFallback) {
       return TherapistMapFallback(
         address: widget.mapData.address,
         height: widget.height,
@@ -114,6 +161,7 @@ class _TherapistLocationMapState extends State<TherapistLocationMap> {
               mapToolbarEnabled: false,
               onMapCreated: (controller) {
                 _controller = controller;
+                _mapReadyTimer?.cancel();
 
                 if (!mounted) {
                   return;
