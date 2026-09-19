@@ -9,6 +9,9 @@ obj/
 # Rider
 .idea/
 
+# Visual Studio
+.vs/
+
 # VS Code
 .vscode/
 
