@@ -98,6 +98,8 @@ Kreiranje lokalnog `.env` fajla:
 Copy-Item .env.example .env
 ```
 
+Za finalnu evaluaciju moze biti dostavljen i odvojeni konfiguracijski paket `MindBloom-Environment.zip`. Taj paket se ne nalazi u public GitHub Release assetima niti u source repository-ju, zasticen je passwordom i sadrzi osjetljive/lokalne konfiguracijske fajlove potrebne za pokretanje evaluacijskog okruzenja. Password se dostavlja odvojeno evaluatoru. Nakon preuzimanja, evaluator treba raspakovati paket i postaviti dobijene konfiguracijske fajlove na njihove predvidjene lokacije u projektu prije pokretanja sistema. Paket, njegov password i stvarne konfiguracijske vrijednosti se ne smiju commitati niti uploadovati kao public release asset.
+
 Minimalno provjeri i popuni vrijednosti za:
 
 - SQL Server: `SQL_SERVER_PORT`, `SQL_SERVER_DATABASE`, `SQL_SERVER_PASSWORD`, `DB_CONNECTION`
@@ -157,7 +159,7 @@ Zaustavljanje bez brisanja podataka:
 docker compose down
 ```
 
-Zaustavljanje sa brisanjem Docker volume podataka:
+Opcionalni destruktivni reset/troubleshooting: sljedeca komanda brise Docker volume podatke, ukljucujuci perzistentne SQL Server/RabbitMQ podatke. Nije dio normalnog startup/shutdown toka i koristi se samo kada namjerno zelis fresh lokalno okruzenje.
 
 ```powershell
 docker compose down -v
@@ -299,6 +301,20 @@ Primjer sa eksplicitnim vrijednostima:
 ```
 
 Mobile `STRIPE_PUBLISHABLE_KEY` mora poceti sa `pk_test_`. Ako nije postavljen, aplikacija se pokrece, ali payment flow ostaje nedostupan za taj run.
+
+Android Google Maps konfiguracija za source build se cita iz:
+
+```text
+frontend/mindbloom_mobile/android/local.properties
+```
+
+U taj fajl lokalno dodaj:
+
+```text
+MAPS_API_KEY=<YOUR_GOOGLE_MAPS_API_KEY>
+```
+
+Stvarni Google Maps API key se ne smije commitati u Git. `local.properties` je namjerno ignorisan/nepracen, a postojece Android Gradle postavke citaju `MAPS_API_KEY` iz tog fajla i prosljedjuju ga u Android manifest. Ovaj key je potreban da integrisana mapa lokacije terapeuta radi u Android aplikaciji. Backend `GOOGLE_MAPS_API_KEY` iz root `.env` ostaje odvojena backend konfiguracija.
 
 ## Flutter Desktop
 
@@ -495,6 +511,7 @@ Firebase push ne salje stvarne notifikacije:
 - [Database schema](docs/database-schema.md)
 - [REST API documentation](docs/api-documentation.md)
 - [Recommender dokumentacija](docs/recommender-dokumentacija.md)
+- [Demo scenario](docs/demo-scenario.md) - preporuceni tok demonstracije za klijentske, terapeutske i administratorske workflow-e.
 
 ## Git sigurnost
 
@@ -506,9 +523,3 @@ Ne commitaj:
 - webhook signing secrets
 - SQL passwords
 - lokalne emulator/debug/cache fajlove
-
-Predlozeni commit za README finalizaciju:
-
-```text
-docs: finalize readme
-```
