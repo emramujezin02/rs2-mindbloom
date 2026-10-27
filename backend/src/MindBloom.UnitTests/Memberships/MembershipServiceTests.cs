@@ -13,7 +13,7 @@ using MindBloom.Messaging.Contracts.Notifications;
 
 namespace MindBloom.UnitTests.Memberships;
 
-public sealed class MembershipServiceTests
+public sealed partial class MembershipServiceTests
 {
     [Fact]
     public async Task
@@ -741,7 +741,8 @@ public sealed class MembershipServiceTests
         CreateService(
             ApplicationDbContext context,
             IIntegrationEventPublisher?
-                publisher = null)
+                publisher = null,
+            StripeVerificationService? verification = null)
     {
         var stripeVerificationService =
             (StripeVerificationService)
@@ -762,7 +763,7 @@ public sealed class MembershipServiceTests
 
         return new MembershipService(
             context,
-            stripeVerificationService,
+            verification ?? stripeVerificationService,
             eventPublisher,
             outbox.Object);
     }

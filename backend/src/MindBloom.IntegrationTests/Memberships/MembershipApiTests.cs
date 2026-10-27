@@ -140,4 +140,27 @@ public sealed class MembershipApiTests
                 item.Id ==
                 membershipId);
     }
+
+    [Fact]
+    public async Task Receipt_WhenMembershipIsUnpaid_ReturnsConflict()
+    {
+        const int clientUserId = 83005;
+        const int therapistUserId = 83006;
+        await _factory.SeedActiveUserAsync(clientUserId, RoleConstants.Client,
+            "receipt-client@test.local", "Password123!");
+        await _factory.SeedActiveUserAsync(therapistUserId, RoleConstants.Therapist,
+            "receipt-therapist@test.local", "Password123!");
+        var clientId = await _factory.SeedClientProfileAsync(clientUserId);
+        var therapistId = await _factory.SeedTherapistProfileAsync(therapistUserId);
+        var membershipId = await _factory.SeedClientMembershipAsync(clientId, therapistId);
+        using var client = _factory.CreateAuthenticatedClient(clientUserId, RoleConstants.Client);
+
+        var response = await client.GetAsync($"/api/Memberships/{membershipId}/receipt");
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<MindBloom.API.Models.ApiErrorResponse>();
+        Assert.NotNull(error);
+        Assert.Equal("business_rule_violation", error.ErrorCode);
+        Assert.Equal("Receipt is available only for a paid membership.", error.Detail);
+    }
 }

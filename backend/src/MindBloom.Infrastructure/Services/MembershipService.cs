@@ -513,7 +513,7 @@ public class MembershipService : IMembershipService
         if (membership.ClientId !=
             client.Id)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "This membership payment does not belong to you.");
         }
 
@@ -530,7 +530,7 @@ public class MembershipService : IMembershipService
         if (membershipPayment.Status ==
             PaymentStatus.Refunded)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "This membership payment has been refunded.");
         }
 
@@ -555,7 +555,7 @@ public class MembershipService : IMembershipService
                 "succeeded",
                 StringComparison.OrdinalIgnoreCase))
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Stripe membership payment has not succeeded. "
                 + $"Current status: {stripePaymentIntent.Status}.");
         }
@@ -567,7 +567,7 @@ public class MembershipService : IMembershipService
         if (stripePaymentIntent.Amount !=
             expectedAmount)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Stripe membership amount does not match the server-calculated price.");
         }
 
@@ -576,7 +576,7 @@ public class MembershipService : IMembershipService
                 PaymentCurrency,
                 StringComparison.OrdinalIgnoreCase))
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Stripe membership currency is invalid.");
         }
 
@@ -1006,7 +1006,7 @@ public class MembershipService : IMembershipService
             membership.Payment.PaidAtUtc ==
                 null)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Receipt is available only for a paid membership.");
         }
 
@@ -1120,7 +1120,7 @@ public class MembershipService : IMembershipService
             if (appointment.Status !=
                 AppointmentStatus.Accepted)
             {
-                throw new Exception(
+                throw new BusinessException(
                     "Membership can only be reserved for an accepted appointment.");
             }
 
@@ -1168,7 +1168,7 @@ public class MembershipService : IMembershipService
                             "A membership session has already been consumed for this appointment.");
 
                     case MembershipUsageStatus.Restored:
-                        throw new Exception(
+                        throw new BusinessException(
                             "A previously restored membership session cannot be reserved again for the same appointment.");
 
                     default:
@@ -1197,7 +1197,7 @@ public class MembershipService : IMembershipService
 
             if (membership == null)
             {
-                throw new Exception(
+                throw new BusinessException(
                     "No active paid membership is available for this therapist.");
             }
 
@@ -1416,7 +1416,7 @@ public class MembershipService : IMembershipService
             if (usage.Status !=
                 MembershipUsageStatus.Reserved)
             {
-                throw new Exception(
+                throw new BusinessException(
                     "Membership usage is not in a valid reserved state.");
             }
 
@@ -1535,7 +1535,7 @@ public class MembershipService : IMembershipService
         if (usage.Status !=
             MembershipUsageStatus.Reserved)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Membership usage is not in a valid reserved state.");
         }
 
@@ -1565,7 +1565,7 @@ public class MembershipService : IMembershipService
 
         if (metadata == null)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Stripe membership metadata is missing.");
         }
 
@@ -1577,7 +1577,7 @@ public class MembershipService : IMembershipService
                 "membership",
                 StringComparison.OrdinalIgnoreCase))
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Stripe payment is not a membership purchase.");
         }
 
@@ -1589,7 +1589,7 @@ public class MembershipService : IMembershipService
                 out var membershipId) ||
             membershipId != membership.Id)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Stripe payment is linked to a different membership.");
         }
 
@@ -1601,7 +1601,7 @@ public class MembershipService : IMembershipService
                 out var metadataClientUserId) ||
             metadataClientUserId != clientUserId)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Stripe payment is linked to a different user.");
         }
 
@@ -1613,7 +1613,7 @@ public class MembershipService : IMembershipService
                 out var metadataClientId) ||
             metadataClientId != clientId)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Stripe payment is linked to a different client.");
         }
 
@@ -1625,7 +1625,7 @@ public class MembershipService : IMembershipService
                 out var therapistId) ||
             therapistId != membership.TherapistId)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Stripe payment is linked to a different therapist.");
         }
     }
@@ -1705,7 +1705,7 @@ public class MembershipService : IMembershipService
             MembershipPlanType.ThirtySessions =>
                 30,
 
-            _ => throw new Exception(
+            _ => throw new BusinessException(
                 "Invalid membership plan.")
         };
     }
@@ -1724,7 +1724,7 @@ public class MembershipService : IMembershipService
             MembershipPlanType.ThirtySessions =>
                 3,
 
-            _ => throw new Exception(
+            _ => throw new BusinessException(
                 "Invalid membership plan.")
         };
     }

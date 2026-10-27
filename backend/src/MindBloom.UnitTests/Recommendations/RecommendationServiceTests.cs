@@ -9,6 +9,32 @@ namespace MindBloom.UnitTests.Recommendations;
 
 public sealed class RecommendationServiceTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetRecommendationsAsync_WhenNoTherapistsMatch_ReturnsEmptyList(bool seedTherapist)
+    {
+        await using var context = CreateContext();
+        var user = CreateUser("empty-client@test.local", "Client", "User");
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+        context.Clients.Add(new Client { UserId = user.Id });
+        if (seedTherapist)
+        {
+            var therapistUser = CreateUser("filtered-therapist@test.local", "Test", "Therapist");
+            context.Users.Add(therapistUser);
+            await context.SaveChangesAsync();
+            context.Therapists.Add(CreateTherapist(therapistUser.Id,
+                TherapistVerificationStatus.Approved, 100m, 5));
+        }
+        await context.SaveChangesAsync();
+
+        var result = await new RecommendationService(context).GetRecommendationsAsync(user.Id,
+            new TherapistRecommendationRequestDto { MaximumPricePerSession = 1m });
+
+        Assert.Empty(result);
+    }
+
     [Fact]
     public async Task
         GetRecommendationsAsync_WhenRequestIsNull_ThrowsArgumentNullException()

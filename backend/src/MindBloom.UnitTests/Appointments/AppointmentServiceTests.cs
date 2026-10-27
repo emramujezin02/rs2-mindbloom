@@ -15,6 +15,76 @@ namespace MindBloom.UnitTests.Appointments;
 
 public sealed class AppointmentServiceTests
 {
+    [Theory]
+    [InlineData(AppointmentStatus.Pending)]
+    [InlineData(AppointmentStatus.Accepted)]
+    [InlineData(AppointmentStatus.Cancelled)]
+    [InlineData(AppointmentStatus.Rejected)]
+    public async Task AddAppointmentNoteAsync_WhenNotCompleted_ThrowsBusinessException(
+        AppointmentStatus status)
+    {
+        await using var context = CreateContext();
+        var therapist = await SeedTherapistAsync(context);
+        var client = await SeedClientAsync(context);
+        var appointment = await SeedAppointmentAsync(context, client.Id, therapist.Id, status);
+
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            CreateService(context).AddAppointmentNoteAsync(therapist.UserId,
+                new CreateAppointmentNoteDto { AppointmentId = appointment.Id, Notes = "Session notes" }));
+
+        Assert.Equal("Notes can only be added after completed appointments.", exception.Message);
+        Assert.Empty(await context.AppointmentNotes.ToListAsync());
+        Assert.Equal(status, appointment.Status);
+    }
+
+    [Fact]
+    public async Task AddAppointmentNoteAsync_WhenCompleted_SavesNote()
+    {
+        await using var context = CreateContext();
+        var therapist = await SeedTherapistAsync(context);
+        var client = await SeedClientAsync(context);
+        var appointment = await SeedAppointmentAsync(context, client.Id, therapist.Id, AppointmentStatus.Completed);
+
+        await CreateService(context).AddAppointmentNoteAsync(therapist.UserId,
+            new CreateAppointmentNoteDto { AppointmentId = appointment.Id, Notes = "Session notes" });
+
+        var note = await context.AppointmentNotes.SingleAsync();
+        Assert.Equal(appointment.Id, note.AppointmentId);
+        Assert.Equal("Session notes", note.Notes);
+    }
+
+    [Fact]
+    public async Task UpdateMeetingLinkAsync_WhenInPerson_ThrowsBusinessException()
+    {
+        await using var context = CreateContext();
+        var therapist = await SeedTherapistAsync(context);
+        var client = await SeedClientAsync(context);
+        var appointment = await SeedAppointmentAsync(context, client.Id, therapist.Id, AppointmentStatus.Accepted);
+        appointment.Type = AppointmentType.InPerson;
+        await context.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            CreateService(context).UpdateMeetingLinkAsync(therapist.UserId, appointment.Id,
+                new UpdateMeetingLinkDto { MeetingLink = "https://example.test/session" }));
+
+        Assert.Equal("Meeting link can only be added to online appointments.", exception.Message);
+        Assert.Null(appointment.MeetingLink);
+    }
+
+    [Fact]
+    public async Task UpdateMeetingLinkAsync_WhenOnlineAndAccepted_SavesLink()
+    {
+        await using var context = CreateContext();
+        var therapist = await SeedTherapistAsync(context);
+        var client = await SeedClientAsync(context);
+        var appointment = await SeedAppointmentAsync(context, client.Id, therapist.Id, AppointmentStatus.Accepted);
+
+        await CreateService(context).UpdateMeetingLinkAsync(therapist.UserId, appointment.Id,
+            new UpdateMeetingLinkDto { MeetingLink = "https://example.test/session" });
+
+        Assert.Equal("https://example.test/session", appointment.MeetingLink);
+    }
+
     [Fact]
     public async Task
         UpdateStatusAsync_WhenTherapistDoesNotExist_ThrowsNotFoundException()

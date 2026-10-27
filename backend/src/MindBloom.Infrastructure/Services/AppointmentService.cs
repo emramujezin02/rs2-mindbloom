@@ -1485,7 +1485,7 @@ public class AppointmentService : IAppointmentService
         if (appointment.Status
             != AppointmentStatus.Completed)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Notes can only be added after completed appointments.");
         }
 
@@ -1690,7 +1690,7 @@ public class AppointmentService : IAppointmentService
         if (appointment.Type
             != AppointmentType.Online)
         {
-            throw new Exception(
+            throw new BusinessException(
                 "Meeting link can only be added to online appointments.");
         }
 
