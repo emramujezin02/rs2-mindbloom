@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Application.Features.ReferenceData.DTOs;
+using MindBloom.Application.Features.ReferenceData.Interfaces;
 using MindBloom.Shared.Constants;
 
 namespace MindBloom.API.Controllers;
@@ -12,43 +12,24 @@ namespace MindBloom.API.Controllers;
 public sealed class TherapyApproachesController
     : ControllerBase
 {
-    private readonly ApplicationDbContext
-        _context;
+    private readonly IReferenceDataService
+        _referenceDataService;
 
     public TherapyApproachesController(
-        ApplicationDbContext context)
+        IReferenceDataService referenceDataService)
     {
-        _context = context;
+        _referenceDataService = referenceDataService;
     }
 
     [AllowAnonymous]
     [HttpGet("public")]
-    public async Task<IActionResult>
-        GetPublic()
+    public async Task<ActionResult<IReadOnlyList<TherapyApproachResponseDto>>>
+        GetPublic(CancellationToken cancellationToken)
     {
         var result =
-            await _context
-                .TherapyApproaches
-                .AsNoTracking()
-                .Where(x =>
-                    x.IsActive &&
-                    !x.IsDeleted)
-                .OrderBy(x =>
-                    x.Name)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.Name,
-                    Description =
-                        x.Description
-                        ?? string.Empty,
-
-                    IconUrl =
-                        (string?)null,
-
-                    x.IsActive
-                })
-                .ToListAsync();
+            await _referenceDataService
+                .GetActiveTherapyApproachesAsync(
+                    cancellationToken);
 
         return Ok(result);
     }
