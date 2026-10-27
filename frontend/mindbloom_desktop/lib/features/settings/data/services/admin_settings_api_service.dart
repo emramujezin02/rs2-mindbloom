@@ -66,8 +66,12 @@ class AdminSettingsApiService {
     required String confirmNewPassword,
   }) async {
     await apiClient.post(
-      '/api/Auth/change-password',
-      body: {'currentPassword': currentPassword, 'newPassword': newPassword},
+      '/Auth/change-password',
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+        'confirmNewPassword': confirmNewPassword,
+      },
     );
   }
 

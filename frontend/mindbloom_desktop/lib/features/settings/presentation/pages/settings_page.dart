@@ -10,7 +10,9 @@ import '../../../../core/widgets/app_error_panel.dart';
 import '../../../../core/widgets/app_loading_state.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  final AdminSettingsViewModel? viewModel;
+
+  const SettingsPage({super.key, this.viewModel});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -49,7 +51,8 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
 
-    _viewModel = AppInjection.createAdminSettingsViewModel();
+    _viewModel =
+        widget.viewModel ?? AppInjection.createAdminSettingsViewModel();
 
     _viewModel.addListener(_onViewModelChanged);
 
