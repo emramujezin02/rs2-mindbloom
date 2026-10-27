@@ -763,6 +763,7 @@ public sealed partial class MembershipServiceTests
 
         return new MembershipService(
             context,
+            (StripeClientProvider)RuntimeHelpers.GetUninitializedObject(typeof(StripeClientProvider)),
             verification ?? stripeVerificationService,
             eventPublisher,
             outbox.Object);

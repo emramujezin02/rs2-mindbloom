@@ -37,6 +37,8 @@ public class MembershipService : IMembershipService
 
     public MembershipService(
         ApplicationDbContext context,
+        StripeClientProvider
+            stripeClientProvider,
         StripeVerificationService
             stripeVerificationService,
         IIntegrationEventPublisher
@@ -45,6 +47,9 @@ public class MembershipService : IMembershipService
     {
         _context =
             context;
+
+        _stripeClientProvider =
+            stripeClientProvider;
 
         _stripeVerificationService =
             stripeVerificationService;
