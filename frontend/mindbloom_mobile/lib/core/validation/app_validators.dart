@@ -1,7 +1,10 @@
 class AppValidators {
   AppValidators._();
 
-  static const int minimumPasswordLength = 6;
+  static const int minimumPasswordLength = 8;
+
+  static const String passwordRequirementsMessage =
+      'Lozinka mora imati najmanje 8 znakova, veliko i malo slovo, broj i specijalni znak.';
 
   static String? requiredText(String? value, {required String fieldName}) {
     if (value == null || value.trim().isEmpty) {
@@ -78,13 +81,15 @@ class AppValidators {
   }
 
   static String? password(String? value, {String fieldName = 'Lozinka'}) {
-    if (value == null || value.isEmpty) {
-      return '$fieldName je obavezno polje.';
-    }
-
-    if (value.length < minimumPasswordLength) {
-      return '$fieldName mora sadržavati najmanje '
-          '$minimumPasswordLength znakova.';
+    // Match the backend's ASCII character classes; keep Unicode and whitespace
+    // unchanged, since Identity accepts them as non-alphanumeric characters.
+    if (value == null ||
+        value.length < minimumPasswordLength ||
+        !RegExp(r'[A-Z]').hasMatch(value) ||
+        !RegExp(r'[a-z]').hasMatch(value) ||
+        !RegExp(r'[0-9]').hasMatch(value) ||
+        !RegExp(r'[^a-zA-Z0-9]').hasMatch(value)) {
+      return passwordRequirementsMessage;
     }
 
     if (value.length > 128) {

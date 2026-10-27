@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/validation/app_validators.dart';
 import '../../../../core/widgets/app_error_banner.dart';
 import '../../../session/presentation/viewmodels/session_scope.dart';
 import '../viewmodels/admin_settings_viewmodel.dart';
@@ -724,6 +725,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       enabled: !_viewModel.isChangingPassword,
                       decoration: InputDecoration(
                         labelText: 'Nova lozinka',
+                        errorMaxLines: 4,
                         prefixIcon: const Icon(Icons.password_outlined),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
@@ -743,13 +745,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Nova lozinka je obavezna.';
-                        }
-
-                        if (value.length < 6) {
-                          return 'Nova lozinka mora imati najmanje 6 karaktera.';
-                        }
+                        final error = AppValidators.password(value);
+                        if (error != null) return error;
 
                         if (value == _currentPasswordController.text) {
                           return 'Nova lozinka mora biti različita od trenutne.';

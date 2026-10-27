@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/validation/app_validators.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
@@ -125,6 +126,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: 'New password',
+                      errorMaxLines: 4,
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         onPressed: _viewModel.isLoading
@@ -141,17 +143,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         ),
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'New password is required.';
-                      }
-
-                      if (value.length < 6) {
-                        return 'Password must have at least 6 characters.';
-                      }
-
-                      return null;
-                    },
+                    validator: AppValidators.password,
                   ),
                   const SizedBox(height: 14),
                   TextFormField(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/validation/app_validators.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../../../../app/router/app_router.dart';
@@ -151,6 +152,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                 obscureText: _hideNewPassword,
                 decoration: InputDecoration(
                   labelText: 'New password',
+                  errorMaxLines: 4,
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
                     onPressed: _viewModel.isLoading
@@ -168,29 +170,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   ),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'New password is required.';
-                  }
-
-                  if (value.length < 8) {
-                    return 'Password must contain at least 8 characters.';
-                  }
-
-                  if (!RegExp(r'[A-Z]').hasMatch(value)) {
-                    return 'Password must contain an uppercase letter.';
-                  }
-
-                  if (!RegExp(r'[a-z]').hasMatch(value)) {
-                    return 'Password must contain a lowercase letter.';
-                  }
-
-                  if (!RegExp(r'[0-9]').hasMatch(value)) {
-                    return 'Password must contain a number.';
-                  }
-
-                  if (!RegExp(r'[^a-zA-Z0-9]').hasMatch(value)) {
-                    return 'Password must contain a special character.';
-                  }
+                  final error = AppValidators.password(value);
+                  if (error != null) return error;
 
                   if (value == _currentPasswordController.text) {
                     return 'New password must be different from the current password.';

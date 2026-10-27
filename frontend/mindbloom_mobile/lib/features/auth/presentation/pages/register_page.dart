@@ -2,18 +2,22 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
+import '../../../../core/validation/app_validators.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+  final AuthViewModel? viewModel;
+
+  const RegisterPage({super.key, this.viewModel});
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  final AuthViewModel _viewModel = AppInjection.createAuthViewModel();
+  late final AuthViewModel _viewModel =
+      widget.viewModel ?? AppInjection.createAuthViewModel();
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -263,6 +267,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: 'Password',
+                      errorMaxLines: 4,
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         onPressed: _viewModel.isLoading
@@ -279,17 +284,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Password is required.';
-                      }
-
-                      if (value.length < 6) {
-                        return 'Password must have at least 6 characters.';
-                      }
-
-                      return null;
-                    },
+                    validator: AppValidators.password,
                   ),
                   const SizedBox(height: 14),
                   OutlinedButton.icon(

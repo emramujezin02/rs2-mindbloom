@@ -1,6 +1,28 @@
 class AppValidators {
   AppValidators._();
 
+  static const int minimumPasswordLength = 8;
+
+  static const String passwordRequirementsMessage =
+      'Lozinka mora imati najmanje 8 znakova, veliko i malo slovo, broj i specijalni znak.';
+
+  static String? password(String? value) {
+    // Identity uses ASCII letter/digit classes and accepts other Unicode
+    // characters and whitespace as non-alphanumeric characters.
+    if (value == null ||
+        value.length < minimumPasswordLength ||
+        !RegExp(r'[A-Z]').hasMatch(value) ||
+        !RegExp(r'[a-z]').hasMatch(value) ||
+        !RegExp(r'[0-9]').hasMatch(value) ||
+        !RegExp(r'[^a-zA-Z0-9]').hasMatch(value)) {
+      return passwordRequirementsMessage;
+    }
+    if (value.length > 128) {
+      return 'Lozinka može sadržavati najviše 128 znakova.';
+    }
+    return null;
+  }
+
   static String normalize(String? value) {
     return value?.trim() ?? '';
   }
