@@ -25,8 +25,11 @@ class TherapistRepository {
 
   TherapistRepository({required this.therapistApiService});
 
-  Future<List<TherapistModel>> getTherapists() {
-    return therapistApiService.getTherapists();
+  Future<PagedResponse<TherapistModel>> getTherapists({
+    int page = 1,
+    int pageSize = 10,
+  }) {
+    return therapistApiService.getTherapists(page: page, pageSize: pageSize);
   }
 
   Future<TherapistSearchPageModel> searchTherapists(

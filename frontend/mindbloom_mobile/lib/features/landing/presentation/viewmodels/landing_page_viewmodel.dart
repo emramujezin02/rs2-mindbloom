@@ -159,9 +159,12 @@ class LandingPageViewModel extends ChangeNotifier {
 
   Future<void> _loadTherapists() async {
     try {
-      final loadedTherapists = await therapistRepository.getTherapists();
+      final page = await therapistRepository.getTherapists(
+        page: 1,
+        pageSize: 6,
+      );
 
-      final sortedTherapists = List<TherapistModel>.from(loadedTherapists)
+      final sortedTherapists = List<TherapistModel>.from(page.items)
         ..sort((first, second) {
           return second.averageRating.compareTo(first.averageRating);
         });

@@ -140,15 +140,20 @@ public class TherapistService : ITherapistService
         };
     }
 
-    public async Task<List<TherapistResponseDto>>
-        GetAllAsync()
+    public async Task<PagedResponse<TherapistResponseDto>>
+        GetAllAsync(
+            int page = PaginationDefaults.DefaultPageNumber,
+            int pageSize = PaginationDefaults.DefaultPageSize)
     {
-        return await _context.Therapists
+        var pagination = PaginationHelper.Normalize(page, pageSize);
+        var query = _context.Therapists
             .AsNoTracking()
             .Include(x => x.User)
             .Include(x => x.Reviews)
-            .Where(TherapistVisibility.PubliclyVisible)
-            .Select(x => new TherapistResponseDto
+            .Where(TherapistVisibility.PubliclyVisible);
+        var totalCount = await query.CountAsync();
+        var skip = (int)Math.Min((long)(pagination.PageNumber - 1) * pagination.PageSize, int.MaxValue);
+        var items = await query.Select(x => new TherapistResponseDto
             {
                 Id = x.Id,
                 UserId = x.UserId,
@@ -181,7 +186,14 @@ public class TherapistService : ITherapistService
     .Select(ta => ta.TherapyApproach.Name)
     .ToList(),
             })
+            .OrderByDescending(x => x.AverageRating)
+            .ThenBy(x => x.Id)
+            .Skip(skip)
+            .Take(pagination.PageSize)
             .ToListAsync();
+
+        return PagedResponse<TherapistResponseDto>.Create(
+            items, pagination.PageNumber, pagination.PageSize, totalCount);
     }
 
     public async Task AddAvailabilityAsync(
@@ -704,10 +716,13 @@ public class TherapistService : ITherapistService
                 totalCount);
     }
 
-    public async Task<List<TherapistResponseDto>>
+    public async Task<PagedResponse<TherapistResponseDto>>
     FilterAsync(
-        TherapistFilterDto filter)
+        TherapistFilterDto filter,
+        int page = PaginationDefaults.DefaultPageNumber,
+        int pageSize = PaginationDefaults.DefaultPageSize)
     {
+        var pagination = PaginationHelper.Normalize(page, pageSize);
         var query =
             _context.Therapists
                 .Include(x => x.User)
@@ -740,8 +755,8 @@ public class TherapistService : ITherapistService
                 x.HourlyRate <= filter.MaxPrice.Value);
         }
 
-        var therapists =
-            await query
+        var totalCount = await query.CountAsync();
+        var projected = query
                 .Select(x => new TherapistResponseDto
                 {
                     Id = x.Id,
@@ -792,18 +807,16 @@ public class TherapistService : ITherapistService
     .Select(ta => ta.TherapyApproach.Name)
     .ToList(),
 
-                })
-                .ToListAsync();
+                });
 
-        if (filter.SortByRating)
-        {
-            therapists = therapists
-                .OrderByDescending(
-                    x => x.AverageRating)
-                .ToList();
-        }
+        var ordered = filter.SortByRating
+            ? projected.OrderByDescending(x => x.AverageRating).ThenBy(x => x.Id)
+            : projected.OrderBy(x => x.Id);
+        var skip = (int)Math.Min((long)(pagination.PageNumber - 1) * pagination.PageSize, int.MaxValue);
+        var items = await ordered.Skip(skip).Take(pagination.PageSize).ToListAsync();
 
-        return therapists;
+        return PagedResponse<TherapistResponseDto>.Create(
+            items, pagination.PageNumber, pagination.PageSize, totalCount);
     }
 
     public async Task<TherapistProfileDto> GetProfileAsync(

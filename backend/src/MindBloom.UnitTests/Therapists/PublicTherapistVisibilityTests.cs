@@ -22,7 +22,7 @@ using Moq;
 
 namespace MindBloom.UnitTests.Therapists;
 
-public sealed class PublicTherapistVisibilityTests
+public sealed partial class PublicTherapistVisibilityTests
 {
     [Theory]
     [InlineData("public", true)]
@@ -53,11 +53,11 @@ public sealed class PublicTherapistVisibilityTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        Assert.Equal(visible ? 1 : 0, (await service.GetAllAsync()).Count);
+        Assert.Equal(visible ? 1 : 0, (await service.GetAllAsync()).Items.Count);
         Assert.Equal(visible ? 1 : 0, (await service.FilterAsync(new TherapistFilterDto
         {
             Specialization = "therapy", MinPrice = 40m, MaxPrice = 60m, SortByRating = true
-        })).Count);
+        })).Items.Count);
         var search = await service.SearchAsync(new SearchTherapistsDto { PageNumber = 1, PageSize = 1 });
         Assert.Equal(visible ? 1 : 0, search.TotalCount);
         Assert.Equal(visible ? 1 : 0, search.Items.Count);
@@ -118,8 +118,8 @@ public sealed class PublicTherapistVisibilityTests
         await context.SaveChangesAsync();
 
         var service = CreateService(context);
-        var all = Assert.Single(await service.GetAllAsync());
-        var filtered = Assert.Single(await service.FilterAsync(new TherapistFilterDto { SortByRating = true }));
+        var all = Assert.Single((await service.GetAllAsync()).Items);
+        var filtered = Assert.Single((await service.FilterAsync(new TherapistFilterDto { SortByRating = true })).Items);
         var searched = Assert.Single((await service.SearchAsync(new SearchTherapistsDto
         {
             SortBy = "rating", SortDirection = "desc", PageNumber = 1, PageSize = 10
@@ -176,7 +176,7 @@ public sealed class PublicTherapistVisibilityTests
         Assert.True(result.HasPreviousPage);
         Assert.True(result.HasNextPage);
         var filtered = await service.FilterAsync(new TherapistFilterDto { MinPrice = 55m, MaxPrice = 65m });
-        Assert.Equal(second.Id, Assert.Single(filtered).Id);
+        Assert.Equal(second.Id, Assert.Single(filtered.Items).Id);
     }
 
     [Fact]

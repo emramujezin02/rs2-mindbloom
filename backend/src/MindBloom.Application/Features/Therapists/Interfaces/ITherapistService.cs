@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using MindBloom.Application.Common.Models;
+using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Features.Therapists.DTOs;
 
 namespace MindBloom.Application.Features.Therapists.Interfaces;
@@ -8,7 +9,9 @@ public interface ITherapistService
 {
     Task<TherapistResponseDto> CreateAsync(int userId,CreateTherapistDto request);
 
-    Task<List<TherapistResponseDto>> GetAllAsync();
+    Task<PagedResponse<TherapistResponseDto>> GetAllAsync(
+        int page = PaginationDefaults.DefaultPageNumber,
+        int pageSize = PaginationDefaults.DefaultPageSize);
 
     Task AddAvailabilityAsync(
     int therapistUserId,
@@ -18,7 +21,10 @@ public interface ITherapistService
 
     Task<PagedResponse<TherapistResponseDto>>SearchAsync(SearchTherapistsDto request);
 
-    Task<List<TherapistResponseDto>>FilterAsync(TherapistFilterDto filter);
+    Task<PagedResponse<TherapistResponseDto>> FilterAsync(
+        TherapistFilterDto filter,
+        int page = PaginationDefaults.DefaultPageNumber,
+        int pageSize = PaginationDefaults.DefaultPageSize);
 
     Task UpdateProfileAsync(int therapistUserId,UpdateTherapistProfileDto request);
 

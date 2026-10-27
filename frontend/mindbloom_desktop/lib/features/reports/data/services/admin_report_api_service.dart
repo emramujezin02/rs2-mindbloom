@@ -98,26 +98,40 @@ class AdminReportApiService {
   }
 
   Future<List<ReportTherapistOptionModel>> getTherapists() async {
-    final response = await _apiClient.get('/Therapists');
-
-    if (response is! List) {
-      throw const FormatException(
-        'The server returned invalid therapist data.',
+    final therapists = <ReportTherapistOptionModel>[];
+    var page = 1;
+    while (true) {
+      final response = await _apiClient.get(
+        '/Therapists?Page=$page&PageSize=50',
       );
+      if (response is! Map || response['items'] is! List) {
+        throw const FormatException(
+          'The server returned an invalid therapist page.',
+        );
+      }
+      final items = response['items'] as List;
+      therapists.addAll(
+        items
+            .whereType<Map>()
+            .map(
+              (item) => ReportTherapistOptionModel.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .where(
+              (therapist) =>
+                  therapist.id > 0 && therapist.fullName.trim().isNotEmpty,
+            )
+            .toList(),
+      );
+      if (response['hasNextPage'] != true) break;
+      if (items.isEmpty) {
+        throw const FormatException(
+          'The server returned an empty intermediate therapist page.',
+        );
+      }
+      page++;
     }
-
-    final therapists = response
-        .whereType<Map>()
-        .map(
-          (item) => ReportTherapistOptionModel.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
-        )
-        .where(
-          (therapist) =>
-              therapist.id > 0 && therapist.fullName.trim().isNotEmpty,
-        )
-        .toList();
 
     therapists.sort(
       (first, second) =>

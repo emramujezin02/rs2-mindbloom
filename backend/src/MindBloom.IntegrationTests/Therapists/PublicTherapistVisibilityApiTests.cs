@@ -31,12 +31,12 @@ public sealed class PublicTherapistVisibilityApiTests
         using var client = factory.CreateClient();
 
         var all = await client.GetFromJsonAsync<JsonElement>("/api/Therapists");
-        Assert.Equal(visible ? 1 : 0, all.GetArrayLength());
+        Assert.Equal(visible ? 1 : 0, all.GetProperty("items").GetArrayLength());
         var filterResponse = await client.PostAsJsonAsync("/api/Therapists/filter",
             new TherapistFilterDto { MinPrice = 40m, MaxPrice = 60m, SortByRating = true });
         Assert.Equal(HttpStatusCode.OK, filterResponse.StatusCode);
         var filtered = await filterResponse.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(visible ? 1 : 0, filtered.GetArrayLength());
+        Assert.Equal(visible ? 1 : 0, filtered.GetProperty("items").GetArrayLength());
         var search = await client.GetFromJsonAsync<JsonElement>("/api/Therapists/search?pageNumber=1&pageSize=1");
         Assert.Equal(visible ? 1 : 0, search.GetProperty("totalCount").GetInt32());
         Assert.Equal(visible ? 1 : 0, search.GetProperty("items").GetArrayLength());
@@ -92,7 +92,7 @@ public sealed class PublicTherapistVisibilityApiTests
         var filter = await filterResponse.Content.ReadFromJsonAsync<JsonElement>();
         var details = await client.GetFromJsonAsync<JsonElement>($"/api/Therapists/{therapistId}");
         var rating = await client.GetFromJsonAsync<JsonElement>($"/api/Reviews/therapist/{therapistId}/rating");
-        foreach (var item in new[] { all[0], search.GetProperty("items")[0], filter[0], details, rating })
+        foreach (var item in new[] { all.GetProperty("items")[0], search.GetProperty("items")[0], filter.GetProperty("items")[0], details, rating })
         {
             Assert.Equal(average, item.GetProperty("averageRating").GetDouble());
             Assert.Equal(count, item.GetProperty("totalReviews").GetInt32());

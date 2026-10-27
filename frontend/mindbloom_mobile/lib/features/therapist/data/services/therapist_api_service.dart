@@ -24,12 +24,24 @@ class TherapistApiService {
 
   TherapistApiService({required this.apiClient});
 
-  Future<List<TherapistModel>> getTherapists() async {
-    final response = await apiClient.get('/Therapists');
-
-    return (response as List)
-        .map((item) => TherapistModel.fromJson(item as Map<String, dynamic>))
-        .toList();
+  Future<PagedResponse<TherapistModel>> getTherapists({
+    int page = 1,
+    int pageSize = 10,
+  }) async {
+    final uri = Uri(
+      path: '/Therapists',
+      queryParameters: {'Page': '$page', 'PageSize': '$pageSize'},
+    );
+    final response = await apiClient.get(uri.toString());
+    if (response is! Map) {
+      throw const FormatException(
+        'The server returned an invalid therapist page.',
+      );
+    }
+    return PagedResponse<TherapistModel>.fromJson(
+      Map<String, dynamic>.from(response),
+      TherapistModel.fromJson,
+    );
   }
 
   Future<TherapistSearchPageModel> searchTherapists(

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MindBloom.Application.Features.Therapists.DTOs;
 using MindBloom.Application.Features.Therapists.Interfaces;
+using MindBloom.Application.Common.Pagination;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using MindBloom.Shared.Constants;
@@ -42,10 +43,12 @@ public class TherapistsController : ControllerBase
     RateLimitPolicyConstants
         .PublicSearch)]
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = PaginationDefaults.DefaultPageNumber,
+        [FromQuery] int pageSize = PaginationDefaults.DefaultPageSize)
     {
         var result =
-            await _therapistService.GetAllAsync();
+            await _therapistService.GetAllAsync(page, pageSize);
 
         return Ok(result);
     }
@@ -96,11 +99,13 @@ public class TherapistsController : ControllerBase
         .PublicSearch)]
     [HttpPost("filter")]
     public async Task<IActionResult> Filter(
-        [FromBody] TherapistFilterDto filter)
+        [FromBody] TherapistFilterDto filter,
+        [FromQuery] int page = PaginationDefaults.DefaultPageNumber,
+        [FromQuery] int pageSize = PaginationDefaults.DefaultPageSize)
     {
         var result =
             await _therapistService
-                .FilterAsync(filter);
+                .FilterAsync(filter, page, pageSize);
 
         return Ok(result);
     }
