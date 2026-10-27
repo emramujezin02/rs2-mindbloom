@@ -70,7 +70,7 @@ public class TherapistsController : ControllerBase
     {
         var result =
             await _therapistService
-                .GetAvailabilitiesAsync(therapistId);
+                .GetAvailabilitiesAsync(therapistId, GetOptionalCurrentUserId());
 
         return Ok(result);
     }
@@ -189,7 +189,8 @@ public class TherapistsController : ControllerBase
                     pageNumber,
                     pageSize,
                     fromUtc,
-                    toUtc);
+                    toUtc,
+                    GetOptionalCurrentUserId());
 
         return Ok(result);
     }
@@ -386,6 +387,9 @@ DeleteProfileImage()
 
         return NoContent();
     }
+
+    private int? GetOptionalCurrentUserId() =>
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) ? userId : null;
 
     private int GetCurrentUserId()
     {

@@ -4,6 +4,7 @@ using MindBloom.Application.Features.Reviews.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Infrastructure.Persistence.Queries;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Common.BusinessRules;
@@ -128,6 +129,9 @@ public class ReviewService : IReviewService
                     limit,
                     maximumLimit);
 
+        var visibleTherapistIds = _context.Therapists
+            .Where(TherapistVisibility.PubliclyVisible).Select(x => x.Id);
+
         var reviews =
             await _context.Reviews
                 .AsNoTracking()
@@ -141,14 +145,9 @@ public class ReviewService : IReviewService
     x.ModerationStatus ==
         ReviewModerationStatus.Approved &&
     !x.Client.IsDeleted &&
-    !x.Therapist.IsDeleted &&
+    visibleTherapistIds.Contains(x.TherapistId) &&
     !x.Client.User.IsBlocked &&
-    x.Client.User.IsActive &&
-    !x.Therapist.User.IsBlocked &&
-    x.Therapist.User.IsActive &&
-    x.Therapist.VerificationStatus ==
-        TherapistVerificationStatus
-            .Approved)
+    x.Client.User.IsActive)
                 .OrderByDescending(x =>
                     x.CreatedAtUtc)
                 .ThenByDescending(x =>
@@ -222,6 +221,8 @@ public class ReviewService : IReviewService
         int therapistId,
         ReviewFilterDto filter)
     {
+        await EnsurePublicTherapistAsync(therapistId);
+
         var pagination =
             PaginationHelper.Normalize(
                 filter.PageNumber,
@@ -319,6 +320,8 @@ public class ReviewService : IReviewService
         GetTherapistRatingAsync(
             int therapistId)
     {
+        await EnsurePublicTherapistAsync(therapistId);
+
         var reviews =
             await _context.Reviews
                 .Where(x =>
@@ -350,6 +353,16 @@ public class ReviewService : IReviewService
 
             TotalReviews = reviews.Count
         };
+    }
+
+    private async Task EnsurePublicTherapistAsync(int therapistId)
+    {
+        if (!await _context.Therapists
+                .Where(TherapistVisibility.PubliclyVisible)
+                .AnyAsync(x => x.Id == therapistId))
+        {
+            throw new NotFoundException("Therapist not found or is not publicly available.");
+        }
     }
 
     public async Task<ReviewEligibilityDto>

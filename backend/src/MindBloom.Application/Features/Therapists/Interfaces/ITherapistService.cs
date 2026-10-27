@@ -14,7 +14,7 @@ public interface ITherapistService
     int therapistUserId,
     CreateAvailabilityDto request);
 
-    Task<List<AvailabilityResponseDto>> GetAvailabilitiesAsync(int therapistId);
+    Task<List<AvailabilityResponseDto>> GetAvailabilitiesAsync(int therapistId, int? currentUserId = null);
 
     Task<PagedResponse<TherapistResponseDto>>SearchAsync(SearchTherapistsDto request);
 
@@ -42,7 +42,8 @@ public interface ITherapistService
         int pageNumber,
         int pageSize,
         DateTime? fromUtc,
-        DateTime? toUtc);
+        DateTime? toUtc,
+        int? currentUserId = null);
     Task UploadDocumentAsync(int therapistUserId,IFormFile file);
 
     Task<PagedResponse<TherapistDocumentResponseDto>>GetDocumentsAsync(

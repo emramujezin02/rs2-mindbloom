@@ -5,6 +5,7 @@ using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Payments;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Infrastructure.Persistence.Queries;
 using Stripe;
 using System.Data;
 using MindBloom.Application.Common.Interfaces;
@@ -69,11 +70,8 @@ public class MembershipService : IMembershipService
             await _context.Therapists
                 .AsNoTracking()
                 .Include(x => x.User)
-                .FirstOrDefaultAsync(x =>
-                    x.Id == therapistId
-                    && !x.IsDeleted
-                    && !x.User.IsBlocked
-                    && x.User.IsActive);
+                .Where(TherapistVisibility.PubliclyVisible)
+                .FirstOrDefaultAsync(x => x.Id == therapistId);
 
         if (therapist == null)
         {

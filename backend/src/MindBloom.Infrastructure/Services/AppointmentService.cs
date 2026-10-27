@@ -3,6 +3,7 @@ using MindBloom.Application.Features.Appointments.DTOs;
 using MindBloom.Application.Features.Appointments.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Infrastructure.Persistence.Queries;
 using MindBloom.Domain.Enums;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Common.Models;
@@ -1714,10 +1715,8 @@ public class AppointmentService : IAppointmentService
     {
         var therapistExists =
             await _context.Therapists
-                .AnyAsync(x =>
-                    x.Id == therapistId &&
-                    x.VerificationStatus ==
-                        TherapistVerificationStatus.Approved);
+                .Where(TherapistVisibility.PubliclyVisible)
+                .AnyAsync(x => x.Id == therapistId);
 
         if (!therapistExists)
         {

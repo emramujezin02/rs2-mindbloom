@@ -5,6 +5,7 @@ using MindBloom.Application.Features.Therapists.DTOs;
 using MindBloom.Application.Features.Therapists.Interfaces;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Infrastructure.Persistence.Queries;
 using MindBloom.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
@@ -15,6 +16,7 @@ using MindBloom.Application.Features.Security.DTOs;
 using MindBloom.Application.Features.Security.Interfaces;
 using Microsoft.Extensions.Options;
 using MindBloom.Infrastructure.Configuration;
+using MindBloom.Shared.Constants;
 
 namespace MindBloom.Infrastructure.Services;
 
@@ -145,11 +147,7 @@ public class TherapistService : ITherapistService
             .AsNoTracking()
             .Include(x => x.User)
             .Include(x => x.Reviews)
-                    .Where(x =>
-    !x.IsDeleted &&
-    x.VerificationStatus ==
-        TherapistVerificationStatus.Approved &&
-        (x.User.Settings ==null || x.User.Settings.ShowProfilePublicly))
+            .Where(TherapistVisibility.PubliclyVisible)
             .Select(x => new TherapistResponseDto
             {
                 Id = x.Id,
@@ -160,8 +158,10 @@ public class TherapistService : ITherapistService
                 Biography = x.Biography,
                 HourlyRate = x.HourlyRate,
                 ExperienceYears = x.ExperienceYears,
-                AverageRating = x.Reviews.Any() ? Math.Round(x.Reviews.Average(r => r.Rating), 1): 0,
-                TotalReviews = x.Reviews.Count,
+                AverageRating = x.Reviews.Any(r => !r.IsDeleted && r.IsApproved && r.ModerationStatus == ReviewModerationStatus.Approved)
+                    ? Math.Round(x.Reviews.Where(r => !r.IsDeleted && r.IsApproved && r.ModerationStatus == ReviewModerationStatus.Approved).Average(r => r.Rating), 1)
+                    : 0,
+                TotalReviews = x.Reviews.Count(r => !r.IsDeleted && r.IsApproved && r.ModerationStatus == ReviewModerationStatus.Approved),
                 VerificationStatus = x.VerificationStatus.ToString(),
                 VerificationNotes = null,
                 ProfileImageUrl = x.User.ProfileImageUrl ?? x.ProfileImagePath,
@@ -244,8 +244,10 @@ public class TherapistService : ITherapistService
     }
 
     public async Task<List<AvailabilityResponseDto>>
-        GetAvailabilitiesAsync(int therapistId)
+        GetAvailabilitiesAsync(int therapistId, int? currentUserId = null)
     {
+        await EnsureScheduleAccessAsync(therapistId, currentUserId);
+
         return await _context.TherapistAvailabilities
             .Where(x =>
     x.TherapistId == therapistId &&
@@ -304,16 +306,7 @@ public class TherapistService : ITherapistService
         var query =
             _context.Therapists
                 .AsNoTracking()
-                .Where(x =>
-                    !x.IsDeleted &&
-                    x.User.IsActive &&
-                    !x.User.IsBlocked &&
-                    x.VerificationStatus ==
-                        TherapistVerificationStatus.Approved &&
-                    (
-                        x.User.Settings == null ||
-                        x.User.Settings.ShowProfilePublicly
-                    ))
+                .Where(TherapistVisibility.PubliclyVisible)
                 .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(
@@ -498,12 +491,12 @@ public class TherapistService : ITherapistService
             query = query.Where(x =>
                 x.Reviews
 .Where(review =>
-    !review.IsDeleted)
+    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
                     .Any()
                 &&
                 x.Reviews
 .Where(review =>
-    !review.IsDeleted)
+    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
                     .Average(review =>
                         review.Rating)
                 >= request.MinRating.Value);
@@ -544,13 +537,11 @@ public class TherapistService : ITherapistService
                         .OrderByDescending(x =>
                             x.Reviews
 .Where(review =>
-    !review.IsDeleted &&
-    review.IsApproved)
+    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
                                 .Any()
                                 ? x.Reviews
                                     .Where(review =>
-                                        !review.IsDeleted &&
-                                        review.IsApproved)
+                                        !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
                                     .Average(review =>
                                         review.Rating)
                                 : 0)
@@ -562,13 +553,11 @@ public class TherapistService : ITherapistService
                         .OrderBy(x =>
                             x.Reviews
 .Where(review =>
-    !review.IsDeleted &&
-    review.IsApproved)
+    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
                                 .Any()
                                 ? x.Reviews
                                     .Where(review =>
-                                        !review.IsDeleted &&
-                                        review.IsApproved)
+                                        !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
                                     .Average(review =>
                                         review.Rating)
                                 : 0)
@@ -646,13 +635,12 @@ public class TherapistService : ITherapistService
                         AverageRating =
                             x.Reviews
 .Where(review =>
-    !review.IsDeleted)
+    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
                                 .Any()
                                 ? Math.Round(
                                     x.Reviews
                                         .Where(review =>
-                                            !review.IsDeleted &&
-                                            review.IsApproved)
+                                            !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
                                         .Average(review =>
                                             review.Rating),
                                     1)
@@ -660,7 +648,7 @@ public class TherapistService : ITherapistService
 
                         TotalReviews =
                             x.Reviews.Count(review =>
-    !review.IsDeleted),
+    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved),
 
                         VerificationStatus =
                             x.VerificationStatus
@@ -724,14 +712,7 @@ public class TherapistService : ITherapistService
             _context.Therapists
                 .Include(x => x.User)
                 .Include(x => x.Reviews)
-.Where(x =>
-    !x.IsDeleted &&
-    x.VerificationStatus ==
-        TherapistVerificationStatus.Approved &&
-    (
-        x.User.Settings == null ||
-        x.User.Settings.ShowProfilePublicly
-    ))
+                .Where(TherapistVisibility.PubliclyVisible)
                 .AsQueryable();
 
 
@@ -783,14 +764,14 @@ public class TherapistService : ITherapistService
                         x.ExperienceYears,
 
                     AverageRating =
-                        x.Reviews.Any()
+                        x.Reviews.Any(r => !r.IsDeleted && r.IsApproved && r.ModerationStatus == ReviewModerationStatus.Approved)
                             ? Math.Round(
-                                x.Reviews
+                                x.Reviews.Where(r => !r.IsDeleted && r.IsApproved && r.ModerationStatus == ReviewModerationStatus.Approved)
                                     .Average(r => r.Rating),
                                 1)
                             : 0,
 
-                    TotalReviews = x.Reviews.Count,
+                    TotalReviews = x.Reviews.Count(r => !r.IsDeleted && r.IsApproved && r.ModerationStatus == ReviewModerationStatus.Approved),
                     ProfileImageUrl = x.User.ProfileImageUrl ?? x.ProfileImagePath,
                     Country = x.Country,
                     City = x.City,
@@ -1313,15 +1294,8 @@ public class TherapistService : ITherapistService
                 .Include(x => x.TherapyApproaches)
                     .ThenInclude(x =>
                         x.TherapyApproach)
-.FirstOrDefaultAsync(x =>
-    x.Id == therapistId &&
-    !x.IsDeleted &&
-    x.VerificationStatus ==
-        TherapistVerificationStatus.Approved &&
-    (
-        x.User.Settings == null ||
-        x.User.Settings.ShowProfilePublicly
-    ));
+                .Where(TherapistVisibility.PubliclyVisible)
+                .FirstOrDefaultAsync(x => x.Id == therapistId);
 
         if (therapist == null)
         {
@@ -1427,13 +1401,11 @@ public class TherapistService : ITherapistService
 
             AverageRating =
                 therapist.Reviews.Any(review =>
-                    !review.IsDeleted &&
-                    review.IsApproved)
+                    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
                     ? Math.Round(
                         therapist.Reviews
                             .Where(review =>
-                                !review.IsDeleted &&
-                                review.IsApproved)
+                                !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
                             .Average(review =>
                                 review.Rating),
                         1)
@@ -1441,8 +1413,7 @@ public class TherapistService : ITherapistService
 
             TotalReviews =
                 therapist.Reviews.Count(review =>
-                    !review.IsDeleted &&
-                    review.IsApproved),
+                    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved),
 
             VerificationStatus =
                 therapist.VerificationStatus
@@ -1992,8 +1963,11 @@ public class TherapistService : ITherapistService
         int pageNumber,
         int pageSize,
         DateTime? fromUtc,
-        DateTime? toUtc)
+        DateTime? toUtc,
+        int? currentUserId = null)
     {
+        await EnsureScheduleAccessAsync(therapistId, currentUserId);
+
         var rangeStart =
             fromUtc?.ToUniversalTime();
 
@@ -2071,6 +2045,27 @@ public class TherapistService : ITherapistService
                 pagination.PageNumber,
                 pagination.PageSize,
                 totalCount);
+    }
+
+    private async Task EnsureScheduleAccessAsync(int therapistId, int? currentUserId)
+    {
+        var publicIds = _context.Therapists
+            .Where(TherapistVisibility.PubliclyVisible).Select(x => x.Id);
+        var adminUserIds = from userRole in _context.UserRoles
+                           join role in _context.Roles on userRole.RoleId equals role.Id
+                           where role.Name == RoleConstants.Admin
+                           select userRole.UserId;
+        var viewerUserId = currentUserId.GetValueOrDefault();
+
+        var canAccess = await _context.Therapists.AnyAsync(x =>
+            x.Id == therapistId && !x.IsDeleted &&
+            ((currentUserId.HasValue && (x.UserId == viewerUserId || adminUserIds.Contains(viewerUserId))) ||
+             publicIds.Contains(x.Id)));
+
+        if (!canAccess)
+        {
+            throw new NotFoundException("Therapist not found or is not publicly available.");
+        }
     }
 
     public async Task DeleteUnavailableDateAsync(

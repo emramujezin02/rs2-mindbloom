@@ -256,6 +256,8 @@ public sealed class TherapistSearchSortingTests
                 IsApproved =
                     true,
 
+                ModerationStatus = ReviewModerationStatus.Approved,
+
                 Comment =
                     "Sorting test review"
             });

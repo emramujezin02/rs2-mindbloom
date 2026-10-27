@@ -881,6 +881,8 @@ public sealed partial class MembershipServiceTests
                 Biography =
                     "Unit test",
 
+                VerificationStatus = TherapistVerificationStatus.Approved,
+
                 Specialization =
                     "Psychotherapy",
 

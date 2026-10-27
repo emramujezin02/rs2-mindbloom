@@ -3,6 +3,8 @@ using MindBloom.Application.Recommendations.DTOs;
 using MindBloom.Application.Recommendations.Services;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Infrastructure.Persistence.Queries;
+using MindBloom.Domain.Enums;
 
 namespace MindBloom.Infrastructure.Recommendations;
 
@@ -42,13 +44,6 @@ public sealed class RecommendationService : IRecommendationService
 
     private const int DefaultRecommendationCount = 10;
     private const int MaximumRecommendationCount = 50;
-
-    private static readonly HashSet<string> ApprovedVerificationStatuses =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            "Approved",
-            "Verified"
-        };
 
     private readonly ApplicationDbContext _context;
 
@@ -172,10 +167,7 @@ public sealed class RecommendationService : IRecommendationService
 
         var therapists = await _context.Therapists
             .AsNoTracking()
-            .Where(x =>
-                !x.IsDeleted &&
-                x.User.IsActive &&
-                !x.User.IsBlocked)
+            .Where(TherapistVisibility.PubliclyVisible)
             .Include(x => x.User)
             .Include(x => x.SpecializationReference)
             .Include(x => x.Availabilities)
@@ -190,7 +182,6 @@ public sealed class RecommendationService : IRecommendationService
                 MaximumRecommendationCount);
 
         var recommendations = therapists
-            .Where(IsApprovedTherapist)
             .Where(therapist =>
                 MatchesStoredPreferences(
                     therapist,
@@ -268,6 +259,8 @@ public sealed class RecommendationService : IRecommendationService
         var validReviews = therapist.Reviews
             .Where(x =>
                 !x.IsDeleted &&
+                x.IsApproved &&
+                x.ModerationStatus == ReviewModerationStatus.Approved &&
                 x.Rating >= 1 &&
                 x.Rating <= 5)
             .ToList();
@@ -882,13 +875,6 @@ public sealed class RecommendationService : IRecommendationService
                 : "This therapist is not currently in your favorites.");
 
         return score;
-    }
-
-    private static bool IsApprovedTherapist(
-        Therapist therapist)
-    {
-        return ApprovedVerificationStatuses.Contains(
-            therapist.VerificationStatus.ToString());
     }
 
     private static string NormalizeText(
