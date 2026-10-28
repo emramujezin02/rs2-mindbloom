@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../../../../core/models/paged_response.dart';
+import '../models/therapist_document_model.dart';
 import 'package:mindbloom_mobile/features/therapist/data/models/create_unavailable_date_request.dart';
 
 import '../models/create_therapist_availability_request.dart';
@@ -21,6 +22,11 @@ import '../models/therapist_availability_model.dart';
 import '../../../appointment/data/models/unavailable_date_model.dart';
 
 class TherapistRepository {
+  Future<PagedResponse<TherapistDocumentModel>> getMyDocuments({
+    int pageNumber = 1,
+  }) => therapistApiService.getMyDocuments(pageNumber: pageNumber);
+  Future<void> uploadVerificationDocument(String path, String contentType) =>
+      therapistApiService.uploadVerificationDocument(path, contentType);
   final TherapistApiService therapistApiService;
 
   TherapistRepository({required this.therapistApiService});

@@ -3,6 +3,8 @@ import '../models/therapist_verification_details_model.dart';
 import '../models/therapist_verification_paged_response.dart';
 
 class TherapistVerificationApiService {
+  Future<List<int>> downloadDocument(int documentId) =>
+      apiClient.getBytes('/Therapists/documents/$documentId/download');
   final ApiClient apiClient;
 
   TherapistVerificationApiService({required this.apiClient});

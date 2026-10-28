@@ -222,7 +222,7 @@ public class TherapistsController : ControllerBase
     RateLimitPolicyConstants.Uploads)]
     [HttpPost("documents")]
     [Consumes("multipart/form-data")]
-    [RequestSizeLimit(10 * 1024 * 1024)]
+    [RequestSizeLimit(11 * 1024 * 1024)]
     public async Task<IActionResult>
         UploadDocument(
             [FromForm]
@@ -238,6 +238,15 @@ public class TherapistsController : ControllerBase
             message =
                 "Document uploaded successfully."
         });
+    }
+
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
+    [HttpGet("documents/me")]
+    public async Task<IActionResult> GetMyDocuments(
+        [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+    {
+        return Ok(await _therapistService.GetMyDocumentsAsync(
+            GetCurrentUserId(), pageNumber, pageSize));
     }
 
     [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]

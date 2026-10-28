@@ -5,6 +5,7 @@ import '../models/forgot_password_request.dart';
 import '../models/login_2fa_response.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
+import '../models/register_therapist_request.dart';
 import '../models/reset_password_request.dart';
 import '../models/verify_2fa_request.dart';
 import '../services/auth_api_service.dart';
@@ -14,6 +15,11 @@ import '../models/current_consent_versions.dart';
 import '../models/delete_account_request.dart';
 
 class AuthRepository {
+  Future<RegisterTherapistResponse> registerTherapist(
+    RegisterTherapistRequest request,
+  ) => authApiService.registerTherapist(request);
+  Future<List<String>> getTherapistSpecializations() =>
+      authApiService.getTherapistSpecializations();
   final AuthApiService authApiService;
   final SessionStorageService sessionStorage;
 

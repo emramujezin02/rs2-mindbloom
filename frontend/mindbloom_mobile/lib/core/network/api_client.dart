@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../../services/session_storage_service.dart';
 import '../constants/api_constants.dart';
@@ -18,13 +19,14 @@ class ApiClient {
 
   Future<void> Function()? onSessionExpired;
 
-  final http.Client _httpClient = http.Client();
+  final http.Client _httpClient;
 
   Future<bool>? _refreshInProgress;
 
   Future<void>? _sessionExpirationInProgress;
 
-  ApiClient({required this.sessionStorage, this.onSessionExpired});
+  ApiClient({required this.sessionStorage, this.onSessionExpired, http.Client? httpClient})
+      : _httpClient = httpClient ?? http.Client();
 
   Future<dynamic> get(String endpoint, {bool requiresAuth = true}) async {
     final uri = _buildUri(endpoint);
@@ -130,6 +132,7 @@ class ApiClient {
     String endpoint, {
     required String filePath,
     String fileFieldName = 'file',
+    String? contentType,
     bool requiresAuth = true,
   }) async {
     final uri = _buildUri(endpoint);
@@ -148,7 +151,13 @@ class ApiClient {
         request.headers.addAll(headers);
 
         request.files.add(
-          await http.MultipartFile.fromPath(fileFieldName, filePath),
+          await http.MultipartFile.fromPath(
+            fileFieldName,
+            filePath,
+            contentType: contentType == null
+                ? null
+                : MediaType.parse(contentType),
+          ),
         );
 
         final streamedResponse = await _httpClient

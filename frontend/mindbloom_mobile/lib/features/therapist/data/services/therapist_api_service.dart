@@ -2,6 +2,7 @@ import 'package:mindbloom_mobile/features/therapist/data/models/create_unavailab
 
 import '../../../../core/models/paged_response.dart';
 import '../../../../core/network/api_client.dart';
+import '../models/therapist_document_model.dart';
 import '../models/therapist_details_model.dart';
 import '../models/therapist_filter_request.dart';
 import '../models/therapist_model.dart';
@@ -20,6 +21,30 @@ import '../../../appointment/data/models/unavailable_date_model.dart';
 import '../models/therapist_availability_model.dart';
 
 class TherapistApiService {
+  Future<PagedResponse<TherapistDocumentModel>> getMyDocuments({
+    int pageNumber = 1,
+  }) async {
+    final json = await apiClient.get(
+      '/Therapists/documents/me?pageNumber=$pageNumber&pageSize=10',
+    );
+    return PagedResponse<TherapistDocumentModel>.fromJson(
+      Map<String, dynamic>.from(json as Map),
+      TherapistDocumentModel.fromJson,
+    );
+  }
+
+  Future<void> uploadVerificationDocument(
+    String path,
+    String contentType,
+  ) async {
+    await apiClient.multipartPost(
+      '/Therapists/documents',
+      filePath: path,
+      fileFieldName: 'File',
+      contentType: contentType,
+    );
+  }
+
   final ApiClient apiClient;
 
   TherapistApiService({required this.apiClient});

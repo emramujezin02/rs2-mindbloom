@@ -934,6 +934,8 @@ public class TherapistService : ITherapistService
                 therapist.VerificationStatus
                     .ToString(),
 
+            VerificationNotes = therapist.VerificationNotes,
+
             Availabilities =
                 therapist.Availabilities
                     .Where(x => !x.IsDeleted)
@@ -2136,6 +2138,11 @@ public class TherapistService : ITherapistService
         await ValidateDocumentAsync(
             file);
 
+        if (therapist.VerificationStatus == TherapistVerificationStatus.Rejected)
+        {
+            throw new BusinessException("Rejected applications cannot be resubmitted.");
+        }
+
         var privateRoot =
             Path.Combine(
                 Directory.GetCurrentDirectory(),
@@ -2203,7 +2210,23 @@ public class TherapistService : ITherapistService
         _context.TherapistDocuments
             .Add(document);
 
+        if (therapist.VerificationStatus == TherapistVerificationStatus.RequiresChanges)
+        {
+            therapist.VerificationStatus = TherapistVerificationStatus.Pending;
+            therapist.UpdatedAtUtc = DateTime.UtcNow;
+        }
+
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<PagedResponse<TherapistDocumentResponseDto>> GetMyDocumentsAsync(
+        int therapistUserId, int pageNumber, int pageSize)
+    {
+        var therapistId = await _context.Therapists
+            .Where(x => x.UserId == therapistUserId && !x.IsDeleted)
+            .Select(x => (int?)x.Id).SingleOrDefaultAsync();
+        if (therapistId == null) throw new NotFoundException("Therapist not found.");
+        return await GetDocumentsAsync(therapistId.Value, pageNumber, pageSize);
     }
 
     public async Task<

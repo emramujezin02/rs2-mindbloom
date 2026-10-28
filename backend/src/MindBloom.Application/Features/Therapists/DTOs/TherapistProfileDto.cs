@@ -45,6 +45,7 @@ public class TherapistProfileDto
     public string? ProfileImageUrl { get; set; }
 
     public string VerificationStatus { get; set; } = string.Empty;
+    public string? VerificationNotes { get; set; }
 
     public List<AvailabilityResponseDto> Availabilities { get; set; } = [];
 

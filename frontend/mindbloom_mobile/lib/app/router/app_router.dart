@@ -9,6 +9,7 @@ import '../../features/privacy/presentation/pages/privacy_consents_page.dart';
 
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/therapist/presentation/pages/therapist_verification_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/change_password_page.dart';
@@ -88,6 +89,7 @@ class AppRouter {
   static const String home = '/';
   static const String login = '/login';
   static const String register = '/register';
+  static const String therapistVerification = '/therapist/verification';
   static const String forgotPassword = '/forgot-password';
   static const String resetPassword = '/reset-password';
   static const String therapists = '/therapists';
@@ -150,7 +152,18 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const LoginPage());
 
       case register:
-        return MaterialPageRoute(builder: (_) => const RegisterPage());
+        final arguments = settings.arguments;
+        final initialRole = RegisterPage.normalizeRole(
+          arguments is Map ? arguments['initialRole'] : null,
+        );
+        return MaterialPageRoute(
+          builder: (_) => RegisterPage(initialRole: initialRole),
+        );
+
+      case therapistVerification:
+        return MaterialPageRoute(
+          builder: (_) => const TherapistVerificationPage(),
+        );
 
       case forgotPassword:
         return MaterialPageRoute(builder: (_) => const ForgotPasswordPage());

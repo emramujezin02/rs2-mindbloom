@@ -3,6 +3,8 @@ import '../models/therapist_verification_paged_response.dart';
 import '../services/therapist_verification_api_service.dart';
 
 class TherapistVerificationRepository {
+  Future<List<int>> downloadDocument(int documentId) =>
+      apiService.downloadDocument(documentId);
   final TherapistVerificationApiService apiService;
 
   TherapistVerificationRepository({required this.apiService});

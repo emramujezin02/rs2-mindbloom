@@ -24,6 +24,7 @@ class TherapistProfileModel {
   final List<String> languages;
   final String? profileImageUrl;
   final String verificationStatus;
+  final String? verificationNotes;
   final List<TherapistProfileAvailabilityModel> availabilities;
   final List<TherapyApproachModel> therapyApproaches;
 
@@ -50,6 +51,7 @@ class TherapistProfileModel {
     required this.languages,
     required this.profileImageUrl,
     required this.verificationStatus,
+    this.verificationNotes,
     required this.availabilities,
     required this.therapyApproaches,
   });
@@ -82,6 +84,7 @@ class TherapistProfileModel {
       languages: _readLanguages(rawLanguages),
       profileImageUrl: _readNullableString(json['profileImageUrl']),
       verificationStatus: json['verificationStatus']?.toString() ?? '',
+      verificationNotes: json['verificationNotes'] as String?,
       availabilities: rawAvailabilities is List
           ? rawAvailabilities
                 .whereType<Map>()
@@ -157,6 +160,7 @@ class TherapistProfileModel {
       languages: languages ?? this.languages,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       verificationStatus: verificationStatus ?? this.verificationStatus,
+      verificationNotes: verificationNotes,
       availabilities: availabilities ?? this.availabilities,
       therapyApproaches: therapyApproaches ?? this.therapyApproaches,
     );

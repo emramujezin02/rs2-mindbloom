@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
+import 'package:file_selector/file_selector.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../core/constants/api_constants.dart';
@@ -28,6 +29,7 @@ class _TherapistVerificationDetailsPageState
     extends State<TherapistVerificationDetailsPage> {
   final TherapistVerificationDetailsViewModel _viewModel =
       AppInjection.createTherapistVerificationDetailsViewModel();
+  bool _isDownloading = false;
 
   @override
   void initState() {
@@ -69,26 +71,28 @@ class _TherapistVerificationDetailsPageState
     return '${ApiConstants.baseUrl}$normalized';
   }
 
-  Future<void> _openFile(String path) async {
-    final url = _fileUrl(path);
-
-    if (url == null) {
-      return;
-    }
-
-    final opened = await launchUrl(
-      Uri.parse(url),
-      mode: LaunchMode.externalApplication,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    if (!opened) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Document could not be opened.')),
-      );
+  Future<void> _downloadDocument(int id, String fileName) async {
+    if (_isDownloading) return;
+    setState(() => _isDownloading = true);
+    try {
+      final safeName = fileName.split(RegExp(r'[/\\]')).last;
+      final location = await getSaveLocation(suggestedName: safeName);
+      if (location == null || !mounted) return;
+      final bytes = await _viewModel.downloadDocument(id);
+      await File(location.path).writeAsBytes(bytes, flush: true);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Document downloaded.')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Document could not be downloaded.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
     }
   }
 
@@ -553,11 +557,14 @@ class _TherapistVerificationDetailsPageState
                           formatter.format(document.createdAtUtc.toLocal()),
                         ),
                         trailing: OutlinedButton.icon(
-                          onPressed: () {
-                            _openFile(document.filePath);
-                          },
-                          icon: const Icon(Icons.open_in_new),
-                          label: const Text('Open'),
+                          onPressed: _isDownloading
+                              ? null
+                              : () => _downloadDocument(
+                                  document.id,
+                                  document.fileName,
+                                ),
+                          icon: const Icon(Icons.download),
+                          label: const Text('Download'),
                         ),
                       ),
                     ),

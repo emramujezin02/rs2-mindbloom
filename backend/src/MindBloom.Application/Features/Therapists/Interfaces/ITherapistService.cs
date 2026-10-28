@@ -52,6 +52,9 @@ public interface ITherapistService
         int? currentUserId = null);
     Task UploadDocumentAsync(int therapistUserId,IFormFile file);
 
+    Task<PagedResponse<TherapistDocumentResponseDto>> GetMyDocumentsAsync(
+        int therapistUserId, int pageNumber, int pageSize);
+
     Task<PagedResponse<TherapistDocumentResponseDto>>GetDocumentsAsync(
         int therapistId,
         int pageNumber,

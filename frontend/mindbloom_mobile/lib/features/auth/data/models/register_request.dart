@@ -4,6 +4,7 @@ class RegisterRequest {
   final String username;
   final String email;
   final String password;
+  final String gender;
   final DateTime dateOfBirth;
 
   final bool acceptPrivacyPolicy;
@@ -18,6 +19,7 @@ class RegisterRequest {
     required this.username,
     required this.email,
     required this.password,
+    this.gender = 'Other',
     required this.dateOfBirth,
     required this.acceptPrivacyPolicy,
     required this.privacyPolicyVersion,
@@ -32,6 +34,7 @@ class RegisterRequest {
       'username': username,
       'email': email,
       'password': password,
+      'gender': gender,
       'dateOfBirth': dateOfBirth.toIso8601String(),
       'acceptPrivacyPolicy': acceptPrivacyPolicy,
       'privacyPolicyVersion': privacyPolicyVersion,

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../data/models/register_therapist_request.dart';
 import '../../../../core/error/app_exception.dart';
 import '../../data/models/change_password_request.dart';
 import '../../data/models/forgot_password_request.dart';
@@ -10,6 +11,28 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/models/current_consent_versions.dart';
 
 class AuthViewModel extends ChangeNotifier {
+  List<String> registrationSpecializations = [];
+  bool isLoadingSpecializations = false;
+  String? specializationsError;
+  RegisterTherapistResponse? therapistRegistration;
+
+  Future<void> loadRegistrationSpecializations() async {
+    if (isLoadingSpecializations) return;
+    isLoadingSpecializations = true;
+    specializationsError = null;
+    notifyListeners();
+    try {
+      registrationSpecializations = await authRepository
+          .getTherapistSpecializations();
+    } catch (_) {
+      specializationsError =
+          'Specijalizacije nije moguće učitati. Pokušajte ponovo.';
+    } finally {
+      isLoadingSpecializations = false;
+      notifyListeners();
+    }
+  }
+
   final AuthRepository authRepository;
 
   AuthViewModel({required this.authRepository});
@@ -270,6 +293,8 @@ class AuthViewModel extends ChangeNotifier {
     required DateTime dateOfBirth,
     required bool acceptPrivacyPolicy,
     required bool acceptTermsOfService,
+    String gender = 'Other',
+    TherapistRegistrationDetails? therapistDetails,
   }) async {
     if (isLoading) {
       return false;
@@ -303,20 +328,27 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await authRepository.register(
-        RegisterRequest(
-          firstName: firstName,
-          lastName: lastName,
-          username: username,
-          email: email,
-          password: password,
-          dateOfBirth: dateOfBirth,
-          acceptPrivacyPolicy: acceptPrivacyPolicy,
-          privacyPolicyVersion: consentVersions.privacyPolicyVersion,
-          acceptTermsOfService: acceptTermsOfService,
-          termsOfServiceVersion: consentVersions.termsOfServiceVersion,
-        ),
+      therapistRegistration = null;
+      final request = RegisterRequest(
+        firstName: firstName,
+        lastName: lastName,
+        username: username,
+        email: email,
+        password: password,
+        gender: gender,
+        dateOfBirth: dateOfBirth,
+        acceptPrivacyPolicy: acceptPrivacyPolicy,
+        privacyPolicyVersion: consentVersions.privacyPolicyVersion,
+        acceptTermsOfService: acceptTermsOfService,
+        termsOfServiceVersion: consentVersions.termsOfServiceVersion,
       );
+      if (therapistDetails == null) {
+        await authRepository.register(request);
+      } else {
+        therapistRegistration = await authRepository.registerTherapist(
+          RegisterTherapistRequest(account: request, details: therapistDetails),
+        );
+      }
 
       successMessage = 'Registracija je uspješno završena.';
 

@@ -604,6 +604,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
             if (_therapistProfileViewModel.profile != null) ...[
               const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.verified_user),
+                title: const Text('Verifikacija i dokumenti'),
+                subtitle: Text(
+                  _therapistProfileViewModel.profile!.verificationStatus,
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  await Navigator.of(
+                    context,
+                  ).pushNamed(AppRouter.therapistVerification);
+                  if (mounted) await _therapistProfileViewModel.loadProfile();
+                },
+              ),
 
               _buildTherapistProfileSection(
                 _therapistProfileViewModel.profile!,

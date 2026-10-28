@@ -5,6 +5,7 @@ import '../models/forgot_password_request.dart';
 import '../models/login_2fa_response.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
+import '../models/register_therapist_request.dart';
 import '../models/reset_password_request.dart';
 import '../models/verify_2fa_request.dart';
 import '../models/send_email_verification_code_request.dart';
@@ -13,6 +14,29 @@ import '../models/current_consent_versions.dart';
 import '../models/delete_account_request.dart';
 
 class AuthApiService {
+  Future<RegisterTherapistResponse> registerTherapist(
+    RegisterTherapistRequest request,
+  ) async {
+    final response = await apiClient.post(
+      '/Auth/register-therapist',
+      body: request.toJson(),
+      requiresAuth: false,
+    );
+    return RegisterTherapistResponse.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
+
+  Future<List<String>> getTherapistSpecializations() async {
+    final response = await apiClient.get(
+      '/reference-data/therapist-specializations/active',
+      requiresAuth: false,
+    );
+    return (response as List)
+        .map((item) => (item as Map)['name'] as String)
+        .toList();
+  }
+
   final ApiClient apiClient;
 
   AuthApiService({required this.apiClient});

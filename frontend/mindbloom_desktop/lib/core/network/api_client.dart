@@ -18,6 +18,20 @@ class ApiClient {
 
   ApiClient({required this.sessionStorage});
 
+  Future<List<int>> getBytes(String endpoint) async {
+    final response = await _executeRequest(
+      requiresAuth: true,
+      asBytes: true,
+      request: () async => http
+          .get(
+            _buildUri(endpoint),
+            headers: await _buildHeaders(requiresAuth: true),
+          )
+          .timeout(_requestTimeout),
+    );
+    return List<int>.from(response as List);
+  }
+
   Future<dynamic> get(String endpoint, {bool requiresAuth = true}) {
     return _executeRequest(
       requiresAuth: requiresAuth,
@@ -137,12 +151,16 @@ class ApiClient {
 
   Future<dynamic> _executeRequest({
     required bool requiresAuth,
+    bool asBytes = false,
     required Future<http.Response> Function() request,
   }) async {
     try {
       final response = await request();
 
       if (!requiresAuth || response.statusCode != 401) {
+        if (asBytes && response.statusCode >= 200 && response.statusCode < 300) {
+          return response.bodyBytes;
+        }
         return _handleResponse(response);
       }
 
@@ -172,6 +190,11 @@ class ApiClient {
         );
       }
 
+      if (asBytes &&
+          repeatedResponse.statusCode >= 200 &&
+          repeatedResponse.statusCode < 300) {
+        return repeatedResponse.bodyBytes;
+      }
       return _handleResponse(repeatedResponse);
     } on AppException {
       rethrow;

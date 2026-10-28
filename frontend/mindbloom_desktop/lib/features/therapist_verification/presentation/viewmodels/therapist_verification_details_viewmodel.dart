@@ -5,6 +5,8 @@ import '../../data/repositories/therapist_verification_repository.dart';
 import '../../../../core/error/app_error_helper.dart';
 
 class TherapistVerificationDetailsViewModel extends ChangeNotifier {
+  Future<List<int>> downloadDocument(int documentId) =>
+      repository.downloadDocument(documentId);
   final TherapistVerificationRepository repository;
 
   TherapistVerificationDetailsViewModel({required this.repository});

@@ -5,11 +5,18 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/validation/app_validators.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../../data/models/register_therapist_request.dart';
 
 class RegisterPage extends StatefulWidget {
   final AuthViewModel? viewModel;
+  final String initialRole;
 
-  const RegisterPage({super.key, this.viewModel});
+  const RegisterPage({super.key, this.viewModel, this.initialRole = 'Client'});
+
+  static String normalizeRole(Object? value) =>
+      value is String && value.toLowerCase() == 'therapist'
+      ? 'Therapist'
+      : 'Client';
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -30,6 +37,18 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _emailController = TextEditingController();
 
   final TextEditingController _passwordController = TextEditingController();
+  final _biography = TextEditingController();
+  final _hourlyRate = TextEditingController();
+  final _experience = TextEditingController();
+  final _country = TextEditingController();
+  final _city = TextEditingController();
+  final _address = TextEditingController();
+  late String _role;
+  String _gender = 'Other';
+  String? _specialization;
+  bool _offersOnline = true;
+  bool _offersInPerson = false;
+  bool get _isTherapist => _role == 'Therapist';
 
   DateTime? _dateOfBirth;
   bool _obscurePassword = true;
@@ -40,6 +59,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void initState() {
     super.initState();
+    _role = RegisterPage.normalizeRole(widget.initialRole);
 
     _viewModel.addListener(_onChanged);
 
@@ -49,6 +69,7 @@ class _RegisterPageState extends State<RegisterPage> {
       }
 
       _viewModel.loadCurrentConsentVersions();
+      if (_isTherapist) _viewModel.loadRegistrationSpecializations();
     });
   }
 
@@ -62,6 +83,16 @@ class _RegisterPageState extends State<RegisterPage> {
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    for (final controller in [
+      _biography,
+      _hourlyRate,
+      _experience,
+      _country,
+      _city,
+      _address,
+    ]) {
+      controller.dispose();
+    }
 
     super.dispose();
   }
@@ -82,8 +113,16 @@ class _RegisterPageState extends State<RegisterPage> {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime(now.year - 18),
-      firstDate: DateTime(1940),
-      lastDate: now,
+      firstDate: _isTherapist
+          ? DateTime(1)
+          : DateTime(now.year - 120, now.month, now.day),
+      lastDate: _isTherapist
+          ? DateTime(
+              now.year,
+              now.month,
+              now.day,
+            ).subtract(const Duration(days: 1))
+          : now,
     );
 
     if (picked != null && mounted) {
@@ -138,6 +177,22 @@ class _RegisterPageState extends State<RegisterPage> {
       username: _usernameController.text.trim(),
       email: email,
       password: _passwordController.text,
+      gender: _gender,
+      therapistDetails: _isTherapist
+          ? TherapistRegistrationDetails(
+              specialization: _specialization!,
+              biography: _biography.text.trim(),
+              country: _country.text.trim(),
+              city: _city.text.trim(),
+              address: _address.text.trim(),
+              hourlyRate: double.parse(
+                _hourlyRate.text.trim().replaceAll(',', '.'),
+              ),
+              experienceYears: int.parse(_experience.text.trim()),
+              offersOnline: _offersOnline,
+              offersInPerson: _offersInPerson,
+            )
+          : null,
       dateOfBirth: _dateOfBirth!,
       acceptPrivacyPolicy: _acceptedPrivacyPolicy,
       acceptTermsOfService: _acceptedTermsOfService,
@@ -148,9 +203,11 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
-          'Registration successful. Enter the code sent to your email.',
+          _isTherapist
+              ? 'Registracija psihoterapeuta je zaprimljena. Potvrdite email, prijavite se i pošaljite dokumentaciju iz profila. Profil čeka verifikaciju.'
+              : 'Registration successful. Enter the code sent to your email.',
         ),
       ),
     );
@@ -184,6 +241,36 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  DropdownButtonFormField<String>(
+                    key: const ValueKey('registration-role'),
+                    initialValue: _role,
+                    decoration: const InputDecoration(
+                      labelText: 'Tip naloga',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'Client', child: Text('Klijent')),
+                      DropdownMenuItem(
+                        value: 'Therapist',
+                        child: Text('Psihoterapeut'),
+                      ),
+                    ],
+                    onChanged: _viewModel.isLoading
+                        ? null
+                        : (value) {
+                            setState(() {
+                              _role = value!;
+                              _localError = null;
+                            });
+                            if (_isTherapist &&
+                                _viewModel
+                                    .registrationSpecializations
+                                    .isEmpty) {
+                              _viewModel.loadRegistrationSpecializations();
+                            }
+                          },
+                  ),
+                  const SizedBox(height: 14),
                   const Text(
                     'Create MindBloom account',
                     textAlign: TextAlign.center,
@@ -201,8 +288,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       if (value == null || value.trim().isEmpty) {
                         return 'First name is required.';
                       }
-
-                      return null;
+                      return _validateName(value);
                     },
                   ),
                   const SizedBox(height: 14),
@@ -217,8 +303,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Last name is required.';
                       }
-
-                      return null;
+                      return _validateName(value);
                     },
                   ),
                   const SizedBox(height: 14),
@@ -233,7 +318,18 @@ class _RegisterPageState extends State<RegisterPage> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Username is required.';
                       }
-
+                      final username = value.trim();
+                      if (username.length < 3 ||
+                          username.length > (_isTherapist ? 100 : 50)) {
+                        return 'Korisničko ime mora imati 3–${_isTherapist ? 100 : 50} znakova.';
+                      }
+                      if (!RegExp(
+                        _isTherapist
+                            ? r'^[a-zA-Z0-9._@+\-]+$'
+                            : r'^[a-zA-Z0-9._\-]+$',
+                      ).hasMatch(username)) {
+                        return 'Korisničko ime sadrži nedozvoljene znakove.';
+                      }
                       return null;
                     },
                   ),
@@ -256,7 +352,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       if (!email.contains('@')) {
                         return 'Enter a valid email address.';
                       }
-
+                      if (email.length > (_isTherapist ? 256 : 254)) {
+                        return 'Email adresa je preduga.';
+                      }
                       return null;
                     },
                   ),
@@ -292,6 +390,23 @@ class _RegisterPageState extends State<RegisterPage> {
                     icon: const Icon(Icons.calendar_month),
                     label: Text(dateText),
                   ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    initialValue: _gender,
+                    decoration: const InputDecoration(
+                      labelText: 'Spol',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'Male', child: Text('Muški')),
+                      DropdownMenuItem(value: 'Female', child: Text('Ženski')),
+                      DropdownMenuItem(value: 'Other', child: Text('Drugo')),
+                    ],
+                    onChanged: _viewModel.isLoading
+                        ? null
+                        : (value) => setState(() => _gender = value!),
+                  ),
+                  if (_isTherapist) ..._therapistFields(),
                   if (error != null) ...[
                     const SizedBox(height: 14),
                     AppInlineError(
@@ -388,4 +503,133 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
   }
+
+  String? _validateName(String value) {
+    if (value.trim().length > 100) return 'Ime može imati najviše 100 znakova.';
+    if (!_isTherapist &&
+        !RegExp(
+          r"^[\p{L}\p{M}][\p{L}\p{M}' -]*$",
+          unicode: true,
+        ).hasMatch(value.trim())) {
+      return 'Ime sadrži nedozvoljene znakove.';
+    }
+    return null;
+  }
+
+  Widget _professionalText(
+    String label,
+    TextEditingController controller,
+    int limit, {
+    int lines = 1,
+    String? Function(String?)? validator,
+    bool numeric = false,
+  }) => Padding(
+    padding: const EdgeInsets.only(top: 14),
+    child: TextFormField(
+      controller: controller,
+      enabled: !_viewModel.isLoading,
+      maxLines: lines,
+      keyboardType: numeric
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.text,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        errorMaxLines: 3,
+      ),
+      validator:
+          validator ??
+          (value) => AppValidators.textLength(
+            value,
+            fieldName: label,
+            maximumLength: limit,
+          ),
+    ),
+  );
+
+  List<Widget> _therapistFields() => [
+    const SizedBox(height: 14),
+    if (_viewModel.isLoadingSpecializations) const LinearProgressIndicator(),
+    if (_viewModel.specializationsError != null) ...[
+      Text(_viewModel.specializationsError!),
+      TextButton(
+        onPressed: _viewModel.isLoading
+            ? null
+            : _viewModel.loadRegistrationSpecializations,
+        child: const Text('Ponovo učitaj specijalizacije'),
+      ),
+    ],
+    DropdownButtonFormField<String>(
+      initialValue: _specialization,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Specijalizacija',
+        border: OutlineInputBorder(),
+      ),
+      items: _viewModel.registrationSpecializations
+          .toSet()
+          .map((name) => DropdownMenuItem(value: name, child: Text(name)))
+          .toList(),
+      onChanged: _viewModel.isLoading
+          ? null
+          : (value) => setState(() => _specialization = value),
+      validator: (value) => value == null ? 'Odaberite specijalizaciju.' : null,
+    ),
+    _professionalText('Biografija', _biography, 3000, lines: 4),
+    _professionalText(
+      'Cijena termina (KM)',
+      _hourlyRate,
+      30,
+      numeric: true,
+      validator: (value) {
+        final price = double.tryParse(value?.trim().replaceAll(',', '.') ?? '');
+        return price == null || !price.isFinite || price <= 0
+            ? 'Unesite cijenu veću od nule.'
+            : null;
+      },
+    ),
+    _professionalText(
+      'Godine iskustva',
+      _experience,
+      2,
+      numeric: true,
+      validator: (value) {
+        final years = int.tryParse(value?.trim() ?? '');
+        return years == null || years < 0 || years > 70
+            ? 'Unesite cijeli broj od 0 do 70.'
+            : null;
+      },
+    ),
+    _professionalText('Država', _country, 100),
+    _professionalText('Grad', _city, 100),
+    _professionalText('Adresa', _address, 300),
+    CheckboxListTile(
+      value: _offersOnline,
+      title: const Text('Online termini'),
+      onChanged: _viewModel.isLoading
+          ? null
+          : (value) => setState(() => _offersOnline = value!),
+    ),
+    FormField<bool>(
+      validator: (_) => !_offersOnline && !_offersInPerson
+          ? 'Odaberite barem jedan način rada.'
+          : null,
+      builder: (field) => Column(
+        children: [
+          CheckboxListTile(
+            value: _offersInPerson,
+            title: const Text('Termini uživo'),
+            onChanged: _viewModel.isLoading
+                ? null
+                : (value) => setState(() => _offersInPerson = value!),
+          ),
+          if (field.hasError)
+            Text(
+              field.errorText!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+        ],
+      ),
+    ),
+  ];
 }
