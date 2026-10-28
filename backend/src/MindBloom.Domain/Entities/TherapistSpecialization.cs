@@ -2,6 +2,8 @@
 
 public class TherapistSpecialization : BaseEntity
 {
+    public ICollection<ClientSpecialization> ClientSpecializations { get; set; } = new List<ClientSpecialization>();
+
     public string Name { get; set; } = string.Empty;
 
     public string? Description { get; set; }

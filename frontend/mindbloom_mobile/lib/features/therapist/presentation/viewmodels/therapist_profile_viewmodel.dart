@@ -152,6 +152,7 @@ class TherapistProfileViewModel extends ChangeNotifier {
   }
 
   Future<bool> saveProfile({
+    int? specializationId,
     int? locationId,
     bool worksWithChildren = false,
     required String biography,
@@ -175,6 +176,7 @@ class TherapistProfileViewModel extends ChangeNotifier {
     _successMessage = null;
 
     final validationMessage = _validateProfileInput(
+      specializationId: specializationId,
       biography: biography,
       specialization: specialization,
       experienceYears: experienceYears,
@@ -211,6 +213,7 @@ class TherapistProfileViewModel extends ChangeNotifier {
         .toList();
 
     final request = UpdateTherapistProfileRequest(
+      specializationId: specializationId,
       locationId: locationId,
       worksWithChildren: worksWithChildren,
       biography: biography.trim(),
@@ -634,6 +637,7 @@ class TherapistProfileViewModel extends ChangeNotifier {
   }
 
   String? _validateProfileInput({
+    int? specializationId,
     required String biography,
     required String specialization,
     required String experienceYears,
@@ -667,11 +671,14 @@ class TherapistProfileViewModel extends ChangeNotifier {
       return 'Biography cannot contain more than 2000 characters.';
     }
 
-    if (normalizedSpecialization.isEmpty) {
+    if (specializationId != null && specializationId <= 0) {
+      return 'Select a valid specialization.';
+    }
+    if (specializationId == null && normalizedSpecialization.isEmpty) {
       return 'Specialization is required.';
     }
 
-    if (normalizedSpecialization.length > 200) {
+    if (specializationId == null && normalizedSpecialization.length > 200) {
       return 'Specialization cannot contain more than 200 characters.';
     }
 

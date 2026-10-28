@@ -28,6 +28,12 @@ public sealed class SaveClientOnboardingDtoValidator
 
     public SaveClientOnboardingDtoValidator()
     {
+        RuleFor(x => x.PreferredSpecializationIds)
+            .Must(ids => ids == null || ids.Count <= 10)
+            .WithMessage("You may select at most 10 specializations.");
+        RuleForEach(x => x.PreferredSpecializationIds).GreaterThan(0)
+            .WithMessage("Specialization identifier is invalid.");
+
         RuleFor(x => x.AssessmentFocusAreas)
             .NotNull()
             .WithMessage(

@@ -12,6 +12,7 @@ class SaveClientOnboardingRequest {
 
   final String? location;
 
+  final List<int>? preferredSpecializationIds;
   final List<int> preferredDays;
 
   final List<int> preferredTherapyApproachIds;
@@ -30,6 +31,7 @@ class SaveClientOnboardingRequest {
     required this.minimumPricePerSession,
     required this.maximumPricePerSession,
     required this.location,
+    this.preferredSpecializationIds,
     required this.preferredDays,
     required this.preferredTherapyApproachIds,
     required this.acceptSensitiveDataProcessing,
@@ -53,6 +55,8 @@ class SaveClientOnboardingRequest {
 
       'location': _nullableText(location),
 
+      if (preferredSpecializationIds != null)
+        'preferredSpecializationIds': preferredSpecializationIds,
       'preferredDays': preferredDays,
 
       'preferredTherapyApproachIds': preferredTherapyApproachIds,

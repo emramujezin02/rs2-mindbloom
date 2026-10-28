@@ -2,6 +2,8 @@
 
 public class Client : BaseEntity
 {
+    public ICollection<ClientSpecialization> PreferredSpecializations { get; set; } = new List<ClientSpecialization>();
+
     public int UserId { get; set; }
 
     public ApplicationUser User { get; set; } = null!;

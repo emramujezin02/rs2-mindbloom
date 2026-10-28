@@ -1,3 +1,4 @@
+import '../models/therapist_specialization_model.dart';
 import 'package:mindbloom_mobile/features/therapist/data/models/create_unavailable_date_request.dart';
 
 import '../../../../core/models/paged_response.dart';
@@ -34,6 +35,11 @@ class TherapistApiService {
       TherapistLocationModel.fromJson,
     );
   }
+
+  Future<List<TherapistSpecializationModel>> getActiveSpecializations() async =>
+      (await getFilterOptions(
+        'therapist-specializations',
+      )).map(TherapistSpecializationModel.fromJson).toList();
 
   Future<List<Map<String, dynamic>>> getFilterOptions(String kind) async {
     final response = await apiClient.get(

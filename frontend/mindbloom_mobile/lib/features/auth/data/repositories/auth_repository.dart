@@ -1,3 +1,4 @@
+import '../../../therapist/data/models/therapist_specialization_model.dart';
 import '../../../../services/session_storage_service.dart';
 import '../models/auth_response.dart';
 import '../models/change_password_request.dart';
@@ -18,7 +19,7 @@ class AuthRepository {
   Future<RegisterTherapistResponse> registerTherapist(
     RegisterTherapistRequest request,
   ) => authApiService.registerTherapist(request);
-  Future<List<String>> getTherapistSpecializations() =>
+  Future<List<TherapistSpecializationModel>> getTherapistSpecializations() =>
       authApiService.getTherapistSpecializations();
   final AuthApiService authApiService;
   final SessionStorageService sessionStorage;

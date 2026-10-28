@@ -97,28 +97,10 @@ public static class ApplicationDbSeeder
 
         foreach (var therapist in therapistsWithoutReference)
         {
-            var existingSpecialization =
-                specializations.FirstOrDefault(x =>
-                    x.Name.ToLower() ==
-                    therapist.Specialization.Trim().ToLower());
-
-            if (existingSpecialization == null)
-            {
-                existingSpecialization =
-                    new TherapistSpecialization
-                    {
-                        Name = therapist.Specialization.Trim(),
-                        Description =
-                            "Specialization migrated from an existing therapist profile.",
-                        IsActive = true
-                    };
-
-                context.TherapistSpecializations.Add(
-                    existingSpecialization);
-
-                specializations.Add(
-                    existingSpecialization);
-            }
+            var candidates = specializations.Where(x =>
+                string.Equals(x.Name.Trim(), therapist.Specialization.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+            if (candidates.Count != 1) continue;
+            var existingSpecialization = candidates[0];
 
             therapist.SpecializationReference =
                 existingSpecialization;

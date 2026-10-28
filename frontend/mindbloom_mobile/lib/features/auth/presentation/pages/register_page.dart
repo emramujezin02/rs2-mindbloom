@@ -48,7 +48,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _address = TextEditingController();
   late String _role;
   String _gender = 'Other';
-  String? _specialization;
+  int? _specializationId;
   bool _offersOnline = true;
   bool _offersInPerson = false;
   TherapistLocationModel? _registrationLocation;
@@ -187,7 +187,8 @@ class _RegisterPageState extends State<RegisterPage> {
           ? TherapistRegistrationDetails(
               locationId: _registrationLocation?.id,
               worksWithChildren: _worksWithChildren,
-              specialization: _specialization!,
+              specializationId: _specializationId,
+              specialization: '',
               biography: _biography.text.trim(),
               country: _country.text.trim(),
               city: _city.text.trim(),
@@ -566,8 +567,8 @@ class _RegisterPageState extends State<RegisterPage> {
         child: const Text('Ponovo učitaj specijalizacije'),
       ),
     ],
-    DropdownButtonFormField<String>(
-      initialValue: _specialization,
+    DropdownButtonFormField<int>(
+      initialValue: _specializationId,
       isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'Specijalizacija',
@@ -575,11 +576,13 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
       items: _viewModel.registrationSpecializations
           .toSet()
-          .map((name) => DropdownMenuItem(value: name, child: Text(name)))
+          .map(
+            (name) => DropdownMenuItem(value: name.id, child: Text(name.name)),
+          )
           .toList(),
       onChanged: _viewModel.isLoading
           ? null
-          : (value) => setState(() => _specialization = value),
+          : (value) => setState(() => _specializationId = value),
       validator: (value) => value == null ? 'Odaberite specijalizaciju.' : null,
     ),
     _professionalText('Biografija', _biography, 3000, lines: 4),

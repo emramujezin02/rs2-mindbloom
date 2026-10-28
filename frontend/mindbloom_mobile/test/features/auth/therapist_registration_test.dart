@@ -95,6 +95,7 @@ void main() {
         'privacyPolicyVersion',
         'acceptTermsOfService',
         'termsOfServiceVersion',
+        'specializationId',
         'specialization',
         'biography',
         'country',
@@ -105,7 +106,8 @@ void main() {
         'offersOnline',
         'offersInPerson',
       });
-      expect(body['specialization'], 'Psychotherapy');
+      expect(body['specializationId'], 7);
+      expect(body['specialization'], isEmpty);
       expect(body['locationId'], 42);
       expect(body['country'], 'Test');
       expect(body['city'], 'Test city');
@@ -219,6 +221,7 @@ void main() {
             termsOfServiceVersion: 'test-v1',
           ),
           details: const TherapistRegistrationDetails(
+            specializationId: 7,
             specialization: 'Psychotherapy',
             biography: 'Biography',
             country: 'Test',
@@ -234,6 +237,7 @@ void main() {
       expect(result.verificationStatus, 'Pending');
       expect(requests.first.url.path, '/api/Auth/register-therapist');
       expect((jsonDecode(requests.first.body) as Map)['gender'], 'Female');
+      expect((jsonDecode(requests.first.body) as Map)['specializationId'], 7);
       final folder = await Directory.systemTemp.createTemp(
         'mindbloom-synthetic-document-',
       );
@@ -341,7 +345,7 @@ Future<void> _fillAccount(
 
 Future<void> _fillProfessional(WidgetTester tester) async {
   final specialization = find.widgetWithText(
-    DropdownButtonFormField<String>,
+    DropdownButtonFormField<int>,
     'Specijalizacija',
   );
   await _show(tester, specialization);
@@ -410,7 +414,7 @@ class _Api extends ApiClient {
     if (endpoint.contains('specializations')) {
       lookups++;
       return <dynamic>[
-        {'name': 'Psychotherapy'},
+        {'id': 7, 'name': 'Psychotherapy'},
       ];
     }
     return <String, dynamic>{

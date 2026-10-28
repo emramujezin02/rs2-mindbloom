@@ -1,3 +1,4 @@
+import '../../../therapist/data/models/therapist_specialization_model.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/auth_response.dart';
 import '../models/change_password_request.dart';
@@ -27,13 +28,18 @@ class AuthApiService {
     );
   }
 
-  Future<List<String>> getTherapistSpecializations() async {
+  Future<List<TherapistSpecializationModel>>
+  getTherapistSpecializations() async {
     final response = await apiClient.get(
       '/reference-data/therapist-specializations/active',
       requiresAuth: false,
     );
     return (response as List)
-        .map((item) => (item as Map)['name'] as String)
+        .map(
+          (item) => TherapistSpecializationModel.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
         .toList();
   }
 

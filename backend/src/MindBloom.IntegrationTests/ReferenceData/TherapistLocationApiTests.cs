@@ -67,18 +67,21 @@ public sealed class TherapistLocationApiTests
     {
         using var factory = new MindBloomIntegrationTestFactory();
         await factory.EnsureRoleExistsAsync(RoleConstants.Therapist);
-        int id;
+        int id, specializationId;
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var specialization = new TherapistSpecialization { Name = "Registration specialization" };
+            db.TherapistSpecializations.Add(specialization);
             var location = new TherapistLocation { Name = "Selected city", Country = "Selected country" };
-            db.TherapistLocations.Add(location); await db.SaveChangesAsync(); id = location.Id;
+            db.TherapistLocations.Add(location); await db.SaveChangesAsync(); id = location.Id; specializationId = specialization.Id;
         }
         using var client = factory.CreateClient();
         var request = new RegisterTherapistRequestDto {
             FirstName = "Test", LastName = "Therapist", Email = "location-registration@test.local", Username = "location-registration",
             Password = "TestingPassword123!", DateOfBirth = new(1990,1,1), Gender = "Other", Biography = "Test", Specialization = "Test", HourlyRate = 50,
             Country = "Legacy country", City = "Legacy city", Address = "Keep address", OffersOnline = true,
+            SpecializationId = specializationId,
             LocationId = validLocation ? id : 999999, WorksWithChildren = true,
             AcceptPrivacyPolicy = true, PrivacyPolicyVersion = ConsentDocumentConstants.PrivacyPolicyVersion,
             AcceptTermsOfService = true, TermsOfServiceVersion = ConsentDocumentConstants.TermsOfServiceVersion

@@ -91,6 +91,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ClientTherapyApproach>
     ClientTherapyApproaches =>
         Set<ClientTherapyApproach>();
+    public DbSet<ClientSpecialization> ClientSpecializations => Set<ClientSpecialization>();
     public DbSet<TherapistSpecialization> TherapistSpecializations => Set<TherapistSpecialization>();
     public DbSet<PrivateJournalEntry>
     PrivateJournalEntries =>
@@ -1145,6 +1146,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 x.IsPublished,
                 x.IsDeleted
             });
+        });
+
+        builder.Entity<ClientSpecialization>(entity =>
+        {
+            entity.HasOne(x => x.Client).WithMany(x => x.PreferredSpecializations)
+                .HasForeignKey(x => x.ClientId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.TherapistSpecialization).WithMany(x => x.ClientSpecializations)
+                .HasForeignKey(x => x.TherapistSpecializationId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.ClientId, x.TherapistSpecializationId }).IsUnique();
         });
 
         builder.Entity<ClientTherapyApproach>(

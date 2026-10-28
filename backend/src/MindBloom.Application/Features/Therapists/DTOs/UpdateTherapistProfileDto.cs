@@ -2,6 +2,7 @@
 
 public class UpdateTherapistProfileDto
 {
+    public int? SpecializationId { get; set; }
     public int? LocationId { get; set; }
     public bool WorksWithChildren { get; set; }
 

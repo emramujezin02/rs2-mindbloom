@@ -14,6 +14,7 @@ class ClientOnboardingModel {
 
   final String? location;
 
+  final List<int> preferredSpecializationIds;
   final List<int> preferredDays;
 
   final List<int> preferredTherapyApproachIds;
@@ -38,6 +39,7 @@ class ClientOnboardingModel {
     required this.minimumPricePerSession,
     required this.maximumPricePerSession,
     required this.location,
+    this.preferredSpecializationIds = const [],
     required this.preferredDays,
     required this.preferredTherapyApproachIds,
     required this.hasAcceptedSensitiveDataProcessing,
@@ -71,6 +73,7 @@ class ClientOnboardingModel {
 
       location: _nullableString(json['location']),
 
+      preferredSpecializationIds: _intList(json['preferredSpecializationIds']),
       preferredDays: _intList(json['preferredDays']),
 
       preferredTherapyApproachIds: _intList(

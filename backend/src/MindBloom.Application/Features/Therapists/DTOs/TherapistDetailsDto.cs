@@ -2,6 +2,7 @@
 
 public class TherapistDetailsDto
 {
+    public int? SpecializationId { get; set; }
     public int? LocationId { get; set; }
     public string LocationRegion { get; set; } = string.Empty;
     public bool WorksWithChildren { get; set; }

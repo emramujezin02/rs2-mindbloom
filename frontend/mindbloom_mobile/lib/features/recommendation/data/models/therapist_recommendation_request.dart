@@ -1,5 +1,5 @@
 class TherapistRecommendationRequest {
-  final List<int> preferredSpecializationIds;
+  final List<int>? preferredSpecializationIds;
   final List<String> assessmentFocusAreas;
   final List<int> preferredDays;
   final double? maximumPricePerSession;
@@ -8,7 +8,7 @@ class TherapistRecommendationRequest {
   final List<int> preferredTherapyApproachIds;
 
   const TherapistRecommendationRequest({
-    this.preferredSpecializationIds = const [],
+    this.preferredSpecializationIds,
     this.assessmentFocusAreas = const [],
     this.preferredDays = const [],
     this.maximumPricePerSession,
@@ -19,7 +19,8 @@ class TherapistRecommendationRequest {
 
   Map<String, dynamic> toJson() {
     return {
-      'preferredSpecializationIds': preferredSpecializationIds,
+      if (preferredSpecializationIds != null)
+        'preferredSpecializationIds': preferredSpecializationIds,
       'assessmentFocusAreas': assessmentFocusAreas,
       'preferredDays': preferredDays,
       'maximumPricePerSession': maximumPricePerSession,

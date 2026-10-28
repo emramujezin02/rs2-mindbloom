@@ -1,4 +1,5 @@
 class UpdateTherapistProfileRequest {
+  final int? specializationId;
   final int? locationId;
   final bool worksWithChildren;
   final String biography;
@@ -15,6 +16,7 @@ class UpdateTherapistProfileRequest {
   final List<int> therapyApproachIds;
 
   const UpdateTherapistProfileRequest({
+    this.specializationId,
     this.locationId,
     this.worksWithChildren = false,
     required this.biography,
@@ -33,6 +35,7 @@ class UpdateTherapistProfileRequest {
 
   Map<String, dynamic> toJson() {
     return {
+      'specializationId': specializationId,
       'locationId': locationId,
       'worksWithChildren': worksWithChildren,
       'biography': biography.trim(),

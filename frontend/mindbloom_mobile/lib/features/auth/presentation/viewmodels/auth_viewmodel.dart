@@ -1,3 +1,4 @@
+import '../../../therapist/data/models/therapist_specialization_model.dart';
 import 'package:flutter/foundation.dart';
 import '../../data/models/register_therapist_request.dart';
 import '../../../../core/error/app_exception.dart';
@@ -11,7 +12,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/models/current_consent_versions.dart';
 
 class AuthViewModel extends ChangeNotifier {
-  List<String> registrationSpecializations = [];
+  List<TherapistSpecializationModel> registrationSpecializations = [];
   bool isLoadingSpecializations = false;
   String? specializationsError;
   RegisterTherapistResponse? therapistRegistration;

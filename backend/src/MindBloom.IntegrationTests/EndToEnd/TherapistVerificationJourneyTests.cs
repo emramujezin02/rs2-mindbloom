@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MindBloom.Application.Features.Auth.DTOs;
 using MindBloom.Domain.Enums;
+using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.IntegrationTests.EndToEnd.Infrastructure;
 using MindBloom.IntegrationTests.Infrastructure;
@@ -30,11 +31,17 @@ public sealed class TherapistVerificationJourneyTests(MindBloomEndToEndTestFacto
         var email = $"verification-{unique}@test.local";
         const string password = "JourneyPassword123!";
         using var anonymous = CreateActorClient();
+        int specializationId;
+        using (var scope = factory.Services.CreateScope()) {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var spec = new TherapistSpecialization { Name = $"Verification {unique}" };
+            db.Add(spec); await db.SaveChangesAsync(); specializationId = spec.Id;
+        }
         var request = new RegisterTherapistRequestDto
         {
             FirstName = "Test", LastName = "Therapist", Email = email, Username = $"verify_{unique}",
             Password = password, DateOfBirth = new DateTime(1990, 1, 1), Gender = "Other",
-            Specialization = "Psychotherapy", Biography = "Synthetic test biography", HourlyRate = 50,
+            SpecializationId = specializationId, Specialization = "Psychotherapy", Biography = "Synthetic test biography", HourlyRate = 50,
             ExperienceYears = 5, Country = "Test", City = "Test", Address = "Test", OffersOnline = true,
             AcceptPrivacyPolicy = true, PrivacyPolicyVersion = ConsentDocumentConstants.PrivacyPolicyVersion,
             AcceptTermsOfService = true, TermsOfServiceVersion = ConsentDocumentConstants.TermsOfServiceVersion

@@ -14,11 +14,7 @@ public sealed class UpdateTherapistProfileDtoValidator
             .MaximumLength(2000)
             .WithMessage("Biography cannot contain more than 2000 characters.");
 
-        RuleFor(x => x.Specialization)
-            .NotEmpty()
-            .WithMessage("Specialization is required.")
-            .MaximumLength(200)
-            .WithMessage("Specialization cannot contain more than 200 characters.");
+        RuleFor(x => x.SpecializationId).GreaterThan(0).When(x => x.SpecializationId.HasValue);
 
         RuleFor(x => x.ExperienceYears)
             .InclusiveBetween(0, 70)

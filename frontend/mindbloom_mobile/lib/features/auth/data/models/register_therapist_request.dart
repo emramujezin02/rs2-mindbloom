@@ -1,6 +1,7 @@
 import 'register_request.dart';
 
 class TherapistRegistrationDetails {
+  final int? specializationId;
   final int? locationId;
   final bool worksWithChildren;
   final String specialization, biography, country, city, address;
@@ -9,6 +10,7 @@ class TherapistRegistrationDetails {
   final bool offersOnline, offersInPerson;
 
   const TherapistRegistrationDetails({
+    this.specializationId,
     this.locationId,
     this.worksWithChildren = false,
     required this.specialization,
@@ -23,6 +25,7 @@ class TherapistRegistrationDetails {
   });
 
   Map<String, dynamic> toJson() => {
+    'specializationId': specializationId,
     'locationId': locationId,
     'worksWithChildren': worksWithChildren,
     'specialization': specialization,

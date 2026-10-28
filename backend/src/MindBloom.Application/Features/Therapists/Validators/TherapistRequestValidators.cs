@@ -60,11 +60,7 @@ public sealed class CreateTherapistDtoValidator
 {
     public CreateTherapistDtoValidator()
     {
-        RuleFor(x => x.Specialization)
-            .RequiredText(
-                "Specialization",
-                TherapistValidationRules
-                    .MaximumSpecializationLength);
+        RuleFor(x => x.SpecializationId).NotNull().GreaterThan(0);
 
         RuleFor(x => x.Biography)
             .RequiredText(

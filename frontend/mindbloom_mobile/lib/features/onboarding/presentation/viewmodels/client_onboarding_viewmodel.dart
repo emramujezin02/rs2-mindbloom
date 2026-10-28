@@ -1,3 +1,4 @@
+import '../../../therapist/data/models/therapist_specialization_model.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -40,6 +41,24 @@ class ClientOnboardingViewModel extends ChangeNotifier {
     return null;
   }
 
+  List<TherapistSpecializationModel> specializations = [];
+  bool isLoadingSpecializations = false;
+  String? specializationsError;
+  Future<void> loadSpecializations() async {
+    if (isLoadingSpecializations) return;
+    isLoadingSpecializations = true;
+    specializationsError = null;
+    _notifyListeners();
+    try {
+      specializations = await repository.getActiveSpecializations();
+    } catch (_) {
+      specializationsError = 'Specijalizacije nije moguće učitati.';
+    } finally {
+      isLoadingSpecializations = false;
+      _notifyListeners();
+    }
+  }
+
   ClientOnboardingModel? onboarding;
 
   List<TherapyApproachModel> therapyApproaches = [];
@@ -66,6 +85,7 @@ class ClientOnboardingViewModel extends ChangeNotifier {
       onboarding = await repository.getOnboarding();
 
       unawaited(_loadTherapyApproaches());
+      unawaited(loadSpecializations());
     } catch (exception) {
       error = _normalizeError(exception);
     } finally {

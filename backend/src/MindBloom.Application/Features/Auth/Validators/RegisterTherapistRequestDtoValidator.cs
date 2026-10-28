@@ -68,9 +68,7 @@ public sealed class RegisterTherapistRequestDtoValidator
             .WithMessage(
                 "Gender must be Male, Female or Other.");
 
-        RuleFor(x => x.Specialization)
-            .NotEmpty()
-            .MaximumLength(200);
+        RuleFor(x => x.SpecializationId).NotNull().GreaterThan(0);
 
         RuleFor(x => x.Biography)
             .NotEmpty()

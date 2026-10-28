@@ -910,6 +910,39 @@ namespace MindBloom.Infrastructure.Migrations
                     b.ToTable("ClientMemberships");
                 });
 
+            modelBuilder.Entity("MindBloom.Domain.Entities.ClientSpecialization", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("TherapistSpecializationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TherapistSpecializationId");
+
+                    b.HasIndex("ClientId", "TherapistSpecializationId")
+                        .IsUnique();
+
+                    b.ToTable("ClientSpecializations");
+                });
+
             modelBuilder.Entity("MindBloom.Domain.Entities.ClientTherapyApproach", b =>
                 {
                     b.Property<int>("Id")
@@ -3078,6 +3111,25 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Navigation("Therapist");
                 });
 
+            modelBuilder.Entity("MindBloom.Domain.Entities.ClientSpecialization", b =>
+                {
+                    b.HasOne("MindBloom.Domain.Entities.Client", "Client")
+                        .WithMany("PreferredSpecializations")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MindBloom.Domain.Entities.TherapistSpecialization", "TherapistSpecialization")
+                        .WithMany("ClientSpecializations")
+                        .HasForeignKey("TherapistSpecializationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Client");
+
+                    b.Navigation("TherapistSpecialization");
+                });
+
             modelBuilder.Entity("MindBloom.Domain.Entities.ClientTherapyApproach", b =>
                 {
                     b.HasOne("MindBloom.Domain.Entities.Client", "Client")
@@ -3588,6 +3640,8 @@ namespace MindBloom.Infrastructure.Migrations
 
                     b.Navigation("MoodEntries");
 
+                    b.Navigation("PreferredSpecializations");
+
                     b.Navigation("PreferredTherapyApproaches");
 
                     b.Navigation("WorkshopRegistrations");
@@ -3647,6 +3701,8 @@ namespace MindBloom.Infrastructure.Migrations
 
             modelBuilder.Entity("MindBloom.Domain.Entities.TherapistSpecialization", b =>
                 {
+                    b.Navigation("ClientSpecializations");
+
                     b.Navigation("Therapists");
                 });
 

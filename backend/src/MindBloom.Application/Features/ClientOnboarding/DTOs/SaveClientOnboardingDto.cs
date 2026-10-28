@@ -3,6 +3,9 @@
 
 public sealed class SaveClientOnboardingDto
 {
+    // Missing/null preserves existing preferences; an empty list clears them.
+    public List<int>? PreferredSpecializationIds { get; set; }
+
     public List<string> AssessmentFocusAreas
     {
         get;

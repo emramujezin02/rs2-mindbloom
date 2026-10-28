@@ -2,6 +2,7 @@ import '../../../therapy_approach/data/models/therapy_approach_model.dart';
 import 'therapist_profile_availability_model.dart';
 
 class TherapistProfileModel {
+  final int? specializationId;
   final int? locationId;
   final String locationRegion;
   final bool worksWithChildren;
@@ -32,6 +33,7 @@ class TherapistProfileModel {
   final List<TherapyApproachModel> therapyApproaches;
 
   const TherapistProfileModel({
+    this.specializationId,
     this.locationId,
     this.locationRegion = '',
     this.worksWithChildren = false,
@@ -68,6 +70,7 @@ class TherapistProfileModel {
     final rawTherapyApproaches = json['therapyApproaches'];
 
     return TherapistProfileModel(
+      specializationId: (json['specializationId'] as num?)?.toInt(),
       locationId: (json['locationId'] as num?)?.toInt(),
       locationRegion: json['locationRegion'] as String? ?? '',
       worksWithChildren: json['worksWithChildren'] == true,

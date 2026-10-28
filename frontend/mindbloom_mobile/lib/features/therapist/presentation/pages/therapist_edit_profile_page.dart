@@ -1,3 +1,4 @@
+import '../widgets/therapist_specialization_dropdown.dart';
 import 'dart:io';
 
 import 'package:image_cropper/image_cropper.dart';
@@ -52,7 +53,7 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
   ];
 
   late final TextEditingController _biographyController;
-  late final TextEditingController _specializationController;
+  int? _specializationId;
   late final TextEditingController _experienceYearsController;
   late final TextEditingController _hourlyRateController;
   late final TextEditingController _locationController;
@@ -82,9 +83,7 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
       text: widget.profile.biography,
     );
 
-    _specializationController = TextEditingController(
-      text: widget.profile.specialization,
-    );
+    _specializationId = widget.profile.specializationId;
 
     _experienceYearsController = TextEditingController(
       text: widget.profile.experienceYears.toString(),
@@ -136,7 +135,6 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
     _viewModel.dispose();
 
     _biographyController.dispose();
-    _specializationController.dispose();
     _experienceYearsController.dispose();
     _hourlyRateController.dispose();
     _locationController.dispose();
@@ -366,7 +364,8 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
       locationId: _locationId,
       worksWithChildren: _worksWithChildren,
       biography: _biographyController.text.trim(),
-      specialization: _specializationController.text.trim(),
+      specializationId: _specializationId,
+      specialization: widget.profile.specialization,
       experienceYears: _experienceYearsController.text.trim(),
       hourlyRate: _hourlyRateController.text.trim(),
       location: _locationController.text.trim(),
@@ -766,32 +765,13 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
                           ),
                           const SizedBox(height: 22),
 
-                          TextFormField(
-                            controller: _specializationController,
-                            textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              labelText: 'Specialization',
-                              hintText: 'Example: Cognitive behavioral therapy',
-                              prefixIcon: Icon(Icons.psychology_outlined),
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              final specialization = value?.trim() ?? '';
-
-                              if (specialization.isEmpty) {
-                                return 'Specialization is required.';
-                              }
-
-                              if (specialization.length < 2) {
-                                return 'Specialization must contain at least 2 characters.';
-                              }
-
-                              if (specialization.length > 150) {
-                                return 'Specialization may contain at most 150 characters.';
-                              }
-
-                              return null;
-                            },
+                          TherapistSpecializationDropdown(
+                            service: _viewModel.repository.therapistApiService,
+                            value: _specializationId,
+                            existingName: widget.profile.specialization,
+                            enabled: !_viewModel.isBusy,
+                            onChanged: (value) =>
+                                setState(() => _specializationId = value),
                           ),
 
                           const SizedBox(height: 16),

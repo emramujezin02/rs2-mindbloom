@@ -22,6 +22,20 @@ namespace MindBloom.Infrastructure.Services;
 
 public class TherapistService : ITherapistService
 {
+    private async Task ApplySpecializationAsync(Therapist therapist, int? id, bool required = false)
+    {
+        if (!id.HasValue)
+        {
+            if (required) throw new BadRequestException("Select an active specialization.");
+            return; // Legacy profiles retain their existing value when the field is omitted.
+        }
+        var specialization = await _context.TherapistSpecializations.AsNoTracking().SingleOrDefaultAsync(x =>
+            x.Id == id && ((!x.IsDeleted && x.IsActive) || x.Id == therapist.SpecializationId));
+        if (specialization == null) throw new BadRequestException("The selected specialization is invalid or inactive.");
+        therapist.SpecializationId = specialization.Id;
+        therapist.Specialization = specialization.Name;
+    }
+
     private async Task ApplyLocationAsync(Therapist therapist, int? locationId, int? allowInactiveId = null)
     {
         if (locationId.HasValue)
@@ -115,7 +129,7 @@ public class TherapistService : ITherapistService
             LocationId = request.LocationId,
             WorksWithChildren = request.WorksWithChildren,
             UserId = userId,
-            Specialization = request.Specialization,
+            Specialization = string.Empty,
             Biography = request.Biography,
             HourlyRate = request.HourlyRate,
             ExperienceYears = request.ExperienceYears,
@@ -127,6 +141,7 @@ public class TherapistService : ITherapistService
             OffersInPerson = request.OffersInPerson,
         };
 
+        await ApplySpecializationAsync(therapist, request.SpecializationId, required: true);
         await ApplyLocationAsync(therapist, request.LocationId);
 
         await UpdateCoordinatesAsync(
@@ -146,6 +161,7 @@ public class TherapistService : ITherapistService
             UserId = therapist.UserId,
             FullName = $"{user.FirstName} {user.LastName}",
             Email = user.Email!,
+            SpecializationId = therapist.SpecializationId,
             Specialization = therapist.Specialization,
             Biography = therapist.Biography,
             HourlyRate = therapist.HourlyRate,
@@ -183,6 +199,7 @@ public class TherapistService : ITherapistService
                 UserId = x.UserId,
                 FullName = x.User.FirstName + " " + x.User.LastName,
                 Email = string.Empty,
+                SpecializationId = x.SpecializationId,
                 Specialization = x.Specialization,
                 Biography = x.Biography,
                 HourlyRate = x.HourlyRate,
@@ -668,6 +685,8 @@ public class TherapistService : ITherapistService
                             x.User.Email
                             ?? string.Empty,
 
+                        SpecializationId = x.SpecializationId,
+
                         Specialization =
                             x.Specialization,
 
@@ -805,6 +824,8 @@ public class TherapistService : ITherapistService
                         + " "
                         + x.User.LastName,
 
+                    SpecializationId = x.SpecializationId,
+
                     Specialization =
                         x.Specialization,
 
@@ -931,6 +952,8 @@ public class TherapistService : ITherapistService
 
             Biography =
                 therapist.Biography,
+
+            SpecializationId = therapist.SpecializationId,
 
             Specialization =
                 therapist.Specialization,
@@ -1064,8 +1087,7 @@ public class TherapistService : ITherapistService
         var biography =
             request.Biography.Trim();
 
-        var specialization =
-            request.Specialization.Trim();
+        await ApplySpecializationAsync(therapist, request.SpecializationId);
 
         var location =
             request.Location.Trim();
@@ -1094,9 +1116,6 @@ public class TherapistService : ITherapistService
 
         therapist.Biography =
             biography;
-
-        therapist.Specialization =
-            specialization;
 
         therapist.ExperienceYears =
             request.ExperienceYears;
@@ -1431,6 +1450,8 @@ public class TherapistService : ITherapistService
 
             Biography =
                 therapist.Biography,
+
+            SpecializationId = therapist.SpecializationId,
 
             Specialization =
                 therapist.Specialization,

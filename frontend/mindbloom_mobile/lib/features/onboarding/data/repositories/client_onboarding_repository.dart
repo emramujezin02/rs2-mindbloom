@@ -1,3 +1,4 @@
+import '../../../therapist/data/models/therapist_specialization_model.dart';
 import '../models/client_onboarding_model.dart';
 import '../models/save_client_onboarding_request.dart';
 import '../services/client_onboarding_api_service.dart';
@@ -6,6 +7,9 @@ class ClientOnboardingRepository {
   final ClientOnboardingApiService apiService;
 
   ClientOnboardingRepository({required this.apiService});
+
+  Future<List<TherapistSpecializationModel>> getActiveSpecializations() =>
+      apiService.getActiveSpecializations();
 
   Future<ClientOnboardingModel> getOnboarding() {
     return apiService.getOnboarding();

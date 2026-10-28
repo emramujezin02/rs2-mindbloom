@@ -3,6 +3,8 @@
 
 public sealed class ClientOnboardingDto
 {
+    public List<int> PreferredSpecializationIds { get; set; } = [];
+
     public bool HasCompletedOnboarding
     {
         get;

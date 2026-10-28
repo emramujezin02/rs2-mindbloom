@@ -9,11 +9,13 @@ import '../../../../core/validation/app_validators.dart';
 class ClientOnboardingPage extends StatefulWidget {
   final bool isRequired;
   final VoidCallback? onCompleted;
+  final ClientOnboardingViewModel? viewModel;
 
   const ClientOnboardingPage({
     super.key,
     this.isRequired = false,
     this.onCompleted,
+    this.viewModel,
   });
 
   @override
@@ -52,8 +54,8 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
     'Saturday',
   ];
 
-  final ClientOnboardingViewModel _viewModel =
-      AppInjection.createClientOnboardingViewModel();
+  late final ClientOnboardingViewModel _viewModel =
+      widget.viewModel ?? AppInjection.createClientOnboardingViewModel();
 
   final TextEditingController _locationController = TextEditingController();
 
@@ -67,6 +69,7 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
 
   final Set<String> _focusAreas = {};
   final Set<String> _languages = {};
+  final Set<int> _specializationIds = {};
   final Set<int> _therapyApproachIds = {};
   final Set<int> _preferredDays = {};
 
@@ -121,6 +124,10 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
     _languages
       ..clear()
       ..addAll(onboarding.preferredLanguages);
+
+    _specializationIds
+      ..clear()
+      ..addAll(onboarding.preferredSpecializationIds);
 
     _therapyApproachIds
       ..clear()
@@ -331,6 +338,7 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
 
         preferredDays: _preferredDays.toList(),
 
+        preferredSpecializationIds: _specializationIds.toList(),
         preferredTherapyApproachIds: _therapyApproachIds.toList(),
 
         acceptSensitiveDataProcessing: alreadyAcceptedCurrentConsent
@@ -665,7 +673,16 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
             Step(
               title: const Text('Therapy approaches'),
               isActive: _currentStep >= 5,
-              content: _buildApproaches(),
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('Preferred specializations (optional)'),
+                  _buildSpecializations(),
+                  const SizedBox(height: 16),
+                  const Text('Therapy approaches'),
+                  _buildApproaches(),
+                ],
+              ),
             ),
             Step(
               title: const Text('Review and save'),
@@ -780,6 +797,54 @@ class _ClientOnboardingPageState extends State<ClientOnboardingPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSpecializations() {
+    final vm = _viewModel;
+    return Column(
+      children: [
+        if (vm.isLoadingSpecializations) const LinearProgressIndicator(),
+        if (vm.specializationsError != null)
+          TextButton(
+            onPressed: vm.loadSpecializations,
+            child: Text('${vm.specializationsError!} Retry'),
+          ),
+        if (!vm.isLoadingSpecializations &&
+            vm.specializationsError == null &&
+            vm.specializations.isEmpty)
+          const Text('No active specializations are currently available.'),
+        ...vm.specializations.map(
+          (item) => CheckboxListTile(
+            key: ValueKey('onboarding-specialization-${item.id}'),
+            title: Text(item.name),
+            value: _specializationIds.contains(item.id),
+            onChanged: vm.isSaving
+                ? null
+                : (checked) => setState(() {
+                    if (checked == true) {
+                      _specializationIds.add(item.id);
+                    } else {
+                      _specializationIds.remove(item.id);
+                    }
+                  }),
+          ),
+        ),
+        ..._specializationIds
+            .where((id) => !vm.specializations.any((x) => x.id == id))
+            .map(
+              (id) => CheckboxListTile(
+                key: ValueKey('unavailable-specialization-$id'),
+                title: const Text(
+                  'A previous specialization is no longer available. Remove it before saving.',
+                ),
+                value: true,
+                onChanged: vm.isSaving
+                    ? null
+                    : (_) => setState(() => _specializationIds.remove(id)),
+              ),
+            ),
+      ],
     );
   }
 

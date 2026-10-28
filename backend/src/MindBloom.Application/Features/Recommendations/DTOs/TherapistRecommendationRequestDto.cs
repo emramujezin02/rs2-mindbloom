@@ -3,11 +3,11 @@
 
 public sealed class TherapistRecommendationRequestDto
 {
-    public List<int> PreferredSpecializationIds
+    public List<int>? PreferredSpecializationIds
     {
         get;
         set;
-    } = [];
+    }
 
     public List<int> PreferredTherapyApproachIds
     {

@@ -1,3 +1,4 @@
+using MindBloom.Application.Common.Exceptions;
 using MindBloom.Infrastructure.Serialization;
 using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Recommendations.DTOs;
@@ -63,6 +64,7 @@ public sealed class RecommendationService : IRecommendationService
 
         var client = await _context.Clients
             .AsNoTracking()
+            .Include(x => x.PreferredSpecializations).ThenInclude(x => x.TherapistSpecialization)
             .Include(x =>
                 x.PreferredTherapyApproaches)
             .FirstOrDefaultAsync(
@@ -95,12 +97,17 @@ public sealed class RecommendationService : IRecommendationService
             request.MaximumPricePerSession
             ?? client.MaximumPricePerSession;
 
-        var preferredSpecializationIds =
-     request
-         .PreferredSpecializationIds
-         .Where(x => x > 0)
-         .Distinct()
-         .ToHashSet();
+        var preferredSpecializationIds = request.PreferredSpecializationIds?.Distinct().ToHashSet()
+            ?? client.PreferredSpecializations.Where(x => !x.IsDeleted &&
+                x.TherapistSpecialization.IsActive && !x.TherapistSpecialization.IsDeleted)
+                .Select(x => x.TherapistSpecializationId).ToHashSet();
+        if (request.PreferredSpecializationIds != null)
+        {
+            var validCount = await _context.TherapistSpecializations.CountAsync(x =>
+                preferredSpecializationIds.Contains(x.Id) && x.IsActive && !x.IsDeleted, cancellationToken);
+            if (validCount != preferredSpecializationIds.Count)
+                throw new BadRequestException("One or more requested specializations are invalid or inactive.");
+        }
 
         var requestedTherapyApproachIds =
             request

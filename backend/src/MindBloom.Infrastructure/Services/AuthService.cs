@@ -503,6 +503,7 @@ public class AuthService : IAuthService
                         user.Id,
                         new CreateTherapistDto
                         {
+                            SpecializationId = request.SpecializationId,
                             LocationId = request.LocationId,
                             WorksWithChildren = request.WorksWithChildren,
                             Specialization =
@@ -1987,6 +1988,8 @@ public class AuthService : IAuthService
                 _context.ClientTherapyApproaches
                     .RemoveRange(
                         therapyPreferences);
+                _context.ClientSpecializations.RemoveRange(await _context.ClientSpecializations
+                    .Where(x => x.ClientId == client.Id).ToListAsync());
             }
 
 

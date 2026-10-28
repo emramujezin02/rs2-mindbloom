@@ -744,6 +744,9 @@ public sealed class RecommendationServiceTests
 
         secondTherapist.SpecializationId =
             2002;
+        context.TherapistSpecializations.AddRange(
+            new TherapistSpecialization { Id = 2001, Name = "First" },
+            new TherapistSpecialization { Id = 2002, Name = "Second" });
 
         context.Therapists.AddRange(
             firstTherapist,

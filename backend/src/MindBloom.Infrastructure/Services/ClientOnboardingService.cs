@@ -97,6 +97,10 @@ public sealed class ClientOnboardingService
                     SplitDays(
                         client.PreferredDays),
 
+                PreferredSpecializationIds = await _context.ClientSpecializations.AsNoTracking()
+                    .Where(x => x.ClientId == client.Id && !x.IsDeleted)
+                    .Select(x => x.TherapistSpecializationId).Distinct().OrderBy(x => x).ToListAsync(cancellationToken),
+
                 PreferredTherapyApproachIds =
                     await _context
                         .Set<ClientTherapyApproach>()
@@ -158,6 +162,7 @@ public sealed class ClientOnboardingService
     {
         var client =
             await _context.Clients
+                .Include(x => x.PreferredSpecializations)
                 .Include(x =>
                     x.PreferredTherapyApproaches)
                 .FirstOrDefaultAsync(x =>
@@ -240,6 +245,30 @@ public sealed class ClientOnboardingService
         {
             throw new BadRequestException(
                 "One or more selected therapy approaches are not available.");
+        }
+
+        List<int>? specializationIds = request.PreferredSpecializationIds?.Distinct().ToList();
+        if (specializationIds != null)
+        {
+            if (specializationIds.Count > 10 || specializationIds.Any(x => x <= 0))
+                throw new BadRequestException("Select up to 10 valid specializations.");
+            var validIds = await _context.TherapistSpecializations.AsNoTracking()
+                .Where(x => specializationIds.Contains(x.Id) && x.IsActive && !x.IsDeleted)
+                .Select(x => x.Id).ToListAsync(cancellationToken);
+            if (validIds.Count != specializationIds.Count)
+                throw new BadRequestException("One or more selected specializations are invalid or inactive.");
+        }
+
+        if (specializationIds != null)
+        {
+            var removed = client.PreferredSpecializations.Where(x => !specializationIds.Contains(x.TherapistSpecializationId)).ToList();
+            _context.ClientSpecializations.RemoveRange(removed);
+            foreach (var id in specializationIds)
+            {
+                var existing = client.PreferredSpecializations.SingleOrDefault(x => x.TherapistSpecializationId == id);
+                if (existing != null) existing.IsDeleted = false;
+                else client.PreferredSpecializations.Add(new ClientSpecialization { TherapistSpecializationId = id });
+            }
         }
 
         client.AssessmentFocusAreas =
