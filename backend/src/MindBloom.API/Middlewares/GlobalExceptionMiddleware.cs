@@ -111,9 +111,7 @@ public sealed class GlobalExceptionMiddleware
              errorDefinition.Title,
 
          Detail =
-             GetDetail(
-                 exception,
-                 errorDefinition),
+             errorDefinition.Detail,
 
          ErrorCode =
              errorDefinition.ErrorCode,
@@ -122,17 +120,7 @@ public sealed class GlobalExceptionMiddleware
              context.TraceIdentifier,
 
          ValidationErrors =
-             errorDefinition.ValidationErrors,
-
-         ExceptionType =
-             _environment.IsDevelopment()
-                 ? exception.GetType().Name
-                 : null,
-
-         StackTrace =
-             _environment.IsDevelopment()
-                 ? exception.StackTrace
-                 : null
+             errorDefinition.ValidationErrors
      };
 
         context.Response.Clear();
@@ -226,13 +214,6 @@ public sealed class GlobalExceptionMiddleware
                     exception.Message,
                     "business_rule_violation"),
 
-            InvalidOperationException =>
-                new ErrorDefinition(
-                    StatusCodes.Status409Conflict,
-                    "Conflict",
-                    exception.Message,
-                    "conflict"),
-
             ArgumentNullException =>
                 new ErrorDefinition(
                     StatusCodes.Status400BadRequest,
@@ -293,27 +274,6 @@ public sealed class GlobalExceptionMiddleware
                     "An unexpected server error occurred.",
                     "internal_server_error")
         };
-    }
-
-    private string GetDetail(
-        Exception exception,
-        ErrorDefinition errorDefinition)
-    {
-        if (!_environment.IsDevelopment())
-        {
-            return errorDefinition.Detail;
-        }
-
-        if (errorDefinition.StatusCode >=
-            StatusCodes.Status500InternalServerError)
-        {
-            return string.IsNullOrWhiteSpace(
-                    exception.Message)
-                ? errorDefinition.Detail
-                : exception.Message;
-        }
-
-        return errorDefinition.Detail;
     }
 
     private void LogException(

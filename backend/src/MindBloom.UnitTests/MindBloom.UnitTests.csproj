@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\MindBloom.API\MindBloom.API.csproj" />
     <ProjectReference Include="..\MindBloom.Application\MindBloom.Application.csproj" />
     <ProjectReference Include="..\MindBloom.Domain\MindBloom.Domain.csproj" />
     <ProjectReference Include="..\MindBloom.Infrastructure\MindBloom.Infrastructure.csproj" />

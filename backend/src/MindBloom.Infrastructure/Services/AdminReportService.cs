@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Features.AdminReports.DTOs;
 using MindBloom.Application.Features.AdminReports.Interfaces;
 using MindBloom.Domain.Enums;
@@ -563,7 +564,7 @@ public class AdminReportService : IAdminReportService
 
         if (admin == null)
         {
-            throw new InvalidOperationException(
+            throw new BusinessException(
                 "Administrator was not found.");
         }
 

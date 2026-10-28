@@ -280,7 +280,7 @@ public partial class ReferenceDataService : IReferenceDataService
 
         if (isUsed)
         {
-            throw new InvalidOperationException(
+            throw new BusinessException(
                 "The specialization cannot be deleted because it is used by one or more therapists. Deactivate it instead.");
         }
 
@@ -1279,19 +1279,19 @@ public partial class ReferenceDataService : IReferenceDataService
     {
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new InvalidOperationException(
+            throw new BusinessException(
                 "Specialization name is required.");
         }
 
         if (name.Length < 2)
         {
-            throw new InvalidOperationException(
+            throw new BusinessException(
                 "Specialization name must contain at least 2 characters.");
         }
 
         if (name.Length > 150)
         {
-            throw new InvalidOperationException(
+            throw new BusinessException(
                 "Specialization name may contain at most 150 characters.");
         }
     }

@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using MindBloom.API.Models;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application.Recommendations.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace MindBloom.IntegrationTests.Recommendations;
 
@@ -139,6 +140,14 @@ public sealed class RecommendationApiTests
     [Theory]
     [InlineData("unexpected", HttpStatusCode.InternalServerError, "internal_server_error",
         "An unexpected server error occurred.")]
+    [InlineData("invalid_operation", HttpStatusCode.InternalServerError, "internal_server_error",
+        "An unexpected server error occurred.")]
+    [InlineData("db_update", HttpStatusCode.InternalServerError, "internal_server_error",
+        "An unexpected server error occurred.")]
+    [InlineData("db_concurrency", HttpStatusCode.InternalServerError, "internal_server_error",
+        "An unexpected server error occurred.")]
+    [InlineData("unauthorized", HttpStatusCode.Unauthorized, "unauthorized", "Authentication is required.")]
+    [InlineData("forbidden", HttpStatusCode.Forbidden, "forbidden", "You do not have permission to perform this action.")]
     [InlineData("business", HttpStatusCode.Conflict, "business_rule_violation", "Business rule failed.")]
     [InlineData("bad_request", HttpStatusCode.BadRequest, "bad_request", "Invalid request.")]
     [InlineData("not_found", HttpStatusCode.NotFound, "not_found", "Resource missing.")]
@@ -163,6 +172,7 @@ public sealed class RecommendationApiTests
             new TherapistRecommendationRequestDto());
 
         Assert.Equal(expectedStatus, response.StatusCode);
+        Assert.DoesNotContain("INTERNAL_TEST_SQL_DETAIL_SHOULD_NOT_LEAK", await response.Content.ReadAsStringAsync());
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
         var error = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();
         Assert.NotNull(error);
@@ -185,7 +195,13 @@ public sealed class RecommendationApiTests
                 "bad_request" => new BadRequestException("Invalid request."),
                 "not_found" => new NotFoundException("Resource missing."),
                 "client_missing" => new KeyNotFoundException("Client profile missing."),
-                _ => new Exception("Unexpected recommendation failure.")
+                "unauthorized" => new UnauthorizedException(),
+                "forbidden" => new ForbiddenException(),
+                "invalid_operation" => new InvalidOperationException("INTERNAL_TEST_SQL_DETAIL_SHOULD_NOT_LEAK"),
+                "db_update" => new DbUpdateException("INTERNAL_TEST_SQL_DETAIL_SHOULD_NOT_LEAK",
+                    new Exception("INTERNAL_TEST_SQL_DETAIL_SHOULD_NOT_LEAK")),
+                "db_concurrency" => new DbUpdateConcurrencyException("INTERNAL_TEST_SQL_DETAIL_SHOULD_NOT_LEAK"),
+                _ => new Exception("INTERNAL_TEST_SQL_DETAIL_SHOULD_NOT_LEAK")
             };
             return Task.FromException<IReadOnlyList<TherapistRecommendationDto>>(exception);
         }

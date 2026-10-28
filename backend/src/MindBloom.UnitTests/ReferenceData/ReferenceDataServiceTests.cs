@@ -3,11 +3,57 @@ using MindBloom.Application.Features.ReferenceData.DTOs;
 using MindBloom.Domain.Entities;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.Infrastructure.Services;
+using MindBloom.Application.Common.Exceptions;
 
 namespace MindBloom.UnitTests.ReferenceData;
 
 public sealed class ReferenceDataServiceTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task DeleteUsedSpecialization_RemainsExplicitBusinessConflict(bool usesForeignKey)
+    {
+        await using var context = CreateContext();
+        var specialization = new TherapistSpecialization { Name = "Used specialization" };
+        context.TherapistSpecializations.Add(specialization);
+        await context.SaveChangesAsync();
+        context.Therapists.Add(new Therapist
+        {
+            UserId = 1, Biography = "Biography", Specialization = specialization.Name,
+            SpecializationId = usesForeignKey ? specialization.Id : null
+        });
+        await context.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<BusinessException>(() => new ReferenceDataService(context)
+            .DeleteTherapistSpecializationAsync(specialization.Id));
+
+        Assert.Contains("Deactivate it instead", error.Message);
+        Assert.False(specialization.IsDeleted);
+        Assert.True(specialization.IsActive);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("A")]
+    [InlineData(null)]
+    public async Task InvalidSpecializationName_RemainsExplicitBusinessError(string? name)
+    {
+        await using var context = CreateContext();
+        await Assert.ThrowsAsync<BusinessException>(() => new ReferenceDataService(context)
+            .CreateTherapistSpecializationAsync(new CreateTherapistSpecializationDto { Name = name! }));
+        Assert.Empty(context.TherapistSpecializations);
+    }
+
+    [Fact]
+    public async Task TooLongSpecializationName_RemainsExplicitBusinessError()
+    {
+        await using var context = CreateContext();
+        await Assert.ThrowsAsync<BusinessException>(() => new ReferenceDataService(context)
+            .CreateTherapistSpecializationAsync(new CreateTherapistSpecializationDto { Name = new string('A', 151) }));
+        Assert.Empty(context.TherapistSpecializations);
+    }
+
     [Fact]
     public async Task GetActiveTherapyApproachesAsync_ReturnsActiveNotDeletedDtosSortedByName()
     {
