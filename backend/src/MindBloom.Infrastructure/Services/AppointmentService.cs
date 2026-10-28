@@ -34,6 +34,12 @@ public class AppointmentService : IAppointmentService
             + "Please choose another available time.";
     private readonly ApplicationDbContext _context;
 
+    private const string ClientAppointmentConflictMessage =
+        "You already have an active appointment during this time. Please choose another time.";
+
+    private const string AppointmentBookingBusyMessage =
+        "Appointment booking is busy. Please try again.";
+
     private readonly IPaymentService _paymentService;
 
     private readonly IMembershipService _membershipService;
@@ -119,17 +125,24 @@ public class AppointmentService : IAppointmentService
             await strategy.ExecuteAsync(
                 async () =>
                 {
+                    // Participant application locks prevent competing inserts. Keep
+                    // eligibility rows stable without Serializable's shared gap locks,
+                    // which can deadlock independent bookings on empty index ranges.
                     await using var transaction =
                         await _context.Database
                             .BeginTransactionAsync(
                                 System.Data
                                     .IsolationLevel
-                                    .Serializable);
+                                    .RepeatableRead);
 
                     try
                     {
+                        // Same order in every booking, across all API instances.
+                        // Acquire both before reading rows to avoid lock-order inversion.
                         await AcquireAppointmentBookingLockAsync(
-    request.TherapistId);
+                            $"MindBloom.AppointmentBooking.ClientUser.{clientUserId}");
+                        await AcquireAppointmentBookingLockAsync(
+                            $"MindBloom.AppointmentBooking.Therapist.{request.TherapistId}");
 
                         var therapist =
                             await _context.Therapists
@@ -139,11 +152,7 @@ public class AppointmentService : IAppointmentService
                                         x.Id ==
                                         request.TherapistId);
 
-                        if (therapist == null)
-                        {
-                            throw new NotFoundException(
-                                "Therapist not found.");
-                        }
+                        AppointmentBookingRules.EnsureTherapistEligible(therapist);
 
                         var dayOfWeek =
                             localStart.DayOfWeek;
@@ -248,6 +257,14 @@ public class AppointmentService : IAppointmentService
                             throw new NotFoundException(
                                 "Client profile not found.");
                         }
+
+                        var clientHasOverlap = await _context.Appointments.AnyAsync(x =>
+                            x.ClientId == client.Id &&
+                            x.StartUtc < request.EndUtc && x.EndUtc > request.StartUtc &&
+                            (x.Status == AppointmentStatus.Pending || x.Status == AppointmentStatus.Accepted));
+
+                        if (clientHasOverlap)
+                            throw new BusinessException(ClientAppointmentConflictMessage);
 
                         var appointment =
                             new Appointment
@@ -429,17 +446,10 @@ public class AppointmentService : IAppointmentService
 
     private async Task
     AcquireAppointmentBookingLockAsync(
-        int therapistId,
+        string resource,
         CancellationToken cancellationToken =
             default)
     {
-        if (therapistId <= 0)
-        {
-            throw new ArgumentException(
-                "Therapist identifier is invalid.",
-                nameof(therapistId));
-        }
-
         var currentTransaction =
             _context.Database
                 .CurrentTransaction;
@@ -492,7 +502,7 @@ public class AppointmentService : IAppointmentService
             DbType.String;
 
         resourceParameter.Value =
-            $"MindBloom.AppointmentBooking.Therapist.{therapistId}";
+            resource;
 
         command.Parameters.Add(
             resourceParameter);
@@ -523,7 +533,7 @@ public class AppointmentService : IAppointmentService
             lockResult < 0)
         {
             throw new BusinessException(
-                AppointmentSlotConflictMessage);
+                AppointmentBookingBusyMessage);
         }
     }
 

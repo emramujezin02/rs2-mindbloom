@@ -487,6 +487,7 @@ public sealed class AppointmentBookingConcurrencyTests
         var therapist =
             new Therapist
             {
+                VerificationStatus = TherapistVerificationStatus.Approved,
                 UserId =
                     therapistUserId,
 
