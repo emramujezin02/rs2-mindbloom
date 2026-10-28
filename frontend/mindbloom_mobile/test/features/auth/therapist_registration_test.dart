@@ -82,6 +82,8 @@ void main() {
       final (endpoint, body) = api.calls.single;
       expect(endpoint, '/Auth/register-therapist');
       expect(body.keys.toSet(), {
+        'locationId',
+        'worksWithChildren',
         'firstName',
         'lastName',
         'username',
@@ -104,6 +106,10 @@ void main() {
         'offersInPerson',
       });
       expect(body['specialization'], 'Psychotherapy');
+      expect(body['locationId'], 42);
+      expect(body['country'], 'Test');
+      expect(body['city'], 'Test city');
+      expect(body['worksWithChildren'], isTrue);
       expect(body['hourlyRate'], 50.5);
       expect(body['experienceYears'], 5);
       expect(body['offersOnline'], isTrue);
@@ -347,12 +353,22 @@ Future<void> _fillProfessional(WidgetTester tester) async {
     'Biografija': 'Test biography',
     'Cijena termina (KM)': '50,5',
     'Godine iskustva': '5',
-    'Država': 'Test',
-    'Grad': 'Test',
     'Adresa': 'Test',
   }.entries) {
     await _enter(tester, entry.key, entry.value);
   }
+  final location = find.widgetWithText(
+    DropdownButtonFormField<int>,
+    'Lokacija',
+  );
+  await _show(tester, location);
+  await tester.tap(location);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Test city, Test region, Test').last);
+  await tester.pumpAndSettle();
+  await _show(tester, find.text('Radim s djecom'));
+  await tester.tap(find.text('Radim s djecom'));
+  await tester.pumpAndSettle();
 }
 
 Future<void> _submit(WidgetTester tester) async {
@@ -373,6 +389,24 @@ class _Api extends ApiClient {
   _Api({this.fail = false, this.pending}) : super(sessionStorage: _Storage());
   @override
   Future<dynamic> get(String endpoint, {bool requiresAuth = true}) async {
+    if (endpoint.contains('/locations/active')) {
+      return {
+        'items': [
+          {
+            'id': 42,
+            'name': 'Test city',
+            'country': 'Test',
+            'region': 'Test region',
+            'isActive': true,
+          },
+        ],
+        'pageNumber': 1,
+        'pageSize': 50,
+        'totalCount': 1,
+        'totalPages': 1,
+        'hasNextPage': false,
+      };
+    }
     if (endpoint.contains('specializations')) {
       lookups++;
       return <dynamic>[

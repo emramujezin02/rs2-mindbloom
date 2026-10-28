@@ -7,7 +7,7 @@ using MindBloom.Infrastructure.Persistence.Context;
 
 namespace MindBloom.Infrastructure.Services;
 
-public class ReferenceDataService : IReferenceDataService
+public partial class ReferenceDataService : IReferenceDataService
 {
     private readonly ApplicationDbContext _context;
 

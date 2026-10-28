@@ -846,6 +846,11 @@ class _ProfilePageState extends State<ProfilePage> {
             title: 'Experience',
             value: '${therapistProfile.experienceYears} years',
           ),
+          _buildTherapistInfoRow(
+            icon: Icons.child_care,
+            title: 'Rad s djecom',
+            value: therapistProfile.worksWithChildren ? 'Da' : 'Nije navedeno',
+          ),
 
           _buildTherapistInfoRow(
             icon: Icons.payments_outlined,

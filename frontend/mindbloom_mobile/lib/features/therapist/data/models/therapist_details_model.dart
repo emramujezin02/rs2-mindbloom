@@ -2,6 +2,9 @@ import 'therapist_availability_model.dart';
 import 'therapist_model.dart';
 
 class TherapistDetailsModel {
+  final int? locationId;
+  final String locationRegion;
+  final bool worksWithChildren;
   final int id;
   final String fullName;
   final String email;
@@ -30,6 +33,9 @@ class TherapistDetailsModel {
   final List<TherapistAvailabilityModel> availabilities;
 
   const TherapistDetailsModel({
+    this.locationId,
+    this.locationRegion = '',
+    this.worksWithChildren = false,
     required this.id,
     required this.fullName,
     required this.email,
@@ -59,6 +65,9 @@ class TherapistDetailsModel {
     final availabilityJson = json['availabilities'];
 
     return TherapistDetailsModel(
+      locationId: (json['locationId'] as num?)?.toInt(),
+      locationRegion: json['locationRegion'] as String? ?? '',
+      worksWithChildren: json['worksWithChildren'] == true,
       id: _intValue(json['id']),
       fullName: _stringValue(json['fullName']),
       email: _stringValue(json['email']),
@@ -151,6 +160,7 @@ class TherapistDetailsModel {
   String get formattedLocation {
     final locationParts = <String>[
       city.trim(),
+      locationRegion.trim(),
       country.trim(),
     ].where((value) => value.isNotEmpty).toList();
 
@@ -171,6 +181,7 @@ class TherapistDetailsModel {
     final addressParts = <String>[
       address.trim(),
       city.trim(),
+      locationRegion.trim(),
       country.trim(),
     ].where((value) => value.isNotEmpty).toList();
 
@@ -218,6 +229,9 @@ class TherapistDetailsModel {
 
   TherapistModel toTherapistModel() {
     return TherapistModel(
+      locationId: locationId,
+      locationRegion: locationRegion,
+      worksWithChildren: worksWithChildren,
       id: id,
       userId: null,
       fullName: fullName,

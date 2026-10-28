@@ -11,6 +11,8 @@ import '../../../../core/widgets/app_loading_widget.dart';
 import '../../../../core/widgets/public_footer.dart';
 import '../../data/models/therapist_list_arguments.dart';
 import '../../data/models/therapist_model.dart';
+import '../../data/models/therapist_filter_request.dart';
+import '../widgets/therapist_location_dropdown.dart';
 import '../viewmodels/therapist_list_viewmodel.dart';
 import '../widgets/therapist_profile_image.dart';
 
@@ -25,18 +27,24 @@ const _therapistBody = Color(0xFF625B6B);
 const _therapistRadius = 20.0;
 
 class TherapistListPage extends StatefulWidget {
+  final TherapistListViewModel? viewModel;
   final TherapistListArguments? arguments;
   final bool showAppBar;
 
-  const TherapistListPage({super.key, this.arguments, this.showAppBar = true});
+  const TherapistListPage({
+    super.key,
+    this.arguments,
+    this.showAppBar = true,
+    this.viewModel,
+  });
 
   @override
   State<TherapistListPage> createState() => _TherapistListPageState();
 }
 
 class _TherapistListPageState extends State<TherapistListPage> {
-  final TherapistListViewModel _viewModel =
-      AppInjection.createTherapistListViewModel();
+  late final TherapistListViewModel _viewModel =
+      widget.viewModel ?? AppInjection.createTherapistListViewModel();
 
   final ScrollController _scrollController = ScrollController();
 
@@ -55,6 +63,9 @@ class _TherapistListPageState extends State<TherapistListPage> {
   Timer? _searchDebounce;
 
   String? _selectedGender;
+  int? _selectedLocationId;
+  bool _onlineOnly = false, _childrenOnly = false;
+  TherapistExperienceRange _experience = TherapistExperienceRange.all;
   String? _selectedSessionMode;
   String? _selectedAvailableDay;
   double? _selectedMinRating;
@@ -77,6 +88,7 @@ class _TherapistListPageState extends State<TherapistListPage> {
     _selectedTherapyApproachName = widget.arguments?.therapyApproachName;
 
     _viewModel.loadTherapists(therapyApproachId: _selectedTherapyApproachId);
+    _viewModel.loadFilterOptions();
   }
 
   @override
@@ -135,7 +147,11 @@ class _TherapistListPageState extends State<TherapistListPage> {
       therapyApproachId: _selectedTherapyApproachId,
       gender: _selectedGender,
       language: _languageController.text,
-      location: _locationController.text,
+      locationId: _selectedLocationId,
+      minExperienceYears: _experience.minimum,
+      maxExperienceYears: _experience.maximum,
+      offersOnline: _onlineOnly,
+      worksWithChildren: _childrenOnly,
       sessionMode: _selectedSessionMode,
       minPrice: _parsePrice(_minPriceController),
       maxPrice: _parsePrice(_maxPriceController),
@@ -170,6 +186,10 @@ class _TherapistListPageState extends State<TherapistListPage> {
 
     setState(() {
       _selectedGender = null;
+      _selectedLocationId = null;
+      _onlineOnly = false;
+      _childrenOnly = false;
+      _experience = TherapistExperienceRange.all;
       _selectedSessionMode = null;
       _selectedAvailableDay = null;
       _selectedMinRating = null;
@@ -185,6 +205,9 @@ class _TherapistListPageState extends State<TherapistListPage> {
 
   bool get _hasActiveFilters {
     return _searchController.text.trim().isNotEmpty ||
+        _onlineOnly ||
+        _childrenOnly ||
+        _experience != TherapistExperienceRange.all ||
         _specializationController.text.trim().isNotEmpty ||
         _languageController.text.trim().isNotEmpty ||
         _locationController.text.trim().isNotEmpty ||
@@ -205,7 +228,8 @@ class _TherapistListPageState extends State<TherapistListPage> {
       return null;
     }
 
-    final direction = _sortDirection ??
+    final direction =
+        _sortDirection ??
         switch (sortBy) {
           'price' => 'asc',
           'rating' => 'desc',
@@ -218,6 +242,9 @@ class _TherapistListPageState extends State<TherapistListPage> {
 
   int get _activeFilterCount {
     var count = 0;
+    if (_onlineOnly) count++;
+    if (_childrenOnly) count++;
+    if (_experience != TherapistExperienceRange.all) count++;
 
     if (_searchController.text.trim().isNotEmpty) count++;
     if (_specializationController.text.trim().isNotEmpty) count++;
@@ -283,10 +310,77 @@ class _TherapistListPageState extends State<TherapistListPage> {
             icon: Icons.manage_search_outlined,
             label: 'Search details',
           ),
-          _FilterTextField(
-            controller: _specializationController,
-            labelText: 'Specialization',
+          if (_viewModel.isLoadingOptions) const LinearProgressIndicator(),
+          if (_viewModel.optionsError != null)
+            TextButton(
+              onPressed: _viewModel.loadFilterOptions,
+              child: Text('${_viewModel.optionsError} Pokušajte ponovo.'),
+            ),
+          _FilterDropdown<String>(
+            key: ValueKey('specialization-${_specializationController.text}'),
+            value: _specializationController.text.isEmpty
+                ? null
+                : _specializationController.text,
+            labelText: 'Specijalizacija',
             icon: Icons.psychology_outlined,
+            items: [
+              const DropdownMenuItem<String>(
+                child: Text('Sve specijalizacije'),
+              ),
+              ..._viewModel.specializations.map(
+                (x) => DropdownMenuItem(
+                  value: x['name'] as String,
+                  child: Text(x['name'] as String),
+                ),
+              ),
+            ],
+            onChanged: (value) {
+              setState(() => _specializationController.text = value ?? '');
+              _applyFilters();
+            },
+          ),
+          const SizedBox(height: 10),
+          _FilterDropdown<int>(
+            key: ValueKey(
+              'approach-$_selectedTherapyApproachId-${_viewModel.therapyApproaches.length}',
+            ),
+            value: _selectedTherapyApproachId,
+            labelText: 'Terapijski pravac',
+            icon: Icons.route_outlined,
+            items: [
+              const DropdownMenuItem<int>(child: Text('Svi terapijski pravci')),
+              ..._viewModel.therapyApproaches.map(
+                (x) => DropdownMenuItem(
+                  value: x['id'] as int,
+                  child: Text(x['name'] as String),
+                ),
+              ),
+              if (_selectedTherapyApproachId != null &&
+                  !_viewModel.therapyApproaches.any(
+                    (x) => x['id'] == _selectedTherapyApproachId,
+                  ))
+                DropdownMenuItem(
+                  value: _selectedTherapyApproachId,
+                  child: Text(
+                    _selectedTherapyApproachName ?? 'Odabrani pravac',
+                  ),
+                ),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _selectedTherapyApproachId = value;
+                _selectedTherapyApproachName = value == null
+                    ? null
+                    : _viewModel.therapyApproaches.firstWhere(
+                            (x) => x['id'] == value,
+                            orElse: () => {
+                              'name': _selectedTherapyApproachName ?? '',
+                            },
+                          )['name']
+                          as String;
+              });
+              _applyFilters();
+            },
           ),
           const SizedBox(height: 10),
           _FilterTextField(
@@ -296,11 +390,54 @@ class _TherapistListPageState extends State<TherapistListPage> {
             icon: Icons.language,
           ),
           const SizedBox(height: 10),
-          _FilterTextField(
-            controller: _locationController,
-            labelText: 'Location',
-            hintText: 'City, country or address',
-            icon: Icons.location_on_outlined,
+          TherapistLocationDropdown(
+            service: _viewModel.therapistRepository.therapistApiService,
+            value: _selectedLocationId,
+            onChanged: (location) {
+              setState(() {
+                _selectedLocationId = location?.id;
+                _locationController.text = location?.displayName ?? '';
+              });
+              _applyFilters();
+            },
+          ),
+          const SizedBox(height: 10),
+          const Text('Godine iskustva'),
+          RadioGroup<TherapistExperienceRange>(
+            groupValue: _experience,
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _experience = value);
+                _applyFilters();
+              }
+            },
+            child: Column(
+              children: TherapistExperienceRange.values
+                  .map(
+                    (range) => RadioListTile<TherapistExperienceRange>(
+                      value: range,
+                      title: Text(range.label),
+                      dense: true,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          CheckboxListTile(
+            title: const Text('Online seanse'),
+            value: _onlineOnly,
+            onChanged: (value) {
+              setState(() => _onlineOnly = value ?? false);
+              _applyFilters();
+            },
+          ),
+          CheckboxListTile(
+            title: const Text('Psihoterapija za djecu'),
+            value: _childrenOnly,
+            onChanged: (value) {
+              setState(() => _childrenOnly = value ?? false);
+              _applyFilters();
+            },
           ),
           const SizedBox(height: 18),
           const _FilterSectionLabel(
@@ -566,6 +703,7 @@ class _TherapistListPageState extends State<TherapistListPage> {
       addChip(
         label: 'Location: $location',
         onDeleted: () {
+          _selectedLocationId = null;
           _locationController.clear();
           setState(() {});
           _applyFilters();
@@ -1008,6 +1146,7 @@ class _FilterDropdown<T> extends StatelessWidget {
   final ValueChanged<T?> onChanged;
 
   const _FilterDropdown({
+    super.key,
     required this.value,
     required this.labelText,
     required this.icon,
@@ -1018,6 +1157,7 @@ class _FilterDropdown<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<T>(
+      key: ValueKey('$labelText-$value'),
       initialValue: value,
       isExpanded: true,
       decoration: _fieldDecoration(labelText: labelText, icon: icon),

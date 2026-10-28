@@ -2,6 +2,9 @@
 
 public sealed class RegisterTherapistRequestDto
 {
+    public int? LocationId { get; set; }
+    public bool WorksWithChildren { get; set; }
+
     public string FirstName { get; set; } =
         string.Empty;
 

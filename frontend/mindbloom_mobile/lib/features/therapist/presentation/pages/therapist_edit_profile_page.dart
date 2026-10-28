@@ -7,12 +7,20 @@ import '../../data/models/therapist_profile_availability_model.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../data/models/therapist_profile_model.dart';
+import '../../data/models/therapist_location_model.dart';
+import '../../data/services/therapist_api_service.dart';
+import '../widgets/therapist_location_dropdown.dart';
 import '../viewmodels/therapist_profile_viewmodel.dart';
 
 class TherapistEditProfilePage extends StatefulWidget {
   final TherapistProfileModel profile;
+  final TherapistProfileViewModel? viewModel;
 
-  const TherapistEditProfilePage({super.key, required this.profile});
+  const TherapistEditProfilePage({
+    super.key,
+    required this.profile,
+    this.viewModel,
+  });
 
   @override
   State<TherapistEditProfilePage> createState() =>
@@ -20,8 +28,8 @@ class TherapistEditProfilePage extends StatefulWidget {
 }
 
 class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
-  final TherapistProfileViewModel _viewModel =
-      AppInjection.createTherapistProfileViewModel();
+  late final TherapistProfileViewModel _viewModel =
+      widget.viewModel ?? AppInjection.createTherapistProfileViewModel();
 
   final ImagePicker _imagePicker = ImagePicker();
   final ImageCropper _imageCropper = ImageCropper();
@@ -57,6 +65,8 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
   final Set<int> _selectedTherapyApproachIds = {};
 
   bool _offersOnline = false;
+  int? _locationId;
+  bool _worksWithChildren = false;
   bool _offersInPerson = false;
 
   File? _selectedImage;
@@ -93,6 +103,8 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
     _addressController = TextEditingController(text: widget.profile.address);
 
     _offersOnline = widget.profile.offersOnline;
+    _locationId = widget.profile.locationId;
+    _worksWithChildren = widget.profile.worksWithChildren;
     _offersInPerson = widget.profile.offersInPerson;
 
     _selectedTherapyApproachIds.addAll(
@@ -351,6 +363,8 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
     }
 
     final success = await _viewModel.saveProfile(
+      locationId: _locationId,
+      worksWithChildren: _worksWithChildren,
       biography: _biographyController.text.trim(),
       specialization: _specializationController.text.trim(),
       experienceYears: _experienceYearsController.text.trim(),
@@ -918,8 +932,51 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
                           ),
                           const SizedBox(height: 16),
 
+                          TherapistLocationDropdown(
+                            value: _locationId,
+                            service: TherapistApiService(
+                              apiClient: _viewModel
+                                  .repository
+                                  .therapistApiService
+                                  .apiClient,
+                            ),
+                            existingLocation: widget.profile.locationId == null
+                                ? null
+                                : TherapistLocationModel(
+                                    id: widget.profile.locationId!,
+                                    name: widget.profile.city,
+                                    country: widget.profile.country,
+                                    region: widget.profile.locationRegion,
+                                  ),
+                            onChanged: (location) => setState(() {
+                              _locationId = location?.id;
+                              if (location != null) {
+                                _countryController.text = location.country;
+                                _cityController.text = location.name;
+                                _locationController.text = location.name;
+                              }
+                            }),
+                          ),
+                          if (widget.profile.locationId == null)
+                            const Text(
+                              'Postojeća tekstualna lokacija je sačuvana. Možete je povezati sa šifarnikom.',
+                            ),
+                          Material(
+                            type: MaterialType.transparency,
+                            child: CheckboxListTile(
+                              title: const Text('Radim s djecom'),
+                              value: _worksWithChildren,
+                              onChanged: _viewModel.isSaving
+                                  ? null
+                                  : (value) => setState(
+                                      () => _worksWithChildren = value ?? false,
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                           TextFormField(
                             controller: _locationController,
+                            readOnly: _locationId != null,
                             textInputAction: TextInputAction.next,
                             decoration: const InputDecoration(
                               labelText: 'Location',
@@ -953,6 +1010,7 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
                             builder: (context, constraints) {
                               final countryField = TextFormField(
                                 controller: _countryController,
+                                readOnly: _locationId != null,
                                 textInputAction: TextInputAction.next,
                                 decoration: const InputDecoration(
                                   labelText: 'Country',
@@ -977,6 +1035,7 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
 
                               final cityField = TextFormField(
                                 controller: _cityController,
+                                readOnly: _locationId != null,
                                 textInputAction: TextInputAction.next,
                                 decoration: const InputDecoration(
                                   labelText: 'City',
@@ -1076,54 +1135,57 @@ class _TherapistEditProfilePageState extends State<TherapistEditProfilePage> {
                                 color: const Color(0xFFE7DDF0),
                               ),
                             ),
-                            child: Column(
-                              children: [
-                                SwitchListTile(
-                                  value: _offersOnline,
-                                  title: const Text(
-                                    'Online sessions',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
+                            child: Material(
+                              type: MaterialType.transparency,
+                              child: Column(
+                                children: [
+                                  SwitchListTile(
+                                    value: _offersOnline,
+                                    title: const Text(
+                                      'Online sessions',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
-                                  ),
-                                  subtitle: const Text(
-                                    'Clients can attend through an online meeting.',
-                                  ),
-                                  secondary: const Icon(
-                                    Icons.videocam_outlined,
-                                  ),
-                                  onChanged: _viewModel.isSaving
-                                      ? null
-                                      : (value) {
-                                          setState(() {
-                                            _offersOnline = value;
-                                          });
-                                        },
-                                ),
-                                const Divider(height: 1),
-                                SwitchListTile(
-                                  value: _offersInPerson,
-                                  title: const Text(
-                                    'In-person sessions',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
+                                    subtitle: const Text(
+                                      'Clients can attend through an online meeting.',
                                     ),
+                                    secondary: const Icon(
+                                      Icons.videocam_outlined,
+                                    ),
+                                    onChanged: _viewModel.isSaving
+                                        ? null
+                                        : (value) {
+                                            setState(() {
+                                              _offersOnline = value;
+                                            });
+                                          },
                                   ),
-                                  subtitle: const Text(
-                                    'Clients can attend at the office address.',
-                                  ),
-                                  secondary: const Icon(Icons.people_outline),
-                                  onChanged: _viewModel.isSaving
-                                      ? null
-                                      : (value) {
-                                          setState(() {
-                                            _offersInPerson = value;
-                                          });
+                                  const Divider(height: 1),
+                                  SwitchListTile(
+                                    value: _offersInPerson,
+                                    title: const Text(
+                                      'In-person sessions',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    subtitle: const Text(
+                                      'Clients can attend at the office address.',
+                                    ),
+                                    secondary: const Icon(Icons.people_outline),
+                                    onChanged: _viewModel.isSaving
+                                        ? null
+                                        : (value) {
+                                            setState(() {
+                                              _offersInPerson = value;
+                                            });
 
-                                          _formKey.currentState?.validate();
-                                        },
-                                ),
-                              ],
+                                            _formKey.currentState?.validate();
+                                          },
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
 

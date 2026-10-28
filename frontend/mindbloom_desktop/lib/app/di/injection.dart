@@ -1,3 +1,4 @@
+import '../../features/reference_data/presentation/viewmodels/location_management_viewmodel.dart';
 import 'package:mindbloom_desktop/features/reports/data/services/appointment_revenue_pdf_service.dart';
 import 'package:mindbloom_desktop/features/review_moderation/presentation/viewmodels/review_moderation_viewmodel.dart';
 import 'package:mindbloom_desktop/features/workshop_management/presentation/viewmodels/workshop_details_viewmodel.dart';
@@ -77,6 +78,8 @@ import '../../features/reports/presentation/viewmodels/therapist_performance_rep
 import '../../features/membership_management/presentation/viewmodels/membership_plan_management_viewmodel.dart';
 
 class AppInjection {
+  static LocationManagementViewModel createLocationManagementViewModel() =>
+      LocationManagementViewModel(repository: _createReferenceDataRepository());
   static final SessionStorageService sessionStorage = SessionStorageService();
 
   static final ApiClient apiClient = ApiClient(sessionStorage: sessionStorage);

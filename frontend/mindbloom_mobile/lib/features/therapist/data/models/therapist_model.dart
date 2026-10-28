@@ -1,4 +1,7 @@
 class TherapistModel {
+  final int? locationId;
+  final String locationRegion;
+  final bool worksWithChildren;
   final int id;
   final int? userId;
   final String fullName;
@@ -23,6 +26,9 @@ class TherapistModel {
   final double? longitude;
 
   const TherapistModel({
+    this.locationId,
+    this.locationRegion = '',
+    this.worksWithChildren = false,
     required this.id,
     this.userId,
     required this.fullName,
@@ -47,6 +53,9 @@ class TherapistModel {
 
   factory TherapistModel.fromJson(Map<String, dynamic> json) {
     return TherapistModel(
+      locationId: (json['locationId'] as num?)?.toInt(),
+      locationRegion: json['locationRegion'] as String? ?? '',
+      worksWithChildren: json['worksWithChildren'] == true,
       id: _intValue(json['id']),
       userId: _nullableInt(json['userId']),
       fullName: _stringValue(json['fullName']),
@@ -73,6 +82,7 @@ class TherapistModel {
   String get formattedLocation {
     final locationParts = <String>[
       city.trim(),
+      locationRegion.trim(),
       country.trim(),
     ].where((value) => value.isNotEmpty).toList();
 

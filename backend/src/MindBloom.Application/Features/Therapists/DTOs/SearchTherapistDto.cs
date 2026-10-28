@@ -2,6 +2,12 @@
 
 public class SearchTherapistsDto
 {
+    public int? LocationId { get; set; }
+    public int? MinExperienceYears { get; set; }
+    public int? MaxExperienceYears { get; set; }
+    public bool? OffersOnline { get; set; }
+    public bool? WorksWithChildren { get; set; }
+
     public string? SearchText { get; set; }
 
     public string? Specialization { get; set; }

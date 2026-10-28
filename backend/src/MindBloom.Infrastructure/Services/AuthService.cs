@@ -503,6 +503,8 @@ public class AuthService : IAuthService
                         user.Id,
                         new CreateTherapistDto
                         {
+                            LocationId = request.LocationId,
+                            WorksWithChildren = request.WorksWithChildren,
                             Specialization =
                                 request
                                     .Specialization

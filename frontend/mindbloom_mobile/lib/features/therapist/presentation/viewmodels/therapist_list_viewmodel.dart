@@ -7,6 +7,36 @@ import '../../data/models/therapist_model.dart';
 import '../../data/repositories/therapist_repository.dart';
 
 class TherapistListViewModel extends ChangeNotifier {
+  List<Map<String, dynamic>> therapyApproaches = [], specializations = [];
+  bool isLoadingOptions = false;
+  String? optionsError;
+  bool _disposed = false;
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  Future<void> loadFilterOptions() async {
+    if (isLoadingOptions) return;
+    isLoadingOptions = true;
+    optionsError = null;
+    notifyListeners();
+    try {
+      final results = await Future.wait([
+        therapistRepository.getFilterOptions('therapy-approaches'),
+        therapistRepository.getFilterOptions('therapist-specializations'),
+      ]);
+      therapyApproaches = results[0];
+      specializations = results[1];
+    } catch (_) {
+      optionsError = 'Filtere nije moguće učitati.';
+    } finally {
+      isLoadingOptions = false;
+      if (!_disposed) notifyListeners();
+    }
+  }
+
   final TherapistRepository therapistRepository;
   final FavoriteRepository favoriteRepository;
 
@@ -27,6 +57,7 @@ class TherapistListViewModel extends ChangeNotifier {
   final int pageSize = 10;
 
   TherapistFilterRequest _activeRequest = const TherapistFilterRequest();
+  TherapistFilterRequest? _pendingRequest;
 
   TherapistListViewModel({
     required this.therapistRepository,
@@ -47,6 +78,11 @@ class TherapistListViewModel extends ChangeNotifier {
   }
 
   Future<void> searchTherapists({
+    int? locationId,
+    int? minExperienceYears,
+    int? maxExperienceYears,
+    bool offersOnline = false,
+    bool worksWithChildren = false,
     String? searchText,
     String? specialization,
     int? therapyApproachId,
@@ -62,13 +98,14 @@ class TherapistListViewModel extends ChangeNotifier {
     String? sortDirection,
     bool resetPage = true,
   }) async {
-    if (isLoading || isLoadingMore) {
-      return;
-    }
-
     final requestedPage = resetPage ? 1 : currentPage;
 
     final request = TherapistFilterRequest(
+      locationId: locationId,
+      minExperienceYears: minExperienceYears,
+      maxExperienceYears: maxExperienceYears,
+      offersOnline: offersOnline,
+      worksWithChildren: worksWithChildren,
       searchText: searchText,
       specialization: specialization,
       therapyApproachId: therapyApproachId,
@@ -86,6 +123,10 @@ class TherapistListViewModel extends ChangeNotifier {
       pageSize: pageSize,
     );
 
+    if (isLoading || isLoadingMore) {
+      _pendingRequest = request;
+      return;
+    }
     await _loadFirstPage(request);
   }
 
@@ -122,6 +163,7 @@ class TherapistListViewModel extends ChangeNotifier {
     } finally {
       isLoading = false;
       notifyListeners();
+      await _loadPendingRequest();
     }
   }
 
@@ -167,11 +209,18 @@ class TherapistListViewModel extends ChangeNotifier {
     } finally {
       isLoadingMore = false;
       notifyListeners();
+      await _loadPendingRequest();
     }
   }
 
   Future<void> retryLoadMore() async {
     await loadMore();
+  }
+
+  Future<void> _loadPendingRequest() async {
+    final request = _pendingRequest;
+    _pendingRequest = null;
+    if (request != null && !_disposed) await _loadFirstPage(request);
   }
 
   List<TherapistModel> _removeDuplicates(List<TherapistModel> items) {
@@ -200,8 +249,9 @@ class TherapistListViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadFavoriteIdsWithoutNotification() async {
-    final loadedTherapistIds =
-        therapists.map((therapist) => therapist.id).toSet();
+    final loadedTherapistIds = therapists
+        .map((therapist) => therapist.id)
+        .toSet();
 
     final favoriteChecks = await Future.wait(
       loadedTherapistIds.map((therapistId) async {
@@ -214,9 +264,7 @@ class TherapistListViewModel extends ChangeNotifier {
     favoriteTherapistIds
       ..clear()
       ..addAll(
-        favoriteChecks
-            .where((check) => check.$2)
-            .map((check) => check.$1),
+        favoriteChecks.where((check) => check.$2).map((check) => check.$1),
       );
   }
 

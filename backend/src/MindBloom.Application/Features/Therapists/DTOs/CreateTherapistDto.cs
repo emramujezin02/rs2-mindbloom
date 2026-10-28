@@ -2,6 +2,9 @@
 
 public class CreateTherapistDto
 {
+    public int? LocationId { get; set; }
+    public bool WorksWithChildren { get; set; }
+
     public string Specialization { get; set; } = string.Empty;
 
     public string Biography { get; set; } = string.Empty;

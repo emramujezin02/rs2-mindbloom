@@ -14,6 +14,8 @@ import '../../../../core/widgets/app_confirmation_dialog.dart';
 import '../../../../core/widgets/admin_table_container.dart';
 import '../../../../core/widgets/admin_table_state.dart';
 import '../../../../core/widgets/app_responsive_dialog_content.dart';
+import 'location_management_page.dart';
+import '../../../session/presentation/pages/admin_route_guard.dart';
 
 enum _ReferenceDataSection {
   specializations,
@@ -594,6 +596,19 @@ class _ReferenceDataManagementPageState
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildHeader(),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const AdminRouteGuard(child: LocationManagementPage()),
+                ),
+              ),
+              icon: const Icon(Icons.location_city),
+              label: const Text('Upravljanje lokacijama'),
+            ),
+          ),
           const SizedBox(height: 20),
           _buildFilters(),
           const SizedBox(height: 16),

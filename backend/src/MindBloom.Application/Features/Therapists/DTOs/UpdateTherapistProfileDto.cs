@@ -2,6 +2,9 @@
 
 public class UpdateTherapistProfileDto
 {
+    public int? LocationId { get; set; }
+    public bool WorksWithChildren { get; set; }
+
     public string Biography { get; set; } = string.Empty;
 
     public string Specialization { get; set; } = string.Empty;

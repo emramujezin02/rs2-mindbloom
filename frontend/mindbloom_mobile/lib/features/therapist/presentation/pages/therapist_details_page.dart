@@ -261,6 +261,11 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
                   label: 'Experience',
                   value: therapist.displayExperience,
                 ),
+                _InfoRow(
+                  icon: Icons.child_care,
+                  label: 'Psihoterapija za djecu',
+                  value: therapist.worksWithChildren ? 'Da' : 'Nije navedeno',
+                ),
                 const _SoftDivider(),
                 _InfoRow(
                   icon: Icons.payments_outlined,

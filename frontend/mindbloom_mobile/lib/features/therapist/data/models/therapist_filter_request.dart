@@ -1,4 +1,18 @@
+enum TherapistExperienceRange {
+  all('Sve', null, null),
+  early('0–2 godine', 0, 2),
+  developing('3–5 godina', 3, 5),
+  experienced('6–10 godina', 6, 10),
+  senior('Više od 10 godina', 11, 70);
+
+  final String label;
+  final int? minimum, maximum;
+  const TherapistExperienceRange(this.label, this.minimum, this.maximum);
+}
+
 class TherapistFilterRequest {
+  final int? locationId, minExperienceYears, maxExperienceYears;
+  final bool offersOnline, worksWithChildren;
   final String? searchText;
   final String? specialization;
   final int? therapyApproachId;
@@ -16,6 +30,11 @@ class TherapistFilterRequest {
   final int pageSize;
 
   const TherapistFilterRequest({
+    this.locationId,
+    this.minExperienceYears,
+    this.maxExperienceYears,
+    this.offersOnline = false,
+    this.worksWithChildren = false,
     this.searchText,
     this.specialization,
     this.therapyApproachId,
@@ -33,11 +52,13 @@ class TherapistFilterRequest {
     this.pageSize = 10,
   });
 
-  TherapistFilterRequest copyWith({
-    int? pageNumber,
-    int? pageSize,
-  }) {
+  TherapistFilterRequest copyWith({int? pageNumber, int? pageSize}) {
     return TherapistFilterRequest(
+      locationId: locationId,
+      minExperienceYears: minExperienceYears,
+      maxExperienceYears: maxExperienceYears,
+      offersOnline: offersOnline,
+      worksWithChildren: worksWithChildren,
       searchText: searchText,
       specialization: specialization,
       therapyApproachId: therapyApproachId,
@@ -63,55 +84,53 @@ class TherapistFilterRequest {
     };
 
     final normalizedSearchText = searchText?.trim();
+    if (locationId != null) params['locationId'] = '$locationId';
+    if (minExperienceYears != null) {
+      params['minExperienceYears'] = '$minExperienceYears';
+    }
+    if (maxExperienceYears != null) {
+      params['maxExperienceYears'] = '$maxExperienceYears';
+    }
+    if (offersOnline) params['offersOnline'] = 'true';
+    if (worksWithChildren) params['worksWithChildren'] = 'true';
 
-    if (normalizedSearchText != null &&
-        normalizedSearchText.isNotEmpty) {
+    if (normalizedSearchText != null && normalizedSearchText.isNotEmpty) {
       params['searchText'] = normalizedSearchText;
     }
 
-    final normalizedSpecialization =
-        specialization?.trim();
+    final normalizedSpecialization = specialization?.trim();
 
     if (normalizedSpecialization != null &&
         normalizedSpecialization.isNotEmpty) {
-      params['specialization'] =
-          normalizedSpecialization;
+      params['specialization'] = normalizedSpecialization;
     }
 
-    if (therapyApproachId != null &&
-        therapyApproachId! > 0) {
-      params['therapyApproachId'] =
-          therapyApproachId.toString();
+    if (therapyApproachId != null && therapyApproachId! > 0) {
+      params['therapyApproachId'] = therapyApproachId.toString();
     }
 
     final normalizedGender = gender?.trim();
 
-    if (normalizedGender != null &&
-        normalizedGender.isNotEmpty) {
+    if (normalizedGender != null && normalizedGender.isNotEmpty) {
       params['gender'] = normalizedGender;
     }
 
     final normalizedLanguage = language?.trim();
 
-    if (normalizedLanguage != null &&
-        normalizedLanguage.isNotEmpty) {
+    if (normalizedLanguage != null && normalizedLanguage.isNotEmpty) {
       params['language'] = normalizedLanguage;
     }
 
     final normalizedLocation = location?.trim();
 
-    if (normalizedLocation != null &&
-        normalizedLocation.isNotEmpty) {
+    if (normalizedLocation != null && normalizedLocation.isNotEmpty) {
       params['location'] = normalizedLocation;
     }
 
-    final normalizedSessionMode =
-        sessionMode?.trim();
+    final normalizedSessionMode = sessionMode?.trim();
 
-    if (normalizedSessionMode != null &&
-        normalizedSessionMode.isNotEmpty) {
-      params['sessionMode'] =
-          normalizedSessionMode;
+    if (normalizedSessionMode != null && normalizedSessionMode.isNotEmpty) {
+      params['sessionMode'] = normalizedSessionMode;
     }
 
     if (minPrice != null) {
@@ -126,29 +145,22 @@ class TherapistFilterRequest {
       params['minRating'] = minRating.toString();
     }
 
-    final normalizedAvailableDay =
-        availableDay?.trim();
+    final normalizedAvailableDay = availableDay?.trim();
 
-    if (normalizedAvailableDay != null &&
-        normalizedAvailableDay.isNotEmpty) {
-      params['availableDay'] =
-          normalizedAvailableDay;
+    if (normalizedAvailableDay != null && normalizedAvailableDay.isNotEmpty) {
+      params['availableDay'] = normalizedAvailableDay;
     }
 
     final normalizedSortBy = sortBy?.trim();
 
-    if (normalizedSortBy != null &&
-        normalizedSortBy.isNotEmpty) {
+    if (normalizedSortBy != null && normalizedSortBy.isNotEmpty) {
       params['sortBy'] = normalizedSortBy;
     }
 
-    final normalizedSortDirection =
-        sortDirection?.trim();
+    final normalizedSortDirection = sortDirection?.trim();
 
-    if (normalizedSortDirection != null &&
-        normalizedSortDirection.isNotEmpty) {
-      params['sortDirection'] =
-          normalizedSortDirection;
+    if (normalizedSortDirection != null && normalizedSortDirection.isNotEmpty) {
+      params['sortDirection'] = normalizedSortDirection;
     }
 
     return params;

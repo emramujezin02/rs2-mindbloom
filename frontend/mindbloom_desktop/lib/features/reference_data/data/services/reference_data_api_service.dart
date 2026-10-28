@@ -1,4 +1,5 @@
 import '../../../../core/network/api_client.dart';
+import '../models/therapist_location_model.dart';
 import '../models/therapist_specialization_model.dart';
 import '../models/therapist_specialization_paged_response.dart';
 import '../models/therapy_approach_model.dart';
@@ -7,6 +8,49 @@ import '../models/article_category_reference_model.dart';
 import '../models/article_category_reference_paged_response.dart';
 
 class ReferenceDataApiService {
+  Future<TherapistLocationPage> getLocations({
+    int pageNumber = 1,
+    int pageSize = 10,
+    String search = '',
+    bool? isActive,
+  }) async {
+    final query = Uri(
+      queryParameters: {
+        'pageNumber': '$pageNumber',
+        'pageSize': '$pageSize',
+        'search': search,
+        if (isActive != null) 'isActive': '$isActive',
+      },
+    ).query;
+    final response = await apiClient.get('/reference-data/locations?$query');
+    return TherapistLocationPage.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
+
+  Future<void> saveLocation({
+    int? id,
+    required String name,
+    required String country,
+    required String region,
+    required bool isActive,
+  }) async {
+    final body = {
+      'name': name.trim(),
+      'country': country.trim(),
+      'region': region.trim(),
+      'isActive': isActive,
+    };
+    if (id == null) {
+      await apiClient.post('/reference-data/locations', body: body);
+    } else {
+      await apiClient.put('/reference-data/locations/$id', body: body);
+    }
+  }
+
+  Future<void> deleteLocation(int id) async =>
+      apiClient.delete('/reference-data/locations/$id');
+
   final ApiClient apiClient;
 
   const ReferenceDataApiService({required this.apiClient});

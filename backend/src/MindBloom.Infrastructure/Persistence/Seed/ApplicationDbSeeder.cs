@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MindBloom.Domain.Entities;
 using MindBloom.Domain.Enums;
@@ -3341,5 +3341,6 @@ public static class ApplicationDbSeeder
                 }
             }
         }
+        await TherapistLocationSeed.SeedAsync(context);
     }
 }

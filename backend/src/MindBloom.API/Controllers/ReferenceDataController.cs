@@ -13,6 +13,45 @@ public class ReferenceDataController : ControllerBase
 {
     private readonly IReferenceDataService _referenceDataService;
 
+    [AllowAnonymous]
+    [HttpGet("locations/active")]
+    public async Task<IActionResult> GetActiveLocations([FromQuery] TherapistLocationQueryDto query, CancellationToken cancellationToken)
+    {
+        query.IsActive = true;
+        return Ok(await _referenceDataService.GetTherapistLocationsAsync(query, cancellationToken));
+    }
+
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
+    [HttpGet("locations")]
+    public async Task<IActionResult> GetLocations([FromQuery] TherapistLocationQueryDto query, CancellationToken cancellationToken)
+        => Ok(await _referenceDataService.GetTherapistLocationsAsync(query, cancellationToken));
+
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
+    [HttpGet("locations/{id:int}")]
+    public async Task<IActionResult> GetLocation(int id, CancellationToken cancellationToken)
+        => Ok(await _referenceDataService.GetTherapistLocationByIdAsync(id, cancellationToken));
+
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
+    [HttpPost("locations")]
+    public async Task<IActionResult> CreateLocation([FromBody] SaveTherapistLocationDto request, CancellationToken cancellationToken)
+    {
+        var result = await _referenceDataService.SaveTherapistLocationAsync(null, request, cancellationToken);
+        return CreatedAtAction(nameof(GetLocation), new { id = result.Id }, result);
+    }
+
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
+    [HttpPut("locations/{id:int}")]
+    public async Task<IActionResult> UpdateLocation(int id, [FromBody] SaveTherapistLocationDto request, CancellationToken cancellationToken)
+        => Ok(await _referenceDataService.SaveTherapistLocationAsync(id, request, cancellationToken));
+
+    [Authorize(Policy = AuthorizationPolicyConstants.AdminOnly)]
+    [HttpDelete("locations/{id:int}")]
+    public async Task<IActionResult> DeleteLocation(int id, CancellationToken cancellationToken)
+    {
+        await _referenceDataService.DeleteTherapistLocationAsync(id, cancellationToken);
+        return NoContent();
+    }
+
     public ReferenceDataController(
         IReferenceDataService referenceDataService)
     {

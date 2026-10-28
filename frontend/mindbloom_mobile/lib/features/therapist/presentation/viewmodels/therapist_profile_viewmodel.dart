@@ -152,6 +152,8 @@ class TherapistProfileViewModel extends ChangeNotifier {
   }
 
   Future<bool> saveProfile({
+    int? locationId,
+    bool worksWithChildren = false,
     required String biography,
     required String specialization,
     required String experienceYears,
@@ -209,6 +211,8 @@ class TherapistProfileViewModel extends ChangeNotifier {
         .toList();
 
     final request = UpdateTherapistProfileRequest(
+      locationId: locationId,
+      worksWithChildren: worksWithChildren,
       biography: biography.trim(),
       specialization: specialization.trim(),
       experienceYears: parsedExperienceYears,

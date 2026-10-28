@@ -1,12 +1,39 @@
 import '../models/therapist_specialization_model.dart';
 import '../models/therapist_specialization_paged_response.dart';
 import '../services/reference_data_api_service.dart';
+import '../models/therapist_location_model.dart';
 import '../models/therapy_approach_model.dart';
 import '../models/therapy_approach_paged_response.dart';
 import '../models/article_category_reference_model.dart';
 import '../models/article_category_reference_paged_response.dart';
 
 class ReferenceDataRepository {
+  Future<TherapistLocationPage> getLocations({
+    int pageNumber = 1,
+    int pageSize = 10,
+    String search = '',
+    bool? isActive,
+  }) => apiService.getLocations(
+    pageNumber: pageNumber,
+    pageSize: pageSize,
+    search: search,
+    isActive: isActive,
+  );
+  Future<void> saveLocation({
+    int? id,
+    required String name,
+    required String country,
+    required String region,
+    required bool isActive,
+  }) => apiService.saveLocation(
+    id: id,
+    name: name,
+    country: country,
+    region: region,
+    isActive: isActive,
+  );
+  Future<void> deleteLocation(int id) => apiService.deleteLocation(id);
+
   final ReferenceDataApiService apiService;
 
   const ReferenceDataRepository({required this.apiService});

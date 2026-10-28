@@ -6,6 +6,9 @@ import '../../../../core/validation/app_validators.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../../data/models/register_therapist_request.dart';
+import '../../../therapist/data/models/therapist_location_model.dart';
+import '../../../therapist/data/services/therapist_api_service.dart';
+import '../../../therapist/presentation/widgets/therapist_location_dropdown.dart';
 
 class RegisterPage extends StatefulWidget {
   final AuthViewModel? viewModel;
@@ -48,6 +51,8 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _specialization;
   bool _offersOnline = true;
   bool _offersInPerson = false;
+  TherapistLocationModel? _registrationLocation;
+  bool _worksWithChildren = false;
   bool get _isTherapist => _role == 'Therapist';
 
   DateTime? _dateOfBirth;
@@ -180,6 +185,8 @@ class _RegisterPageState extends State<RegisterPage> {
       gender: _gender,
       therapistDetails: _isTherapist
           ? TherapistRegistrationDetails(
+              locationId: _registrationLocation?.id,
+              worksWithChildren: _worksWithChildren,
               specialization: _specialization!,
               biography: _biography.text.trim(),
               country: _country.text.trim(),
@@ -600,8 +607,27 @@ class _RegisterPageState extends State<RegisterPage> {
             : null;
       },
     ),
-    _professionalText('Država', _country, 100),
-    _professionalText('Grad', _city, 100),
+    const SizedBox(height: 14),
+    TherapistLocationDropdown(
+      value: _registrationLocation?.id,
+      requiredSelection: true,
+      enabled: !_viewModel.isLoading,
+      service: TherapistApiService(
+        apiClient: _viewModel.authRepository.authApiService.apiClient,
+      ),
+      onChanged: (location) => setState(() {
+        _registrationLocation = location;
+        _country.text = location?.country ?? '';
+        _city.text = location?.name ?? '';
+      }),
+    ),
+    CheckboxListTile(
+      title: const Text('Radim s djecom'),
+      value: _worksWithChildren,
+      onChanged: _viewModel.isLoading
+          ? null
+          : (value) => setState(() => _worksWithChildren = value ?? false),
+    ),
     _professionalText('Adresa', _address, 300),
     CheckboxListTile(
       value: _offersOnline,

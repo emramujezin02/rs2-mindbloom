@@ -19,6 +19,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<MoodEntry> MoodEntries => Set<MoodEntry>();
     public DbSet<Therapist> Therapists => Set<Therapist>();
+    public DbSet<TherapistLocation> TherapistLocations => Set<TherapistLocation>();
     public DbSet<ApiIdempotencyRecord>
     ApiIdempotencyRecords =>
         Set<ApiIdempotencyRecord>();
@@ -891,6 +892,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany()
             .HasForeignKey(x => x.TherapistId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<TherapistLocation>(entity =>
+        {
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Country).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Region).HasMaxLength(100).IsRequired();
+            entity.HasIndex(x => new { x.Name, x.Country, x.Region }).IsUnique().HasFilter("[IsDeleted] = 0");
+            entity.HasMany(x => x.Therapists).WithOne(x => x.LocationReference)
+                .HasForeignKey(x => x.LocationId).OnDelete(DeleteBehavior.Restrict);
+        });
 
         builder.Entity<TherapyApproach>(entity =>
         {

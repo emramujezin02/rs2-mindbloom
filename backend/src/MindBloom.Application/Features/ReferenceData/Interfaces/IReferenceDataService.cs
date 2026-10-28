@@ -4,6 +4,12 @@ namespace MindBloom.Application.Features.ReferenceData.Interfaces;
 
 public interface IReferenceDataService
 {
+    Task<MindBloom.Application.Common.Models.PagedResponse<TherapistLocationResponseDto>> GetTherapistLocationsAsync(
+        TherapistLocationQueryDto query, CancellationToken cancellationToken = default);
+    Task<TherapistLocationResponseDto> GetTherapistLocationByIdAsync(int id, CancellationToken cancellationToken = default);
+    Task<TherapistLocationResponseDto> SaveTherapistLocationAsync(int? id, SaveTherapistLocationDto request, CancellationToken cancellationToken = default);
+    Task DeleteTherapistLocationAsync(int id, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<TherapistSpecializationResponseDto>>
         GetActiveTherapistSpecializationsAsync(
             CancellationToken cancellationToken = default);

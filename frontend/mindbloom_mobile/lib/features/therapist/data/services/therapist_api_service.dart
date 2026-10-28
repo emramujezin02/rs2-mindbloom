@@ -3,6 +3,7 @@ import 'package:mindbloom_mobile/features/therapist/data/models/create_unavailab
 import '../../../../core/models/paged_response.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/therapist_document_model.dart';
+import '../models/therapist_location_model.dart';
 import '../models/therapist_details_model.dart';
 import '../models/therapist_filter_request.dart';
 import '../models/therapist_model.dart';
@@ -21,6 +22,29 @@ import '../../../appointment/data/models/unavailable_date_model.dart';
 import '../models/therapist_availability_model.dart';
 
 class TherapistApiService {
+  Future<PagedResponse<TherapistLocationModel>> getActiveLocations({
+    int pageNumber = 1,
+  }) async {
+    final response = await apiClient.get(
+      '/reference-data/locations/active?pageNumber=$pageNumber&pageSize=50',
+      requiresAuth: false,
+    );
+    return PagedResponse<TherapistLocationModel>.fromJson(
+      Map<String, dynamic>.from(response as Map),
+      TherapistLocationModel.fromJson,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getFilterOptions(String kind) async {
+    final response = await apiClient.get(
+      '/reference-data/$kind/active',
+      requiresAuth: false,
+    );
+    return (response as List)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
   Future<PagedResponse<TherapistDocumentModel>> getMyDocuments({
     int pageNumber = 1,
   }) async {

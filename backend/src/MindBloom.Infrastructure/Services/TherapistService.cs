@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Common.Models;
 using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Features.Therapists.DTOs;
@@ -22,6 +22,20 @@ namespace MindBloom.Infrastructure.Services;
 
 public class TherapistService : ITherapistService
 {
+    private async Task ApplyLocationAsync(Therapist therapist, int? locationId, int? allowInactiveId = null)
+    {
+        if (locationId.HasValue)
+        {
+            var location = await _context.TherapistLocations.AsNoTracking().SingleOrDefaultAsync(x =>
+                x.Id == locationId && !x.IsDeleted && (x.IsActive || x.Id == allowInactiveId));
+            if (location == null) throw new BadRequestException("The selected location is invalid or inactive.");
+            therapist.Country = location.Country;
+            therapist.City = location.Name;
+            therapist.Location = location.Name;
+        }
+        therapist.LocationId = locationId;
+    }
+
     private const int MaximumUnavailableDateRangeDays = 370;
 
     private readonly ApplicationDbContext _context;
@@ -98,6 +112,8 @@ public class TherapistService : ITherapistService
 
         var therapist = new Therapist
         {
+            LocationId = request.LocationId,
+            WorksWithChildren = request.WorksWithChildren,
             UserId = userId,
             Specialization = request.Specialization,
             Biography = request.Biography,
@@ -111,6 +127,8 @@ public class TherapistService : ITherapistService
             OffersInPerson = request.OffersInPerson,
         };
 
+        await ApplyLocationAsync(therapist, request.LocationId);
+
         await UpdateCoordinatesAsync(
             therapist,
             CancellationToken.None);
@@ -121,6 +139,9 @@ public class TherapistService : ITherapistService
 
         return new TherapistResponseDto
         {
+            LocationId = therapist.LocationId,
+            LocationRegion = therapist.LocationReference == null ? "" : therapist.LocationReference.Region,
+            WorksWithChildren = therapist.WorksWithChildren,
             Id = therapist.Id,
             UserId = therapist.UserId,
             FullName = $"{user.FirstName} {user.LastName}",
@@ -155,6 +176,9 @@ public class TherapistService : ITherapistService
         var skip = (int)Math.Min((long)(pagination.PageNumber - 1) * pagination.PageSize, int.MaxValue);
         var items = await query.Select(x => new TherapistResponseDto
             {
+                LocationId = x.LocationId,
+                LocationRegion = x.LocationReference == null ? "" : x.LocationReference.Region,
+                WorksWithChildren = x.WorksWithChildren,
                 Id = x.Id,
                 UserId = x.UserId,
                 FullName = x.User.FirstName + " " + x.User.LastName,
@@ -277,6 +301,10 @@ public class TherapistService : ITherapistService
     public async Task<PagedResponse<TherapistResponseDto>>
      SearchAsync(SearchTherapistsDto request)
     {
+        if (request.LocationId is <= 0 || request.MinExperienceYears is < 0 or > 70 ||
+            request.MaxExperienceYears is < 0 or > 70 || request.MinExperienceYears > request.MaxExperienceYears)
+            throw new BadRequestException("Invalid location or experience range.");
+
         var pagination =
             PaginationHelper.Normalize(
                 request.PageNumber,
@@ -321,8 +349,7 @@ public class TherapistService : ITherapistService
                 .Where(TherapistVisibility.PubliclyVisible)
                 .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(
-                request.SearchText))
+        if (!string.IsNullOrWhiteSpace(request.SearchText))
         {
             var searchText =
                 request.SearchText
@@ -524,6 +551,14 @@ public class TherapistService : ITherapistService
                             request.AvailableDay.Value));
         }
 
+        if (request.LocationId.HasValue) query = query.Where(x => x.LocationId == request.LocationId.Value);
+        if (request.MinExperienceYears.HasValue) query = query.Where(x => x.ExperienceYears >= request.MinExperienceYears.Value);
+        if (request.MaxExperienceYears.HasValue) query = query.Where(x => x.ExperienceYears <= request.MaxExperienceYears.Value);
+        if (request.OffersOnline == true) query = query.Where(x => x.OffersOnline);
+        if (request.WorksWithChildren == true) query = query.Where(x => x.WorksWithChildren);
+
+        var totalCount = await query.CountAsync();
+
         var sortBy =
             request.SortBy?
                 .Trim()
@@ -609,16 +644,17 @@ public class TherapistService : ITherapistService
                         x.Id)
             };
 
-        var totalCount =
-            await query.CountAsync();
-
+        var skip = (int)Math.Min((long)(pagination.PageNumber - 1) * pagination.PageSize, int.MaxValue);
         var items =
             await query
-                .Skip(pagination.Skip)
+                .Skip(skip)
                 .Take(pagination.PageSize)
                 .Select(x =>
                     new TherapistResponseDto
                     {
+                        LocationId = x.LocationId,
+                        LocationRegion = x.LocationReference == null ? "" : x.LocationReference.Region,
+                        WorksWithChildren = x.WorksWithChildren,
                         Id = x.Id,
 
                         UserId = x.UserId,
@@ -759,6 +795,9 @@ public class TherapistService : ITherapistService
         var projected = query
                 .Select(x => new TherapistResponseDto
                 {
+                    LocationId = x.LocationId,
+                    LocationRegion = x.LocationReference == null ? "" : x.LocationReference.Region,
+                    WorksWithChildren = x.WorksWithChildren,
                     Id = x.Id,
 
                     FullName =
@@ -826,6 +865,7 @@ public class TherapistService : ITherapistService
             await _context.Therapists
                 .AsNoTracking()
                 .Include(x => x.User)
+                .Include(x => x.LocationReference)
                 .Include(x => x.Availabilities)
                 .Include(x => x.TherapyApproaches)
                     .ThenInclude(x => x.TherapyApproach)
@@ -856,6 +896,9 @@ public class TherapistService : ITherapistService
 
         return new TherapistProfileDto
         {
+            LocationId = therapist.LocationId,
+            LocationRegion = therapist.LocationReference == null ? "" : therapist.LocationReference.Region,
+            WorksWithChildren = therapist.WorksWithChildren,
             TherapistId = therapist.Id,
 
             UserId = therapist.UserId,
@@ -1082,6 +1125,9 @@ public class TherapistService : ITherapistService
         therapist.Languages =
             serializedLanguages;
 
+        await ApplyLocationAsync(therapist, request.LocationId, allowInactiveId: therapist.LocationId);
+        therapist.WorksWithChildren = request.WorksWithChildren;
+
         var currentActiveConnections =
             therapist.TherapyApproaches
                 .Where(x => !x.IsDeleted)
@@ -1305,6 +1351,7 @@ public class TherapistService : ITherapistService
                 .AsNoTracking()
                 .Include(x => x.User)
                 .Include(x => x.Reviews)
+                .Include(x => x.LocationReference)
                 .Include(x => x.Availabilities)
                 .Include(x => x.TherapyApproaches)
                     .ThenInclude(x =>
@@ -1368,6 +1415,9 @@ public class TherapistService : ITherapistService
 
         return new TherapistDetailsDto
         {
+            LocationId = therapist.LocationId,
+            LocationRegion = therapist.LocationReference == null ? "" : therapist.LocationReference.Region,
+            WorksWithChildren = therapist.WorksWithChildren,
             Id =
                 therapist.Id,
 

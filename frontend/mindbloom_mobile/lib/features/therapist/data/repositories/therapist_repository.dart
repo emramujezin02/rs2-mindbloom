@@ -22,6 +22,8 @@ import '../models/therapist_availability_model.dart';
 import '../../../appointment/data/models/unavailable_date_model.dart';
 
 class TherapistRepository {
+  Future<List<Map<String, dynamic>>> getFilterOptions(String kind) =>
+      therapistApiService.getFilterOptions(kind);
   Future<PagedResponse<TherapistDocumentModel>> getMyDocuments({
     int pageNumber = 1,
   }) => therapistApiService.getMyDocuments(pageNumber: pageNumber);

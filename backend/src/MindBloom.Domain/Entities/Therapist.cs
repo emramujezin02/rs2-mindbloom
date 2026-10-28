@@ -4,6 +4,10 @@ namespace MindBloom.Domain.Entities;
 
 public class Therapist : BaseEntity
 {
+    public int? LocationId { get; set; }
+    public TherapistLocation? LocationReference { get; set; }
+    public bool WorksWithChildren { get; set; }
+
     public int UserId { get; set; }
 
     public ApplicationUser User { get; set; } = null!;

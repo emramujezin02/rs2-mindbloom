@@ -2138,6 +2138,9 @@ namespace MindBloom.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<int?>("LocationId")
+                        .HasColumnType("int");
+
                     b.Property<double?>("Longitude")
                         .HasColumnType("float");
 
@@ -2173,7 +2176,12 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Property<int>("VerificationStatus")
                         .HasColumnType("int");
 
+                    b.Property<bool>("WorksWithChildren")
+                        .HasColumnType("bit");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("LocationId");
 
                     b.HasIndex("SpecializationId");
 
@@ -2258,6 +2266,50 @@ namespace MindBloom.Infrastructure.Migrations
                     b.HasIndex("TherapistId");
 
                     b.ToTable("TherapistDocuments");
+                });
+
+            modelBuilder.Entity("MindBloom.Domain.Entities.TherapistLocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name", "Country", "Region")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("TherapistLocations");
                 });
 
             modelBuilder.Entity("MindBloom.Domain.Entities.TherapistSpecialization", b =>
@@ -3299,6 +3351,11 @@ namespace MindBloom.Infrastructure.Migrations
 
             modelBuilder.Entity("MindBloom.Domain.Entities.Therapist", b =>
                 {
+                    b.HasOne("MindBloom.Domain.Entities.TherapistLocation", "LocationReference")
+                        .WithMany("Therapists")
+                        .HasForeignKey("LocationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("MindBloom.Domain.Entities.TherapistSpecialization", "SpecializationReference")
                         .WithMany("Therapists")
                         .HasForeignKey("SpecializationId")
@@ -3309,6 +3366,8 @@ namespace MindBloom.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("LocationReference");
 
                     b.Navigation("SpecializationReference");
 
@@ -3579,6 +3638,11 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Navigation("VerificationAudits");
 
                     b.Navigation("Workshops");
+                });
+
+            modelBuilder.Entity("MindBloom.Domain.Entities.TherapistLocation", b =>
+                {
+                    b.Navigation("Therapists");
                 });
 
             modelBuilder.Entity("MindBloom.Domain.Entities.TherapistSpecialization", b =>
