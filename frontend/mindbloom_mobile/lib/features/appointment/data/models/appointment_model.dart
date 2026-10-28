@@ -1,3 +1,5 @@
+import '../../../../core/time/appointment_time_zone.dart';
+
 class AppointmentModel {
   final int id;
   final int therapistId;
@@ -191,9 +193,11 @@ class AppointmentModel {
   }
 
   static DateTime _toDateTime(dynamic value) {
-    final parsed = DateTime.tryParse(value?.toString() ?? '');
-
-    return parsed ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    try {
+      return AppointmentTimeZone.parseUtc(value?.toString() ?? '');
+    } on FormatException {
+      return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    }
   }
 
   static bool _toBool(dynamic value) {

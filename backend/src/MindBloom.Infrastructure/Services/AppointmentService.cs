@@ -17,6 +17,7 @@ using MindBloom.Messaging.Contracts.Appointments;
 using MindBloom.Messaging.Contracts.Common;
 using MindBloom.Shared.Observability;
 using System.Data;
+using MindBloom.Infrastructure.Time;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace MindBloom.Infrastructure.Services;
@@ -108,6 +109,8 @@ public class AppointmentService : IAppointmentService
          int clientUserId,
          CreateAppointmentDto request)
     {
+        var (localStart, localEnd) = AppointmentTimeZone.LocalInterval(request.StartUtc, request.EndUtc);
+
         var strategy =
             _context.Database
                 .CreateExecutionStrategy();
@@ -143,19 +146,25 @@ public class AppointmentService : IAppointmentService
                         }
 
                         var dayOfWeek =
-                            request.StartUtc
-                                .DayOfWeek;
+                            localStart.DayOfWeek;
 
-                        var availability =
+                        var dailyAvailabilities =
                             await _context
                                 .TherapistAvailabilities
-                                .FirstOrDefaultAsync(
+                                .Where(
                                     x =>
                                         x.TherapistId ==
                                             request
                                                 .TherapistId &&
                                         x.DayOfWeek ==
-                                            dayOfWeek);
+                                            dayOfWeek)
+                                .ToListAsync();
+
+                        var availability = dailyAvailabilities.FirstOrDefault(x =>
+                            x.StartTime <= localStart.TimeOfDay &&
+                            x.EndTime >= (localEnd.Date == localStart.Date
+                                ? localEnd.TimeOfDay : TimeSpan.FromDays(1)))
+                            ?? dailyAvailabilities.FirstOrDefault();
 
                         BusinessRuleGuard.Against(
                             availability == null,
@@ -168,18 +177,19 @@ public class AppointmentService : IAppointmentService
                         }
 
                         var startTime =
-                            request.StartUtc
-                                .TimeOfDay;
+                            localStart.TimeOfDay;
 
                         var endTime =
-                            request.EndUtc
-                                .TimeOfDay;
+                            localEnd.TimeOfDay;
 
                         BusinessRuleGuard.Against(
                             startTime <
                                 availability.StartTime ||
                             endTime >
-                                availability.EndTime,
+                                availability.EndTime ||
+                            (localEnd.Date != localStart.Date &&
+                                !(localEnd == localStart.Date.AddDays(1) &&
+                                    availability.EndTime == TimeSpan.FromDays(1))),
                             "Appointment is outside working hours.");
 
                         var unavailableDate =
@@ -1724,12 +1734,7 @@ public class AppointmentService : IAppointmentService
                 "Therapist not found or is not available.");
         }
 
-        var dateUtc = DateTime.SpecifyKind(
-            date.Date,
-            DateTimeKind.Utc);
-
-        var nextDateUtc =
-            dateUtc.AddDays(1);
+        var (dateUtc, nextDateUtc) = AppointmentTimeZone.DayBounds(date);
 
         return await _context.Appointments
             .AsNoTracking()
@@ -1745,8 +1750,8 @@ public class AppointmentService : IAppointmentService
             .Select(x =>
                 new OccupiedAppointmentSlotDto
                 {
-                    StartUtc = x.StartUtc,
-                    EndUtc = x.EndUtc
+                    StartUtc = DateTime.SpecifyKind(x.StartUtc, DateTimeKind.Utc),
+                    EndUtc = DateTime.SpecifyKind(x.EndUtc, DateTimeKind.Utc)
                 })
             .ToListAsync();
     }

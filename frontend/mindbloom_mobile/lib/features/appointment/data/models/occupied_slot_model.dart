@@ -1,3 +1,5 @@
+import '../../../../core/time/appointment_time_zone.dart';
+
 class OccupiedSlotModel {
   final DateTime startUtc;
   final DateTime endUtc;
@@ -6,8 +8,8 @@ class OccupiedSlotModel {
 
   factory OccupiedSlotModel.fromJson(Map<String, dynamic> json) {
     return OccupiedSlotModel(
-      startUtc: DateTime.parse(json['startUtc']),
-      endUtc: DateTime.parse(json['endUtc']),
+      startUtc: AppointmentTimeZone.parseUtc(json['startUtc']),
+      endUtc: AppointmentTimeZone.parseUtc(json['endUtc']),
     );
   }
 }

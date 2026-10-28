@@ -40,6 +40,14 @@ public sealed class CreateAppointmentDtoValidator
             .WithMessage(
                 "Appointment must last exactly one hour.");
 
+        RuleFor(x => x.StartUtc)
+            .Must(x => x.Kind == DateTimeKind.Utc)
+            .WithMessage("Appointment start time must be UTC (with Z suffix).");
+
+        RuleFor(x => x.EndUtc)
+            .Must(x => x.Kind == DateTimeKind.Utc)
+            .WithMessage("Appointment end time must be UTC (with Z suffix).");
+
         RuleFor(x => x.Type)
             .IsInEnum()
             .WithMessage(

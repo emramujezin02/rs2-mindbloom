@@ -1,3 +1,4 @@
+import '../../../../core/time/appointment_time_zone.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -504,7 +505,9 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               therapistName: appointment.therapistName,
               status: appointment.status,
               type: appointment.type,
-              startsAt: formatter.format(appointment.startUtc.toLocal()),
+              startsAt: formatter.format(
+                AppointmentTimeZone.fromInstant(appointment.startUtc),
+              ),
               price: '${appointment.price.toStringAsFixed(2)} BAM',
             ),
 
@@ -521,12 +524,16 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                   const _DetailsDivider(),
                   _RowItem(
                     label: 'Start',
-                    value: formatter.format(appointment.startUtc.toLocal()),
+                    value: formatter.format(
+                      AppointmentTimeZone.fromInstant(appointment.startUtc),
+                    ),
                   ),
                   const _DetailsDivider(),
                   _RowItem(
                     label: 'End',
-                    value: formatter.format(appointment.endUtc.toLocal()),
+                    value: formatter.format(
+                      AppointmentTimeZone.fromInstant(appointment.endUtc),
+                    ),
                   ),
                   const _DetailsDivider(),
                   _RowItem(label: 'Duration', value: durationText),

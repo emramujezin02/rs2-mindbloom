@@ -1,3 +1,5 @@
+import '../../../../core/time/appointment_time_zone.dart';
+
 class UnavailableDateModel {
   final int id;
   final DateTime startUtc;
@@ -37,7 +39,10 @@ class UnavailableDateModel {
   }
 
   static DateTime _readDateTime(dynamic value) {
-    return DateTime.tryParse(value?.toString() ?? '') ??
-        DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    try {
+      return AppointmentTimeZone.parseUtc(value?.toString() ?? '');
+    } on FormatException {
+      return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    }
   }
 }

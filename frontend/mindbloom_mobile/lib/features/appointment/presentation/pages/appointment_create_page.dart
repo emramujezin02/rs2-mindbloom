@@ -1,3 +1,4 @@
+import '../../../../core/time/appointment_time_zone.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/validation/app_validators.dart';
@@ -70,7 +71,9 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
       return;
     }
 
-    final initialSlot = widget.initialSlot?.toLocal();
+    final initialSlot = widget.initialSlot == null
+        ? null
+        : AppointmentTimeZone.fromInstant(widget.initialSlot!);
 
     if (initialSlot == null) {
       return;
@@ -138,7 +141,7 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
       return;
     }
 
-    final now = DateTime.now();
+    final now = AppointmentTimeZone.now();
 
     final firstDate = DateTime(now.year, now.month, now.day);
 
@@ -456,11 +459,7 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
   }
 
   bool _isSameSlot(DateTime first, DateTime second) {
-    return first.year == second.year &&
-        first.month == second.month &&
-        first.day == second.day &&
-        first.hour == second.hour &&
-        first.minute == second.minute;
+    return first.isAtSameMomentAs(second);
   }
 
   void _showMessage(String message) {

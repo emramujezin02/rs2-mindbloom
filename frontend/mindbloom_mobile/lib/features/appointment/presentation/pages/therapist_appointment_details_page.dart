@@ -1,3 +1,4 @@
+import '../../../../core/time/appointment_time_zone.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mindbloom_mobile/app/di/injection.dart';
@@ -200,8 +201,8 @@ class _TherapistAppointmentDetailsPageState
 
     final hasStatusActions = canAccept || canReject || canComplete || canCancel;
 
-    final start = appointment.startUtc.toLocal();
-    final end = appointment.endUtc.toLocal();
+    final start = AppointmentTimeZone.fromInstant(appointment.startUtc);
+    final end = AppointmentTimeZone.fromInstant(appointment.endUtc);
 
     final duration = appointment.endUtc.difference(appointment.startUtc);
 
@@ -399,7 +400,7 @@ class _HeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final start = appointment.startUtc.toLocal();
+    final start = AppointmentTimeZone.fromInstant(appointment.startUtc);
 
     return Container(
       padding: const EdgeInsets.all(22),
@@ -756,7 +757,7 @@ class _DialogAppointmentSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final start = appointment.startUtc.toLocal();
+    final start = AppointmentTimeZone.fromInstant(appointment.startUtc);
 
     return Container(
       width: double.infinity,

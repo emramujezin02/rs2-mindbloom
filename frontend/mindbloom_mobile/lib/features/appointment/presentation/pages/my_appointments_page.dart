@@ -1,3 +1,4 @@
+import '../../../../core/time/appointment_time_zone.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -425,7 +426,11 @@ class _AppointmentCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          dateFormat.format(appointment.startUtc.toLocal()),
+                          dateFormat.format(
+                            AppointmentTimeZone.fromInstant(
+                              appointment.startUtc,
+                            ),
+                          ),
                           style: const TextStyle(color: _appointmentsMuted),
                         ),
                       ],

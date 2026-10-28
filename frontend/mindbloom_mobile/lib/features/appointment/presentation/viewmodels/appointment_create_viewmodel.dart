@@ -1,3 +1,4 @@
+import '../../../../core/time/appointment_time_zone.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/error/app_exception.dart';
 import '../../../therapist/data/models/therapist_availability_model.dart';
@@ -11,7 +12,12 @@ class AppointmentCreateViewModel extends ChangeNotifier {
 
   final AppointmentRepository repository;
 
-  AppointmentCreateViewModel({required this.repository});
+  AppointmentCreateViewModel({
+    required this.repository,
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
+
+  final DateTime Function() _now;
 
   bool isLoading = false;
   bool isLoadingSlots = false;
@@ -80,10 +86,7 @@ class AppointmentCreateViewModel extends ChangeNotifier {
       if (availabilities.isEmpty) {
         final results = await Future.wait([
           repository.getTherapistAvailabilities(therapistId),
-          _loadUnavailableDates(
-            therapistId,
-            daysAhead: daysAhead,
-          ),
+          _loadUnavailableDates(therapistId, daysAhead: daysAhead),
         ]);
 
         availabilities = results[0] as List<TherapistAvailabilityModel>;
@@ -91,9 +94,9 @@ class AppointmentCreateViewModel extends ChangeNotifier {
         unavailableDates = results[1] as List<UnavailableDateModel>;
       }
 
-      final now = DateTime.now();
+      final now = AppointmentTimeZone.fromInstant(_now());
 
-      final today = DateTime(now.year, now.month, now.day);
+      final today = DateTime.utc(now.year, now.month, now.day);
 
       final previewResult = <DateTime, List<DateTime>>{};
 
@@ -143,75 +146,10 @@ class AppointmentCreateViewModel extends ChangeNotifier {
   }
 
   bool isDateSelectable(DateTime date) {
-    final normalizedDate = DateTime(date.year, date.month, date.day);
-
-    final now = DateTime.now();
-
-    final today = DateTime(now.year, now.month, now.day);
-
-    if (normalizedDate.isBefore(today)) {
-      return false;
-    }
-
-    final backendDayOfWeek = _toBackendDayOfWeek(normalizedDate.weekday);
-
-    final dailyAvailabilities = availabilities
-        .where((availability) => availability.dayOfWeek == backendDayOfWeek)
-        .toList();
-
-    if (dailyAvailabilities.isEmpty) {
-      return false;
-    }
-
-    for (final availability in dailyAvailabilities) {
-      final startParts = _parseTime(availability.startTime);
-
-      final endParts = _parseTime(availability.endTime);
-
-      if (startParts == null || endParts == null) {
-        continue;
-      }
-
-      var slotStart = DateTime(
-        normalizedDate.year,
-        normalizedDate.month,
-        normalizedDate.day,
-        startParts.$1,
-        startParts.$2,
-      );
-
-      final availabilityEnd = DateTime(
-        normalizedDate.year,
-        normalizedDate.month,
-        normalizedDate.day,
-        endParts.$1,
-        endParts.$2,
-      );
-
-      while (slotStart.add(appointmentDuration).compareTo(availabilityEnd) <=
-          0) {
-        final slotEnd = slotStart.add(appointmentDuration);
-
-        final isPast = slotStart.isBefore(DateTime.now());
-
-        final isUnavailable = unavailableDates.any((unavailableDate) {
-          final unavailableStart = unavailableDate.startUtc.toLocal();
-
-          final unavailableEnd = unavailableDate.endUtc.toLocal();
-
-          return slotStart.isBefore(unavailableEnd) &&
-              slotEnd.isAfter(unavailableStart);
-        });
-
-        if (!isPast && !isUnavailable) {
-          return true;
-        }
-
-        slotStart = slotStart.add(appointmentDuration);
-      }
-    }
-
-    return false;
+    return _buildAvailableSlotsForDate(
+      date: date,
+      dailyOccupiedSlots: [],
+    ).isNotEmpty;
   }
 
   Future<void> loadAvailableSlots({
@@ -263,7 +201,7 @@ class AppointmentCreateViewModel extends ChangeNotifier {
         continue;
       }
 
-      var slotStart = DateTime(
+      var wallStart = DateTime.utc(
         date.year,
         date.month,
         date.day,
@@ -271,7 +209,7 @@ class AppointmentCreateViewModel extends ChangeNotifier {
         startParts.$2,
       );
 
-      final availabilityEnd = DateTime(
+      final availabilityEnd = DateTime.utc(
         date.year,
         date.month,
         date.day,
@@ -279,25 +217,49 @@ class AppointmentCreateViewModel extends ChangeNotifier {
         endParts.$2,
       );
 
-      while (slotStart.add(appointmentDuration).compareTo(availabilityEnd) <=
+      while (wallStart.add(appointmentDuration).compareTo(availabilityEnd) <=
           0) {
-        final slotEnd = slotStart.add(appointmentDuration);
+        final slotStart = AppointmentTimeZone.uniqueLocal(wallStart);
+        wallStart = wallStart.add(appointmentDuration);
+        if (slotStart == null) continue;
+        final slotEnd = AppointmentTimeZone.fromInstant(
+          slotStart.toUtc().add(appointmentDuration),
+        );
+        if (AppointmentTimeZone.uniqueLocal(
+                  DateTime.utc(
+                    slotEnd.year,
+                    slotEnd.month,
+                    slotEnd.day,
+                    slotEnd.hour,
+                    slotEnd.minute,
+                  ),
+                ) ==
+                null ||
+            DateTime.utc(
+              slotEnd.year,
+              slotEnd.month,
+              slotEnd.day,
+              slotEnd.hour,
+              slotEnd.minute,
+            ).isAfter(availabilityEnd)) {
+          continue;
+        }
 
-        final isPast = slotStart.isBefore(DateTime.now());
+        final isPast = slotStart.isBefore(_now());
 
         final isOccupied = dailyOccupiedSlots.any((occupiedSlot) {
-          final occupiedStart = occupiedSlot.startUtc.toLocal();
+          final occupiedStart = occupiedSlot.startUtc.toUtc();
 
-          final occupiedEnd = occupiedSlot.endUtc.toLocal();
+          final occupiedEnd = occupiedSlot.endUtc.toUtc();
 
           return slotStart.isBefore(occupiedEnd) &&
               slotEnd.isAfter(occupiedStart);
         });
 
         final isUnavailable = unavailableDates.any((unavailableDate) {
-          final unavailableStart = unavailableDate.startUtc.toLocal();
+          final unavailableStart = unavailableDate.startUtc.toUtc();
 
-          final unavailableEnd = unavailableDate.endUtc.toLocal();
+          final unavailableEnd = unavailableDate.endUtc.toUtc();
 
           return slotStart.isBefore(unavailableEnd) &&
               slotEnd.isAfter(unavailableStart);
@@ -306,8 +268,6 @@ class AppointmentCreateViewModel extends ChangeNotifier {
         if (!isPast && !isOccupied && !isUnavailable) {
           slots.add(slotStart);
         }
-
-        slotStart = slotStart.add(appointmentDuration);
       }
     }
 
@@ -367,9 +327,13 @@ class AppointmentCreateViewModel extends ChangeNotifier {
     int therapistId, {
     int daysAhead = 370,
   }) async {
-    final now = DateTime.now();
-    final rangeStart = DateTime(now.year, now.month, now.day).toUtc();
-    final rangeEnd = rangeStart.add(Duration(days: daysAhead));
+    final now = AppointmentTimeZone.fromInstant(_now());
+    final rangeStart = AppointmentTimeZone.uniqueLocal(
+      DateTime.utc(now.year, now.month, now.day),
+    )!.toUtc();
+    final rangeEnd = AppointmentTimeZone.uniqueLocal(
+      DateTime.utc(now.year, now.month, now.day + daysAhead),
+    )!.toUtc();
 
     final response = await repository.getTherapistUnavailableDates(
       therapistId: therapistId,

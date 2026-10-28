@@ -1,3 +1,4 @@
+import '../../../../core/time/appointment_time_zone.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mindbloom_mobile/app/di/injection.dart';
@@ -717,15 +718,17 @@ class _AppointmentCard extends StatelessWidget {
               _InformationTile(
                 icon: Icons.calendar_today_outlined,
                 label: 'Date',
-                value: _formatDate(appointment.startUtc.toLocal()),
+                value: _formatDate(
+                  AppointmentTimeZone.fromInstant(appointment.startUtc),
+                ),
               ),
               const SizedBox(height: 10),
               _InformationTile(
                 icon: Icons.schedule_outlined,
                 label: 'Time',
                 value:
-                    '${_formatTime(appointment.startUtc.toLocal())} - '
-                    '${_formatTime(appointment.endUtc.toLocal())}',
+                    '${_formatTime(AppointmentTimeZone.fromInstant(appointment.startUtc))} - '
+                    '${_formatTime(AppointmentTimeZone.fromInstant(appointment.endUtc))}',
               ),
               if (appointment.type.trim().isNotEmpty) ...[
                 const SizedBox(height: 10),
@@ -1097,7 +1100,7 @@ class _DialogAppointmentSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final start = appointment.startUtc.toLocal();
+    final start = AppointmentTimeZone.fromInstant(appointment.startUtc);
 
     return Container(
       width: double.infinity,
