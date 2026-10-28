@@ -1,3 +1,4 @@
+using MindBloom.Infrastructure.Serialization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MindBloom.Domain.Entities;
@@ -328,13 +329,13 @@ public static class ApplicationDbSeeder
                         80m,
 
                     PreferredLanguages =
-                        "Bosnian, English",
+                        ClientPreferenceFormat.SerializeTextValues(["Bosnian", "English"]),
 
                     AssessmentFocusAreas =
-                        "Anxiety, stress, sleep",
+                        ClientPreferenceFormat.SerializeTextValues(["Anxiety", "stress", "sleep"]),
 
                     PreferredDays =
-                        "Monday, Wednesday, Friday",
+                        ClientPreferenceFormat.SerializeDays([DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday]),
 
                     HasCompletedOnboarding =
                         true,

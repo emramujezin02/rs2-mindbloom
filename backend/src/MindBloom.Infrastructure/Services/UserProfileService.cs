@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Hosting;
+using MindBloom.Infrastructure.Serialization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using MindBloom.Application.Common.Exceptions;
@@ -590,46 +591,11 @@ public class UserProfileService : IUserProfileService
             : value.Trim();
     }
 
-    private static string? NormalizeLanguages(
-        IEnumerable<string>? languages)
-    {
-        if (languages == null)
-        {
-            return null;
-        }
+    private static string? NormalizeLanguages(IEnumerable<string>? languages)
+        => ClientPreferenceFormat.SerializeTextValues(languages);
 
-        var normalizedLanguages =
-            languages
-                .Where(x =>
-                    !string.IsNullOrWhiteSpace(x))
-                .Select(x => x.Trim())
-                .Distinct(
-                    StringComparer.OrdinalIgnoreCase)
-                .OrderBy(x => x)
-                .ToList();
-
-        return normalizedLanguages.Count == 0
-            ? null
-            : string.Join(",", normalizedLanguages);
-    }
-
-    private static List<string> SplitLanguages(
-        string? languages)
-    {
-        if (string.IsNullOrWhiteSpace(languages))
-        {
-            return [];
-        }
-
-        return languages
-            .Split(
-                ',',
-                StringSplitOptions.RemoveEmptyEntries |
-                StringSplitOptions.TrimEntries)
-            .Distinct(
-                StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
+    private static List<string> SplitLanguages(string? languages)
+        => ClientPreferenceFormat.SplitTextValues(languages);
 
     private static UserProfileDto MapToDto(
         ApplicationUser user,

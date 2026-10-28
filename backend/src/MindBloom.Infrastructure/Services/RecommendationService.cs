@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+using MindBloom.Infrastructure.Serialization;
+using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Recommendations.DTOs;
 using MindBloom.Application.Recommendations.Services;
 using MindBloom.Domain.Entities;
@@ -479,61 +480,12 @@ public sealed class RecommendationService : IRecommendationService
         return score;
     }
 
-    private static List<string>
-    SplitStoredAssessmentFocusAreas(
-        string? value)
-    {
-        if (string.IsNullOrWhiteSpace(
-                value))
-        {
-            return [];
-        }
+    private static List<string> SplitStoredAssessmentFocusAreas(string? value)
+        => ClientPreferenceFormat.SplitTextValues(value)
+            .Select(NormalizeText).Distinct().OrderBy(x => x).ToList();
 
-        return value
-            .Split(
-                '|',
-                StringSplitOptions
-                    .RemoveEmptyEntries |
-                StringSplitOptions
-                    .TrimEntries)
-            .Select(NormalizeText)
-            .Where(x =>
-                x.Length > 0)
-            .Distinct()
-            .OrderBy(x => x)
-            .ToList();
-    }
-
-    private static HashSet<DayOfWeek>
-    SplitStoredPreferredDays(
-        string? value)
-    {
-        if (string.IsNullOrWhiteSpace(
-                value))
-        {
-            return [];
-        }
-
-        return value
-            .Split(
-                ',',
-                StringSplitOptions
-                    .RemoveEmptyEntries |
-                StringSplitOptions
-                    .TrimEntries)
-            .Select(x =>
-                int.TryParse(
-                    x,
-                    out var day)
-                    ? day
-                    : -1)
-            .Where(x =>
-                x >= 0 &&
-                x <= 6)
-            .Select(x =>
-                (DayOfWeek)x)
-            .ToHashSet();
-    }
+    private static HashSet<DayOfWeek> SplitStoredPreferredDays(string? value)
+        => ClientPreferenceFormat.SplitDays(value).ToHashSet();
 
     private static decimal CalculateAssessmentScore(
         Therapist therapist,
@@ -1003,24 +955,7 @@ public sealed class RecommendationService : IRecommendationService
             : value.Trim();
     }
 
-    private static HashSet<string>
-        SplitPreferenceLanguages(
-            string? languages)
-    {
-        if (string.IsNullOrWhiteSpace(languages))
-        {
-            return new HashSet<string>(
-                StringComparer.OrdinalIgnoreCase);
-        }
-
-        return languages
-            .Split(
-                ',',
-                StringSplitOptions.RemoveEmptyEntries |
-                StringSplitOptions.TrimEntries)
-            .ToHashSet(
-                StringComparer.OrdinalIgnoreCase);
-    }
-
-    
+    private static HashSet<string> SplitPreferenceLanguages(string? languages)
+        => ClientPreferenceFormat.SplitTextValues(languages)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 }

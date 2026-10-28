@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+using MindBloom.Infrastructure.Serialization;
+using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Common.Exceptions;
 using MindBloom.Application
     .Features.ClientOnboarding.DTOs;
@@ -431,110 +432,15 @@ public sealed class ClientOnboardingService
             : value.Trim();
     }
 
-    private static string?
-        SerializeTextValues(
-            IEnumerable<string>? values)
-    {
-        if (values == null)
-        {
-            return null;
-        }
+    private static string? SerializeTextValues(IEnumerable<string>? values)
+        => ClientPreferenceFormat.SerializeTextValues(values);
 
-        var normalized =
-            values
-                .Where(x =>
-                    !string.IsNullOrWhiteSpace(
-                        x))
-                .Select(x =>
-                    x.Trim())
-                .Distinct(
-                    StringComparer
-                        .OrdinalIgnoreCase)
-                .OrderBy(x => x)
-                .ToList();
+    private static List<string> SplitTextValues(string? value)
+        => ClientPreferenceFormat.SplitTextValues(value);
 
-        return normalized.Count == 0
-            ? null
-            : string.Join(
-                "|",
-                normalized);
-    }
+    private static string? SerializeDays(IEnumerable<DayOfWeek>? days)
+        => ClientPreferenceFormat.SerializeDays(days);
 
-    private static List<string>
-        SplitTextValues(
-            string? value)
-    {
-        if (string.IsNullOrWhiteSpace(
-                value))
-        {
-            return [];
-        }
-
-        return value
-            .Split(
-                '|',
-                StringSplitOptions
-                    .RemoveEmptyEntries |
-                StringSplitOptions
-                    .TrimEntries)
-            .Distinct(
-                StringComparer
-                    .OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static string?
-        SerializeDays(
-            IEnumerable<DayOfWeek>? days)
-    {
-        if (days == null)
-        {
-            return null;
-        }
-
-        var values =
-            days
-                .Distinct()
-                .OrderBy(x => (int)x)
-                .Select(x =>
-                    ((int)x).ToString())
-                .ToList();
-
-        return values.Count == 0
-            ? null
-            : string.Join(",", values);
-    }
-
-    private static List<DayOfWeek>
-        SplitDays(
-            string? value)
-    {
-        if (string.IsNullOrWhiteSpace(
-                value))
-        {
-            return [];
-        }
-
-        return value
-            .Split(
-                ',',
-                StringSplitOptions
-                    .RemoveEmptyEntries |
-                StringSplitOptions
-                    .TrimEntries)
-            .Select(x =>
-                int.TryParse(
-                    x,
-                    out var day)
-                    ? day
-                    : -1)
-            .Where(x =>
-                x >= 0 &&
-                x <= 6)
-            .Distinct()
-            .OrderBy(x => x)
-            .Select(x =>
-                (DayOfWeek)x)
-            .ToList();
-    }
+    private static List<DayOfWeek> SplitDays(string? value)
+        => ClientPreferenceFormat.SplitDays(value);
 }
