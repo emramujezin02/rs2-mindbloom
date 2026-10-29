@@ -1,8 +1,10 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Features.Admin.DTOs;
 using MindBloom.Application.Features.AdminReports.DTOs;
 using MindBloom.Application.Features.Appointments.DTOs;
@@ -1164,8 +1166,17 @@ public sealed class ClientJourneyEndToEndTests
          * ==================================================
          */
 
+        // Simulate reaching the scheduled end without changing the stored appointment.
+        using var completionHost = _factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+        {
+            services.AddSingleton<TimeProvider>(new SessionEndClock(appointmentEndUtc));
+            services.AddSingleton<IIntegrationEventPublisher>(integrationPublisher);
+        }));
+        using var completionClient = completionHost.CreateClient();
+        completionClient.DefaultRequestHeaders.Authorization = therapistClient.DefaultRequestHeaders.Authorization;
+
         var completeResponse =
-            await therapistClient
+            await completionClient
                 .PutAsJsonAsync(
                     "/api/Appointments/status",
                     new UpdateAppointmentStatusDto
@@ -1595,5 +1606,9 @@ public sealed class ClientJourneyEndToEndTests
                             ReviewModerationAction
                                 .Approved));
         }
+    }
+    private sealed class SessionEndClock(DateTime endUtc) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(DateTime.SpecifyKind(endUtc, DateTimeKind.Utc));
     }
 }

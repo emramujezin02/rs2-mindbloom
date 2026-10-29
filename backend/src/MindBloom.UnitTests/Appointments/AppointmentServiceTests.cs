@@ -341,6 +341,10 @@ public sealed class AppointmentServiceTests
                 therapist.Id,
                 AppointmentStatus.Accepted);
 
+        appointment.StartUtc = DateTime.UtcNow.AddHours(-2);
+        appointment.EndUtc = DateTime.UtcNow.AddHours(-1);
+        await context.SaveChangesAsync();
+
         var membershipService =
             new Mock<
                 IMembershipService>();

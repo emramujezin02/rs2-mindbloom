@@ -836,6 +836,13 @@ public partial class AppointmentService : IAppointmentService
                 $"Status transition from {appointment.Status} to {request.Status} is not allowed.");
         }
 
+        if (request.Status == AppointmentStatus.Completed &&
+            appointment.EndUtc > _timeProvider.GetUtcNow().UtcDateTime)
+        {
+            throw new BusinessException(
+                "An appointment can only be marked as completed after its scheduled end time.");
+        }
+
         if (request.Status ==
             AppointmentStatus.Rejected)
         {
