@@ -14,7 +14,7 @@ public class AdminAppointmentAuditDto
 
     public string? Reason { get; set; }
 
-    public int ChangedByUserId { get; set; }
+    public int? ChangedByUserId { get; set; }
 
     public string ChangedByUserName { get; set; }
         = string.Empty;

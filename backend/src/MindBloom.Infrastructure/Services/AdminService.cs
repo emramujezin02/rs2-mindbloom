@@ -2280,15 +2280,15 @@ public class AdminService : IAdminService
                             ChangedByUserId =
                                 x.ChangedByUserId,
 
-                            ChangedByUserName =
-                                x.ChangedByUser
+                            ChangedByUserName = x.ChangedByUserId == null ? "System" :
+                                x.ChangedByUser!
                                     .FirstName
                                 + " "
                                 + x.ChangedByUser
                                     .LastName,
 
-                            ChangedByUserEmail =
-                                x.ChangedByUser.Email
+                            ChangedByUserEmail = x.ChangedByUserId == null ? string.Empty :
+                                x.ChangedByUser!.Email
                                 ?? string.Empty,
 
                             ChangedAtUtc =
@@ -2303,6 +2303,7 @@ public class AdminService : IAdminService
         int appointmentId,
         AdminCancelAppointmentDto request)
     {
+        await using var statusLock = await AppointmentStatusLock.AcquireAsync(_context, appointmentId);
         var reason =
             request.Reason?.Trim()
             ?? string.Empty;
@@ -2355,6 +2356,8 @@ public class AdminService : IAdminService
             throw new NotFoundException(
                 "Appointment not found.");
         }
+
+        await _context.Entry(appointment).ReloadAsync();
 
         if (appointment.Status ==
             AppointmentStatus.Cancelled)

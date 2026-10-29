@@ -6,11 +6,33 @@ using MindBloom.Domain.Enums;
 using MindBloom.Infrastructure.Persistence.Context;
 using MindBloom.NotificationsWorker.Services;
 using MindBloom.Shared.Observability;
+using MindBloom.Messaging.Contracts.Appointments;
+using MindBloom.NotificationsWorker.Handlers.Appointments;
 
 namespace MindBloom.IntegrationTests.Notifications;
 
 public sealed class WorkerNotificationServiceTests
 {
+    [Fact]
+    public async Task ExpiredPendingRequest_NotificationPreservesSystemReasonWithoutManualActor()
+    {
+        await using var context = CreateDbContext();
+        var user = await SeedUserAsync(context, "expired-request@test.local");
+        var service = CreateService(context, new TestEmailService(), new TestPushNotificationService());
+        const string reason = "Appointment request expired because the therapist did not respond before the scheduled end time.";
+        await new AppointmentRejectedEventHandler(service).HandleAsync(new AppointmentRejectedEvent
+        {
+            AppointmentId = 123, ClientUserId = user.Id, StartUtc = DateTime.UtcNow.AddDays(-1),
+            EndUtc = DateTime.UtcNow.AddDays(-1).AddHours(1), Reason = reason
+        }, CancellationToken.None);
+
+        var notification = await context.Notifications.SingleAsync();
+        Assert.Equal("Appointment rejected", notification.Title);
+        Assert.Contains(reason, notification.Message);
+        Assert.DoesNotContain("by therapist", notification.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("completed", notification.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task
         CreateAsync_CreatesInAppNotification()

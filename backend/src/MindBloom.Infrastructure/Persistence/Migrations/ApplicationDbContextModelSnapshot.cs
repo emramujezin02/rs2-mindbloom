@@ -594,7 +594,7 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Property<DateTime>("ChangedAtUtc")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("ChangedByUserId")
+                    b.Property<int?>("ChangedByUserId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAtUtc")
@@ -3029,8 +3029,7 @@ namespace MindBloom.Infrastructure.Migrations
                     b.HasOne("MindBloom.Domain.Entities.ApplicationUser", "ChangedByUser")
                         .WithMany()
                         .HasForeignKey("ChangedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Appointment");
 

@@ -10,10 +10,9 @@ public class AppointmentStatusAudit
     public Appointment Appointment { get; set; }
         = null!;
 
-    public int ChangedByUserId { get; set; }
+    public int? ChangedByUserId { get; set; }
 
-    public ApplicationUser ChangedByUser { get; set; }
-        = null!;
+    public ApplicationUser? ChangedByUser { get; set; }
 
     public AppointmentStatus? PreviousStatus { get; set; }
 

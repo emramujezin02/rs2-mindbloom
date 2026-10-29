@@ -1661,6 +1661,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         entity.HasOne(x => x.ChangedByUser)
             .WithMany()
             .HasForeignKey(x => x.ChangedByUserId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
         entity.HasIndex(x => new

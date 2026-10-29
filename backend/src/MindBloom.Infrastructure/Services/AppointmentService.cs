@@ -22,7 +22,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace MindBloom.Infrastructure.Services;
 
-public class AppointmentService : IAppointmentService
+public partial class AppointmentService : IAppointmentService
 {
     private const int
     AppointmentBookingLockTimeoutMilliseconds =
@@ -33,6 +33,7 @@ public class AppointmentService : IAppointmentService
             "This appointment time has already been booked. "
             + "Please choose another available time.";
     private readonly ApplicationDbContext _context;
+    private readonly TimeProvider _timeProvider;
 
     private const string ClientAppointmentConflictMessage =
         "You already have an active appointment during this time. Please choose another time.";
@@ -90,8 +91,10 @@ public class AppointmentService : IAppointmentService
         ApplicationMetrics applicationMetrics,
         IIntegrationEventPublisher
             integrationEventPublisher,
-        IOutboxWriter outboxWriter)
+        IOutboxWriter outboxWriter,
+        TimeProvider? timeProvider = null)
     {
+        _timeProvider = timeProvider ?? TimeProvider.System;
         _context =
             context;
 
@@ -537,105 +540,6 @@ public class AppointmentService : IAppointmentService
         }
     }
 
-    private async Task
-    AutoCompleteAppointmentsAsync()
-    {
-        var appointments =
-            await _context.Appointments
-                .Include(x =>
-                    x.Client)
-                    .ThenInclude(x =>
-                        x.User)
-                .Include(x =>
-                    x.Therapist)
-                    .ThenInclude(x =>
-                        x.User)
-                .Where(x =>
-                    x.EndUtc <
-                        DateTime.UtcNow &&
-                    x.Status !=
-                        AppointmentStatus.Completed &&
-                    x.Status !=
-                        AppointmentStatus.Cancelled &&
-                    x.Status !=
-                        AppointmentStatus.Rejected)
-                .ToListAsync();
-
-        if (appointments.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var appointment
-                 in appointments)
-        {
-            appointment.Status =
-                AppointmentStatus.Completed;
-        }
-
-        await _context.SaveChangesAsync();
-
-        foreach (var appointment
-                 in appointments)
-        {
-            await _membershipService
-                .FinalizeAppointmentUsageAsync(
-                    appointment.Id,
-                    "Membership session consumed after automatic appointment completion.");
-
-            var correlationId =
-                Guid.NewGuid();
-
-            var appointmentCompletedEvent =
-                new AppointmentCompletedEvent
-                {
-                    CorrelationId =
-                        correlationId,
-
-                    TimestampUtc =
-                        DateTime.UtcNow,
-
-                    AppointmentId =
-                        appointment.Id,
-
-                    ClientId =
-                        appointment.ClientId,
-
-                    ClientUserId =
-                        appointment.Client.UserId,
-
-                    TherapistId =
-                        appointment.TherapistId,
-
-                    TherapistUserId =
-                        appointment.Therapist.UserId,
-
-                    StartUtc =
-                        appointment.StartUtc,
-
-                    EndUtc =
-                        appointment.EndUtc,
-
-                    CompletedByUserId =
-                        null,
-
-                    AppointmentType =
-                        appointment.Type.ToString(),
-
-                    Price =
-                        appointment.Price
-                };
-
-            await _outboxWriter
-                .EnqueueAsync(
-                    appointmentCompletedEvent,
-                    IntegrationEventRoutingKeys
-                        .AppointmentCompleted);
-        }
-
-        await _context.SaveChangesAsync();
-    }
-
     public async Task<PagedResponse<AppointmentResponseDto>>
      GetMyAppointmentsAsync(
          int userId,
@@ -889,6 +793,7 @@ public class AppointmentService : IAppointmentService
      int therapistUserId,
      UpdateAppointmentStatusDto request)
     {
+        await using var statusLock = await AppointmentStatusLock.AcquireAsync(_context, request.AppointmentId);
         var therapist =
             await _context.Therapists
                 .Include(x =>
@@ -920,6 +825,8 @@ public class AppointmentService : IAppointmentService
             throw new NotFoundException(
                 "Appointment not found.");
         }
+
+        await _context.Entry(appointment).ReloadAsync();
 
         if (!IsValidStatusTransition(
           appointment.Status,
@@ -1234,6 +1141,7 @@ public class AppointmentService : IAppointmentService
     int appointmentId,
     CancelAppointmentDto request)
     {
+        await using var statusLock = await AppointmentStatusLock.AcquireAsync(_context, appointmentId);
         var reason =
             request.Reason?.Trim() ??
             string.Empty;
@@ -1272,6 +1180,8 @@ public class AppointmentService : IAppointmentService
             throw new NotFoundException(
                 "Appointment not found.");
         }
+
+        await _context.Entry(appointment).ReloadAsync();
 
         if (appointment.Status ==
             AppointmentStatus.Completed)
