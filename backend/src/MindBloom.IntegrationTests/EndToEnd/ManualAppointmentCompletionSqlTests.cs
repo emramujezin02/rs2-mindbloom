@@ -201,8 +201,8 @@ public sealed class ManualAppointmentCompletionSqlTests(MindBloomEndToEndTestFac
         Assert.Equal(s.End, row.EndUtc);
         var completed = expected == AppointmentStatus.Completed;
         Assert.Equal(completed ? 1 : 0, await db.AppointmentStatusAudits.CountAsync(x => x.AppointmentId == s.Id));
-        Assert.Equal(completed ? 1 : 0, CompletionEvents(s.Id));
-        Assert.Empty(await db.OutboxMessages.Where(x => x.PayloadJson.Contains("\"appointmentId\":" + s.Id + ",")).ToListAsync());
+        Assert.Equal(0, CompletionEvents(s.Id));
+        Assert.Equal(completed ? 1 : 0, await db.OutboxMessages.CountAsync(x => x.PayloadJson.Contains("\"appointmentId\":" + s.Id + ",")));
         var usage = Assert.Single(await db.MembershipUsages.Where(x => x.AppointmentId == s.Id).ToListAsync());
         Assert.Equal(completed ? MembershipUsageStatus.Consumed : MembershipUsageStatus.Reserved, usage.Status);
         Assert.Equal(completed, usage.ConsumedAtUtc.HasValue);

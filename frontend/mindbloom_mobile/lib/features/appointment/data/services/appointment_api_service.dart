@@ -78,10 +78,12 @@ class AppointmentApiService {
   Future<void> updateTherapistAppointmentStatus({
     required int appointmentId,
     required TherapistAppointmentStatus status,
+    String? reason,
   }) async {
     final request = UpdateAppointmentStatusRequest(
       appointmentId: appointmentId,
       status: status,
+      reason: reason,
     );
 
     await apiClient.put('/Appointments/status', body: request.toJson());

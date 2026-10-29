@@ -10,6 +10,13 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
   static const int pageSize = 10;
 
   final AppointmentRepository repository;
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 
   TherapistAppointmentsViewModel({required this.repository});
 
@@ -82,6 +89,7 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
   Future<bool> updateStatus({
     required AppointmentModel appointment,
     required TherapistAppointmentStatus status,
+    String? reason,
   }) async {
     if (isUpdatingStatus) {
       return false;
@@ -96,7 +104,9 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
       await repository.updateTherapistAppointmentStatus(
         appointmentId: appointment.id,
         status: status,
+        reason: reason,
       );
+      if (_disposed) return true;
 
       /*
        * The list is fetched again from the API after every successful
@@ -113,7 +123,7 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
     } finally {
       isUpdatingStatus = false;
       updatingAppointmentId = null;
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     }
   }
 
@@ -200,8 +210,9 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
         toUtc: _dateRange?.$2,
       );
 
-      final existingIds =
-          _appointments.map((appointment) => appointment.id).toSet();
+      final existingIds = _appointments
+          .map((appointment) => appointment.id)
+          .toSet();
 
       _appointments.addAll(
         result.items.where(

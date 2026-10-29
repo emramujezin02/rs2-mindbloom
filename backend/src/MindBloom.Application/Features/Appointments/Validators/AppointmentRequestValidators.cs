@@ -113,6 +113,13 @@ public sealed class UpdateAppointmentStatusDtoValidator
 {
     public UpdateAppointmentStatusDtoValidator()
     {
+        RuleFor(x => x.Reason)
+            .Must(reason => reason?.Trim().Length >= 5)
+            .WithMessage("Rejection reason must contain at least 5 characters.")
+            .Must(reason => reason == null || reason.Trim().Length <= UpdateAppointmentStatusDto.MaximumReasonLength)
+            .WithMessage("Rejection reason may contain at most 500 characters.")
+            .When(x => x.Status == AppointmentStatus.Rejected);
+
         RuleFor(x => x.AppointmentId)
             .GreaterThan(0)
             .WithMessage(

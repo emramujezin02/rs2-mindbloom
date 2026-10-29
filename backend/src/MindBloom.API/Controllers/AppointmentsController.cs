@@ -105,6 +105,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("status")]
+    [Produces("application/problem+json")]
     [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     public async Task<IActionResult>
     UpdateStatus(

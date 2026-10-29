@@ -1382,10 +1382,8 @@ public class MembershipService : IMembershipService
         await strategy.ExecuteAsync(
             async () =>
             {
-                await using var transaction =
-                    await _context.Database
-                        .BeginTransactionAsync(
-                            IsolationLevel.Serializable);
+                await using var transaction = _context.Database.IsRelational() && _context.Database.CurrentTransaction == null
+                    ? await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable) : null;
 
                 try
                 {
@@ -1401,7 +1399,7 @@ public class MembershipService : IMembershipService
 
             if (usage == null)
             {
-                await transaction.CommitAsync();
+                if (transaction != null) await transaction.CommitAsync();
 
                 return;
             }
@@ -1411,7 +1409,7 @@ public class MembershipService : IMembershipService
                 usage.Status ==
                     MembershipUsageStatus.Consumed)
             {
-                await transaction.CommitAsync();
+                if (transaction != null) await transaction.CommitAsync();
 
                 return;
             }
@@ -1488,13 +1486,17 @@ public class MembershipService : IMembershipService
                     + normalizedReason;
             }
 
+            // The audit/event retain the full reason; this membership summary includes a prefix.
+            if (usage.ResolutionReason?.Length > 500)
+                usage.ResolutionReason = usage.ResolutionReason[..500];
+
             await _context.SaveChangesAsync();
 
-            await transaction.CommitAsync();
+            if (transaction != null) await transaction.CommitAsync();
         }
                 catch
                 {
-                    await transaction.RollbackAsync();
+                    if (transaction != null) await transaction.RollbackAsync();
 
                     throw;
                 }

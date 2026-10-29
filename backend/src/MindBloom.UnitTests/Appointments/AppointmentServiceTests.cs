@@ -472,7 +472,8 @@ public sealed class AppointmentServiceTests
                     appointment.Id,
 
                 Status =
-                    AppointmentStatus.Rejected
+                    AppointmentStatus.Rejected,
+                Reason = "  A scheduling conflict  "
             });
 
         Assert.Equal(

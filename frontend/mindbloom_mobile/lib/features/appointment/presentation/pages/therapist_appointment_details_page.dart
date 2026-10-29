@@ -7,6 +7,7 @@ import '../../../../app/router/app_router.dart';
 import '../../data/models/appointment_model.dart';
 import '../../data/models/therapist_appointment_status.dart';
 import '../viewmodels/therapist_appointments_viewmodel.dart';
+import '../widgets/appointment_rejection_dialog.dart';
 
 const _detailsBackground = Color(0xFFF7F3FB);
 const _detailsSurface = Color(0xFFFFFFFF);
@@ -61,6 +62,32 @@ class _TherapistAppointmentDetailsPageState
   }
 
   Future<void> _changeStatus(TherapistAppointmentStatus status) async {
+    if (viewModel.isUpdatingStatus) return;
+    if (status == TherapistAppointmentStatus.rejected) {
+      final rejected = await showAppointmentRejectionDialog(
+        context,
+        onReject: (reason) async {
+          final success = await viewModel.updateStatus(
+            appointment: appointment,
+            status: status,
+            reason: reason,
+          );
+          return success
+              ? null
+              : viewModel.errorMessage ??
+                    'The appointment could not be rejected.';
+        },
+      );
+      if (!mounted || rejected != true) return;
+      setState(() {
+        appointment = appointment.copyWith(status: status.label);
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Appointment rejected.')));
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {

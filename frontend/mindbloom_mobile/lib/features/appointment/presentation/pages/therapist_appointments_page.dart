@@ -8,6 +8,7 @@ import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/appointment_model.dart';
 import '../../data/models/therapist_appointment_status.dart';
 import '../viewmodels/therapist_appointments_viewmodel.dart';
+import '../widgets/appointment_rejection_dialog.dart';
 
 const _appointmentsBackground = Color(0xFFF7F3FB);
 const _appointmentsSurface = Color(0xFFFFFFFF);
@@ -62,6 +63,29 @@ class _TherapistAppointmentsPageState extends State<TherapistAppointmentsPage> {
     AppointmentModel appointment,
     TherapistAppointmentStatus status,
   ) async {
+    if (viewModel.isUpdatingStatus) return;
+    if (status == TherapistAppointmentStatus.rejected) {
+      final rejected = await showAppointmentRejectionDialog(
+        context,
+        onReject: (reason) async {
+          final success = await viewModel.updateStatus(
+            appointment: appointment,
+            status: status,
+            reason: reason,
+          );
+          return success
+              ? null
+              : viewModel.errorMessage ??
+                    'The appointment could not be rejected.';
+        },
+      );
+      if (!mounted || rejected != true) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Appointment rejected.')));
+      return;
+    }
+
     final confirmed = await _showStatusConfirmation(
       appointment: appointment,
       status: status,

@@ -62,7 +62,7 @@ public sealed class ManualAppointmentCompletionTests
         await db.SaveChangesAsync();
         var membership = new Mock<IMembershipService>();
         var publisher = new Mock<IIntegrationEventPublisher>();
-        var outbox = new Mock<IOutboxWriter>(MockBehavior.Strict);
+        var outbox = new Mock<IOutboxWriter>();
         var service = new AppointmentService(db, Mock.Of<IPaymentService>(), membership.Object,
             new ApplicationMetrics(), publisher.Object, outbox.Object, new FrozenClock(now));
         var request = new UpdateAppointmentStatusDto { AppointmentId = appointment.Id, Status = AppointmentStatus.Completed };
@@ -86,8 +86,8 @@ public sealed class ManualAppointmentCompletionTests
             Assert.Equal(AppointmentStatus.Accepted, audit.PreviousStatus);
             Assert.Equal(appointment.Therapist.UserId, audit.ChangedByUserId);
             membership.Verify(x => x.FinalizeAppointmentUsageAsync(appointment.Id, It.IsAny<string>()), Times.Once);
-            publisher.Verify(x => x.PublishAsync(It.IsAny<AppointmentCompletedEvent>(),
-                It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+            outbox.Verify(x => x.EnqueueAsync(It.IsAny<AppointmentCompletedEvent>(),
+                It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<string?>()), Times.Once);
             await Assert.ThrowsAsync<BusinessException>(() => service.UpdateStatusAsync(appointment.Therapist.UserId, request));
             Assert.Single(await db.AppointmentStatusAudits.ToListAsync());
             membership.VerifyNoOtherCalls();

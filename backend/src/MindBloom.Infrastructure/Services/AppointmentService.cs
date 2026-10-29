@@ -793,6 +793,12 @@ public partial class AppointmentService : IAppointmentService
      int therapistUserId,
      UpdateAppointmentStatusDto request)
     {
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(() => UpdateStatusUnderLockAsync(therapistUserId, request));
+    }
+
+    private async Task UpdateStatusUnderLockAsync(int therapistUserId, UpdateAppointmentStatusDto request)
+    {
         await using var statusLock = await AppointmentStatusLock.AcquireAsync(_context, request.AppointmentId);
         var therapist =
             await _context.Therapists
@@ -843,13 +849,24 @@ public partial class AppointmentService : IAppointmentService
                 "An appointment can only be marked as completed after its scheduled end time.");
         }
 
+        var reason = request.Reason?.Trim();
+        if (request.Status == AppointmentStatus.Rejected &&
+            (string.IsNullOrEmpty(reason) || reason.Length < 5 || reason.Length > UpdateAppointmentStatusDto.MaximumReasonLength))
+        {
+            throw new BadRequestException("Rejection reason must contain between 5 and 500 characters.");
+        }
+
+        await using var transaction = _context.Database.IsRelational() && _context.Database.CurrentTransaction == null
+            ? await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable) : null;
+        try
+        {
         if (request.Status ==
             AppointmentStatus.Rejected)
         {
             await _membershipService
                 .HandleAppointmentCancellationAsync(
                     appointment.Id,
-                    "Appointment rejected by therapist.",
+                    reason!,
                     forceRestore: true);
         }
 
@@ -892,7 +909,7 @@ public partial class AppointmentService : IAppointmentService
                     "Appointment accepted by therapist.",
 
                 AppointmentStatus.Rejected =>
-                    "Appointment rejected by therapist.",
+                    reason,
 
                 AppointmentStatus.Completed =>
                     "Appointment completed by therapist.",
@@ -904,8 +921,6 @@ public partial class AppointmentService : IAppointmentService
         ChangedAtUtc =
             DateTime.UtcNow
     });
-
-        await _context.SaveChangesAsync();
 
         var correlationId =
             Guid.NewGuid();
@@ -968,8 +983,8 @@ public partial class AppointmentService : IAppointmentService
                                 appointment.Location
                         };
 
-                    await _integrationEventPublisher
-                        .PublishAsync(
+                    await _outboxWriter
+                        .EnqueueAsync(
                             appointmentAcceptedEvent,
                             IntegrationEventRoutingKeys
                                 .AppointmentAccepted);
@@ -1024,11 +1039,11 @@ public partial class AppointmentService : IAppointmentService
                                 appointment.EndUtc,
 
                             Reason =
-                                "Appointment rejected by therapist."
+                                reason!
                         };
 
-                    await _integrationEventPublisher
-                        .PublishAsync(
+                    await _outboxWriter
+                        .EnqueueAsync(
                             appointmentRejectedEvent,
                             IntegrationEventRoutingKeys
                                 .AppointmentRejected);
@@ -1078,8 +1093,8 @@ public partial class AppointmentService : IAppointmentService
                                 appointment.EndUtc
                         };
 
-                    await _integrationEventPublisher
-                        .PublishAsync(
+                    await _outboxWriter
+                        .EnqueueAsync(
                             appointmentCancelledEvent,
                             IntegrationEventRoutingKeys
                                 .AppointmentCancelled);
@@ -1132,14 +1147,23 @@ public partial class AppointmentService : IAppointmentService
                                 appointment.IsPaid
                         };
 
-                    await _integrationEventPublisher
-                        .PublishAsync(
+                    await _outboxWriter
+                        .EnqueueAsync(
                             appointmentCompletedEvent,
                             IntegrationEventRoutingKeys
                                 .AppointmentCompleted);
 
                     break;
                 }
+        }
+        await _context.SaveChangesAsync();
+        if (transaction != null) await transaction.CommitAsync();
+        }
+        catch
+        {
+            if (transaction != null) await transaction.RollbackAsync();
+            _context.ChangeTracker.Clear();
+            throw;
         }
     }
 

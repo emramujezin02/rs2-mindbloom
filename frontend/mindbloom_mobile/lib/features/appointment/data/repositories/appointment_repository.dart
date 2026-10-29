@@ -73,10 +73,12 @@ class AppointmentRepository {
   Future<void> updateTherapistAppointmentStatus({
     required int appointmentId,
     required TherapistAppointmentStatus status,
+    String? reason,
   }) {
     return apiService.updateTherapistAppointmentStatus(
       appointmentId: appointmentId,
       status: status,
+      reason: reason,
     );
   }
 

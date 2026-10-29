@@ -76,8 +76,8 @@ public sealed class ManualAppointmentCompletionApiTests
             (await verifyDb.Appointments.FindAsync(id))!.Status);
         Assert.Equal(expected == HttpStatusCode.NoContent ? 1 : 0,
             await verifyDb.AppointmentStatusAudits.CountAsync(x => x.AppointmentId == id));
-        Assert.Empty(await verifyDb.OutboxMessages.ToListAsync());
-        Assert.Equal(expected == HttpStatusCode.NoContent ? 1 : 0, publisher.Events.Count);
+        Assert.Equal(expected == HttpStatusCode.NoContent ? 1 : 0, await verifyDb.OutboxMessages.CountAsync());
+        Assert.Empty(publisher.Events);
 
         using var client = factory.CreateAuthenticatedClient(73101, RoleConstants.Client);
         using var review = await client.PostAsJsonAsync("/api/Reviews",

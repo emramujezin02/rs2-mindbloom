@@ -212,6 +212,7 @@ public sealed class AutomaticAppointmentStatusSqlTests(MindBloomEndToEndTestFact
                 await service.UpdateStatusAsync(s.TherapistUserId, new UpdateAppointmentStatusDto
                 {
                     AppointmentId = s.Id,
+                    Reason = "Therapist cannot attend",
                     Status = operation == "accept" ? AppointmentStatus.Accepted : operation == "reject"
                         ? AppointmentStatus.Rejected : AppointmentStatus.Completed
                 });
