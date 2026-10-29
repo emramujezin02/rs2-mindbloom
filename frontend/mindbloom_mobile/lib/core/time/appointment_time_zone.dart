@@ -15,6 +15,11 @@ abstract final class AppointmentTimeZone {
 
   static tz.TZDateTime now() => fromInstant(DateTime.now().toUtc());
 
+  static (DateTime, DateTime) dayBounds(DateTime date) => (
+    uniqueLocal(DateTime.utc(date.year, date.month, date.day))!.toUtc(),
+    uniqueLocal(DateTime.utc(date.year, date.month, date.day + 1))!.toUtc(),
+  );
+
   // SQL datetime2 may arrive without a suffix although the API field is UTC.
   static DateTime parseUtc(String value) {
     final hasZone = RegExp(

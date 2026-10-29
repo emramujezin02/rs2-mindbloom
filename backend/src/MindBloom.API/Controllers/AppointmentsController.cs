@@ -88,7 +88,8 @@ public class AppointmentsController : ControllerBase
         [FromQuery] int pageSize = 10,
         [FromQuery] string? status = null,
         [FromQuery] DateTime? fromUtc = null,
-        [FromQuery] DateTime? toUtc = null)
+        [FromQuery] DateTime? toUtc = null,
+        [FromQuery] bool overlapsRange = false)
     {
 
         var result =
@@ -99,7 +100,8 @@ public class AppointmentsController : ControllerBase
                     pageSize,
                     status,
                     fromUtc,
-                    toUtc);
+                    toUtc,
+                    overlapsRange);
 
         return Ok(result);
     }

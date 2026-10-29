@@ -299,6 +299,13 @@ public class TherapistsController : ControllerBase
         return Ok(result);
     }
     [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
+    [HttpGet("clients/{clientId:int}/profile")]
+    public async Task<IActionResult> GetClientProfile(int clientId)
+    {
+        return Ok(await _therapistService.GetClientProfileAsync(GetCurrentUserId(), clientId));
+    }
+
+    [Authorize(Policy = AuthorizationPolicyConstants.TherapistOnly)]
     [HttpGet("clients/{clientId:int}")]
     public async Task<IActionResult>
         GetClientDetails(

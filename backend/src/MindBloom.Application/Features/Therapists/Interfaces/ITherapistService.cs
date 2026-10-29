@@ -72,6 +72,8 @@ public interface ITherapistService
             int pageNumber,
             int pageSize);
 
+    Task<TherapistClientProfileDto> GetClientProfileAsync(int therapistUserId, int clientId);
+
     Task<TherapistClientDetailsDto>
         GetClientDetailsAsync(
             int therapistUserId,

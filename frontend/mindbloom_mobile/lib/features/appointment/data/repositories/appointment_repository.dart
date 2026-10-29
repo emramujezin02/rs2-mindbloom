@@ -60,6 +60,7 @@ class AppointmentRepository {
     String? status,
     DateTime? fromUtc,
     DateTime? toUtc,
+    bool overlapsRange = false,
   }) {
     return apiService.getTherapistAppointments(
       pageNumber: pageNumber,
@@ -67,6 +68,7 @@ class AppointmentRepository {
       status: status,
       fromUtc: fromUtc,
       toUtc: toUtc,
+      overlapsRange: overlapsRange,
     );
   }
 

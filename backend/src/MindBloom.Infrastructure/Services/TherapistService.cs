@@ -2743,6 +2743,21 @@ public class TherapistService : ITherapistService
                 totalCount);
     }
 
+    public async Task<TherapistClientProfileDto> GetClientProfileAsync(int therapistUserId, int clientId)
+    {
+        await _therapistClientAccessService.EnsureRelationshipAsync(therapistUserId, clientId);
+        return await _context.Clients.AsNoTracking()
+            .Where(x => x.Id == clientId && !x.IsDeleted)
+            .Select(x => new TherapistClientProfileDto
+            {
+                ClientId = x.Id,
+                FullName = (x.User.FirstName + " " + x.User.LastName).Trim(),
+                Email = x.User.Email ?? string.Empty,
+                PhoneNumber = x.User.PhoneNumber
+            }).SingleOrDefaultAsync()
+            ?? throw new NotFoundException("Client not found or is not available to this therapist.");
+    }
+
     public async Task<TherapistClientDetailsDto>
     GetClientDetailsAsync(
         int therapistUserId,

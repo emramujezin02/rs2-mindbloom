@@ -29,7 +29,8 @@ public interface IAppointmentService
         int pageSize,
         string? status,
         DateTime? fromUtc,
-        DateTime? toUtc);
+        DateTime? toUtc,
+        bool overlapsRange = false);
 
     Task UpdateStatusAsync(
         int therapistUserId,

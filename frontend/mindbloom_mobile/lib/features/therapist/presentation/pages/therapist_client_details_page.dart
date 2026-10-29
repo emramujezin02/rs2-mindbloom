@@ -14,10 +14,26 @@ import '../../../../core/widgets/app_loading_widget.dart';
 import '../../data/models/therapist_client_membership_model.dart';
 import '../../data/models/therapist_client_review_model.dart';
 
+class TherapistClientDetailsArguments {
+  final int clientId;
+  final bool basicOnly;
+  const TherapistClientDetailsArguments(
+    this.clientId, {
+    this.basicOnly = false,
+  });
+}
+
 class TherapistClientDetailsPage extends StatefulWidget {
   final int clientId;
+  final bool basicOnly;
+  final TherapistClientDetailsViewModel? viewModel;
 
-  const TherapistClientDetailsPage({super.key, required this.clientId});
+  const TherapistClientDetailsPage({
+    super.key,
+    required this.clientId,
+    this.basicOnly = false,
+    this.viewModel,
+  });
 
   @override
   State<TherapistClientDetailsPage> createState() =>
@@ -32,12 +48,19 @@ class _TherapistClientDetailsPageState
   void initState() {
     super.initState();
 
-    viewModel = AppInjection.createTherapistClientDetailsViewModel();
+    viewModel =
+        widget.viewModel ??
+        AppInjection.createTherapistClientDetailsViewModel();
 
     viewModel.addListener(_onViewModelChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      viewModel.loadClientDetails(widget.clientId);
+      if (mounted) {
+        viewModel.loadClientDetails(
+          widget.clientId,
+          basicOnly: widget.basicOnly,
+        );
+      }
     });
   }
 
@@ -56,7 +79,10 @@ class _TherapistClientDetailsPageState
   }
 
   Future<void> _refresh() async {
-    await viewModel.loadClientDetails(widget.clientId);
+    await viewModel.loadClientDetails(
+      widget.clientId,
+      basicOnly: widget.basicOnly,
+    );
   }
 
   @override
@@ -111,6 +137,13 @@ class _TherapistClientDetailsPageState
         icon: Icons.person_off_outlined,
         actionLabel: 'Try again',
         onAction: _refresh,
+      );
+    }
+
+    if (widget.basicOnly) {
+      return ListView(
+        padding: const EdgeInsets.all(20),
+        children: [_ClientProfileCard(client: client)],
       );
     }
 

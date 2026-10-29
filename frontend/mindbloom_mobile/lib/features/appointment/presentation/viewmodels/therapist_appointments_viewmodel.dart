@@ -1,4 +1,10 @@
 import 'package:flutter/foundation.dart';
+import '../../../../core/time/appointment_time_zone.dart';
+import '../../../therapist/data/repositories/therapist_repository.dart';
+import '../../data/models/booking_slot.dart';
+import '../../data/models/booking_slot_generator.dart';
+import '../../data/models/occupied_slot_model.dart';
+import '../../data/models/unavailable_date_model.dart';
 
 import '../../data/models/appointment_model.dart';
 import '../../data/models/therapist_appointment_status.dart';
@@ -18,7 +24,34 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  TherapistAppointmentsViewModel({required this.repository});
+  TherapistAppointmentsViewModel({
+    required this.repository,
+    this.therapistRepository,
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
+
+  final TherapistRepository? therapistRepository;
+  final DateTime Function() _now;
+  int _request = 0;
+  int? _therapistId;
+  List<BookingSlot> freeSlots = [];
+  DateTime get now => AppointmentTimeZone.fromInstant(_now());
+  DateTime get today => DateTime.utc(now.year, now.month, now.day);
+  DateTime get day => selectedDate ?? today;
+  bool get isHistoricalDay => day.isBefore(today);
+  bool get isDailyOverview => therapistRepository != null;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  bool _blocks(AppointmentModel appointment) =>
+      ['pending', 'accepted'].contains(appointment.status.toLowerCase());
+  List<AppointmentModel> get occupiedAppointments =>
+      appointments.where(_blocks).toList();
+  List<AppointmentModel> get otherAppointments =>
+      appointments.where((a) => !_blocks(a)).toList();
 
   final List<AppointmentModel> _appointments = [];
 
@@ -45,6 +78,12 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
 
   List<AppointmentModel> get appointments {
     final filteredAppointments = _appointments.toList();
+    if (isDailyOverview && selectedStatusFilter != null) {
+      filteredAppointments.removeWhere(
+        (a) =>
+            a.status.toLowerCase() != selectedStatusFilter!.label.toLowerCase(),
+      );
+    }
 
     filteredAppointments.sort((first, second) {
       return second.startUtc.compareTo(first.startUtc);
@@ -68,6 +107,7 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
   }
 
   Future<void> loadAppointments() async {
+    if (isDailyOverview) return _loadDailyOverview();
     if (isLoading) {
       return;
     }
@@ -113,7 +153,11 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
        * status change. This keeps the local state synchronized with
        * the backend state machine and any backend-side changes.
        */
-      await _reloadAppointments();
+      if (isDailyOverview) {
+        await loadAppointments();
+      } else {
+        await _reloadAppointments();
+      }
 
       return true;
     } catch (error) {
@@ -133,6 +177,10 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
     }
 
     selectedStatusFilter = filter;
+    if (isDailyOverview) {
+      notifyListeners();
+      return;
+    }
     await loadAppointments();
   }
 
@@ -156,12 +204,16 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
 
   Future<void> selectCustomDate(DateTime date) async {
     selectedDateFilter = TherapistAppointmentDateFilter.custom;
-    selectedDate = DateTime(date.year, date.month, date.day);
+    selectedDate = DateTime.utc(date.year, date.month, date.day);
     await loadAppointments();
   }
 
   Future<void> clearFilters() async {
     selectedStatusFilter = null;
+    if (isDailyOverview) {
+      notifyListeners();
+      return;
+    }
     selectedDateFilter = TherapistAppointmentDateFilter.all;
     selectedDate = null;
     await loadAppointments();
@@ -170,6 +222,80 @@ class TherapistAppointmentsViewModel extends ChangeNotifier {
   void clearError() {
     errorMessage = null;
     notifyListeners();
+  }
+
+  Future<void> _loadDailyOverview() async {
+    final request = ++_request;
+    final selected = day;
+    selectedDate = selected;
+    final (start, end) = AppointmentTimeZone.dayBounds(selected);
+    isLoading = true;
+    errorMessage = null;
+    _appointments.clear();
+    freeSlots = [];
+    notifyListeners();
+    try {
+      _therapistId ??=
+          (await therapistRepository!.getTherapistProfile()).therapistId;
+      if (_disposed || request != _request) return;
+      final id = _therapistId!;
+      final availability = await repository.getTherapistAvailabilities(id);
+      if (_disposed || request != _request) return;
+      final absences = <UnavailableDateModel>[];
+      var page = 1;
+      while (true) {
+        final response = await repository.getTherapistUnavailableDates(
+          therapistId: id,
+          fromUtc: start,
+          toUtc: end,
+          pageNumber: page++,
+        );
+        if (_disposed || request != _request) return;
+        absences.addAll(response.items);
+        if (!response.hasNextPage) break;
+      }
+      final all = <AppointmentModel>[];
+      page = 1;
+      while (true) {
+        final response = await repository.getTherapistAppointments(
+          pageNumber: page++,
+          pageSize: 50,
+          fromUtc: start,
+          toUtc: end,
+          overlapsRange: true,
+        );
+        if (_disposed || request != _request) return;
+        all.addAll(response.items);
+        if (!response.hasNextPage) break;
+      }
+      if (_disposed || request != _request) return;
+      _appointments.addAll({for (final a in all) a.id: a}.values);
+      if (!isHistoricalDay) {
+        freeSlots = BookingSlotGenerator.generate(
+          date: selected,
+          dailyOccupiedSlots: all
+              .where(_blocks)
+              .map(
+                (a) =>
+                    OccupiedSlotModel(startUtc: a.startUtc, endUtc: a.endUtc),
+              )
+              .toList(),
+          availabilities: availability,
+          unavailableDates: absences,
+          now: _now(),
+        ).where((slot) => slot.isAvailable).toList();
+      }
+      pageNumber = 1;
+      totalPages = 1;
+    } catch (error) {
+      if (_disposed || request != _request) return;
+      errorMessage = _cleanError(error);
+    } finally {
+      if (!_disposed && request == _request) {
+        isLoading = false;
+        notifyListeners();
+      }
+    }
   }
 
   Future<void> _reloadAppointments() async {

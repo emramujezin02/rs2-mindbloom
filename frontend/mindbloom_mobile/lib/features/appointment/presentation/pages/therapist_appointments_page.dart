@@ -9,6 +9,8 @@ import '../../data/models/appointment_model.dart';
 import '../../data/models/therapist_appointment_status.dart';
 import '../viewmodels/therapist_appointments_viewmodel.dart';
 import '../widgets/appointment_rejection_dialog.dart';
+import '../widgets/booking_calendar.dart';
+import '../../../therapist/presentation/pages/therapist_client_details_page.dart';
 
 const _appointmentsBackground = Color(0xFFF7F3FB);
 const _appointmentsSurface = Color(0xFFFFFFFF);
@@ -22,7 +24,8 @@ const _appointmentsDanger = Color(0xFFB13B3B);
 const _appointmentsRadius = 22.0;
 
 class TherapistAppointmentsPage extends StatefulWidget {
-  const TherapistAppointmentsPage({super.key});
+  final TherapistAppointmentsViewModel? viewModel;
+  const TherapistAppointmentsPage({super.key, this.viewModel});
 
   @override
   State<TherapistAppointmentsPage> createState() =>
@@ -36,12 +39,13 @@ class _TherapistAppointmentsPageState extends State<TherapistAppointmentsPage> {
   void initState() {
     super.initState();
 
-    viewModel = AppInjection.createTherapistAppointmentsViewModel();
+    viewModel =
+        widget.viewModel ?? AppInjection.createTherapistAppointmentsViewModel();
 
     viewModel.addListener(_onViewModelChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      viewModel.loadAppointments();
+      if (mounted) viewModel.loadAppointments();
     });
   }
 
@@ -235,26 +239,13 @@ class _TherapistAppointmentsPageState extends State<TherapistAppointmentsPage> {
     }
   }
 
-  Future<void> _selectDate() async {
-    final now = DateTime.now();
-
-    final initialDate = viewModel.selectedDate ?? now;
-
-    final selectedDate = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(now.year - 2),
-      lastDate: DateTime(now.year + 3),
-      helpText: 'Select appointment date',
-      cancelText: 'Cancel',
-      confirmText: 'Select',
+  Future<void> _openClient(AppointmentModel appointment) async {
+    final id = appointment.clientId;
+    if (id == null) return;
+    await Navigator.of(context).pushNamed(
+      AppRouter.therapistClientDetails,
+      arguments: TherapistClientDetailsArguments(id, basicOnly: true),
     );
-
-    if (selectedDate == null || !mounted) {
-      return;
-    }
-
-    viewModel.selectCustomDate(selectedDate);
   }
 
   @override
@@ -265,7 +256,7 @@ class _TherapistAppointmentsPageState extends State<TherapistAppointmentsPage> {
         backgroundColor: _appointmentsBackground,
         surfaceTintColor: Colors.transparent,
         title: const Text(
-          'Therapist Appointments',
+          'Pregled termina',
           style: TextStyle(
             color: _appointmentsText,
             fontWeight: FontWeight.w800,
@@ -286,38 +277,158 @@ class _TherapistAppointmentsPageState extends State<TherapistAppointmentsPage> {
     );
   }
 
-  Widget _buildBody() {
-    if (viewModel.isLoading && viewModel.totalCount == 0) {
-      return const AppLoadingWidget.skeleton(
-        message: 'Loading appointments...',
-        skeletonItemCount: 6,
-      );
-    }
+  Widget _dayCard(AppointmentModel a) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: _AppointmentCard(
+      appointment: a,
+      isUpdating:
+          viewModel.isUpdatingStatus && viewModel.updatingAppointmentId == a.id,
+      onDetails: () => _openDetails(a),
+      onClient: a.clientId == null ? null : () => _openClient(a),
+      onAccept: () => _changeStatus(a, TherapistAppointmentStatus.accepted),
+      onReject: () => _changeStatus(a, TherapistAppointmentStatus.rejected),
+      onComplete: () => _changeStatus(a, TherapistAppointmentStatus.completed),
+      onCancel: () => _changeStatus(a, TherapistAppointmentStatus.cancelled),
+    ),
+  );
 
-    if (viewModel.errorMessage != null && viewModel.totalCount == 0) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
-        children: [
-          const SizedBox(height: 90),
-          _ErrorState(
-            message: viewModel.errorMessage!,
-            onRetry: viewModel.loadAppointments,
+  Widget _freeColumn() => Column(
+    key: const Key('daily-free'),
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Text(
+        'Slobodni termini',
+        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+      ),
+      const Text(
+        'Budući intervali prema trenutnom rasporedu. Ovaj pregled ne kreira rezervacije.',
+      ),
+      const SizedBox(height: 12),
+      if (viewModel.isHistoricalDay)
+        const Text(
+          'Historijska slobodna raspoloživost nije dostupna jer se verzije rasporeda ne čuvaju.',
+        )
+      else if (viewModel.freeSlots.isEmpty)
+        const Text('Nema slobodnih termina.')
+      else
+        ...viewModel.freeSlots.map(
+          (s) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _SurfaceCard(
+              child: Text(
+                '${DateFormat('HH:mm').format(s.start)}–${DateFormat('HH:mm').format(s.end)} · Slobodno',
+              ),
+            ),
           ),
-        ],
-      );
-    }
+        ),
+    ],
+  );
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
-      children: [
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+  Widget _occupiedColumn() => Column(
+    key: const Key('daily-occupied'),
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Text(
+        'Zauzeti termini',
+        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(height: 12),
+      if (viewModel.occupiedAppointments.isEmpty)
+        const Text('Nema aktivnih termina za odabrani filter.'),
+      ...viewModel.occupiedAppointments.map(_dayCard),
+    ],
+  );
+
+  Widget _buildBody() => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+    children: [
+      Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1000),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _SurfaceCard(
+                child: BookingCalendar(
+                  today: viewModel.today,
+                  firstDate: DateTime.utc(1),
+                  lastDate: DateTime.utc(9999, 12, 30),
+                  selectedDate: viewModel.day,
+                  isSelectable: (_) => true,
+                  onSelected: viewModel.selectCustomDate,
+                ),
+              ),
+              const SizedBox(height: 18),
+              _SectionHeader(
+                title: 'Termini za odabrani dan',
+                subtitle:
+                    '${DateFormat('dd.MM.yyyy.').format(viewModel.day)} · Europe/Sarajevo',
+              ),
+              const SizedBox(height: 12),
+              DropdownButton<TherapistAppointmentStatus?>(
+                key: const Key('daily-status-filter'),
+                isExpanded: true,
+                value: viewModel.selectedStatusFilter,
+                items: [
+                  const DropdownMenuItem(
+                    value: null,
+                    child: Text('Svi statusi'),
+                  ),
+                  ...TherapistAppointmentStatus.values.map(
+                    (s) => DropdownMenuItem(value: s, child: Text(s.label)),
+                  ),
+                ],
+                onChanged: viewModel.selectStatusFilter,
+              ),
+              const Text(
+                'Filter mijenja prikaz rezervacija; svi Pending i Accepted termini i dalje blokiraju slobodne slotove.',
+              ),
+              const SizedBox(height: 16),
+              if (viewModel.isLoading)
+                const AppInlineLoadingIndicator(
+                  message: 'Učitavanje dnevnog rasporeda...',
+                )
+              else if (viewModel.errorMessage != null)
+                _ErrorState(
+                  message: viewModel.errorMessage!,
+                  onRetry: viewModel.loadAppointments,
+                )
+              else ...[
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth >= 640) {
+                      return Row(
+                        key: const Key('daily-columns'),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: _freeColumn()),
+                          const SizedBox(width: 16),
+                          Expanded(child: _occupiedColumn()),
+                        ],
+                      );
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _freeColumn(),
+                        const SizedBox(height: 24),
+                        _occupiedColumn(),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                const _SectionHeader(
+                  title: 'Historija i neaktivni termini',
+                  subtitle:
+                      'Completed, Cancelled i Rejected ne blokiraju slobodne slotove.',
+                ),
+                const SizedBox(height: 12),
+                if (viewModel.otherAppointments.isEmpty)
+                  const Text('Nema drugih termina za odabrani filter.'),
+                ...viewModel.otherAppointments.map(_dayCard),
+                const SizedBox(height: 16),
                 _SummarySection(
                   total: viewModel.totalCount,
                   pending: viewModel.countByStatus(
@@ -330,107 +441,13 @@ class _TherapistAppointmentsPageState extends State<TherapistAppointmentsPage> {
                     TherapistAppointmentStatus.completed,
                   ),
                 ),
-                const SizedBox(height: 18),
-                _FilterSection(
-                  selectedStatusFilter: viewModel.selectedStatusFilter,
-                  selectedDateFilter: viewModel.selectedDateFilter,
-                  selectedDate: viewModel.selectedDate,
-                  hasActiveFilters: viewModel.hasActiveFilters,
-                  onStatusSelected: (status) {
-                    viewModel.selectStatusFilter(status);
-                  },
-                  onAllDatesSelected: () {
-                    viewModel.selectAllDates();
-                  },
-                  onTodaySelected: () {
-                    viewModel.selectToday();
-                  },
-                  onThisWeekSelected: () {
-                    viewModel.selectThisWeek();
-                  },
-                  onCustomDateSelected: _selectDate,
-                  onClearFilters: () {
-                    viewModel.clearFilters();
-                  },
-                ),
-                const SizedBox(height: 20),
-                const _SectionHeader(
-                  title: 'Schedule',
-                  subtitle: 'Review appointments and manage status updates.',
-                ),
-                const SizedBox(height: 14),
-                if (viewModel.appointments.isEmpty)
-                  const _EmptyState()
-                else
-                  ...viewModel.appointments.map((appointment) {
-                    final isUpdating =
-                        viewModel.isUpdatingStatus &&
-                        viewModel.updatingAppointmentId == appointment.id;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _AppointmentCard(
-                        appointment: appointment,
-                        isUpdating: isUpdating,
-                        onDetails: () {
-                          _openDetails(appointment);
-                        },
-                        onAccept: () {
-                          _changeStatus(
-                            appointment,
-                            TherapistAppointmentStatus.accepted,
-                          );
-                        },
-                        onReject: () {
-                          _changeStatus(
-                            appointment,
-                            TherapistAppointmentStatus.rejected,
-                          );
-                        },
-                        onComplete: () {
-                          _changeStatus(
-                            appointment,
-                            TherapistAppointmentStatus.completed,
-                          );
-                        },
-                        onCancel: () {
-                          _changeStatus(
-                            appointment,
-                            TherapistAppointmentStatus.cancelled,
-                          );
-                        },
-                      ),
-                    );
-                  }),
-                if (viewModel.isLoadingMore)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 18),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (viewModel.loadMoreErrorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: _ErrorState(
-                      message: viewModel.loadMoreErrorMessage!,
-                      onRetry: viewModel.loadMoreAppointments,
-                    ),
-                  )
-                else if (viewModel.hasMorePages)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    child: OutlinedButton.icon(
-                      onPressed: viewModel.loadMoreAppointments,
-                      icon: const Icon(Icons.expand_more),
-                      label: const Text('Load more'),
-                    ),
-                  ),
               ],
-            ),
+            ],
           ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
 }
 
 class _SummarySection extends StatelessWidget {
@@ -533,150 +550,12 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-class _FilterSection extends StatelessWidget {
-  final TherapistAppointmentStatus? selectedStatusFilter;
-
-  final TherapistAppointmentDateFilter selectedDateFilter;
-
-  final DateTime? selectedDate;
-
-  final bool hasActiveFilters;
-
-  final ValueChanged<TherapistAppointmentStatus?> onStatusSelected;
-
-  final VoidCallback onAllDatesSelected;
-  final VoidCallback onTodaySelected;
-  final VoidCallback onThisWeekSelected;
-  final VoidCallback onCustomDateSelected;
-  final VoidCallback onClearFilters;
-
-  const _FilterSection({
-    required this.selectedStatusFilter,
-    required this.selectedDateFilter,
-    required this.selectedDate,
-    required this.hasActiveFilters,
-    required this.onStatusSelected,
-    required this.onAllDatesSelected,
-    required this.onTodaySelected,
-    required this.onThisWeekSelected,
-    required this.onCustomDateSelected,
-    required this.onClearFilters,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _SurfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: _SectionHeader(
-                  title: 'Filters',
-                  subtitle: 'Narrow the schedule by date or status.',
-                ),
-              ),
-              if (hasActiveFilters)
-                TextButton.icon(
-                  onPressed: onClearFilters,
-                  icon: const Icon(Icons.filter_alt_off_outlined),
-                  label: const Text('Clear'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const _FilterLabel('Date'),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilterChip(
-                label: const Text('All dates'),
-                selected:
-                    selectedDateFilter == TherapistAppointmentDateFilter.all,
-                onSelected: (_) {
-                  onAllDatesSelected();
-                },
-              ),
-              FilterChip(
-                avatar: const Icon(Icons.today_outlined, size: 18),
-                label: const Text('Today'),
-                selected:
-                    selectedDateFilter == TherapistAppointmentDateFilter.today,
-                onSelected: (_) {
-                  onTodaySelected();
-                },
-              ),
-              FilterChip(
-                avatar: const Icon(Icons.date_range_outlined, size: 18),
-                label: const Text('This week'),
-                selected:
-                    selectedDateFilter ==
-                    TherapistAppointmentDateFilter.thisWeek,
-                onSelected: (_) {
-                  onThisWeekSelected();
-                },
-              ),
-              FilterChip(
-                avatar: const Icon(Icons.calendar_month_outlined, size: 18),
-                label: Text(_customDateLabel()),
-                selected:
-                    selectedDateFilter == TherapistAppointmentDateFilter.custom,
-                onSelected: (_) {
-                  onCustomDateSelected();
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          const _FilterLabel('Status'),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilterChip(
-                label: const Text('All statuses'),
-                selected: selectedStatusFilter == null,
-                onSelected: (_) {
-                  onStatusSelected(null);
-                },
-              ),
-              ...TherapistAppointmentStatus.values.map((status) {
-                return FilterChip(
-                  label: Text(status.label),
-                  selected: selectedStatusFilter == status,
-                  onSelected: (_) {
-                    onStatusSelected(status);
-                  },
-                );
-              }),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _customDateLabel() {
-    final date = selectedDate;
-
-    if (selectedDateFilter != TherapistAppointmentDateFilter.custom ||
-        date == null) {
-      return 'Choose date';
-    }
-
-    return DateFormat('dd.MM.yyyy.').format(date);
-  }
-}
-
 class _AppointmentCard extends StatelessWidget {
   final AppointmentModel appointment;
   final bool isUpdating;
 
   final VoidCallback onDetails;
+  final VoidCallback? onClient;
   final VoidCallback onAccept;
   final VoidCallback onReject;
   final VoidCallback onComplete;
@@ -686,6 +565,7 @@ class _AppointmentCard extends StatelessWidget {
     required this.appointment,
     required this.isUpdating,
     required this.onDetails,
+    this.onClient,
     required this.onAccept,
     required this.onReject,
     required this.onComplete,
@@ -734,7 +614,11 @@ class _AppointmentCard extends StatelessWidget {
                 runSpacing: 12,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  _ClientIdentity(appointment: appointment),
+                  InkWell(
+                    key: Key('client-profile-${appointment.id}'),
+                    onTap: isUpdating ? null : onClient,
+                    child: _ClientIdentity(appointment: appointment),
+                  ),
                   _StatusBadge(status: appointment.status),
                 ],
               ),
@@ -1040,42 +924,6 @@ class _DisabledActionHint extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return _SurfaceCard(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-      child: const Column(
-        children: [
-          Icon(
-            Icons.event_available_outlined,
-            size: 62,
-            color: _appointmentsPrimary,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'No appointments found',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: _appointmentsText,
-              fontSize: 21,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'There are no appointments matching the selected filter.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _appointmentsMuted, height: 1.4),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ErrorState extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
@@ -1184,23 +1032,6 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _FilterLabel extends StatelessWidget {
-  final String label;
-
-  const _FilterLabel(this.label);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: const TextStyle(
-        color: _appointmentsText,
-        fontWeight: FontWeight.w800,
-      ),
     );
   }
 }

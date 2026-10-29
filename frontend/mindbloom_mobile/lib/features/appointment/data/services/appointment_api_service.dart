@@ -56,10 +56,12 @@ class AppointmentApiService {
     String? status,
     DateTime? fromUtc,
     DateTime? toUtc,
+    bool overlapsRange = false,
   }) async {
     final query = <String, String>{
       'pageNumber': pageNumber.toString(),
       'pageSize': pageSize.toString(),
+      if (overlapsRange) 'overlapsRange': 'true',
       if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
       if (fromUtc != null) 'fromUtc': fromUtc.toUtc().toIso8601String(),
       if (toUtc != null) 'toUtc': toUtc.toUtc().toIso8601String(),

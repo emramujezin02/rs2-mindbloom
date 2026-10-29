@@ -428,7 +428,10 @@ class AppInjection {
 
     final repository = AppointmentRepository(apiService: apiService);
 
-    return TherapistAppointmentsViewModel(repository: repository);
+    return TherapistAppointmentsViewModel(
+      repository: repository,
+      therapistRepository: _createTherapistRepository(),
+    );
   }
 
   static TherapistRepository _createTherapistRepository() {

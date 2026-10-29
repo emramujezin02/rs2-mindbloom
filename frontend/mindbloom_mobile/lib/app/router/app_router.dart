@@ -403,7 +403,12 @@ class AppRouter {
         );
 
       case therapistClientDetails:
-        final clientId = settings.arguments;
+        final args = settings.arguments;
+        final clientId = args is TherapistClientDetailsArguments
+            ? args.clientId
+            : args;
+        final basicOnly =
+            args is TherapistClientDetailsArguments && args.basicOnly;
 
         if (clientId is! int) {
           return MaterialPageRoute(
@@ -415,7 +420,10 @@ class AppRouter {
         }
 
         return MaterialPageRoute(
-          builder: (_) => TherapistClientDetailsPage(clientId: clientId),
+          builder: (_) => TherapistClientDetailsPage(
+            clientId: clientId,
+            basicOnly: basicOnly,
+          ),
           settings: settings,
         );
 

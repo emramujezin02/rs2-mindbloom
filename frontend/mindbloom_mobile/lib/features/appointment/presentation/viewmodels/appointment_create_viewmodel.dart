@@ -4,12 +4,14 @@ import '../../../../core/error/app_exception.dart';
 import '../../../therapist/data/models/therapist_availability_model.dart';
 import '../../data/models/appointment_create_request.dart';
 import '../../data/models/booking_slot.dart';
+import '../../data/models/booking_slot_generator.dart';
 import '../../data/models/occupied_slot_model.dart';
 import '../../data/models/unavailable_date_model.dart';
 import '../../data/repositories/appointment_repository.dart';
 
 class AppointmentCreateViewModel extends ChangeNotifier {
-  static const Duration appointmentDuration = Duration(hours: 1);
+  static const Duration appointmentDuration =
+      BookingSlotGenerator.appointmentDuration;
 
   final AppointmentRepository repository;
 
@@ -223,100 +225,13 @@ class AppointmentCreateViewModel extends ChangeNotifier {
   List<BookingSlot> _buildSlotsForDate({
     required DateTime date,
     required List<OccupiedSlotModel> dailyOccupiedSlots,
-  }) {
-    final backendDayOfWeek = _toBackendDayOfWeek(date.weekday);
-
-    final dailyAvailabilities = availabilities
-        .where((availability) => availability.dayOfWeek == backendDayOfWeek)
-        .toList();
-
-    final slots = <int, BookingSlot>{};
-
-    for (final availability in dailyAvailabilities) {
-      final startParts = _parseTime(availability.startTime);
-
-      final endParts = _parseTime(availability.endTime);
-
-      if (startParts == null || endParts == null) {
-        continue;
-      }
-
-      var wallStart = DateTime.utc(
-        date.year,
-        date.month,
-        date.day,
-        startParts.$1,
-        startParts.$2,
-      );
-
-      final availabilityEnd = DateTime.utc(
-        date.year,
-        date.month,
-        date.day,
-        endParts.$1,
-        endParts.$2,
-      );
-
-      while (wallStart.add(appointmentDuration).compareTo(availabilityEnd) <=
-          0) {
-        final slotStart = AppointmentTimeZone.uniqueLocal(wallStart);
-        wallStart = wallStart.add(appointmentDuration);
-        if (slotStart == null) continue;
-        final slotEnd = AppointmentTimeZone.fromInstant(
-          slotStart.toUtc().add(appointmentDuration),
-        );
-        if (AppointmentTimeZone.uniqueLocal(
-                  DateTime.utc(
-                    slotEnd.year,
-                    slotEnd.month,
-                    slotEnd.day,
-                    slotEnd.hour,
-                    slotEnd.minute,
-                  ),
-                ) ==
-                null ||
-            DateTime.utc(
-              slotEnd.year,
-              slotEnd.month,
-              slotEnd.day,
-              slotEnd.hour,
-              slotEnd.minute,
-            ).isAfter(availabilityEnd)) {
-          continue;
-        }
-
-        final isPast = !slotStart.isAfter(_now());
-
-        final isOccupied = dailyOccupiedSlots.any((occupiedSlot) {
-          final occupiedStart = occupiedSlot.startUtc.toUtc();
-
-          final occupiedEnd = occupiedSlot.endUtc.toUtc();
-
-          return slotStart.isBefore(occupiedEnd) &&
-              slotEnd.isAfter(occupiedStart);
-        });
-
-        final isUnavailable = unavailableDates.any((unavailableDate) {
-          final unavailableStart = unavailableDate.startUtc.toUtc();
-
-          final unavailableEnd = unavailableDate.endUtc.toUtc();
-
-          return slotStart.isBefore(unavailableEnd) &&
-              slotEnd.isAfter(unavailableStart);
-        });
-
-        if (!isPast && !isUnavailable) {
-          slots[slotStart.microsecondsSinceEpoch] = BookingSlot(
-            start: slotStart,
-            end: slotEnd,
-            isOccupied: isOccupied,
-          );
-        }
-      }
-    }
-
-    return slots.values.toList()..sort((a, b) => a.start.compareTo(b.start));
-  }
+  }) => BookingSlotGenerator.generate(
+    date: date,
+    dailyOccupiedSlots: dailyOccupiedSlots,
+    availabilities: availabilities,
+    unavailableDates: unavailableDates,
+    now: _now(),
+  );
 
   Future<bool> createAppointment({
     required int therapistId,
@@ -362,10 +277,6 @@ class AppointmentCreateViewModel extends ChangeNotifier {
     }
   }
 
-  static int _toBackendDayOfWeek(int dartWeekday) {
-    return dartWeekday == DateTime.sunday ? 0 : dartWeekday;
-  }
-
   Future<List<UnavailableDateModel>> _loadUnavailableDates(
     int therapistId, {
     int daysAhead = 370,
@@ -391,24 +302,6 @@ class AppointmentCreateViewModel extends ChangeNotifier {
       if (!response.hasNextPage) return result;
       page++;
     }
-  }
-
-  static (int, int)? _parseTime(String value) {
-    final parts = value.split(':');
-
-    if (parts.length < 2) {
-      return null;
-    }
-
-    final hour = int.tryParse(parts[0]);
-
-    final minute = int.tryParse(parts[1]);
-
-    if (hour == null || minute == null) {
-      return null;
-    }
-
-    return (hour, minute);
   }
 
   void _setError(Object exception, {required String fallback}) {

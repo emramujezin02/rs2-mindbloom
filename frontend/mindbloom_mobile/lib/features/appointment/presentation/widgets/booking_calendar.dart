@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 /// Date-only values are calendar coordinates in Sarajevo, never device instants.
 class BookingCalendar extends StatefulWidget {
   final DateTime today;
+  final DateTime? firstDate;
   final DateTime lastDate;
   final DateTime? selectedDate;
   final bool Function(DateTime) isSelectable;
@@ -12,6 +13,7 @@ class BookingCalendar extends StatefulWidget {
   const BookingCalendar({
     super.key,
     required this.today,
+    this.firstDate,
     required this.lastDate,
     required this.selectedDate,
     required this.isSelectable,
@@ -37,7 +39,8 @@ class _BookingCalendarState extends State<BookingCalendar> {
 
   @override
   Widget build(BuildContext context) {
-    final firstMonth = DateTime.utc(widget.today.year, widget.today.month);
+    final firstDate = widget.firstDate ?? widget.today;
+    final firstMonth = DateTime.utc(firstDate.year, firstDate.month);
     final lastMonth = DateTime.utc(widget.lastDate.year, widget.lastDate.month);
     final offset = month.weekday - 1;
     final days = DateTime.utc(month.year, month.month + 1, 0).day;
@@ -115,7 +118,7 @@ class _BookingCalendarState extends State<BookingCalendar> {
               index - offset + 1,
             );
             final enabled =
-                !date.isBefore(widget.today) &&
+                !date.isBefore(firstDate) &&
                 !date.isAfter(widget.lastDate) &&
                 widget.isSelectable(date);
             final selected = sameDay(widget.selectedDate, date);

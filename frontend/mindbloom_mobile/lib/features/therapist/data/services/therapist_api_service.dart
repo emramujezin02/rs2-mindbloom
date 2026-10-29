@@ -176,6 +176,11 @@ class TherapistApiService {
     return TherapistProfileModel.fromJson(_asJsonMap(response));
   }
 
+  Future<TherapistClientDetailsModel> getTherapistClientProfile(int clientId) async {
+    final response = await apiClient.get('/Therapists/clients/$clientId/profile');
+    return TherapistClientDetailsModel.fromJson(_asJsonMap(response));
+  }
+
   Future<void> updateTherapistProfile(
     UpdateTherapistProfileRequest request,
   ) async {

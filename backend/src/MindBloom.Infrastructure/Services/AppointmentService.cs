@@ -657,7 +657,8 @@ public partial class AppointmentService : IAppointmentService
         int pageSize,
         string? status,
         DateTime? fromUtc,
-        DateTime? toUtc)
+        DateTime? toUtc,
+        bool overlapsRange = false)
     {
         await AutoCompleteAppointmentsAsync();
         var therapist =
@@ -682,12 +683,18 @@ public partial class AppointmentService : IAppointmentService
             .ThenInclude(x => x.User)
             .Where(x => x.TherapistId == therapist.Id);
 
-        query =
-            ApplyAppointmentFilters(
-                query,
-                status,
-                fromUtc,
-                toUtc);
+        if (overlapsRange)
+        {
+            // A local-day overview includes intervals starting on the preceding day.
+            // The original start-based list contract remains the default.
+            query = ApplyAppointmentFilters(query.Where(x => !x.IsDeleted), status, null, null);
+            if (fromUtc.HasValue) query = query.Where(x => x.EndUtc > fromUtc.Value);
+            if (toUtc.HasValue) query = query.Where(x => x.StartUtc < toUtc.Value);
+        }
+        else
+        {
+            query = ApplyAppointmentFilters(query, status, fromUtc, toUtc);
+        }
 
         query =
             query

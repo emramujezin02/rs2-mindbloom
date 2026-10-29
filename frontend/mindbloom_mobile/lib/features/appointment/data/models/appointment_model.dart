@@ -2,6 +2,7 @@ import '../../../../core/time/appointment_time_zone.dart';
 
 class AppointmentModel {
   final int id;
+  final int? clientId;
   final int therapistId;
   final String therapistName;
   final String clientName;
@@ -19,6 +20,7 @@ class AppointmentModel {
 
   const AppointmentModel({
     required this.id,
+    this.clientId,
     required this.therapistId,
     required this.therapistName,
     required this.clientName,
@@ -38,6 +40,7 @@ class AppointmentModel {
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
     return AppointmentModel(
       id: _toInt(json['id']),
+      clientId: _toNullableInt(json['clientId']),
       therapistId: _toInt(json['therapistId']),
       therapistName: _toString(json['therapistName']),
       clientName: _readClientName(json),
@@ -57,6 +60,7 @@ class AppointmentModel {
 
   AppointmentModel copyWith({
     int? id,
+    int? clientId,
     int? therapistId,
     String? therapistName,
     String? clientName,
@@ -74,6 +78,7 @@ class AppointmentModel {
   }) {
     return AppointmentModel(
       id: id ?? this.id,
+      clientId: clientId ?? this.clientId,
       therapistId: therapistId ?? this.therapistId,
       therapistName: therapistName ?? this.therapistName,
       clientName: clientName ?? this.clientName,

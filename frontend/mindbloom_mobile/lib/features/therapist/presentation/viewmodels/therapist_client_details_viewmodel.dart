@@ -7,6 +7,19 @@ import '../../data/models/therapist_mood_trend_model.dart';
 import '../../data/repositories/therapist_repository.dart';
 
 class TherapistClientDetailsViewModel extends ChangeNotifier {
+  bool _disposed = false;
+  bool _basicOnly = false;
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
   final TherapistRepository repository;
 
   TherapistClientDetailsViewModel({required this.repository});
@@ -18,14 +31,22 @@ class TherapistClientDetailsViewModel extends ChangeNotifier {
   List<TherapistMoodEntryModel> moodHistory = [];
   TherapistMoodTrendModel? moodTrend;
 
-  Future<void> loadClientDetails(int clientId) async {
+  Future<void> loadClientDetails(int clientId, {bool basicOnly = false}) async {
     if (isLoading) return;
+    _basicOnly = basicOnly;
 
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
+      if (basicOnly) {
+        client = null;
+        moodHistory = [];
+        moodTrend = null;
+        client = await repository.getTherapistClientProfile(clientId);
+        return;
+      }
       final results = await Future.wait<Object>([
         repository.getTherapistClientDetails(clientId),
         repository.getClientMoodHistory(clientId),
@@ -47,7 +68,7 @@ class TherapistClientDetailsViewModel extends ChangeNotifier {
   Future<void> refresh() {
     final currentClientId = client?.clientId;
     if (currentClientId == null) return Future.value();
-    return loadClientDetails(currentClientId);
+    return loadClientDetails(currentClientId, basicOnly: _basicOnly);
   }
 
   void clearError() {

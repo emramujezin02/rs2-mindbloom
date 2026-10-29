@@ -74,6 +74,9 @@ class TherapistRepository {
     return therapistApiService.getTherapistProfile();
   }
 
+  Future<TherapistClientDetailsModel> getTherapistClientProfile(int clientId) =>
+      therapistApiService.getTherapistClientProfile(clientId);
+
   Future<void> updateTherapistProfile(UpdateTherapistProfileRequest request) {
     return therapistApiService.updateTherapistProfile(request);
   }
