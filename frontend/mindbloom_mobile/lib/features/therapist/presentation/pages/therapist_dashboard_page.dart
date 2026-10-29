@@ -323,18 +323,21 @@ class _DashboardStatistics extends StatelessWidget {
         icon: Icons.event_busy_outlined,
       ),
       _DashboardCardData(
-        title: 'Ukupna zarada',
-        value: '${dashboard.totalEarnings.toStringAsFixed(2)} KM',
+        title: 'Bruto direktne naplate',
+        value:
+            '${dashboard.totalEarnings.toStringAsFixed(2)} ${dashboard.currency}',
         icon: Icons.payments_outlined,
       ),
       _DashboardCardData(
-        title: 'Mjesečna zarada',
-        value: '${dashboard.monthlyEarnings.toStringAsFixed(2)} KM',
+        title: 'Mjesečne direktne naplate',
+        value:
+            '${dashboard.monthlyEarnings.toStringAsFixed(2)} ${dashboard.currency}',
         icon: Icons.calendar_month_outlined,
       ),
       _DashboardCardData(
-        title: 'Sedmična zarada',
-        value: '${dashboard.weeklyEarnings.toStringAsFixed(2)} KM',
+        title: 'Sedmične direktne naplate',
+        value:
+            '${dashboard.weeklyEarnings.toStringAsFixed(2)} ${dashboard.currency}',
         icon: Icons.date_range_outlined,
       ),
     ];
@@ -680,9 +683,10 @@ class _ResponsiveGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = (constraints.maxWidth / minItemWidth)
-            .floor()
-            .clamp(1, 3);
+        final columns = (constraints.maxWidth / minItemWidth).floor().clamp(
+          1,
+          3,
+        );
 
         final itemWidth =
             (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
@@ -852,8 +856,5 @@ class _MetricPalette {
   final Color background;
   final Color foreground;
 
-  const _MetricPalette({
-    required this.background,
-    required this.foreground,
-  });
+  const _MetricPalette({required this.background, required this.foreground});
 }

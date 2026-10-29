@@ -1,4 +1,5 @@
 class ClientDashboardModel {
+  final String currency;
   final int totalAppointments;
   final int completedAppointments;
   final int pendingAppointments;
@@ -9,6 +10,7 @@ class ClientDashboardModel {
   final DateTime? nextAppointmentDate;
 
   ClientDashboardModel({
+    this.currency = 'USD',
     required this.totalAppointments,
     required this.completedAppointments,
     required this.pendingAppointments,
@@ -21,6 +23,7 @@ class ClientDashboardModel {
 
   factory ClientDashboardModel.fromJson(Map<String, dynamic> json) {
     return ClientDashboardModel(
+      currency: json['currency']?.toString() ?? 'USD',
       totalAppointments: json['totalAppointments'] ?? 0,
       completedAppointments: json['completedAppointments'] ?? 0,
       pendingAppointments: json['pendingAppointments'] ?? 0,

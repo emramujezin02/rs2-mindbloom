@@ -201,7 +201,8 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
                     _DashboardMetricCard(
                       icon: Icons.payments,
                       title: 'Total spent',
-                      value: '${dashboard.totalSpent.toStringAsFixed(2)} KM',
+                      value:
+                          '${dashboard.totalSpent.toStringAsFixed(2)} ${dashboard.currency}',
                       width: itemWidth,
                     ),
                     _DashboardMetricCard(
@@ -302,7 +303,8 @@ class _HomeHeroPanel extends StatelessWidget {
               ),
               _HeroStat(
                 label: 'Spent',
-                value: '${dashboard.totalSpent.toStringAsFixed(2)} KM',
+                value:
+                    '${dashboard.totalSpent.toStringAsFixed(2)} ${dashboard.currency}',
               ),
             ],
           ),

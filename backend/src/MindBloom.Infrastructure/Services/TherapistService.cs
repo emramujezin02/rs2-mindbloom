@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Common.Models;
 using MindBloom.Application.Common.Pagination;
 using MindBloom.Application.Features.Therapists.DTOs;
@@ -1745,48 +1745,14 @@ public class TherapistService : ITherapistService
                 .AverageAsync()
             ?? 0;
 
-        var totalEarnings =
-            await _context.Payments
-                .AsNoTracking()
-                .Where(payment =>
-                    !payment.IsDeleted &&
-                    payment.Status ==
-                        PaymentStatus.Paid &&
-                    payment.Appointment.TherapistId ==
-                        therapist.Id)
-                .SumAsync(payment =>
-                    (decimal?)payment.Amount)
-            ?? 0;
-
-        var monthlyEarnings =
-    await _context.Payments
-        .AsNoTracking()
-        .Where(payment =>
-            !payment.IsDeleted &&
-            payment.Status == PaymentStatus.Paid &&
-            payment.PaidAtUtc.HasValue &&
-            payment.PaidAtUtc.Value >= currentMonthStartUtc &&
-            payment.PaidAtUtc.Value < nextMonthStartUtc &&
-            !payment.Appointment.IsDeleted &&
-            payment.Appointment.TherapistId == therapist.Id)
-        .SumAsync(payment =>
-            (decimal?)payment.Amount)
-    ?? 0;
-
-        var weeklyEarnings =
-            await _context.Payments
-                .AsNoTracking()
-                .Where(payment =>
-                    !payment.IsDeleted &&
-                    payment.Status == PaymentStatus.Paid &&
-                    payment.PaidAtUtc.HasValue &&
-                    payment.PaidAtUtc.Value >= currentWeekStartUtc &&
-                    payment.PaidAtUtc.Value <= nowUtc &&
-                    !payment.Appointment.IsDeleted &&
-                    payment.Appointment.TherapistId == therapist.Id)
-                .SumAsync(payment =>
-                    (decimal?)payment.Amount)
-            ?? 0;
+        var receipts = DashboardFinancialQueries.TherapistDirectReceipts(_context, therapist.Id);
+        var totalEarnings = await receipts.SumAsync(p => (decimal?)p.Amount) ?? 0;
+        var monthlyEarnings = await receipts
+            .Where(p => p.PaidAtUtc.HasValue && p.PaidAtUtc.Value >= currentMonthStartUtc && p.PaidAtUtc.Value < nextMonthStartUtc)
+            .SumAsync(p => (decimal?)p.Amount) ?? 0;
+        var weeklyEarnings = await receipts
+            .Where(p => p.PaidAtUtc.HasValue && p.PaidAtUtc.Value >= currentWeekStartUtc && p.PaidAtUtc.Value <= nowUtc)
+            .SumAsync(p => (decimal?)p.Amount) ?? 0;
 
         var completedAppointments =
     await _context.Appointments

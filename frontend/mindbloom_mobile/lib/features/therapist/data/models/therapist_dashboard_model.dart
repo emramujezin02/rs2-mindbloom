@@ -1,4 +1,5 @@
 class TherapistDashboardModel {
+  final String currency;
   final int todayAppointments;
   final int upcomingAppointments;
   final int totalClients;
@@ -16,6 +17,7 @@ class TherapistDashboardModel {
   final int cancelledAppointments;
 
   const TherapistDashboardModel({
+    this.currency = 'USD',
     required this.todayAppointments,
     required this.upcomingAppointments,
     required this.totalClients,
@@ -37,6 +39,7 @@ class TherapistDashboardModel {
     final workTrendJson = json['workTrend'];
 
     return TherapistDashboardModel(
+      currency: json['currency']?.toString() ?? 'USD',
       todayAppointments: _toInt(json['todayAppointments']),
       upcomingAppointments: _toInt(json['upcomingAppointments']),
       totalClients: _toInt(json['totalClients']),

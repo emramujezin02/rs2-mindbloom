@@ -2,6 +2,7 @@
 
 public class TherapistDashboardDto
 {
+    public string Currency { get; set; } = "USD";
     public int TodayAppointments { get; set; }
 
     public int UpcomingAppointments { get; set; }

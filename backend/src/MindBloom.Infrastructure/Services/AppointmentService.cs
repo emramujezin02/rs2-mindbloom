@@ -1370,7 +1370,7 @@ public partial class AppointmentService : IAppointmentService
         var therapist =
             await _context.Therapists
                 .FirstOrDefaultAsync(x =>
-                    x.UserId == therapistUserId);
+                    x.UserId == therapistUserId && !x.IsDeleted);
 
         if (therapist == null)
         {
@@ -1380,25 +1380,25 @@ public partial class AppointmentService : IAppointmentService
         var totalAppointments =
      await _context.Appointments
          .CountAsync(x =>
-             x.TherapistId == therapist.Id);
+             !x.IsDeleted && x.TherapistId == therapist.Id);
 
         var completedAppointments =
             await _context.Appointments
                 .CountAsync(x =>
-                    x.TherapistId == therapist.Id
+                    !x.IsDeleted && x.TherapistId == therapist.Id
                     && x.Status ==
-                        AppointmentStatus.Accepted
-                    && x.EndUtc < DateTime.UtcNow);
+                        AppointmentStatus.Completed);
 
         var cancelledAppointments =
             await _context.Appointments
                 .CountAsync(x =>
-                    x.TherapistId == therapist.Id
+                    !x.IsDeleted && x.TherapistId == therapist.Id
                     && x.Status ==
                         AppointmentStatus.Cancelled);
 
         decimal totalEarnings =
-            completedAppointments * 50;
+            await DashboardFinancialQueries.TherapistDirectReceipts(_context, therapist.Id)
+                .SumAsync(p => (decimal?)p.Amount) ?? 0;
 
         return new TherapistStatsDto
         {
@@ -1541,6 +1541,7 @@ public partial class AppointmentService : IAppointmentService
     GetClientDashboardAsync(
         int clientUserId)
     {
+        var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
         var client =
             await _context.Clients
                 .FirstOrDefaultAsync(x =>
@@ -1552,72 +1553,32 @@ public partial class AppointmentService : IAppointmentService
                 "Client not found.");
         }
 
-        var appointments =
-            await _context.Appointments
-            .AsNoTracking()
-                .Include(x => x.Therapist)
-                .Where(x =>
-                    x.ClientId == client.Id)
-                .ToListAsync();
+        var appointments = _context.Appointments.AsNoTracking()
+            .Where(x => x.ClientId == client.Id && !x.IsDeleted);
+        var completed = appointments.Where(x => x.Status == AppointmentStatus.Completed);
 
-        return new ClientDashboardDto
+        var dashboard = new ClientDashboardDto
         {
-            TotalAppointments =
-                appointments.Count,
-
-            CompletedAppointments =
-                appointments.Count(x =>
-                    x.Status
-                    == AppointmentStatus.Completed),
-
-            PendingAppointments =
-                appointments.Count(x =>
-                    x.Status
-                    == AppointmentStatus.Pending),
-
-            CancelledAppointments =
-                appointments.Count(x =>
-                    x.Status
-                    == AppointmentStatus.Cancelled
-                    || x.Status
-                    == AppointmentStatus.Rejected),
-
-            TotalTherapistsVisited =
-                appointments
-                    .Select(x => x.TherapistId)
-                    .Distinct()
-                    .Count(),
-
-            TotalSpent =
-                appointments
-                    .Where(x =>
-                        x.Status
-                        == AppointmentStatus.Completed)
-                    .Sum(x =>
-                        x.Therapist.HourlyRate),
-
-            LastAppointmentDate =
-                appointments
-                    .Where(x =>
-                        x.EndUtc
-                        < DateTime.UtcNow)
-                    .OrderByDescending(x =>
-                        x.EndUtc)
-                    .Select(x =>
-                        (DateTime?)x.EndUtc)
-                    .FirstOrDefault(),
-
-            NextAppointmentDate =
-                appointments
-                    .Where(x =>
-                        x.StartUtc
-                        > DateTime.UtcNow)
-                    .OrderBy(x =>
-                        x.StartUtc)
-                    .Select(x =>
-                        (DateTime?)x.StartUtc)
-                    .FirstOrDefault()
+            TotalAppointments = await appointments.CountAsync(),
+            CompletedAppointments = await completed.CountAsync(),
+            PendingAppointments = await appointments.CountAsync(x => x.Status == AppointmentStatus.Pending),
+            CancelledAppointments = await appointments.CountAsync(x => x.Status == AppointmentStatus.Cancelled || x.Status == AppointmentStatus.Rejected),
+            TotalTherapistsVisited = await completed.Select(x => x.TherapistId).Distinct().CountAsync(),
+            TotalSpent = await DashboardFinancialQueries.ClientTotalSpentAsync(_context, client.Id),
+            LastAppointmentDate = await completed.Where(x => x.EndUtc <= nowUtc)
+                .OrderByDescending(x => x.EndUtc).ThenByDescending(x => x.Id)
+                .Select(x => (DateTime?)x.EndUtc).FirstOrDefaultAsync(),
+            NextAppointmentDate = await appointments
+                .Where(x => (x.Status == AppointmentStatus.Pending || x.Status == AppointmentStatus.Accepted) && x.StartUtc > nowUtc)
+                .OrderBy(x => x.StartUtc).ThenBy(x => x.Id)
+                .Select(x => (DateTime?)x.StartUtc).FirstOrDefaultAsync()
         };
+        // SQL datetime2 stores UTC ticks without a DateTime.Kind; retain the UTC API contract.
+        if (dashboard.LastAppointmentDate.HasValue)
+            dashboard.LastAppointmentDate = DateTime.SpecifyKind(dashboard.LastAppointmentDate.Value, DateTimeKind.Utc);
+        if (dashboard.NextAppointmentDate.HasValue)
+            dashboard.NextAppointmentDate = DateTime.SpecifyKind(dashboard.NextAppointmentDate.Value, DateTimeKind.Utc);
+        return dashboard;
     }
 
     public async Task UpdateMeetingLinkAsync(
