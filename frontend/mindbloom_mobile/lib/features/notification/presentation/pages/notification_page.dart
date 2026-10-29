@@ -49,7 +49,7 @@ class _NotificationPageState extends State<NotificationPage> {
       _viewModel = viewModel;
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _viewModel?.initialize();
+        if (mounted) _viewModel?.initialize();
       });
     }
   }

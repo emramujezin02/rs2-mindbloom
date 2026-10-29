@@ -31,6 +31,7 @@ class NotificationRealtimeService {
   bool _isStarting = false;
 
   bool _manuallyStopped = false;
+  int _generation = 0;
 
   NotificationRealtimeService({
     required this.sessionStorage,
@@ -44,45 +45,37 @@ class NotificationRealtimeService {
   }
 
   Future<void> start() async {
-    if (_isStarting || isConnected) {
-      return;
-    }
-
-    final token = await sessionStorage.getToken();
-
-    if (token == null || token.trim().isEmpty) {
-      onConnectionStatusChanged(NotificationConnectionStatus.disconnected);
-
-      return;
-    }
-
+    if (_isStarting || isConnected) return;
     _isStarting = true;
-    _manuallyStopped = false;
-
-    onConnectionStatusChanged(NotificationConnectionStatus.connecting);
-
+    final generation = _generation;
     try {
-      _hubConnection ??= _createHubConnection();
-
-      if (_hubConnection!.state == HubConnectionState.Disconnected) {
-        final startFuture = _hubConnection!.start();
-
-        if (startFuture != null) {
-          await startFuture.timeout(_startTimeout);
-        }
+      final token = await sessionStorage.getToken();
+      if (generation != _generation) return;
+      if (token == null || token.trim().isEmpty) {
+        onConnectionStatusChanged(NotificationConnectionStatus.disconnected);
+        return;
       }
-
-      onConnectionStatusChanged(NotificationConnectionStatus.connected);
+      _manuallyStopped = false;
+      onConnectionStatusChanged(NotificationConnectionStatus.connecting);
+      final connection = _hubConnection ??= _createHubConnection(generation);
+      if (connection.state == HubConnectionState.Disconnected) {
+        final startFuture = connection.start();
+        if (startFuture != null) await startFuture.timeout(_startTimeout);
+      }
+      if (generation == _generation && !_manuallyStopped && isConnected) {
+        onConnectionStatusChanged(NotificationConnectionStatus.connected);
+      }
     } catch (_) {
-      onConnectionStatusChanged(NotificationConnectionStatus.disconnected);
-
-      _scheduleManualReconnect();
+      if (generation == _generation && !_manuallyStopped) {
+        onConnectionStatusChanged(NotificationConnectionStatus.disconnected);
+        _scheduleManualReconnect();
+      }
     } finally {
-      _isStarting = false;
+      if (generation == _generation) _isStarting = false;
     }
   }
 
-  HubConnection _createHubConnection() {
+  HubConnection _createHubConnection(int generation) {
     final httpOptions = HttpConnectionOptions(
       accessTokenFactory: () async {
         final token = await sessionStorage.getToken();
@@ -99,19 +92,25 @@ class NotificationRealtimeService {
         .withAutomaticReconnect(retryDelays: [0, 2000, 5000, 10000, 20000])
         .build();
 
-    connection.on('ReceiveNotification', _handleNotification);
+    bool active() => generation == _generation && !_manuallyStopped;
+    connection.on('ReceiveNotification', (arguments) {
+      if (active()) _handleNotification(arguments);
+    });
 
     connection.onreconnecting(({Exception? error}) {
+      if (!active()) return;
       onConnectionStatusChanged(NotificationConnectionStatus.reconnecting);
     });
 
     connection.onreconnected(({String? connectionId}) {
+      if (!active()) return;
       onConnectionStatusChanged(NotificationConnectionStatus.connected);
 
       unawaited(onReconnected());
     });
 
     connection.onclose(({Exception? error}) {
+      if (!active()) return;
       onConnectionStatusChanged(NotificationConnectionStatus.disconnected);
 
       if (!_manuallyStopped) {
@@ -150,11 +149,17 @@ class NotificationRealtimeService {
 
   Future<void> stop() async {
     _manuallyStopped = true;
+    _generation++;
+    _isStarting = false;
 
     _manualReconnectTimer?.cancel();
     _manualReconnectTimer = null;
 
     final connection = _hubConnection;
+    _hubConnection = null;
+    connection?.off('ReceiveNotification');
+    // An old stop must not overwrite a new session's connection state.
+    onConnectionStatusChanged(NotificationConnectionStatus.disconnected);
 
     if (connection != null &&
         connection.state != HubConnectionState.Disconnected) {
@@ -164,7 +169,5 @@ class NotificationRealtimeService {
         // Session se svakako smije završiti.
       }
     }
-
-    onConnectionStatusChanged(NotificationConnectionStatus.disconnected);
   }
 }
