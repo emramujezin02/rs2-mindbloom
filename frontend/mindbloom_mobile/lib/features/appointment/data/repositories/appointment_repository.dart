@@ -102,11 +102,13 @@ class AppointmentRepository {
     required int therapistId,
     required DateTime fromUtc,
     required DateTime toUtc,
+    int pageNumber = 1,
   }) {
     return apiService.getTherapistUnavailableDates(
       therapistId: therapistId,
       fromUtc: fromUtc,
       toUtc: toUtc,
+      pageNumber: pageNumber,
     );
   }
 

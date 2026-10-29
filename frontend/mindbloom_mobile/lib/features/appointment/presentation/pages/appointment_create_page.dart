@@ -7,7 +7,7 @@ import '../../../../core/widgets/app_loading_widget.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../therapist/data/models/therapist_model.dart';
-import '../../../therapist/presentation/widgets/therapist_profile_image.dart';
+import '../widgets/booking_calendar.dart';
 import '../viewmodels/appointment_create_viewmodel.dart';
 
 const _appointmentBackground = Color(0xFFFCFAFF);
@@ -23,12 +23,14 @@ class AppointmentCreatePage extends StatefulWidget {
   final TherapistModel therapist;
   final DateTime? initialSlot;
   final bool returnResultOnSuccess;
+  final AppointmentCreateViewModel? viewModel;
 
   const AppointmentCreatePage({
     super.key,
     required this.therapist,
     this.initialSlot,
     this.returnResultOnSuccess = false,
+    this.viewModel,
   });
 
   @override
@@ -36,8 +38,7 @@ class AppointmentCreatePage extends StatefulWidget {
 }
 
 class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
-  final AppointmentCreateViewModel _viewModel =
-      AppInjection.createAppointmentViewModel();
+  late final AppointmentCreateViewModel _viewModel;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -56,6 +57,8 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
   @override
   void initState() {
     super.initState();
+    _viewModel = widget.viewModel ?? AppInjection.createAppointmentViewModel();
+    _notesController.addListener(_onChanged);
 
     _type = widget.therapist.offersOnline ? 1 : 2;
 
@@ -111,10 +114,6 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
 
     setState(() {
       _selectedSlot = matchingSlot;
-
-      if (matchingSlot != null) {
-        _currentStep = 2;
-      }
     });
   }
 
@@ -134,71 +133,16 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
     }
   }
 
-  Future<void> _pickDate() async {
-    if (_viewModel.availabilities.isEmpty) {
-      _showMessage('This therapist has not published availability.');
-
-      return;
-    }
-
-    final now = AppointmentTimeZone.now();
-
-    final firstDate = DateTime(now.year, now.month, now.day);
-
-    final lastDate = firstDate.add(const Duration(days: 365));
-
-    final initialDate = _findFirstSelectableDate(firstDate, lastDate);
-
-    if (initialDate == null) {
-      _showMessage('No available booking dates were found.');
-
-      return;
-    }
-
-    final currentlySelected = _selectedDate;
-
-    final validInitialDate =
-        currentlySelected != null &&
-            _viewModel.isDateSelectable(currentlySelected)
-        ? currentlySelected
-        : initialDate;
-
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: validInitialDate,
-      firstDate: firstDate,
-      lastDate: lastDate,
-      selectableDayPredicate: _viewModel.isDateSelectable,
-      helpText: 'Choose an available date',
-    );
-
-    if (picked == null) {
-      return;
-    }
-
+  Future<void> _selectDate(DateTime date) async {
+    if (_isSubmitting || !_viewModel.isDateSelectable(date)) return;
     setState(() {
-      _selectedDate = picked;
+      _selectedDate = date;
       _selectedSlot = null;
     });
-
     await _viewModel.loadAvailableSlots(
       therapistId: widget.therapist.id,
-      date: picked,
+      date: date,
     );
-  }
-
-  DateTime? _findFirstSelectableDate(DateTime firstDate, DateTime lastDate) {
-    var currentDate = firstDate;
-
-    while (!currentDate.isAfter(lastDate)) {
-      if (_viewModel.isDateSelectable(currentDate)) {
-        return currentDate;
-      }
-
-      currentDate = currentDate.add(const Duration(days: 1));
-    }
-
-    return null;
   }
 
   Future<void> _continue() async {
@@ -212,7 +156,7 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
       return;
     }
 
-    if (_currentStep < 6) {
+    if (_currentStep < 2) {
       setState(() {
         _currentStep++;
       });
@@ -234,108 +178,33 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
   }
 
   Future<bool> _validateCurrentStep() async {
-    switch (_currentStep) {
-      case 0:
-        return true;
-
-      case 1:
-        if (_selectedDate == null) {
-          _showMessage('Please choose an appointment date.');
-
-          return false;
-        }
-
-        return true;
-
-      case 2:
-        if (_selectedSlot == null) {
-          _showMessage('Please choose an available appointment time.');
-
-          return false;
-        }
-
-        final stillAvailable = _viewModel.availableSlots.any(
-          (slot) => _isSameSlot(slot, _selectedSlot!),
-        );
-
-        if (!stillAvailable) {
-          _selectedSlot = null;
-
-          _showMessage('The selected appointment time is no longer available.');
-
-          return false;
-        }
-
-        return true;
-
-      case 3:
-        if (_type == 1 && !widget.therapist.offersOnline) {
-          _showMessage('This therapist does not offer online sessions.');
-
-          return false;
-        }
-
-        if (_type == 2 && !widget.therapist.offersInPerson) {
-          _showMessage('This therapist does not offer in-person sessions.');
-
-          return false;
-        }
-
-        if (_type == 2 && widget.therapist.address.trim().isEmpty) {
-          _showMessage('The therapist has not provided an office address.');
-
-          return false;
-        }
-
-        return true;
-
-      case 4:
-        return _formKey.currentState?.validate() ?? false;
-
-      case 5:
-        return true;
-
-      case 6:
-        return true;
-
-      default:
-        return false;
+    if (_selectedDate == null || !_viewModel.isDateSelectable(_selectedDate!)) {
+      _showMessage('Izaberite važeći datum termina.');
+      return false;
     }
+    if (_currentStep == 0) return true;
+    if (_selectedSlot == null ||
+        !_selectedSlot!.isAfter(_viewModel.now) ||
+        !_viewModel.availableSlots.any(
+          (slot) => _isSameSlot(slot, _selectedSlot!),
+        )) {
+      setState(() => _selectedSlot = null);
+      _showMessage('Izaberite slobodan termin.');
+      return false;
+    }
+    if (_currentStep == 1) return true;
+    if ((_type == 1 && !widget.therapist.offersOnline) ||
+        (_type == 2 &&
+            (!widget.therapist.offersInPerson ||
+                widget.therapist.address.trim().isEmpty))) {
+      _showMessage('Odabrani tip seanse nije dostupan kod ovog terapeuta.');
+      return false;
+    }
+    return _formKey.currentState?.validate() ?? false;
   }
 
   Future<void> _confirmAndSubmit() async {
     if (_isSubmitting || _selectedDate == null || _selectedSlot == null) {
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Confirm appointment'),
-          content: const Text(
-            'Are you sure you want to send this appointment request?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Back'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: const Text('Confirm'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true || !mounted) {
       return;
     }
 
@@ -344,6 +213,7 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
     });
 
     final selectedDate = _selectedDate!;
+    final selectedSlot = _selectedSlot!;
 
     await _viewModel.loadAvailableSlots(
       therapistId: widget.therapist.id,
@@ -354,7 +224,15 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
       return;
     }
 
-    final selectedSlot = _selectedSlot!;
+    if (_viewModel.error != null) {
+      setState(() {
+        _isSubmitting = false;
+        _selectedSlot = null;
+        _currentStep = 1;
+      });
+      _showMessage(_friendlyErrorMessage(_viewModel.error));
+      return;
+    }
 
     final slotStillAvailable = _viewModel.availableSlots.any(
       (slot) => _isSameSlot(slot, selectedSlot),
@@ -363,7 +241,7 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
     if (!slotStillAvailable) {
       setState(() {
         _selectedSlot = null;
-        _currentStep = 2;
+        _currentStep = 1;
         _isSubmitting = false;
       });
 
@@ -425,7 +303,7 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
 
       setState(() {
         _selectedSlot = null;
-        _currentStep = 2;
+        _currentStep = 1;
         _isSubmitting = false;
       });
     } else {
@@ -440,14 +318,15 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
   bool _isConflictError(String? error) {
     final normalized = error?.toLowerCase() ?? '';
 
-    return normalized.contains('already booked') ||
+    return _viewModel.errorStatusCode == 409 ||
+        normalized.contains('already booked') ||
         normalized.contains('already occupied') ||
         normalized.contains('conflict') ||
         normalized.contains('409');
   }
 
   String _friendlyErrorMessage(String? error) {
-    if (_isConflictError(error)) {
+    if (_isConflictError(error) && (error == null || error.trim().isEmpty)) {
       return 'The selected appointment time is no longer available. Please choose another time.';
     }
 
@@ -474,282 +353,109 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isSuccess) {
-      return _buildSuccessScreen();
-    }
-
-    if (_viewModel.isLoading && _viewModel.availabilities.isEmpty) {
-      return Scaffold(
+    if (_isSuccess) return _buildSuccessScreen();
+    final busy = _isSubmitting || _viewModel.isLoadingSlots;
+    return PopScope(
+      canPop: _currentStep == 0 && !_isSubmitting,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _goBack();
+      },
+      child: Scaffold(
         backgroundColor: _appointmentBackground,
         appBar: AppBar(
-          title: const Text('Book appointment'),
+          title: const Text('Zakaži termin'),
           backgroundColor: _appointmentBackground,
           surfaceTintColor: Colors.transparent,
         ),
-        body: const AppLoadingWidget(message: 'Loading available times...'),
-      );
-    }
-
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      backgroundColor: _appointmentBackground,
-      appBar: AppBar(
-        title: const Text('Book appointment'),
-        backgroundColor: _appointmentBackground,
-        surfaceTintColor: Colors.transparent,
-      ),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: Theme(
-            data: theme.copyWith(
-              canvasColor: _appointmentBackground,
-              colorScheme: theme.colorScheme.copyWith(
-                primary: _appointmentPrimary,
-                surface: _appointmentSurface,
-              ),
-            ),
-            child: Column(
+        body: SafeArea(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                  child: _BookingProgressHeader(
-                    currentStep: _currentStep,
-                    therapistName: widget.therapist.fullName,
-                    selectedSlot: _selectedSlot,
-                    sessionType: _sessionTypeLabel,
+                _BookingProgressHeader(
+                  currentStep: _currentStep,
+                  therapistName: widget.therapist.fullName,
+                  selectedSlot: _selectedSlot,
+                  sessionType: _sessionTypeLabel,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  ['Izbor datuma', 'Izbor termina', 'Potvrda'][_currentStep],
+                  key: const Key('booking-step-title'),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: _appointmentText,
                   ),
                 ),
-                Expanded(
-                  child: Stepper(
-                    currentStep: _currentStep,
-                    type: StepperType.vertical,
-                    physics: const ClampingScrollPhysics(),
-                    margin: const EdgeInsets.fromLTRB(12, 0, 12, 20),
-                    onStepContinue: _continue,
-                    onStepCancel: _goBack,
-                    onStepTapped: (step) {
-                      if (_isSubmitting) {
-                        return;
-                      }
-
-                      if (step <= _currentStep) {
-                        setState(() {
-                          _currentStep = step;
-                        });
-                      }
-                    },
-                    controlsBuilder: (context, details) {
-                      final isFinalStep = _currentStep == 6;
-
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 20),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final stackButtons = constraints.maxWidth < 340;
-                            final primaryButton = FilledButton.icon(
-                              onPressed:
-                                  _isSubmitting || _viewModel.isLoadingSlots
-                                  ? null
-                                  : details.onStepContinue,
-                              icon: _isSubmitting && isFinalStep
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Icon(
-                                      isFinalStep
-                                          ? Icons.check_circle_outline
-                                          : Icons.arrow_forward,
-                                    ),
-                              label: Text(
-                                isFinalStep ? 'Confirm booking' : 'Next',
-                              ),
-                            );
-
-                            if (_currentStep == 0) {
-                              return SizedBox(
-                                width: double.infinity,
-                                child: primaryButton,
-                              );
-                            }
-
-                            final secondaryButton = OutlinedButton.icon(
-                              onPressed: _isSubmitting
-                                  ? null
-                                  : details.onStepCancel,
-                              icon: const Icon(Icons.arrow_back),
-                              label: const Text('Back'),
-                            );
-
-                            if (stackButtons) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  primaryButton,
-                                  const SizedBox(height: 10),
-                                  secondaryButton,
-                                ],
-                              );
-                            }
-
-                            return Row(
-                              children: [
-                                Expanded(child: primaryButton),
-                                const SizedBox(width: 12),
-                                Expanded(child: secondaryButton),
-                              ],
-                            );
-                          },
-                        ),
-                      );
-                    },
-                    steps: [
-                      Step(
-                        title: const Text('Therapist'),
-                        subtitle: Text(
-                          widget.therapist.fullName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        isActive: _currentStep >= 0,
-                        state: _stepState(0),
-                        content: _buildTherapistStep(),
-                      ),
-                      Step(
-                        title: const Text('Date'),
-                        subtitle: Text(
-                          _selectedDate == null
-                              ? 'Choose a date'
-                              : DateFormat(
-                                  'dd.MM.yyyy.',
-                                ).format(_selectedDate!),
-                        ),
-                        isActive: _currentStep >= 1,
-                        state: _stepState(1),
-                        content: _buildDateStep(),
-                      ),
-                      Step(
-                        title: const Text('Available time'),
-                        subtitle: Text(
-                          _selectedSlot == null
-                              ? 'Choose a time'
-                              : DateFormat('HH:mm').format(_selectedSlot!),
-                        ),
-                        isActive: _currentStep >= 2,
-                        state: _stepState(2),
-                        content: _buildTimeStep(),
-                      ),
-                      Step(
-                        title: const Text('Session type'),
-                        subtitle: Text(_sessionTypeLabel),
-                        isActive: _currentStep >= 3,
-                        state: _stepState(3),
-                        content: _buildSessionTypeStep(),
-                      ),
-                      Step(
-                        title: const Text('Notes'),
-                        subtitle: const Text('Additional information'),
-                        isActive: _currentStep >= 4,
-                        state: _stepState(4),
-                        content: _buildNotesStep(),
-                      ),
-                      Step(
-                        title: const Text('Review'),
-                        subtitle: const Text('Check appointment details'),
-                        isActive: _currentStep >= 5,
-                        state: _stepState(5),
-                        content: _buildReviewStep(),
-                      ),
-                      Step(
-                        title: const Text('Confirmation'),
-                        subtitle: const Text('Send appointment request'),
-                        isActive: _currentStep >= 6,
-                        state: _stepState(6),
-                        content: _buildConfirmationStep(),
-                      ),
-                    ],
+                const SizedBox(height: 12),
+                if (_viewModel.isLoading && _viewModel.availabilities.isEmpty)
+                  const AppInlineLoadingIndicator(
+                    message: 'Učitavanje rasporeda...',
+                  )
+                else ...[
+                  if (_viewModel.error != null) ...[
+                    Text(
+                      _viewModel.error!,
+                      key: const Key('booking-error'),
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                    TextButton(
+                      onPressed: busy
+                          ? null
+                          : () async {
+                              if (_viewModel.availabilities.isEmpty) {
+                                await _initialize();
+                              } else if (_selectedDate != null) {
+                                await _viewModel.loadAvailableSlots(
+                                  therapistId: widget.therapist.id,
+                                  date: _selectedDate!,
+                                );
+                              }
+                            },
+                      child: const Text('Pokušaj ponovo'),
+                    ),
+                  ],
+                  if (_currentStep == 0) _buildDateStep(),
+                  if (_currentStep == 1) _buildTimeStep(),
+                  if (_currentStep == 2) _buildConfirmationStep(),
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    key: const Key('booking-next'),
+                    onPressed:
+                        busy ||
+                            _viewModel.isLoading ||
+                            (_currentStep == 0 &&
+                                (_selectedDate == null ||
+                                    !_viewModel.isDateSelectable(
+                                      _selectedDate!,
+                                    ))) ||
+                            (_currentStep > 0 && _selectedSlot == null)
+                        ? null
+                        : _continue,
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check),
+                    label: Text(_currentStep == 2 ? 'DA' : 'Nastavi'),
                   ),
-                ),
+                  if (_currentStep > 0) ...[
+                    const SizedBox(height: 10),
+                    OutlinedButton(
+                      key: const Key('booking-back'),
+                      onPressed: _isSubmitting ? null : _goBack,
+                      child: Text(_currentStep == 2 ? 'NE' : 'Nazad'),
+                    ),
+                  ],
+                ],
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  StepState _stepState(int step) {
-    if (_currentStep > step) {
-      return StepState.complete;
-    }
-
-    if (_currentStep == step) {
-      return StepState.editing;
-    }
-
-    return StepState.indexed;
-  }
-
-  Widget _buildTherapistStep() {
-    return _AppointmentCard(
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: const BoxDecoration(
-              color: _appointmentLavender,
-              shape: BoxShape.circle,
-            ),
-            child: TherapistProfileImage(
-              fullName: widget.therapist.fullName,
-              profileImageUrl: widget.therapist.profileImageUrl,
-              radius: 46,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            widget.therapist.fullName,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: _appointmentText,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            widget.therapist.specialization,
-            textAlign: TextAlign.center,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: _appointmentMuted, height: 1.35),
-          ),
-          const SizedBox(height: 16),
-          _SummaryRow(
-            icon: Icons.payments_outlined,
-            label: 'Session price',
-            value: '${widget.therapist.hourlyRate.toStringAsFixed(2)} BAM',
-          ),
-          const _SoftDivider(),
-          _SummaryRow(
-            icon: Icons.schedule,
-            label: 'Duration',
-            value: '60 minutes',
-          ),
-          const _SoftDivider(),
-          _SummaryRow(
-            icon: Icons.video_call_outlined,
-            label: 'Available options',
-            value: _availableModesLabel,
-          ),
-        ],
       ),
     );
   }
@@ -759,21 +465,17 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _StepIntro(
-            icon: Icons.calendar_month_outlined,
-            title: 'Choose an appointment date',
-            message: 'Only days with published availability can be selected.',
+          const Text(
+            'Datumi i vrijeme prikazani su u vremenskoj zoni Europe/Sarajevo.',
           ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: _viewModel.isLoading ? null : _pickDate,
-            icon: const Icon(Icons.calendar_month),
-            label: Text(
-              _selectedDate == null
-                  ? 'Choose an available date'
-                  : DateFormat('EEEE, dd.MM.yyyy.').format(_selectedDate!),
-              overflow: TextOverflow.ellipsis,
-            ),
+          if (_viewModel.availabilities.isEmpty)
+            const Text('Terapeut još nije objavio raspored.'),
+          BookingCalendar(
+            today: _viewModel.today,
+            lastDate: _viewModel.lastBookingDate,
+            selectedDate: _selectedDate,
+            isSelectable: _viewModel.isDateSelectable,
+            onSelected: _selectDate,
           ),
         ],
       ),
@@ -781,80 +483,54 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
   }
 
   Widget _buildTimeStep() {
-    if (_selectedDate == null) {
-      return const _AppointmentCard(
-        child: _StepIntro(
-          icon: Icons.event_available_outlined,
-          title: 'Date first',
-          message: 'Choose a date before selecting an appointment time.',
-        ),
-      );
-    }
-
     if (_viewModel.isLoadingSlots) {
-      return const _AppointmentCard(
-        child: AppInlineLoadingIndicator(message: 'Loading available times...'),
+      return const AppInlineLoadingIndicator(message: 'Učitavanje termina...');
+    }
+    if (_viewModel.bookingSlots.isEmpty) {
+      return const AppInlineEmptyState(
+        icon: Icons.event_busy_outlined,
+        message:
+            'Za odabrani datum nema ponuđenih termina. Izaberite drugi datum.',
       );
     }
-
-    if (_viewModel.availableSlots.isEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const AppInlineEmptyState(
-            icon: Icons.event_busy_outlined,
-            message: 'There are no available times on this date.',
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: _pickDate,
-            icon: const Icon(Icons.calendar_month),
-            label: const Text('Choose another date'),
-          ),
-        ],
-      );
-    }
-
     return _AppointmentCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _StepIntro(
-            icon: Icons.schedule_outlined,
-            title: DateFormat('EEEE, dd.MM.yyyy.').format(_selectedDate!),
-            message: 'Select the time that works best for you.',
-          ),
+          Text(DateFormat('dd.MM.yyyy.').format(_selectedDate!)),
+          const Text('Europe/Sarajevo · 60 minuta'),
+          if (_viewModel.availableSlots.isEmpty)
+            const Text('Svi ponuđeni termini su zauzeti.'),
           const SizedBox(height: 16),
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: _viewModel.availableSlots.map((slot) {
+            children: _viewModel.bookingSlots.map((slot) {
               final selected =
-                  _selectedSlot != null && _isSameSlot(_selectedSlot!, slot);
-
-              return ChoiceChip(
-                label: Text(DateFormat('HH:mm').format(slot)),
+                  _selectedSlot != null &&
+                  _isSameSlot(_selectedSlot!, slot.start);
+              final label =
+                  '${DateFormat('HH:mm').format(slot.start)} – ${DateFormat('HH:mm').format(slot.end)}';
+              return Semantics(
                 selected: selected,
-                showCheckmark: false,
-                avatar: Icon(
-                  Icons.schedule,
-                  size: 17,
-                  color: selected ? Colors.white : _appointmentPrimary,
+                child: OutlinedButton(
+                  key: Key('slot-${slot.start.toUtc().toIso8601String()}'),
+                  onPressed: slot.isAvailable && !_isSubmitting
+                      ? () => setState(() => _selectedSlot = slot.start)
+                      : null,
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: selected
+                        ? _appointmentPrimary
+                        : _appointmentSurface,
+                    foregroundColor: selected ? Colors.white : _appointmentText,
+                    disabledBackgroundColor: const Color(0xFFD4CEDB),
+                    disabledForegroundColor: const Color(0xFF47404F),
+                  ),
+                  child: Text(
+                    slot.isOccupied ? '$label\nZauzeto' : label,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                selectedColor: _appointmentPrimary,
-                backgroundColor: _appointmentSurface,
-                side: BorderSide(
-                  color: selected ? _appointmentPrimary : _appointmentBorder,
-                ),
-                labelStyle: TextStyle(
-                  color: selected ? Colors.white : _appointmentText,
-                  fontWeight: FontWeight.w700,
-                ),
-                onSelected: (isSelected) {
-                  setState(() {
-                    _selectedSlot = isSelected ? slot : null;
-                  });
-                },
               );
             }).toList(),
           ),
@@ -867,7 +543,7 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
     return RadioGroup<int>(
       groupValue: _type,
       onChanged: (value) {
-        if (value == null) {
+        if (_isSubmitting || value == null) {
           return;
         }
         setState(() {
@@ -903,7 +579,9 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
   Widget _buildNotesStep() {
     return _AppointmentCard(
       child: TextFormField(
+        key: const Key('booking-notes'),
         controller: _notesController,
+        onChanged: (_) => _viewModel.fieldErrors.clear(),
         minLines: 4,
         maxLines: 7,
         maxLength: 2000,
@@ -970,7 +648,7 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
           _SummaryRow(
             icon: Icons.payments_outlined,
             label: 'Price',
-            value: '${widget.therapist.hourlyRate.toStringAsFixed(2)} BAM',
+            value: '${widget.therapist.hourlyRate.toStringAsFixed(2)} USD',
           ),
           const _SoftDivider(),
           _SummaryRow(
@@ -986,22 +664,19 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
   }
 
   Widget _buildConfirmationStep() {
-    return const _AppointmentCard(
-      child: Column(
-        children: [
-          Icon(
-            Icons.verified_user_outlined,
-            size: 42,
-            color: _appointmentPrimary,
-          ),
-          SizedBox(height: 12),
-          Text(
-            'The appointment will only be created after you press "Confirm booking" and confirm the dialog.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _appointmentMuted, height: 1.4),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSessionTypeStep(),
+        const SizedBox(height: 12),
+        _buildNotesStep(),
+        const SizedBox(height: 12),
+        _buildReviewStep(),
+        const SizedBox(height: 12),
+        const Text(
+          'Zahtjev se šalje terapeutu. Plaćanje ili korištenje članarine dostupno je nakon prihvatanja termina.',
+        ),
+      ],
     );
   }
 
@@ -1087,22 +762,6 @@ class _AppointmentCreatePageState extends State<AppointmentCreatePage> {
   String get _sessionTypeLabel {
     return _type == 1 ? 'Online' : 'In person';
   }
-
-  String get _availableModesLabel {
-    if (widget.therapist.offersOnline && widget.therapist.offersInPerson) {
-      return 'Online and in person';
-    }
-
-    if (widget.therapist.offersOnline) {
-      return 'Online';
-    }
-
-    if (widget.therapist.offersInPerson) {
-      return 'In person';
-    }
-
-    return 'Not specified';
-  }
 }
 
 class _SummaryRow extends StatelessWidget {
@@ -1178,7 +837,7 @@ class _BookingProgressHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = (currentStep + 1) / 7;
+    final progress = (currentStep + 1) / 3;
     final slotLabel = selectedSlot == null
         ? 'Choose date and time'
         : DateFormat('dd.MM.yyyy. HH:mm').format(selectedSlot!);
@@ -1221,7 +880,7 @@ class _BookingProgressHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Step ${currentStep + 1} of 7',
+                      'Korak ${currentStep + 1} od 3',
                       style: const TextStyle(
                         color: _appointmentPrimary,
                         fontSize: 12,
@@ -1289,12 +948,14 @@ class _MiniPill extends StatelessWidget {
         children: [
           Icon(icon, size: 15, color: _appointmentPrimary),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              color: _appointmentText,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: _appointmentText,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -1329,58 +990,7 @@ class _AppointmentCard extends StatelessWidget {
           ),
         ],
       ),
-      child: child,
-    );
-  }
-}
-
-class _StepIntro extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String message;
-
-  const _StepIntro({
-    required this.icon,
-    required this.title,
-    required this.message,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: _appointmentLavender,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Icon(icon, color: _appointmentPrimary, size: 21),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: _appointmentText,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                message,
-                style: const TextStyle(color: _appointmentMuted, height: 1.35),
-              ),
-            ],
-          ),
-        ),
-      ],
+      child: Material(type: MaterialType.transparency, child: child),
     );
   }
 }

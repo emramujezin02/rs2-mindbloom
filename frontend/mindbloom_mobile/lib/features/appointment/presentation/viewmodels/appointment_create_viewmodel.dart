@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/error/app_exception.dart';
 import '../../../therapist/data/models/therapist_availability_model.dart';
 import '../../data/models/appointment_create_request.dart';
+import '../../data/models/booking_slot.dart';
 import '../../data/models/occupied_slot_model.dart';
 import '../../data/models/unavailable_date_model.dart';
 import '../../data/repositories/appointment_repository.dart';
@@ -18,6 +19,24 @@ class AppointmentCreateViewModel extends ChangeNotifier {
   }) : _now = now ?? DateTime.now;
 
   final DateTime Function() _now;
+  DateTime get now => AppointmentTimeZone.fromInstant(_now());
+  DateTime get today => DateTime.utc(now.year, now.month, now.day);
+  DateTime get lastBookingDate => today.add(const Duration(days: 365));
+  int? errorStatusCode;
+  int _slotsRequest = 0;
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _slotsRequest++;
+    super.dispose();
+  }
 
   bool isLoading = false;
   bool isLoadingSlots = false;
@@ -47,6 +66,7 @@ class AppointmentCreateViewModel extends ChangeNotifier {
   List<OccupiedSlotModel> occupiedSlots = [];
 
   List<DateTime> availableSlots = [];
+  List<BookingSlot> bookingSlots = [];
 
   Map<DateTime, List<DateTime>> groupedPreviewSlots = {};
 
@@ -146,6 +166,8 @@ class AppointmentCreateViewModel extends ChangeNotifier {
   }
 
   bool isDateSelectable(DateTime date) {
+    final day = DateTime.utc(date.year, date.month, date.day);
+    if (day.isBefore(today) || day.isAfter(lastBookingDate)) return false;
     return _buildAvailableSlotsForDate(
       date: date,
       dailyOccupiedSlots: [],
@@ -156,24 +178,34 @@ class AppointmentCreateViewModel extends ChangeNotifier {
     required int therapistId,
     required DateTime date,
   }) async {
+    final request = ++_slotsRequest;
     isLoadingSlots = true;
     error = null;
+    errorStatusCode = null;
     occupiedSlots = [];
     availableSlots = [];
+    bookingSlots = [];
     notifyListeners();
 
     try {
-      occupiedSlots = await repository.getOccupiedSlots(
+      final occupied = await repository.getOccupiedSlots(
         therapistId: therapistId,
         date: date,
       );
 
-      availableSlots = _buildAvailableSlotsForDate(
+      if (_disposed || request != _slotsRequest) return;
+      occupiedSlots = occupied;
+      bookingSlots = _buildSlotsForDate(
         date: date,
         dailyOccupiedSlots: occupiedSlots,
       );
+      availableSlots = bookingSlots
+          .where((slot) => slot.isAvailable)
+          .map((slot) => slot.start)
+          .toList();
     } catch (exception) {
-      error = exception.toString();
+      if (_disposed || request != _slotsRequest) return;
+      _setError(exception, fallback: 'Termine nije moguće učitati.');
     }
 
     isLoadingSlots = false;
@@ -183,6 +215,14 @@ class AppointmentCreateViewModel extends ChangeNotifier {
   List<DateTime> _buildAvailableSlotsForDate({
     required DateTime date,
     required List<OccupiedSlotModel> dailyOccupiedSlots,
+  }) => _buildSlotsForDate(
+    date: date,
+    dailyOccupiedSlots: dailyOccupiedSlots,
+  ).where((slot) => slot.isAvailable).map((slot) => slot.start).toList();
+
+  List<BookingSlot> _buildSlotsForDate({
+    required DateTime date,
+    required List<OccupiedSlotModel> dailyOccupiedSlots,
   }) {
     final backendDayOfWeek = _toBackendDayOfWeek(date.weekday);
 
@@ -190,7 +230,7 @@ class AppointmentCreateViewModel extends ChangeNotifier {
         .where((availability) => availability.dayOfWeek == backendDayOfWeek)
         .toList();
 
-    final slots = <DateTime>[];
+    final slots = <int, BookingSlot>{};
 
     for (final availability in dailyAvailabilities) {
       final startParts = _parseTime(availability.startTime);
@@ -245,7 +285,7 @@ class AppointmentCreateViewModel extends ChangeNotifier {
           continue;
         }
 
-        final isPast = slotStart.isBefore(_now());
+        final isPast = !slotStart.isAfter(_now());
 
         final isOccupied = dailyOccupiedSlots.any((occupiedSlot) {
           final occupiedStart = occupiedSlot.startUtc.toUtc();
@@ -265,15 +305,17 @@ class AppointmentCreateViewModel extends ChangeNotifier {
               slotEnd.isAfter(unavailableStart);
         });
 
-        if (!isPast && !isOccupied && !isUnavailable) {
-          slots.add(slotStart);
+        if (!isPast && !isUnavailable) {
+          slots[slotStart.microsecondsSinceEpoch] = BookingSlot(
+            start: slotStart,
+            end: slotEnd,
+            isOccupied: isOccupied,
+          );
         }
       }
     }
 
-    slots.sort();
-
-    return slots;
+    return slots.values.toList()..sort((a, b) => a.start.compareTo(b.start));
   }
 
   Future<bool> createAppointment({
@@ -292,6 +334,7 @@ class AppointmentCreateViewModel extends ChangeNotifier {
     isLoading = true;
     error = null;
     fieldErrors = {};
+    errorStatusCode = null;
 
     notifyListeners();
 
@@ -335,13 +378,19 @@ class AppointmentCreateViewModel extends ChangeNotifier {
       DateTime.utc(now.year, now.month, now.day + daysAhead),
     )!.toUtc();
 
-    final response = await repository.getTherapistUnavailableDates(
-      therapistId: therapistId,
-      fromUtc: rangeStart,
-      toUtc: rangeEnd,
-    );
-
-    return response.items;
+    final result = <UnavailableDateModel>[];
+    var page = 1;
+    while (true) {
+      final response = await repository.getTherapistUnavailableDates(
+        therapistId: therapistId,
+        fromUtc: rangeStart,
+        toUtc: rangeEnd,
+        pageNumber: page,
+      );
+      result.addAll(response.items);
+      if (!response.hasNextPage) return result;
+      page++;
+    }
   }
 
   static (int, int)? _parseTime(String value) {
@@ -364,6 +413,7 @@ class AppointmentCreateViewModel extends ChangeNotifier {
 
   void _setError(Object exception, {required String fallback}) {
     if (exception is AppException) {
+      errorStatusCode = exception.statusCode;
       error = exception.message.trim().isEmpty
           ? fallback
           : exception.message.trim();
