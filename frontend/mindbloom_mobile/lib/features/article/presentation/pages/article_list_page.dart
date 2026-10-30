@@ -11,6 +11,7 @@ import '../../data/models/article_category_model.dart';
 import '../../data/models/article_model.dart';
 import '../viewmodels/article_viewmodel.dart';
 import '../widgets/article_image.dart';
+import '../widgets/article_pagination.dart';
 
 const _articleBackground = Color(0xFFFCFAFF);
 const _articleSurface = Color(0xFFFFFFFF);
@@ -22,14 +23,15 @@ const _articleBody = Color(0xFF625B6B);
 const _articleRadius = 20.0;
 
 class ArticleListPage extends StatefulWidget {
-  const ArticleListPage({super.key});
+  final ArticleViewModel? viewModel;
+  const ArticleListPage({super.key, this.viewModel});
 
   @override
   State<ArticleListPage> createState() => _ArticleListPageState();
 }
 
 class _ArticleListPageState extends State<ArticleListPage> {
-  final ArticleViewModel _viewModel = AppInjection.createArticleViewModel();
+  late final ArticleViewModel _viewModel;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -39,9 +41,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
   void initState() {
     super.initState();
 
+    _viewModel = widget.viewModel ?? AppInjection.createArticleViewModel();
     _viewModel.addListener(_onViewModelChanged);
-
-    _scrollController.addListener(_onScroll);
 
     _viewModel.loadInitialData();
   }
@@ -49,8 +50,6 @@ class _ArticleListPageState extends State<ArticleListPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
-
-    _scrollController.removeListener(_onScroll);
 
     _searchController.dispose();
     _scrollController.dispose();
@@ -65,16 +64,11 @@ class _ArticleListPageState extends State<ArticleListPage> {
     }
   }
 
-  void _onScroll() {
-    if (!_scrollController.hasClients) {
-      return;
-    }
-
-    final position = _scrollController.position;
-
-    if (position.pixels >= position.maxScrollExtent - 150) {
-      _viewModel.loadMore();
-    }
+  Future<void> _changePage(int page) async {
+    await _viewModel.goToPage(page);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scrollController.hasClients) _scrollController.jumpTo(0);
+    });
   }
 
   Future<void> _search() async {
@@ -129,7 +123,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   Widget _buildBody() {
-    if (_viewModel.isLoading && _viewModel.articles.isEmpty) {
+    if (_viewModel.isLoading) {
       return const AppLoadingWidget.skeleton(
         message: 'Loading articles...',
         skeletonItemCount: 5,
@@ -175,25 +169,12 @@ class _ArticleListPageState extends State<ArticleListPage> {
           ..._viewModel.articles.map(
             (article) => _ArticleCard(article: article),
           ),
-          if (_viewModel.isLoadingMore)
-            const AppLoadMoreIndicator(
-              loadingMessage: 'Loading more articles...',
-            )
-          else if (_viewModel.loadMoreError != null)
-            AppLoadMoreError(
-              error: _viewModel.loadMoreError,
-              fallbackMessage: 'More articles could not be loaded.',
-              onRetry: _viewModel.retryLoadMore,
-            )
-          else if (_viewModel.hasMorePages)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              child: OutlinedButton.icon(
-                onPressed: _viewModel.loadMore,
-                icon: const Icon(Icons.expand_more),
-                label: const Text('Load more'),
-              ),
-            ),
+          ArticlePagination(
+            currentPage: _viewModel.pageNumber,
+            totalPages: _viewModel.totalPages,
+            isLoading: _viewModel.isLoading,
+            onPageChanged: _changePage,
+          ),
           const Padding(
             padding: EdgeInsets.only(top: 20),
             child: PublicFooter(),

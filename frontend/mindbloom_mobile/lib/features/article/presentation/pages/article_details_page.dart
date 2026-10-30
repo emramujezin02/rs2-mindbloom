@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../app/router/app_router.dart';
 import '../../../../core/widgets/app_empty_state_widget.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../../../../core/widgets/app_loading_widget.dart';
@@ -43,6 +44,14 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     _viewModel = widget.viewModel ?? AppInjection.createArticleViewModel();
     _viewModel.addListener(_onViewModelChanged);
     _viewModel.loadArticleDetails(widget.articleId);
+  }
+
+  @override
+  void didUpdateWidget(covariant ArticleDetailsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.articleId != widget.articleId) {
+      _viewModel.loadArticleDetails(widget.articleId);
+    }
   }
 
   @override
@@ -110,6 +119,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     return RefreshIndicator(
       onRefresh: _reload,
       child: ListView(
+        key: ValueKey('article-details-${article.id}'),
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.zero,
         children: [
@@ -122,7 +132,69 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
             ),
           _ArticleHeader(article: article),
           _ArticleBody(article: article),
+          _buildRelatedArticles(),
           const PublicFooter(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRelatedArticles() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Related articles',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: _detailText,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_viewModel.isLoadingRelated)
+            const LinearProgressIndicator()
+          else if (_viewModel.relatedError != null)
+            AppInlineError(
+              error: _viewModel.relatedError,
+              onRetry: _viewModel.loadRelatedArticles,
+            )
+          else if (_viewModel.relatedArticles.isEmpty)
+            const Text('No related articles are available.')
+          else
+            for (final related in _viewModel.relatedArticles)
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  key: ValueKey('related-article-${related.id}'),
+                  onTap: () => Navigator.of(
+                    context,
+                  ).pushNamed(AppRouter.articleDetails, arguments: related.id),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ArticleImage(
+                          imageUrl: related.imageUrl,
+                          aspectRatio: 16 / 7,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          related.title,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(related.articleCategoryName),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
         ],
       ),
     );
