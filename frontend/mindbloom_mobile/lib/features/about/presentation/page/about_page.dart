@@ -182,7 +182,7 @@ class _MissionVisionSection extends StatelessWidget {
 
           if (isDesktop) {
             return Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(child: missionCard),
                 SizedBox(width: 18),

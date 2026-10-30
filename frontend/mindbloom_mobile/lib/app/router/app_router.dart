@@ -1,3 +1,4 @@
+import '../../features/legal/presentation/pages/public_legal_page.dart';
 import 'package:flutter/material.dart';
 import 'package:mindbloom_mobile/features/about/presentation/page/about_page.dart';
 import 'package:mindbloom_mobile/features/private_journal/presentation/pages/private_journal_page.dart';
@@ -126,6 +127,8 @@ class AppRouter {
   static const String chatDetails = '/chat/details';
   static const String recommendations = '/recommendations';
   static const about = '/about';
+  static const terms = '/terms';
+  static const privacyPolicy = '/privacy-policy';
   static const String therapistDashboard = '/therapist-dashboard';
   static const String therapistAppointments = '/therapist/appointments';
   static const String therapistAppointmentDetails =
@@ -394,7 +397,24 @@ class AppRouter {
         );
 
       case about:
-        return MaterialPageRoute(builder: (_) => const AboutPage());
+        return MaterialPageRoute(
+          builder: (_) => const AboutPage(),
+          settings: settings,
+        );
+
+      case terms:
+        return MaterialPageRoute(
+          builder: (_) =>
+              const PublicLegalPage(document: PublicLegalDocument.terms),
+          settings: settings,
+        );
+
+      case privacyPolicy:
+        return MaterialPageRoute(
+          builder: (_) =>
+              const PublicLegalPage(document: PublicLegalDocument.privacy),
+          settings: settings,
+        );
 
       case therapistClients:
         return MaterialPageRoute(
