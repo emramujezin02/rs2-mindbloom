@@ -2,6 +2,7 @@
 
 public class CreateReviewDto
 {
+    public bool ShareAuthorDemographics { get; set; }
     public int AppointmentId { get; set; }
 
     public int Rating { get; set; }

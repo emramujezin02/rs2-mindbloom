@@ -305,6 +305,8 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
   }
 
   Future<bool> createTherapyApproach({
+    int? featuredArticleId,
+    bool updateFeaturedArticle = false,
     required String name,
     String? description,
     required bool isActive,
@@ -319,6 +321,8 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
     try {
       await repository.createTherapyApproach(
+        featuredArticleId: featuredArticleId,
+        updateFeaturedArticle: updateFeaturedArticle,
         name: name,
         description: description,
         isActive: isActive,
@@ -340,6 +344,8 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
 
   Future<bool> updateTherapyApproach({
     required int id,
+    int? featuredArticleId,
+    bool updateFeaturedArticle = false,
     required String name,
     String? description,
   }) async {
@@ -354,6 +360,8 @@ class ReferenceDataManagementViewModel extends ChangeNotifier {
     try {
       await repository.updateTherapyApproach(
         id: id,
+        featuredArticleId: featuredArticleId,
+        updateFeaturedArticle: updateFeaturedArticle,
         name: name,
         description: description,
       );

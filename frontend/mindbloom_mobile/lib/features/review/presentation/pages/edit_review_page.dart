@@ -8,16 +8,17 @@ import '../viewmodels/create_review_viewmodel.dart';
 
 class EditReviewPage extends StatefulWidget {
   final ReviewModel review;
+  final CreateReviewViewModel? viewModel;
 
-  const EditReviewPage({super.key, required this.review});
+  const EditReviewPage({super.key, this.viewModel, required this.review});
 
   @override
   State<EditReviewPage> createState() => _EditReviewPageState();
 }
 
 class _EditReviewPageState extends State<EditReviewPage> {
-  final CreateReviewViewModel _viewModel =
-      AppInjection.createCreateReviewViewModel();
+  late final CreateReviewViewModel _viewModel;
+  bool _shareAuthorDemographics = false;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -28,6 +29,8 @@ class _EditReviewPageState extends State<EditReviewPage> {
   @override
   void initState() {
     super.initState();
+    _viewModel = widget.viewModel ?? AppInjection.createCreateReviewViewModel();
+    _shareAuthorDemographics = widget.review.shareAuthorDemographics;
 
     _rating = widget.review.rating;
     _commentController = TextEditingController(text: widget.review.comment);
@@ -60,6 +63,7 @@ class _EditReviewPageState extends State<EditReviewPage> {
     final success = await _viewModel.updateReview(
       reviewId: widget.review.id,
       rating: _rating,
+      shareAuthorDemographics: _shareAuthorDemographics,
       comment: _commentController.text.trim(),
     );
 
@@ -72,8 +76,13 @@ class _EditReviewPageState extends State<EditReviewPage> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Review updated and submitted for moderation again.'),
+      SnackBar(
+        content: Text(
+          _rating == widget.review.rating &&
+                  _commentController.text.trim() == widget.review.comment
+              ? 'Review privacy preferences updated.'
+              : 'Review updated and submitted for moderation again.',
+        ),
       ),
     );
 
@@ -92,7 +101,7 @@ class _EditReviewPageState extends State<EditReviewPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'Updating a review sends it through moderation again.',
+                'Changes to the rating or comment require moderation again. Privacy preferences can be changed at any time.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
@@ -138,6 +147,23 @@ class _EditReviewPageState extends State<EditReviewPage> {
                   return _viewModel.fieldError('Comment') ??
                       AppValidators.reviewComment(value);
                 },
+              ),
+              CheckboxListTile(
+                key: const Key('review-demographics-consent'),
+                contentPadding: EdgeInsets.zero,
+                value: _shareAuthorDemographics,
+                onChanged: _viewModel.isLoading
+                    ? null
+                    : (value) => setState(
+                        () => _shareAuthorDemographics = value ?? false,
+                      ),
+                title: const Text(
+                  'Share my gender and age with this public review',
+                ),
+                subtitle: const Text(
+                  'Optional. Shown only for adults with a public profile. You can withdraw consent by editing your review.',
+                ),
+                controlAffinity: ListTileControlAffinity.leading,
               ),
               if (_viewModel.error != null) ...[
                 const SizedBox(height: 12),

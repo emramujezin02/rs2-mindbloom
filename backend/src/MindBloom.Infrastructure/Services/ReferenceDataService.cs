@@ -306,6 +306,7 @@ public partial class ReferenceDataService : IReferenceDataService
                 {
                     Id =
                         x.Id,
+                    FeaturedArticleId = x.FeaturedArticle != null && !x.FeaturedArticle.IsDeleted && x.FeaturedArticle.IsPublished ? x.FeaturedArticleId : null,
 
                     Name =
                         x.Name,
@@ -400,6 +401,7 @@ public partial class ReferenceDataService : IReferenceDataService
                 .Select(x =>
                     new TherapyApproachResponseDto
                     {
+                        FeaturedArticleId = x.FeaturedArticleId,
                         Id =
                             x.Id,
 
@@ -518,9 +520,11 @@ public partial class ReferenceDataService : IReferenceDataService
                 "A therapy approach with the same name already exists.");
         }
 
+        await ValidateFeaturedArticleAsync(request.FeaturedArticleId, cancellationToken);
         var approach =
             new TherapyApproach
             {
+                FeaturedArticleId = request.FeaturedArticleId,
                 Name =
                     name,
 
@@ -577,6 +581,13 @@ public partial class ReferenceDataService : IReferenceDataService
         {
             throw new BusinessException(
                 "A therapy approach with the same name already exists.");
+        }
+
+        if (request.UpdateFeaturedArticle || request.FeaturedArticleId.HasValue)
+        {
+            if (request.FeaturedArticleId != approach.FeaturedArticleId)
+                await ValidateFeaturedArticleAsync(request.FeaturedArticleId, cancellationToken);
+            approach.FeaturedArticleId = request.FeaturedArticleId;
         }
 
         approach.Name =
@@ -1165,6 +1176,12 @@ public partial class ReferenceDataService : IReferenceDataService
         return approach;
     }
 
+    private async Task ValidateFeaturedArticleAsync(int? id, CancellationToken cancellationToken)
+    {
+        if (id.HasValue && !await _context.Articles.AnyAsync(x => x.Id == id && !x.IsDeleted && x.IsPublished, cancellationToken))
+            throw new BadRequestException("Choose an existing published article.");
+    }
+
     private static TherapyApproachResponseDto
     MapTherapyApproachResponse(
         TherapyApproach approach,
@@ -1175,6 +1192,7 @@ public partial class ReferenceDataService : IReferenceDataService
         {
             Id =
                 approach.Id,
+            FeaturedArticleId = approach.FeaturedArticleId,
 
             Name =
                 approach.Name,

@@ -10,16 +10,21 @@ import '../viewmodels/create_review_viewmodel.dart';
 
 class CreateReviewPage extends StatefulWidget {
   final AppointmentModel appointment;
+  final CreateReviewViewModel? viewModel;
 
-  const CreateReviewPage({super.key, required this.appointment});
+  const CreateReviewPage({
+    super.key,
+    this.viewModel,
+    required this.appointment,
+  });
 
   @override
   State<CreateReviewPage> createState() => _CreateReviewPageState();
 }
 
 class _CreateReviewPageState extends State<CreateReviewPage> {
-  final CreateReviewViewModel _viewModel =
-      AppInjection.createCreateReviewViewModel();
+  late final CreateReviewViewModel _viewModel;
+  bool _shareAuthorDemographics = false;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -30,6 +35,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
   @override
   void initState() {
     super.initState();
+    _viewModel = widget.viewModel ?? AppInjection.createCreateReviewViewModel();
 
     _viewModel.addListener(_refresh);
     _viewModel.checkEligibility(widget.appointment.id);
@@ -64,6 +70,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
     final success = await _viewModel.createReview(
       appointmentId: widget.appointment.id,
       rating: _rating,
+      shareAuthorDemographics: _shareAuthorDemographics,
       comment: _commentController.text.trim(),
     );
 
@@ -190,6 +197,23 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
                 return _viewModel.fieldError('Comment') ??
                     AppValidators.reviewComment(value);
               },
+            ),
+            CheckboxListTile(
+              key: const Key('review-demographics-consent'),
+              contentPadding: EdgeInsets.zero,
+              value: _shareAuthorDemographics,
+              onChanged: _viewModel.isLoading
+                  ? null
+                  : (value) => setState(
+                      () => _shareAuthorDemographics = value ?? false,
+                    ),
+              title: const Text(
+                'Share my gender and age with this public review',
+              ),
+              subtitle: const Text(
+                'Optional. Shown only for adults with a public profile. You can withdraw consent by editing your review.',
+              ),
+              controlAffinity: ListTileControlAffinity.leading,
             ),
             if (_viewModel.error != null) ...[
               const SizedBox(height: 12),

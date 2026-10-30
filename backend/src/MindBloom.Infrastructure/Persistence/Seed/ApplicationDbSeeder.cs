@@ -2915,6 +2915,7 @@ public static class ApplicationDbSeeder
         if (seededAdmin != null)
         {
             var articleSeeds =
+                // New approach articles are additive; retain all existing general articles.
                 new[]
                 {
             new Article
@@ -3076,6 +3077,7 @@ public static class ApplicationDbSeeder
             }
 
             await context.SaveChangesAsync();
+            await TherapyApproachArticleSeeder.SeedAsync(context, seededAdmin.Id);
         }
 
         var workshopAdmin =

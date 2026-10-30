@@ -25,7 +25,8 @@ const _landingBody = Color(0xFF625B6B);
 const _landingCardRadius = 20.0;
 
 class LandingPage extends StatefulWidget {
-  const LandingPage({super.key});
+  final LandingPageViewModel? viewModel;
+  const LandingPage({super.key, this.viewModel});
 
   @override
   State<LandingPage> createState() => _LandingPageState();
@@ -46,11 +47,11 @@ class _LandingPageState extends State<LandingPage> {
   void initState() {
     super.initState();
 
-    viewModel = AppInjection.createLandingPageViewModel();
+    viewModel = widget.viewModel ?? AppInjection.createLandingPageViewModel();
     viewModel.addListener(_onViewModelChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      viewModel.loadLandingData();
+      if (mounted) viewModel.loadLandingData();
     });
   }
 
@@ -185,6 +186,10 @@ class _LandingPageState extends State<LandingPage> {
                           errorMessage: viewModel.therapyApproachErrorMessage,
                           onRetry: viewModel.retryTherapyApproaches,
                           onApproachSelected: _openTherapistsByApproach,
+                          onLearnMore: (approach) {
+                            final id = approach.featuredArticleId;
+                            if (id != null) _openArticleDetails(id);
+                          },
                           onReadArticles: _openArticles,
                         ),
                       ),
@@ -301,12 +306,17 @@ class _LandingNavigation extends StatelessWidget {
                   );
                 },
               ),
-            InkWell(
-              onTap: onHome,
-              borderRadius: BorderRadius.circular(14),
-              child: const Padding(
-                padding: EdgeInsets.all(8),
-                child: _MindBloomLogo(),
+            Flexible(
+              child: InkWell(
+                onTap: onHome,
+                borderRadius: BorderRadius.circular(14),
+                child: const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: _MindBloomLogo(),
+                  ),
+                ),
               ),
             ),
             const Spacer(),
@@ -727,6 +737,7 @@ class _TherapySection extends StatelessWidget {
   final String? errorMessage;
   final Future<void> Function() onRetry;
   final ValueChanged<TherapyApproachModel> onApproachSelected;
+  final ValueChanged<TherapyApproachModel> onLearnMore;
   final VoidCallback onReadArticles;
 
   const _TherapySection({
@@ -735,6 +746,7 @@ class _TherapySection extends StatelessWidget {
     required this.errorMessage,
     required this.onRetry,
     required this.onApproachSelected,
+    required this.onLearnMore,
     required this.onReadArticles,
   });
 
@@ -777,6 +789,7 @@ class _TherapySection extends StatelessWidget {
                   width: itemWidth,
                   child: _TherapyCard(
                     approach: approach,
+                    onLearnMore: () => onLearnMore(approach),
                     onTap: () {
                       onApproachSelected(approach);
                     },
@@ -795,7 +808,12 @@ class _TherapyCard extends StatelessWidget {
   final TherapyApproachModel approach;
   final VoidCallback onTap;
 
-  const _TherapyCard({required this.approach, required this.onTap});
+  final VoidCallback onLearnMore;
+  const _TherapyCard({
+    required this.approach,
+    required this.onTap,
+    required this.onLearnMore,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -807,54 +825,51 @@ class _TherapyCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(_landingCardRadius),
         side: const BorderSide(color: _landingBorder),
       ),
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _ApproachIcon(iconUrl: approach.iconUrl),
-              const SizedBox(height: 16),
-              Text(
-                approach.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: _landingText,
-                ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ApproachIcon(iconUrl: approach.iconUrl),
+            const SizedBox(height: 16),
+            Text(
+              approach.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: _landingText,
               ),
-              const SizedBox(height: 9),
-              Text(
-                approach.description.trim().isEmpty
-                    ? 'Learn more about this therapeutic approach.'
-                    : approach.description,
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: _landingBody, height: 1.45),
+            ),
+            const SizedBox(height: 9),
+            Text(
+              approach.description.trim().isEmpty
+                  ? 'Learn more about this therapeutic approach.'
+                  : approach.description,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: _landingBody, height: 1.45),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              key: ValueKey('approach-article-${approach.id}'),
+              onPressed: approach.featuredArticleId == null
+                  ? null
+                  : onLearnMore,
+              child: const Text('SAZNAJ VIŠE'),
+            ),
+            if (approach.featuredArticleId == null)
+              const Text(
+                'Article not available',
+                style: TextStyle(color: _landingBody),
               ),
-              const SizedBox(height: 16),
-              const Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      'View therapists',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: _landingPrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 5),
-                  Icon(Icons.arrow_forward, size: 18, color: _landingPrimary),
-                ],
-              ),
-            ],
-          ),
+            TextButton(
+              key: ValueKey('approach-therapists-${approach.id}'),
+              onPressed: onTap,
+              child: const Text('PRONAĐI TERAPEUTA'),
+            ),
+          ],
         ),
       ),
     );
@@ -1254,6 +1269,17 @@ class _ReviewCard extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
             ),
+            if (review.authorGender != null || review.authorAge != null)
+              Text(
+                [
+                  if (review.authorGender != null) review.authorGender!,
+                  if (review.authorAge != null && review.authorAge! > 0)
+                    '${review.authorAge} years old',
+                ].join(' · '),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: _landingBody, fontSize: 13),
+              ),
             const SizedBox(height: 5),
             Row(
               children: [

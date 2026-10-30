@@ -1,5 +1,6 @@
 class TherapyApproachModel {
   final int id;
+  final int? featuredArticleId;
   final String name;
   final String description;
   final String? iconUrl;
@@ -7,6 +8,7 @@ class TherapyApproachModel {
 
   const TherapyApproachModel({
     required this.id,
+    this.featuredArticleId,
     required this.name,
     required this.description,
     required this.iconUrl,
@@ -16,6 +18,9 @@ class TherapyApproachModel {
   factory TherapyApproachModel.fromJson(Map<String, dynamic> json) {
     return TherapyApproachModel(
       id: _parseInt(json['id']),
+      featuredArticleId: int.tryParse(
+        json['featuredArticleId']?.toString() ?? '',
+      ),
       name: (json['name'] ?? '').toString().trim(),
       description: (json['description'] ?? '').toString().trim(),
       iconUrl: _parseNullableString(json['iconUrl']),

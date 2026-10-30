@@ -1,3 +1,4 @@
+import '../widgets/featured_article_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mindbloom_desktop/core/widgets/admin_page_header.dart';
@@ -287,6 +288,8 @@ class _ReferenceDataManagementPageState
     }
 
     final success = await _viewModel.createTherapyApproach(
+      featuredArticleId: result.featuredArticleId,
+      updateFeaturedArticle: true,
       name: result.name,
       description: result.description,
       isActive: result.isActive,
@@ -324,6 +327,8 @@ class _ReferenceDataManagementPageState
 
     final success = await _viewModel.updateTherapyApproach(
       id: approach.id,
+      featuredArticleId: result.featuredArticleId,
+      updateFeaturedArticle: true,
       name: result.name,
       description: result.description,
     );
@@ -1579,6 +1584,7 @@ class _TherapyApproachFormDialogState
   late final TextEditingController _descriptionController;
 
   late bool _isActive;
+  int? _featuredArticleId;
 
   bool get _isEditing => widget.approach != null;
 
@@ -1593,6 +1599,7 @@ class _TherapyApproachFormDialogState
     );
 
     _isActive = widget.approach?.isActive ?? true;
+    _featuredArticleId = widget.approach?.featuredArticleId;
   }
 
   @override
@@ -1611,6 +1618,7 @@ class _TherapyApproachFormDialogState
 
     Navigator.of(context).pop(
       _TherapyApproachFormResult(
+        featuredArticleId: _featuredArticleId,
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
         isActive: _isActive,
@@ -1679,6 +1687,11 @@ class _TherapyApproachFormDialogState
                   );
                 },
               ),
+              FeaturedArticlePicker(
+                repository: AppInjection.createArticleManagementRepository(),
+                selectedId: _featuredArticleId,
+                onChanged: (id) => setState(() => _featuredArticleId = id),
+              ),
               if (!_isEditing) ...[
                 const SizedBox(height: 12),
                 SwitchListTile(
@@ -1717,6 +1730,7 @@ class _TherapyApproachFormDialogState
 }
 
 class _TherapyApproachFormResult {
+  final int? featuredArticleId;
   final String name;
 
   final String? description;
@@ -1724,6 +1738,7 @@ class _TherapyApproachFormResult {
   final bool isActive;
 
   const _TherapyApproachFormResult({
+    this.featuredArticleId,
     required this.name,
     required this.description,
     required this.isActive,

@@ -906,6 +906,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
         builder.Entity<TherapyApproach>(entity =>
         {
+            entity.HasOne(x => x.FeaturedArticle).WithMany()
+                .HasForeignKey(x => x.FeaturedArticleId).OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.Name)
                 .IsRequired()
                 .HasMaxLength(150);
@@ -1103,6 +1105,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
         builder.Entity<Article>(entity =>
         {
+            entity.Property(x => x.SeedKey).HasMaxLength(100);
+            entity.HasIndex(x => x.SeedKey).IsUnique().HasFilter("[SeedKey] IS NOT NULL");
             entity.Property(x => x.Title)
                 .IsRequired()
                 .HasMaxLength(200);
@@ -1529,6 +1533,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
         builder.Entity<Review>(entity =>
         {
+            entity.Property(x => x.ShareAuthorDemographics).HasDefaultValue(false);
             entity.Property(x => x.Comment)
                 .IsRequired()
                 .HasMaxLength(1000);

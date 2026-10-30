@@ -22,19 +22,25 @@ const _detailRadius = 22.0;
 
 class ArticleDetailsPage extends StatefulWidget {
   final int articleId;
+  final ArticleViewModel? viewModel;
 
-  const ArticleDetailsPage({super.key, required this.articleId});
+  const ArticleDetailsPage({
+    super.key,
+    this.viewModel,
+    required this.articleId,
+  });
 
   @override
   State<ArticleDetailsPage> createState() => _ArticleDetailsPageState();
 }
 
 class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
-  final ArticleViewModel _viewModel = AppInjection.createArticleViewModel();
+  late final ArticleViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
+    _viewModel = widget.viewModel ?? AppInjection.createArticleViewModel();
     _viewModel.addListener(_onViewModelChanged);
     _viewModel.loadArticleDetails(widget.articleId);
   }

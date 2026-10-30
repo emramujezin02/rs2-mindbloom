@@ -193,6 +193,8 @@ class ReferenceDataApiService {
   }
 
   Future<TherapyApproachModel> createTherapyApproach({
+    int? featuredArticleId,
+    bool updateFeaturedArticle = false,
     required String name,
     String? description,
     required bool isActive,
@@ -200,6 +202,8 @@ class ReferenceDataApiService {
     final response = await apiClient.post(
       '/reference-data/therapy-approaches',
       body: {
+        'featuredArticleId': featuredArticleId,
+        'updateFeaturedArticle': updateFeaturedArticle,
         'name': name.trim(),
         'description': _normalizeOptionalText(description),
         'isActive': isActive,
@@ -215,12 +219,16 @@ class ReferenceDataApiService {
 
   Future<TherapyApproachModel> updateTherapyApproach({
     required int id,
+    int? featuredArticleId,
+    bool updateFeaturedArticle = false,
     required String name,
     String? description,
   }) async {
     final response = await apiClient.put(
       '/reference-data/therapy-approaches/$id',
       body: {
+        'featuredArticleId': featuredArticleId,
+        'updateFeaturedArticle': updateFeaturedArticle,
         'name': name.trim(),
         'description': _normalizeOptionalText(description),
       },

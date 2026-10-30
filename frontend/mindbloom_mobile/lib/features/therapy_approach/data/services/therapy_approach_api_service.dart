@@ -7,7 +7,10 @@ class TherapyApproachApiService {
   TherapyApproachApiService({required this.apiClient});
 
   Future<List<TherapyApproachModel>> getPublicTherapyApproaches() async {
-    final response = await apiClient.get('/TherapyApproaches/public');
+    final response = await apiClient.get(
+      '/TherapyApproaches/public',
+      requiresAuth: false,
+    );
 
     final dynamic items;
 

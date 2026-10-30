@@ -45,6 +45,7 @@ class CreateReviewViewModel extends ChangeNotifier {
   }
 
   Future<bool> createReview({
+    bool shareAuthorDemographics = false,
     required int appointmentId,
     required int rating,
     required String comment,
@@ -62,6 +63,7 @@ class CreateReviewViewModel extends ChangeNotifier {
       await repository.createReview(
         CreateReviewRequest(
           appointmentId: appointmentId,
+          shareAuthorDemographics: shareAuthorDemographics,
           rating: rating,
           comment: comment.trim(),
         ),
@@ -79,6 +81,7 @@ class CreateReviewViewModel extends ChangeNotifier {
   }
 
   Future<bool> updateReview({
+    bool? shareAuthorDemographics,
     required int reviewId,
     required int rating,
     required String comment,
@@ -95,7 +98,11 @@ class CreateReviewViewModel extends ChangeNotifier {
     try {
       await repository.updateReview(
         reviewId: reviewId,
-        request: UpdateReviewRequest(rating: rating, comment: comment.trim()),
+        request: UpdateReviewRequest(
+          rating: rating,
+          comment: comment.trim(),
+          shareAuthorDemographics: shareAuthorDemographics,
+        ),
       );
 
       error = null;

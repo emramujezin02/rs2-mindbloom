@@ -664,6 +664,10 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Property<DateTime?>("PublishedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("SeedKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<int?>("TherapistId")
                         .HasColumnType("int");
 
@@ -680,6 +684,10 @@ namespace MindBloom.Infrastructure.Migrations
                     b.HasIndex("AuthorUserId");
 
                     b.HasIndex("PublishedAtUtc");
+
+                    b.HasIndex("SeedKey")
+                        .IsUnique()
+                        .HasFilter("[SeedKey] IS NOT NULL");
 
                     b.HasIndex("TherapistId");
 
@@ -1921,6 +1929,11 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Property<int>("Rating")
                         .HasColumnType("int");
 
+                    b.Property<bool>("ShareAuthorDemographics")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<int>("TherapistId")
                         .HasColumnType("int");
 
@@ -2519,6 +2532,9 @@ namespace MindBloom.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<int?>("FeaturedArticleId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -2536,6 +2552,8 @@ namespace MindBloom.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("FeaturedArticleId");
 
                     b.HasIndex("Name")
                         .IsUnique()
@@ -3494,6 +3512,16 @@ namespace MindBloom.Infrastructure.Migrations
                     b.Navigation("AdminUser");
 
                     b.Navigation("Therapist");
+                });
+
+            modelBuilder.Entity("MindBloom.Domain.Entities.TherapyApproach", b =>
+                {
+                    b.HasOne("MindBloom.Domain.Entities.Article", "FeaturedArticle")
+                        .WithMany()
+                        .HasForeignKey("FeaturedArticleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("FeaturedArticle");
                 });
 
             modelBuilder.Entity("MindBloom.Domain.Entities.TwoFactorLoginChallenge", b =>

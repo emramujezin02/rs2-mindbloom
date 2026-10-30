@@ -16,15 +16,17 @@ namespace MindBloom.Infrastructure.Services;
 public class ReviewService : IReviewService
 {
     private readonly ApplicationDbContext _context;
+    private readonly TimeProvider _timeProvider;
 
     private readonly IBusinessNotificationService _businessNotificationService;
 
     public ReviewService(
     ApplicationDbContext context,
     IBusinessNotificationService
-        businessNotificationService)
+        businessNotificationService, TimeProvider? timeProvider = null)
     {
         _context = context;
+        _timeProvider = timeProvider ?? TimeProvider.System;
 
         _businessNotificationService = businessNotificationService;
     }
@@ -78,6 +80,7 @@ public class ReviewService : IReviewService
 
         var review = new Review
         {
+            ShareAuthorDemographics = request.ShareAuthorDemographics,
             ClientId =
                 client.Id,
 
@@ -163,6 +166,9 @@ public class ReviewService : IReviewService
 
                         ClientLastName =
                             x.Client.User.LastName,
+                        x.Client.User.Gender,
+                        x.Client.User.DateOfBirth,
+                        CanShareDemographics = x.ShareAuthorDemographics && x.Client.User.Settings != null && x.Client.User.Settings.ShowProfilePublicly,
 
                         x.Rating,
 
@@ -180,10 +186,13 @@ public class ReviewService : IReviewService
                     })
                 .ToListAsync();
 
+        var today = _timeProvider.GetUtcNow().UtcDateTime.Date;
         return reviews
             .Select(x =>
                 new PublicReviewDto
                 {
+                    AuthorAge = x.CanShareDemographics && PublicReviewDemographics.CalculateAge(x.DateOfBirth, today) is >= 18 ? PublicReviewDemographics.CalculateAge(x.DateOfBirth, today) : null,
+                    AuthorGender = x.CanShareDemographics && PublicReviewDemographics.CalculateAge(x.DateOfBirth, today) is >= 18 ? PublicReviewDemographics.NormalizeGender(x.Gender) : null,
                     Id =
                         x.Id,
 
@@ -534,6 +543,17 @@ public class ReviewService : IReviewService
             review.ClientId == client.Id,
             "You can update only your own review.");
 
+        if (request.ShareAuthorDemographics.HasValue)
+        {
+            review.ShareAuthorDemographics = request.ShareAuthorDemographics.Value;
+            if (review.Rating == request.Rating && review.Comment == request.Comment.Trim())
+            {
+                review.UpdatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
+                await _context.SaveChangesAsync();
+                return;
+            }
+        }
+
         review.Rating =
             request.Rating;
 
@@ -613,6 +633,7 @@ public class ReviewService : IReviewService
                 .Select(x =>
 new ClientReviewDto
 {
+    ShareAuthorDemographics = x.ShareAuthorDemographics,
     Id = x.Id,
 
     AppointmentId =

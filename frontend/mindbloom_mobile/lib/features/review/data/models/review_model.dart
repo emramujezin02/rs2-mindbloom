@@ -1,5 +1,8 @@
 class ReviewModel {
   final int id;
+  final String? authorGender;
+  final int? authorAge;
+  final bool shareAuthorDemographics;
   final int? therapistId;
   final int? appointmentId;
   final String clientName;
@@ -18,6 +21,9 @@ class ReviewModel {
 
   const ReviewModel({
     required this.id,
+    this.authorGender,
+    this.authorAge,
+    this.shareAuthorDemographics = false,
     this.therapistId,
     this.appointmentId,
     required this.clientName,
@@ -46,6 +52,9 @@ class ReviewModel {
 
     return ReviewModel(
       id: _parseInt(json['id']),
+      authorGender: _parseNullableString(json['authorGender']),
+      authorAge: _parseNullableInt(json['authorAge']),
+      shareAuthorDemographics: _parseBool(json['shareAuthorDemographics']),
       therapistId: _parseNullableInt(json['therapistId']),
       appointmentId: _parseNullableInt(json['appointmentId']),
       clientName: clientInitials.isNotEmpty ? clientInitials : clientName,

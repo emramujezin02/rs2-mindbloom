@@ -2,6 +2,8 @@
 
 public class TherapyApproach : BaseEntity
 {
+    public int? FeaturedArticleId { get; set; }
+    public Article? FeaturedArticle { get; set; }
     public string Name { get; set; } = string.Empty;
 
     public string? Description { get; set; }

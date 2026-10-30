@@ -2,6 +2,7 @@
 
 public class ClientReviewDto
 {
+    public bool ShareAuthorDemographics { get; set; }
     public int Id { get; set; }
 
     public int AppointmentId { get; set; }

@@ -105,11 +105,15 @@ class ReferenceDataRepository {
   }
 
   Future<TherapyApproachModel> createTherapyApproach({
+    int? featuredArticleId,
+    bool updateFeaturedArticle = false,
     required String name,
     String? description,
     required bool isActive,
   }) {
     return apiService.createTherapyApproach(
+      featuredArticleId: featuredArticleId,
+      updateFeaturedArticle: updateFeaturedArticle,
       name: name,
       description: description,
       isActive: isActive,
@@ -118,11 +122,15 @@ class ReferenceDataRepository {
 
   Future<TherapyApproachModel> updateTherapyApproach({
     required int id,
+    int? featuredArticleId,
+    bool updateFeaturedArticle = false,
     required String name,
     String? description,
   }) {
     return apiService.updateTherapyApproach(
       id: id,
+      featuredArticleId: featuredArticleId,
+      updateFeaturedArticle: updateFeaturedArticle,
       name: name,
       description: description,
     );

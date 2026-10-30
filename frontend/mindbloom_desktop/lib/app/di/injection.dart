@@ -224,7 +224,7 @@ class AppInjection {
     );
   }
 
-  static ArticleManagementRepository _createArticleManagementRepository() {
+  static ArticleManagementRepository createArticleManagementRepository() {
     final apiService = ArticleManagementApiService(apiClient: apiClient);
 
     return ArticleManagementRepository(apiService: apiService);
@@ -232,13 +232,13 @@ class AppInjection {
 
   static ArticleManagementViewModel createArticleManagementViewModel() {
     return ArticleManagementViewModel(
-      repository: _createArticleManagementRepository(),
+      repository: createArticleManagementRepository(),
     );
   }
 
   static ArticleFormViewModel createArticleFormViewModel() {
     return ArticleFormViewModel(
-      repository: _createArticleManagementRepository(),
+      repository: createArticleManagementRepository(),
     );
   }
 

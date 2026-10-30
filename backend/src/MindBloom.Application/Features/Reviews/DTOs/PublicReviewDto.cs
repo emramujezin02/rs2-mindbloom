@@ -2,6 +2,8 @@
 
 public class PublicReviewDto
 {
+    public string? AuthorGender { get; set; }
+    public int? AuthorAge { get; set; }
     public int Id { get; set; }
 
     public string ClientInitials { get; set; } =

@@ -2,6 +2,7 @@
 
 public class CreateTherapyApproachDto
 {
+    public int? FeaturedArticleId { get; set; }
     public string Name { get; set; } =
         string.Empty;
 

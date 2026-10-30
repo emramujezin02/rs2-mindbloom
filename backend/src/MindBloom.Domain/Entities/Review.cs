@@ -4,6 +4,7 @@ namespace MindBloom.Domain.Entities;
 
 public class Review : BaseEntity
 {
+    public bool ShareAuthorDemographics { get; set; }
     public int ClientId { get; set; }
 
     public Client Client { get; set; } = null!;

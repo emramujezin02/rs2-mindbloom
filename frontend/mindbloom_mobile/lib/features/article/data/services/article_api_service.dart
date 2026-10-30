@@ -6,9 +6,7 @@ import '../models/article_paged_response.dart';
 class ArticleApiService {
   final ApiClient apiClient;
 
-  ArticleApiService({
-    required this.apiClient,
-  });
+  ArticleApiService({required this.apiClient});
 
   Future<ArticlePagedResponse> getArticles({
     required int pageNumber,
@@ -16,85 +14,60 @@ class ArticleApiService {
     String? search,
     int? articleCategoryId,
   }) async {
-    final queryParameters =
-        <String, String>{
+    final queryParameters = <String, String>{
       'pageNumber': pageNumber.toString(),
       'pageSize': pageSize.toString(),
     };
 
-    final normalizedSearch =
-        search?.trim() ?? '';
+    final normalizedSearch = search?.trim() ?? '';
 
     if (normalizedSearch.isNotEmpty) {
-      queryParameters['search'] =
-          normalizedSearch;
+      queryParameters['search'] = normalizedSearch;
     }
 
     if (articleCategoryId != null) {
-      queryParameters['articleCategoryId'] =
-          articleCategoryId.toString();
+      queryParameters['articleCategoryId'] = articleCategoryId.toString();
     }
 
-    final uri = Uri(
-      path: '/Articles',
-      queryParameters: queryParameters,
-    );
+    final uri = Uri(path: '/Articles', queryParameters: queryParameters);
 
-    final response =
-        await apiClient.get(
-      uri.toString(),
-    );
+    final response = await apiClient.get(uri.toString(), requiresAuth: false);
 
     if (response is! Map) {
-      throw const FormatException(
-        'Invalid article list response.',
-      );
+      throw const FormatException('Invalid article list response.');
     }
 
-    return ArticlePagedResponse.fromJson(
-      Map<String, dynamic>.from(response),
-    );
+    return ArticlePagedResponse.fromJson(Map<String, dynamic>.from(response));
   }
 
-  Future<ArticleModel> getArticle(
-    int articleId,
-  ) async {
-    final response =
-        await apiClient.get(
+  Future<ArticleModel> getArticle(int articleId) async {
+    final response = await apiClient.get(
       '/Articles/$articleId',
+      requiresAuth: false,
     );
 
     if (response is! Map) {
-      throw const FormatException(
-        'Invalid article response.',
-      );
+      throw const FormatException('Invalid article response.');
     }
 
-    return ArticleModel.fromJson(
-      Map<String, dynamic>.from(response),
-    );
+    return ArticleModel.fromJson(Map<String, dynamic>.from(response));
   }
 
-  Future<List<ArticleCategoryModel>>
-      getCategories() async {
-    final response =
-        await apiClient.get(
+  Future<List<ArticleCategoryModel>> getCategories() async {
+    final response = await apiClient.get(
       '/Articles/categories',
+      requiresAuth: false,
     );
 
     if (response is! List) {
-      throw const FormatException(
-        'Invalid article category response.',
-      );
+      throw const FormatException('Invalid article category response.');
     }
 
     return response
         .whereType<Map>()
         .map(
           (item) =>
-              ArticleCategoryModel.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
+              ArticleCategoryModel.fromJson(Map<String, dynamic>.from(item)),
         )
         .toList();
   }

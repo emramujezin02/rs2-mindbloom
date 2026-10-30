@@ -2,6 +2,8 @@
 
 public class Article : BaseEntity
 {
+    // Internal, stable identity for idempotent educational seeds; not exposed by APIs.
+    public string? SeedKey { get; set; }
     public string Title { get; set; } =
         string.Empty;
 
