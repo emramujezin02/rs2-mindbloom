@@ -454,8 +454,34 @@ Mobile Android APK:
 
 ```powershell
 cd frontend/mindbloom_mobile
-flutter build apk --release --dart-define=API_BASE_URL=http://10.0.2.2:5110 --dart-define=STRIPE_PUBLISHABLE_KEY=<YOUR_STRIPE_TEST_PUBLISHABLE_KEY>
+flutter build apk --release --dart-define=STRIPE_PUBLISHABLE_KEY=<YOUR_STRIPE_TEST_PUBLISHABLE_KEY>
 ```
+
+The Android Release default is `http://10.0.2.2:8080` for the Docker API.
+Plain `flutter build apk --release` also uses this address; without a Stripe
+publishable key the existing payment flow remains unavailable, while login works.
+Debug/Profile keep `http://10.0.2.2:5110` for the local launch profile.
+To run Debug against Docker, pass `--dart-define=API_BASE_URL=http://10.0.2.2:8080`.
+
+Release includes `INTERNET` permission and a network security policy that permits
+cleartext HTTP only to `10.0.2.2`; other destinations must use HTTPS. This address
+is the standard Android emulator's host alias, not a physical phone address.
+`API_BASE_URL` remains available for HTTPS deployments or other environments;
+a physical-device HTTP deployment needs its own explicitly scoped Android policy.
+No TLS/certificate validation is bypassed. Desktop configuration is independent.
+
+Release verification (use the APK produced by the command above):
+
+```powershell
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+adb shell am start -n com.example.mindbloom_mobile/.MainActivity
+```
+
+Use the existing documented mobile demo account to verify login against the
+already-running Docker API on host port 8080. Do not rebuild/recreate Docker
+services for this APK test. The local operational API/Worker containers use
+newer image tags and `Seed__Enabled=false`; the base Compose file alone does
+not preserve those runtime overrides.
 
 Desktop Windows build:
 
