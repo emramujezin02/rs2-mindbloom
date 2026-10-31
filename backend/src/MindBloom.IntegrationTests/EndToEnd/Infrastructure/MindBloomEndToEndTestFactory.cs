@@ -19,6 +19,20 @@ public sealed class MindBloomEndToEndTestFactory
     : WebApplicationFactory<Program>,
       IAsyncLifetime
 {
+    private readonly string? _contentRoot;
+
+    public MindBloomEndToEndTestFactory() { }
+
+    // The standalone GUI runner has no VSTest content-root manifest.
+    public static MindBloomEndToEndTestFactory ForGuiRunner(string contentRoot) => new(contentRoot);
+
+    private MindBloomEndToEndTestFactory(string contentRoot)
+    {
+        _contentRoot = Path.GetFullPath(contentRoot);
+        if (!File.Exists(Path.Combine(_contentRoot, "MindBloom.API.csproj")))
+            throw new ArgumentException("Expected the API project content root.", nameof(contentRoot));
+    }
+
     private readonly MsSqlContainer
         _sqlContainer =
             new MsSqlBuilder()
@@ -34,9 +48,15 @@ public sealed class MindBloomEndToEndTestFactory
         _connectionString =
             string.Empty;
 
+    private string _serverConnectionString = string.Empty;
+    private bool _usesExternalSqlServer;
+    private bool _databaseCreated;
+    private bool _hostInitialized;
+
     protected override void ConfigureWebHost(
         IWebHostBuilder builder)
     {
+        if (_contentRoot is not null) builder.UseContentRoot(_contentRoot);
         builder.UseEnvironment(
             "Testing");
 
@@ -132,16 +152,28 @@ public sealed class MindBloomEndToEndTestFactory
         TestEnvironmentLoader
             .LoadRootDotEnv();
 
-        await _sqlContainer
-            .StartAsync();
-
-        var masterConnectionString =
-            _sqlContainer
-                .GetConnectionString();
+        // Optional low-memory runner: reuse a server, never its application database.
+        // Each fixture still creates and drops only its own generated MindBloomE2E_* database.
+        var externalServer = Environment.GetEnvironmentVariable(
+            "MINDBLOOM_E2E_SQL_SERVER_CONNECTION");
+        _usesExternalSqlServer = !string.IsNullOrWhiteSpace(externalServer);
+        if (_usesExternalSqlServer)
+        {
+            var externalBuilder = new SqlConnectionStringBuilder(externalServer);
+            if (!string.Equals(externalBuilder.InitialCatalog, "master", StringComparison.OrdinalIgnoreCase)
+                || !string.IsNullOrEmpty(externalBuilder.AttachDBFilename))
+                throw new InvalidOperationException("The optional E2E server connection must target master without an attached database file.");
+            _serverConnectionString = externalBuilder.ConnectionString;
+        }
+        else
+        {
+            await _sqlContainer.StartAsync();
+            _serverConnectionString = _sqlContainer.GetConnectionString();
+        }
 
         var connectionBuilder =
             new SqlConnectionStringBuilder(
-                masterConnectionString)
+                _serverConnectionString)
             {
                 InitialCatalog =
                     "master"
@@ -165,6 +197,7 @@ public sealed class MindBloomEndToEndTestFactory
 
             await command
                 .ExecuteNonQueryAsync();
+            _databaseCreated = true;
         }
 
         connectionBuilder
@@ -184,6 +217,7 @@ public sealed class MindBloomEndToEndTestFactory
          * moraju biti spremni prije ove linije.
          */
         _ = Services;
+        _hostInitialized = true;
 
         using var scope =
             Services.CreateScope();
@@ -201,16 +235,18 @@ public sealed class MindBloomEndToEndTestFactory
     {
         try
         {
-            if (!string.IsNullOrWhiteSpace(
-                    _connectionString))
+            if (_databaseCreated)
             {
+                if (!_databaseName.StartsWith("MindBloomE2E_", StringComparison.Ordinal)
+                    || !Guid.TryParseExact(_databaseName["MindBloomE2E_".Length..], "N", out _))
+                    throw new InvalidOperationException("Refusing cleanup of an unowned test database.");
                 /*
                  * Prvo pustimo EF scope prije
                  * brisanja test baze.
                  */
-                using (var scope =
-                       Services.CreateScope())
+                if (_hostInitialized)
                 {
+                    using var scope = Services.CreateScope();
                     var context =
                         scope.ServiceProvider
                             .GetRequiredService<
@@ -222,8 +258,7 @@ public sealed class MindBloomEndToEndTestFactory
 
                 var masterConnectionBuilder =
                     new SqlConnectionStringBuilder(
-                        _sqlContainer
-                            .GetConnectionString())
+                        _serverConnectionString)
                     {
                         InitialCatalog =
                             "master"
@@ -255,14 +290,20 @@ public sealed class MindBloomEndToEndTestFactory
 
                 await command
                     .ExecuteNonQueryAsync();
+                _databaseCreated = false;
             }
         }
         finally
         {
-            await base.DisposeAsync();
-
-            await _sqlContainer
-                .DisposeAsync();
+            try
+            {
+                await base.DisposeAsync();
+            }
+            finally
+            {
+                if (!_usesExternalSqlServer)
+                    await _sqlContainer.DisposeAsync();
+            }
         }
     }
 

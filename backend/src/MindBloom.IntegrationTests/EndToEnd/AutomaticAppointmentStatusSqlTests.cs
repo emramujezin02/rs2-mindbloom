@@ -234,7 +234,19 @@ public sealed class AutomaticAppointmentStatusSqlTests(MindBloomEndToEndTestFact
         Assert.Equal(current, (await db.Appointments.FindAsync(s.Id))!.Status);
         Assert.Contains(current, new[] { AppointmentStatus.Completed, AppointmentStatus.Rejected, AppointmentStatus.Cancelled });
         var events = await Events(db, s.Id);
-        Assert.InRange(events.Count, 0, 1);
+        // Acceptance and completion are separate committed transitions since Task 14.
+        // Match every event to its audit instead of treating both as duplicate completion.
+        var expectedRoutes = audits.Select(a => a.NewStatus switch
+        {
+            AppointmentStatus.Accepted => IntegrationEventRoutingKeys.AppointmentAccepted,
+            AppointmentStatus.Completed => IntegrationEventRoutingKeys.AppointmentCompleted,
+            AppointmentStatus.Rejected => IntegrationEventRoutingKeys.AppointmentRejected,
+            AppointmentStatus.Cancelled => IntegrationEventRoutingKeys.AppointmentCancelled,
+            _ => throw new InvalidOperationException("Unexpected audited transition.")
+        }).OrderBy(x => x).ToArray();
+        Assert.Equal(expectedRoutes, events.Select(x => x.RoutingKey).OrderBy(x => x).ToArray());
+        Assert.All(events.GroupBy(x => x.RoutingKey), group => Assert.Single(group));
+        Assert.InRange(events.Count(x => x.RoutingKey == IntegrationEventRoutingKeys.AppointmentCompleted), 0, 1);
         Assert.InRange(audits.Count(x => x.NewStatus == AppointmentStatus.Completed), 0, 1);
         Assert.Equal(initial == AppointmentStatus.Accepted ? 2 : 3,
             (await db.ClientMemberships.FindAsync(s.MembershipId))!.RemainingSessions);
@@ -244,6 +256,32 @@ public sealed class AutomaticAppointmentStatusSqlTests(MindBloomEndToEndTestFact
             Assert.Single(audits);
             Assert.Single(events);
         }
+    }
+
+    [Fact]
+    public async Task AcceptanceThenAutomaticCompletion_ProducesOneEventPerCommittedTransition()
+    {
+        var scenario = await Seed(AppointmentStatus.Pending, Now.AddDays(-1));
+        using (var scope = factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IAppointmentService>()
+                .UpdateStatusAsync(scenario.TherapistUserId, new UpdateAppointmentStatusDto
+                {
+                    AppointmentId = scenario.Id,
+                    Status = AppointmentStatus.Accepted
+                });
+        }
+        await Run(scenario);
+        await Run(scenario);
+        using var verification = factory.Services.CreateScope();
+        var db = verification.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var statuses = await db.AppointmentStatusAudits.Where(x => x.AppointmentId == scenario.Id)
+            .OrderBy(x => x.Id).Select(x => x.NewStatus).ToListAsync();
+        Assert.Equal(new[] { AppointmentStatus.Accepted, AppointmentStatus.Completed }, statuses);
+        var events = await Events(db, scenario.Id);
+        Assert.Equal(2, events.Count);
+        Assert.Single(events, x => x.RoutingKey == IntegrationEventRoutingKeys.AppointmentAccepted);
+        Assert.Single(events, x => x.RoutingKey == IntegrationEventRoutingKeys.AppointmentCompleted);
     }
 
     private async Task Run(Scenario s, Func<ApplicationDbContext, IOutboxWriter, IOutboxWriter>? decorate = null)
