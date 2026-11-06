@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+
+**/.vs/
+**/.vscode/
+
+.git
+.gitignore
+
+.env
+.env.*
+
+Dockerfile*
+
+README.md

@@ -1,0 +1,60 @@
+﻿namespace MindBloom.Application.Features.Therapists.DTOs;
+
+public class TherapistProfileDto
+{
+    public int? SpecializationId { get; set; }
+    public int? LocationId { get; set; }
+    public string LocationRegion { get; set; } = string.Empty;
+    public bool WorksWithChildren { get; set; }
+
+    public int TherapistId { get; set; }
+
+    public int UserId { get; set; }
+
+    public string FirstName { get; set; } = string.Empty;
+
+    public string LastName { get; set; } = string.Empty;
+
+    public string FullName { get; set; } = string.Empty;
+
+    public string Email { get; set; } = string.Empty;
+
+    public string? PhoneNumber { get; set; }
+
+    public string Biography { get; set; } = string.Empty;
+
+    public string Specialization { get; set; } = string.Empty;
+
+    public int ExperienceYears { get; set; }
+
+    public decimal HourlyRate { get; set; }
+
+    public string Location { get; set; } = string.Empty;
+
+    public string Country { get; set; } = string.Empty;
+
+    public string City { get; set; } = string.Empty;
+
+    public string Address { get; set; } = string.Empty;
+
+    public double? Latitude { get; set; }
+
+    public double? Longitude { get; set; }
+
+    public bool OffersOnline { get; set; }
+
+    public bool OffersInPerson { get; set; }
+
+    public List<string> Languages { get; set; } = [];
+
+    public string? ProfileImageUrl { get; set; }
+
+    public string VerificationStatus { get; set; } = string.Empty;
+    public string? VerificationNotes { get; set; }
+
+    public List<AvailabilityResponseDto> Availabilities { get; set; } = [];
+
+    public List<TherapistProfileTherapyApproachDto>
+        TherapyApproaches
+    { get; set; } = [];
+}

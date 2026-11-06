@@ -1,0 +1,395 @@
+name: mindbloom
+
+services:
+
+  # =========================================================
+  # SQL SERVER
+  # =========================================================
+
+  sql-server:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mindbloom-sql-server
+    restart: unless-stopped
+
+    stop_grace_period: 30s
+
+    mem_limit: 2g
+    cpus: 1.50
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${SQL_SERVER_PASSWORD}"
+
+    ports:
+      - "${SQL_SERVER_PORT:-1433}:1433"
+
+    volumes:
+      - mindbloom-sql-data:/var/opt/mssql
+
+    networks:
+      - mindbloom-network
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" >/dev/null 2>&1 || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" >/dev/null 2>&1 || exit 1"
+        ]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+
+  # =========================================================
+  # RABBITMQ
+  # =========================================================
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: mindbloom-rabbitmq
+    hostname: rabbitmq
+    restart: unless-stopped
+
+    stop_grace_period: 30s
+
+    mem_limit: 1g
+    cpus: 0.75
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USERNAME}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
+      RABBITMQ_DEFAULT_VHOST: "${RABBITMQ_VIRTUAL_HOST:-/}"
+
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+
+    volumes:
+      - mindbloom-rabbitmq-data:/var/lib/rabbitmq
+
+    networks:
+      - mindbloom-network
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "rabbitmq-diagnostics",
+          "-q",
+          "ping"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+
+  # =========================================================
+  # MINDBLOOM API
+  # =========================================================
+
+  api:
+    image: mindbloom-api:${API_IMAGE_VERSION:-${IMAGE_VERSION:-1.1.1-final-20261106}}
+
+    build:
+      context: .
+      dockerfile: backend/src/MindBloom.API/Dockerfile
+
+    container_name: mindbloom-api
+    restart: unless-stopped
+
+    stop_grace_period: 30s
+
+    mem_limit: 768m
+    cpus: 1.00
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
+      DOTNET_ENVIRONMENT: "${DOTNET_ENVIRONMENT:-Development}"
+      ASPNETCORE_URLS: "http://+:8080"
+
+      # Opt in only for the first initialization of a new empty evaluation DB.
+      Seed__Enabled: "${SEED_ENABLED:-false}"
+
+      # -----------------------------------------------------
+      # DATABASE
+      # -----------------------------------------------------
+
+      DB_CONNECTION: "Server=sql-server,1433;Database=${SQL_SERVER_DATABASE};User Id=sa;Password=${SQL_SERVER_PASSWORD};TrustServerCertificate=True;Encrypt=False;"
+
+      ConnectionStrings__DefaultConnection: "Server=sql-server,1433;Database=${SQL_SERVER_DATABASE};User Id=sa;Password=${SQL_SERVER_PASSWORD};TrustServerCertificate=True;Encrypt=False;"
+
+      # -----------------------------------------------------
+      # JWT
+      # -----------------------------------------------------
+
+      JWT_SECRET: "${JWT_SECRET}"
+      JWT_ISSUER: "${JWT_ISSUER}"
+      JWT_AUDIENCE: "${JWT_AUDIENCE}"
+      JWT_EXPIRATION_MINUTES: "${JWT_EXPIRATION_MINUTES}"
+
+      # -----------------------------------------------------
+      # RABBITMQ
+      # -----------------------------------------------------
+
+      RABBITMQ_HOST: "rabbitmq"
+      RABBITMQ_PORT: "5672"
+
+      RABBITMQ_USERNAME: "${RABBITMQ_USERNAME}"
+      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD}"
+      RABBITMQ_VIRTUAL_HOST: "${RABBITMQ_VIRTUAL_HOST:-/}"
+
+      RABBITMQ_CLIENT_NAME: "${RABBITMQ_CLIENT_NAME}"
+      RABBITMQ_WORKER_CLIENT_NAME: "${RABBITMQ_WORKER_CLIENT_NAME}"
+
+      RABBITMQ_NOTIFICATION_EXCHANGE: "${RABBITMQ_NOTIFICATION_EXCHANGE}"
+
+      RABBITMQ_EMAIL_QUEUE: "${RABBITMQ_EMAIL_QUEUE}"
+      RABBITMQ_EMAIL_ROUTING_KEY: "${RABBITMQ_EMAIL_ROUTING_KEY}"
+
+      RABBITMQ_INTEGRATION_EVENT_QUEUE: "${RABBITMQ_INTEGRATION_EVENT_QUEUE}"
+
+      RABBITMQ_RETRY_EXCHANGE: "${RABBITMQ_RETRY_EXCHANGE}"
+
+      RABBITMQ_DEAD_LETTER_EXCHANGE: "${RABBITMQ_DEAD_LETTER_EXCHANGE}"
+
+      RABBITMQ_EMAIL_DEAD_LETTER_QUEUE: "${RABBITMQ_EMAIL_DEAD_LETTER_QUEUE}"
+      RABBITMQ_EMAIL_DEAD_LETTER_ROUTING_KEY: "${RABBITMQ_EMAIL_DEAD_LETTER_ROUTING_KEY}"
+
+      RABBITMQ_INTEGRATION_EVENT_DEAD_LETTER_QUEUE: "${RABBITMQ_INTEGRATION_EVENT_DEAD_LETTER_QUEUE}"
+      RABBITMQ_INTEGRATION_EVENT_DEAD_LETTER_ROUTING_KEY: "${RABBITMQ_INTEGRATION_EVENT_DEAD_LETTER_ROUTING_KEY}"
+
+      RABBITMQ_PREFETCH_COUNT: "${RABBITMQ_PREFETCH_COUNT:-1}"
+      RABBITMQ_MAXIMUM_RETRY_COUNT: "${RABBITMQ_MAXIMUM_RETRY_COUNT:-4}"
+
+      RABBITMQ_AUTOMATIC_RECOVERY: "${RABBITMQ_AUTOMATIC_RECOVERY:-true}"
+      RABBITMQ_RECOVERY_INTERVAL_SECONDS: "${RABBITMQ_RECOVERY_INTERVAL_SECONDS:-5}"
+      RABBITMQ_HEARTBEAT_SECONDS: "${RABBITMQ_HEARTBEAT_SECONDS:-30}"
+
+      RABBITMQ_CONNECTION_RETRY_COUNT: "${RABBITMQ_CONNECTION_RETRY_COUNT:-5}"
+      RABBITMQ_CONNECTION_RETRY_DELAY_SECONDS: "${RABBITMQ_CONNECTION_RETRY_DELAY_SECONDS:-3}"
+
+      RABBITMQ_DLQ_MONITORING_INTERVAL_SECONDS: "${RABBITMQ_DLQ_MONITORING_INTERVAL_SECONDS:-60}"
+      RABBITMQ_DLQ_WARNING_MESSAGE_COUNT: "${RABBITMQ_DLQ_WARNING_MESSAGE_COUNT:-1}"
+      RABBITMQ_MONITORING_INTERVAL_SECONDS: "${RABBITMQ_MONITORING_INTERVAL_SECONDS:-60}"
+
+      # -----------------------------------------------------
+      # STRIPE
+      # -----------------------------------------------------
+
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET}"
+
+      # -----------------------------------------------------
+      # EMAIL
+      # -----------------------------------------------------
+
+      EMAIL_USERNAME: "${EMAIL_USERNAME}"
+      EMAIL_PASSWORD: "${EMAIL_PASSWORD}"
+
+      # -----------------------------------------------------
+      # GOOGLE MAPS
+      # -----------------------------------------------------
+
+      GOOGLE_MAPS_API_KEY: "${GOOGLE_MAPS_API_KEY}"
+
+      # -----------------------------------------------------
+      # UPLOADS
+      # -----------------------------------------------------
+
+      UPLOAD_ROOT_PATH: "${UPLOAD_ROOT_PATH:-uploads}"
+      UPLOAD_MAX_IMAGE_SIZE_MB: "${UPLOAD_MAX_IMAGE_SIZE_MB:-5}"
+      UPLOAD_MAX_DOCUMENT_SIZE_MB: "${UPLOAD_MAX_DOCUMENT_SIZE_MB:-10}"
+
+    ports:
+      - "${API_PORT:-8080}:8080"
+
+    depends_on:
+      sql-server:
+        condition: service_healthy
+
+      rabbitmq:
+        condition: service_healthy
+
+    networks:
+      - mindbloom-network
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl --fail --silent http://localhost:8080/health/ready || exit 1"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+
+  # =========================================================
+  # NOTIFICATIONS WORKER
+  # =========================================================
+
+  notifications-worker:
+    image: mindbloom-worker:${WORKER_IMAGE_VERSION:-${IMAGE_VERSION:-1.1.1}}
+
+    build:
+      context: .
+      dockerfile: backend/src/MindBloom.NotificationsWorker/Dockerfile
+
+    container_name: mindbloom-notifications-worker
+    restart: unless-stopped
+
+    stop_grace_period: 60s
+
+    mem_limit: 512m
+    cpus: 0.75
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
+      DOTNET_ENVIRONMENT: "${DOTNET_ENVIRONMENT:-Development}"
+
+      ASPNETCORE_URLS: "http://+:8080"
+
+      # -----------------------------------------------------
+      # DATABASE
+      # -----------------------------------------------------
+
+      DB_CONNECTION: "Server=sql-server,1433;Database=${SQL_SERVER_DATABASE};User Id=sa;Password=${SQL_SERVER_PASSWORD};TrustServerCertificate=True;Encrypt=False;"
+
+      ConnectionStrings__DefaultConnection: "Server=sql-server,1433;Database=${SQL_SERVER_DATABASE};User Id=sa;Password=${SQL_SERVER_PASSWORD};TrustServerCertificate=True;Encrypt=False;"
+
+      # -----------------------------------------------------
+      # RABBITMQ
+      # -----------------------------------------------------
+
+      RABBITMQ_HOST: "rabbitmq"
+      RABBITMQ_PORT: "5672"
+
+      RABBITMQ_USERNAME: "${RABBITMQ_USERNAME}"
+      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD}"
+      RABBITMQ_VIRTUAL_HOST: "${RABBITMQ_VIRTUAL_HOST:-/}"
+
+      RABBITMQ_CLIENT_NAME: "${RABBITMQ_CLIENT_NAME}"
+      RABBITMQ_WORKER_CLIENT_NAME: "${RABBITMQ_WORKER_CLIENT_NAME}"
+
+      RABBITMQ_NOTIFICATION_EXCHANGE: "${RABBITMQ_NOTIFICATION_EXCHANGE}"
+
+      RABBITMQ_EMAIL_QUEUE: "${RABBITMQ_EMAIL_QUEUE}"
+      RABBITMQ_EMAIL_ROUTING_KEY: "${RABBITMQ_EMAIL_ROUTING_KEY}"
+
+      RABBITMQ_INTEGRATION_EVENT_QUEUE: "${RABBITMQ_INTEGRATION_EVENT_QUEUE}"
+
+      RABBITMQ_RETRY_EXCHANGE: "${RABBITMQ_RETRY_EXCHANGE}"
+
+      RABBITMQ_DEAD_LETTER_EXCHANGE: "${RABBITMQ_DEAD_LETTER_EXCHANGE}"
+
+      RABBITMQ_EMAIL_DEAD_LETTER_QUEUE: "${RABBITMQ_EMAIL_DEAD_LETTER_QUEUE}"
+      RABBITMQ_EMAIL_DEAD_LETTER_ROUTING_KEY: "${RABBITMQ_EMAIL_DEAD_LETTER_ROUTING_KEY}"
+
+      RABBITMQ_INTEGRATION_EVENT_DEAD_LETTER_QUEUE: "${RABBITMQ_INTEGRATION_EVENT_DEAD_LETTER_QUEUE}"
+      RABBITMQ_INTEGRATION_EVENT_DEAD_LETTER_ROUTING_KEY: "${RABBITMQ_INTEGRATION_EVENT_DEAD_LETTER_ROUTING_KEY}"
+
+      RABBITMQ_PREFETCH_COUNT: "${RABBITMQ_PREFETCH_COUNT:-1}"
+      RABBITMQ_MAXIMUM_RETRY_COUNT: "${RABBITMQ_MAXIMUM_RETRY_COUNT:-4}"
+
+      RABBITMQ_AUTOMATIC_RECOVERY: "${RABBITMQ_AUTOMATIC_RECOVERY:-true}"
+      RABBITMQ_RECOVERY_INTERVAL_SECONDS: "${RABBITMQ_RECOVERY_INTERVAL_SECONDS:-5}"
+      RABBITMQ_HEARTBEAT_SECONDS: "${RABBITMQ_HEARTBEAT_SECONDS:-30}"
+
+      RABBITMQ_CONNECTION_RETRY_COUNT: "${RABBITMQ_CONNECTION_RETRY_COUNT:-5}"
+      RABBITMQ_CONNECTION_RETRY_DELAY_SECONDS: "${RABBITMQ_CONNECTION_RETRY_DELAY_SECONDS:-3}"
+
+      RABBITMQ_DLQ_MONITORING_INTERVAL_SECONDS: "${RABBITMQ_DLQ_MONITORING_INTERVAL_SECONDS:-60}"
+      RABBITMQ_DLQ_WARNING_MESSAGE_COUNT: "${RABBITMQ_DLQ_WARNING_MESSAGE_COUNT:-1}"
+      RABBITMQ_MONITORING_INTERVAL_SECONDS: "${RABBITMQ_MONITORING_INTERVAL_SECONDS:-60}"
+
+      # -----------------------------------------------------
+      # EMAIL
+      # -----------------------------------------------------
+
+      EMAIL_USERNAME: "${EMAIL_USERNAME}"
+      EMAIL_PASSWORD: "${EMAIL_PASSWORD}"
+
+      # -----------------------------------------------------
+      # FIREBASE
+      # -----------------------------------------------------
+
+      FIREBASE_CREDENTIALS_PATH: "${FIREBASE_CREDENTIALS_PATH}"
+      FIREBASE_BATCH_SIZE: "${FIREBASE_BATCH_SIZE:-500}"
+      FIREBASE_RETRY_COUNT: "${FIREBASE_RETRY_COUNT:-3}"
+      FIREBASE_RETRY_DELAY_SECONDS: "${FIREBASE_RETRY_DELAY_SECONDS:-2}"
+
+    ports:
+      - "${WORKER_HEALTH_PORT:-8081}:8080"
+
+    depends_on:
+      sql-server:
+        condition: service_healthy
+
+      rabbitmq:
+        condition: service_healthy
+
+    networks:
+      - mindbloom-network
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl --fail --silent http://localhost:8080/health/ready || exit 1"
+        ]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+
+# =========================================================
+# VOLUMES
+# =========================================================
+
+volumes:
+
+  mindbloom-sql-data:
+    name: mindbloom-sql-data
+
+  mindbloom-rabbitmq-data:
+    name: mindbloom-rabbitmq-data
+
+
+# =========================================================
+# NETWORK
+# =========================================================
+
+networks:
+
+  mindbloom-network:
+    name: mindbloom-network
+    driver: bridge

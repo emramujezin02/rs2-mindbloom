@@ -1,0 +1,166 @@
+using System.Net;
+using System.Net.Http.Json;
+using MindBloom.Application.Common.Models;
+using MindBloom.Application.Features.Memberships.DTOs;
+using MindBloom.IntegrationTests.Infrastructure;
+using MindBloom.Shared.Constants;
+
+namespace MindBloom.IntegrationTests.Memberships;
+
+public sealed class MembershipApiTests
+    : IClassFixture<
+        MindBloomIntegrationTestFactory>
+{
+    private readonly
+        MindBloomIntegrationTestFactory
+        _factory;
+
+    public MembershipApiTests(
+        MindBloomIntegrationTestFactory factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task
+        Plans_IsAvailableWithoutAuthentication()
+    {
+        const int therapistUserId = 83001;
+
+        await _factory.SeedActiveUserAsync(
+            therapistUserId,
+            RoleConstants.Therapist,
+            "membership-public-therapist@test.local",
+            "Password123!");
+
+        var therapistId =
+            await _factory
+                .SeedTherapistProfileAsync(
+                    therapistUserId);
+
+        await _factory
+            .SeedMembershipPlanAsync();
+
+        using var client =
+            _factory.CreateClient();
+
+        var response =
+            await client.GetAsync(
+                $"/api/Memberships/therapist/{therapistId}/plans");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task
+        Mine_WithTherapistRole_ReturnsForbidden()
+    {
+        const int userId = 83002;
+
+        await _factory.SeedActiveUserAsync(
+            userId,
+            RoleConstants.Therapist,
+            "membership-role@test.local",
+            "Password123!");
+
+        using var client =
+            _factory.CreateAuthenticatedClient(
+                userId,
+                RoleConstants.Therapist);
+
+        var response =
+            await client.GetAsync(
+                "/api/Memberships/mine");
+
+        Assert.Equal(
+            HttpStatusCode.Forbidden,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task
+        Mine_ReturnsAuthenticatedClientsMembership()
+    {
+        const int clientUserId = 83003;
+        const int therapistUserId = 83004;
+
+        await _factory.SeedActiveUserAsync(
+            clientUserId,
+            RoleConstants.Client,
+            "membership-client@test.local",
+            "Password123!");
+
+        var clientId =
+            await _factory
+                .SeedClientProfileAsync(
+                    clientUserId);
+
+        await _factory.SeedActiveUserAsync(
+            therapistUserId,
+            RoleConstants.Therapist,
+            "membership-therapist@test.local",
+            "Password123!");
+
+        var therapistId =
+            await _factory
+                .SeedTherapistProfileAsync(
+                    therapistUserId);
+
+        var membershipId =
+            await _factory
+                .SeedClientMembershipAsync(
+                    clientId,
+                    therapistId);
+
+        using var client =
+            _factory.CreateAuthenticatedClient(
+                clientUserId,
+                RoleConstants.Client);
+
+        var response =
+            await client.GetAsync(
+                "/api/Memberships/mine");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<
+                    PagedResponse<MembershipResponseDto>>();
+
+        Assert.NotNull(result);
+
+        Assert.Contains(
+            result!.Items,
+            item =>
+                item.Id ==
+                membershipId);
+    }
+
+    [Fact]
+    public async Task Receipt_WhenMembershipIsUnpaid_ReturnsConflict()
+    {
+        const int clientUserId = 83005;
+        const int therapistUserId = 83006;
+        await _factory.SeedActiveUserAsync(clientUserId, RoleConstants.Client,
+            "receipt-client@test.local", "Password123!");
+        await _factory.SeedActiveUserAsync(therapistUserId, RoleConstants.Therapist,
+            "receipt-therapist@test.local", "Password123!");
+        var clientId = await _factory.SeedClientProfileAsync(clientUserId);
+        var therapistId = await _factory.SeedTherapistProfileAsync(therapistUserId);
+        var membershipId = await _factory.SeedClientMembershipAsync(clientId, therapistId);
+        using var client = _factory.CreateAuthenticatedClient(clientUserId, RoleConstants.Client);
+
+        var response = await client.GetAsync($"/api/Memberships/{membershipId}/receipt");
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<MindBloom.API.Models.ApiErrorResponse>();
+        Assert.NotNull(error);
+        Assert.Equal("business_rule_violation", error.ErrorCode);
+        Assert.Equal("Receipt is available only for a paid membership.", error.Detail);
+    }
+}

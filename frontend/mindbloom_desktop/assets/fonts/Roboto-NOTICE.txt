@@ -1,0 +1,16 @@
+Roboto Regular and Bold, Version 2.137 (2017)
+Copyright 2011 Google Inc. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0.
+The complete license is included in Roboto-LICENSE.txt.
+https://www.apache.org/licenses/LICENSE-2.0
+
+These unmodified font files were obtained from the locally installed Flutter SDK:
+bin/cache/artifacts/material_fonts/roboto-regular.ttf
+bin/cache/artifacts/material_fonts/roboto-bold.ttf
+
+SHA-256:
+Roboto-Regular.ttf 79E851404657DAC2106B3D22AD256D47824A9A5765458EDB72C9102A45816D95
+Roboto-Bold.ttf    7D0B991EE3E0BE7AF01AD7EA8CD2BEEA6C00A25E679A0226B6737F079AAFFF86
+
+The fonts are bundled as application assets for offline embedding in PDF reports.

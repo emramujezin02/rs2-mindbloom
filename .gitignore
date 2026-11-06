@@ -1,0 +1,91 @@
+# Build
+bin/
+obj/
+
+# User files
+*.user
+*.suo
+
+# Rider
+.idea/
+
+# Visual Studio
+.vs/
+
+# VS Code
+.vscode/
+
+# Flutter
+.flutter-plugins
+.flutter-plugins-dependencies
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Environment files containing real secrets
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Private environment archives
+/MindBloom-Environment*.zip
+
+# Safe configuration templates
+!.env.example
+!**/.env.example
+
+# Firebase / Google service-account credentials
+**/firebase-service-account*.json
+**/service-account*.json
+**/google-credentials*.json
+**/firebase-adminsdk*.json
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-data/
+
+# SQL
+*.mdf
+*.ldf
+
+# JetBrains
+*.iml
+
+# Generated
+Generated/
+
+# Coverage
+coverage/
+
+# NuGet
+*.nupkg
+
+# Release artifacts
+*.apk
+*.exe
+*.msix
+
+# Node
+node_modules/
+
+# Temporary
+temp/
+tmp/
+
+local.properties
+**/local.properties

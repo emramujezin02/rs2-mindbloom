@@ -1,0 +1,230 @@
+import '../../../../core/network/api_client.dart';
+import '../models/therapist_option_model.dart';
+import '../models/workshop_model.dart';
+import '../models/workshop_paged_response.dart';
+import '../models/workshop_registration_paged_response.dart';
+
+class WorkshopManagementApiService {
+  final ApiClient apiClient;
+
+  WorkshopManagementApiService({required this.apiClient});
+
+  Future<WorkshopPagedResponse> getWorkshops({
+    String? search,
+    int? type,
+    int? status,
+    DateTime? fromUtc,
+    DateTime? toUtc,
+    int pageNumber = 1,
+    int pageSize = 10,
+  }) async {
+    final parameters = <String, String>{
+      'PageNumber': pageNumber.toString(),
+      'PageSize': pageSize.toString(),
+    };
+
+    if (search != null && search.trim().isNotEmpty) {
+      parameters['Search'] = search.trim();
+    }
+
+    if (type != null) {
+      parameters['Type'] = type.toString();
+    }
+
+    if (status != null) {
+      parameters['Status'] = status.toString();
+    }
+
+    if (fromUtc != null) {
+      parameters['FromUtc'] = fromUtc.toUtc().toIso8601String();
+    }
+
+    if (toUtc != null) {
+      parameters['ToUtc'] = toUtc.toUtc().toIso8601String();
+    }
+
+    final query = Uri(queryParameters: parameters).query;
+
+    final response = await apiClient.get('/Workshops/manage?$query');
+
+    return WorkshopPagedResponse.fromJson(Map<String, dynamic>.from(response));
+  }
+
+  Future<WorkshopModel> getWorkshop(int workshopId) async {
+    final response = await apiClient.get('/Workshops/$workshopId');
+
+    return WorkshopModel.fromJson(Map<String, dynamic>.from(response));
+  }
+
+  Future<WorkshopRegistrationPagedResponse> getRegistrations({
+    required int workshopId,
+    int pageNumber = 1,
+    int pageSize = 10,
+  }) async {
+    final response = await apiClient.get(
+      '/Workshops/$workshopId/registrations'
+      '?pageNumber=$pageNumber'
+      '&pageSize=$pageSize',
+    );
+
+    return WorkshopRegistrationPagedResponse.fromJson(
+      Map<String, dynamic>.from(response),
+    );
+  }
+
+  Future<List<TherapistOptionModel>> getTherapists() async {
+    final therapists = <TherapistOptionModel>[];
+    var page = 1;
+    while (true) {
+      final response = await apiClient.get(
+        '/Therapists?Page=$page&PageSize=50',
+      );
+      if (response is! Map || response['items'] is! List) {
+        throw const FormatException(
+          'The server returned an invalid therapist page.',
+        );
+      }
+      final items = response['items'] as List;
+      therapists.addAll(
+        items.whereType<Map>().map(
+          (item) =>
+              TherapistOptionModel.fromJson(Map<String, dynamic>.from(item)),
+        ),
+      );
+      if (response['hasNextPage'] != true) break;
+      if (items.isEmpty) {
+        throw const FormatException(
+          'The server returned an empty intermediate therapist page.',
+        );
+      }
+      page++;
+    }
+    return therapists;
+  }
+
+  Future<WorkshopModel> createWorkshop({
+    required String title,
+    required String description,
+    required DateTime startUtc,
+    required DateTime endUtc,
+    required int type,
+    required String? onlineLink,
+    required String? location,
+    required String? imageUrl,
+    required DateTime registrationDeadlineUtc,
+    required int capacity,
+    required double price,
+    required int? therapistId,
+  }) async {
+    final response = await apiClient.post(
+      '/Workshops',
+      body: {
+        'title': title,
+        'description': description,
+        'startUtc': startUtc.toUtc().toIso8601String(),
+        'endUtc': endUtc.toUtc().toIso8601String(),
+        'type': type,
+        'onlineLink': onlineLink,
+        'location': location,
+        'capacity': capacity,
+        'price': price,
+        'therapistId': therapistId,
+        'imageUrl': imageUrl,
+        'registrationDeadlineUtc': registrationDeadlineUtc
+            .toUtc()
+            .toIso8601String(),
+      },
+    );
+
+    return WorkshopModel.fromJson(Map<String, dynamic>.from(response));
+  }
+
+  Future<WorkshopModel> updateWorkshop({
+    required int workshopId,
+    required String title,
+    required String description,
+    required DateTime startUtc,
+    required DateTime endUtc,
+    required int type,
+    required String? onlineLink,
+    required String? location,
+    required int capacity,
+    required double price,
+    required int? therapistId,
+    required String? imageUrl,
+    required DateTime registrationDeadlineUtc,
+  }) async {
+    final response = await apiClient.put(
+      '/Workshops/$workshopId',
+      body: {
+        'title': title,
+        'description': description,
+        'startUtc': startUtc.toUtc().toIso8601String(),
+        'endUtc': endUtc.toUtc().toIso8601String(),
+        'type': type,
+        'onlineLink': onlineLink,
+        'location': location,
+        'capacity': capacity,
+        'price': price,
+        'therapistId': therapistId,
+        'imageUrl': imageUrl,
+        'registrationDeadlineUtc': registrationDeadlineUtc
+            .toUtc()
+            .toIso8601String(),
+      },
+    );
+
+    return WorkshopModel.fromJson(Map<String, dynamic>.from(response));
+  }
+
+  Future<WorkshopModel> cancelWorkshop({
+    required int workshopId,
+    required String reason,
+  }) async {
+    final response = await apiClient.put(
+      '/Workshops/$workshopId/status',
+      body: {'status': 2, 'reason': reason},
+    );
+
+    return WorkshopModel.fromJson(Map<String, dynamic>.from(response));
+  }
+
+  Future<void> deleteWorkshop(int workshopId) async {
+    await apiClient.delete('/Workshops/$workshopId');
+  }
+
+  Future<String> uploadWorkshopImage(String filePath) async {
+    final response = await apiClient.postMultipartFile(
+      '/Workshops/image',
+      filePath: filePath,
+      fieldName: 'file',
+    );
+
+    if (response is! Map) {
+      throw Exception('The server returned invalid workshop image data.');
+    }
+
+    final data = Map<String, dynamic>.from(response);
+
+    final imageUrl = data['imageUrl']?.toString().trim();
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      throw Exception('The server did not return a workshop image URL.');
+    }
+
+    return imageUrl;
+  }
+
+  Future<WorkshopModel> updateWorkshopStatus({
+    required int workshopId,
+    required int status,
+    String? reason,
+  }) async {
+    final response = await apiClient.put(
+      '/Workshops/$workshopId/status',
+      body: {'status': status, 'reason': reason},
+    );
+
+    return WorkshopModel.fromJson(Map<String, dynamic>.from(response));
+  }
+}

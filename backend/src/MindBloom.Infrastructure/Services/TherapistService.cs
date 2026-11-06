@@ -1,0 +1,3443 @@
+﻿using Microsoft.EntityFrameworkCore;
+using MindBloom.Application.Common.Models;
+using MindBloom.Application.Common.Pagination;
+using MindBloom.Application.Features.Therapists.DTOs;
+using MindBloom.Application.Features.Therapists.Interfaces;
+using MindBloom.Domain.Entities;
+using MindBloom.Infrastructure.Persistence.Context;
+using MindBloom.Infrastructure.Persistence.Queries;
+using MindBloom.Domain.Enums;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
+using MindBloom.Application.Common.Exceptions;
+using MindBloom.Application.Common.Interfaces;
+using System.Threading;
+using MindBloom.Application.Features.Security.DTOs;
+using MindBloom.Application.Features.Security.Interfaces;
+using Microsoft.Extensions.Options;
+using MindBloom.Infrastructure.Configuration;
+using MindBloom.Shared.Constants;
+
+namespace MindBloom.Infrastructure.Services;
+
+public class TherapistService : ITherapistService
+{
+    private async Task ApplySpecializationAsync(Therapist therapist, int? id, bool required = false)
+    {
+        if (!id.HasValue)
+        {
+            if (required) throw new BadRequestException("Select an active specialization.");
+            return; // Legacy profiles retain their existing value when the field is omitted.
+        }
+        var specialization = await _context.TherapistSpecializations.AsNoTracking().SingleOrDefaultAsync(x =>
+            x.Id == id && ((!x.IsDeleted && x.IsActive) || x.Id == therapist.SpecializationId));
+        if (specialization == null) throw new BadRequestException("The selected specialization is invalid or inactive.");
+        therapist.SpecializationId = specialization.Id;
+        therapist.Specialization = specialization.Name;
+    }
+
+    private async Task ApplyLocationAsync(Therapist therapist, int? locationId, int? allowInactiveId = null)
+    {
+        if (locationId.HasValue)
+        {
+            var location = await _context.TherapistLocations.AsNoTracking().SingleOrDefaultAsync(x =>
+                x.Id == locationId && !x.IsDeleted && (x.IsActive || x.Id == allowInactiveId));
+            if (location == null) throw new BadRequestException("The selected location is invalid or inactive.");
+            therapist.Country = location.Country;
+            therapist.City = location.Name;
+            therapist.Location = location.Name;
+        }
+        therapist.LocationId = locationId;
+    }
+
+    private const int MaximumUnavailableDateRangeDays = 370;
+
+    private readonly ApplicationDbContext _context;
+    private readonly IWebHostEnvironment _environment;
+    private readonly ITherapistClientAccessService _therapistClientAccessService;
+    private readonly ISecurityAuditService
+    _securityAuditService;
+
+    private readonly UploadSettings
+    _uploadSettings;
+
+    private static readonly HashSet<string>
+        AllowedDocumentExtensions =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".pdf"
+        };
+
+    private static readonly HashSet<string>
+        AllowedDocumentMimeTypes =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+        "image/jpeg",
+        "image/png",
+        "application/pdf"
+        };
+
+    private readonly IGeocodingService _geocodingService;
+
+    public TherapistService(
+        ApplicationDbContext context,
+        IWebHostEnvironment environment,
+        IGeocodingService geocodingService,
+        ISecurityAuditService securityAuditService,
+        ITherapistClientAccessService therapistClientAccessService,
+        IOptions<UploadSettings> uploadSettings)
+    {
+        _context = context;
+        _securityAuditService =
+    securityAuditService;
+        _environment = environment;
+        _uploadSettings =
+    uploadSettings.Value;
+        _geocodingService = geocodingService;
+        _therapistClientAccessService = therapistClientAccessService;
+
+    }
+    public async Task<TherapistResponseDto> CreateAsync(int userId, CreateTherapistDto request)
+    {
+        var user =
+            await _context.Users
+                .FirstOrDefaultAsync(x => x.Id == userId);
+
+        if (user == null)
+        {
+            throw new NotFoundException("User not found.");
+        }
+
+        var existingTherapist =
+    await _context.Therapists
+        .AsNoTracking()
+        .FirstOrDefaultAsync(x =>
+            x.UserId == userId &&
+            !x.IsDeleted);
+
+        if (existingTherapist != null)
+        {
+            throw new BusinessException(
+                "Therapist profile already exists.");
+        }
+
+        var therapist = new Therapist
+        {
+            LocationId = request.LocationId,
+            WorksWithChildren = request.WorksWithChildren,
+            UserId = userId,
+            Specialization = string.Empty,
+            Biography = request.Biography,
+            HourlyRate = request.HourlyRate,
+            ExperienceYears = request.ExperienceYears,
+            VerificationStatus = TherapistVerificationStatus.Pending,
+            Country = request.Country.Trim(),
+            City = request.City.Trim(),
+            Address = request.Address.Trim(),
+            OffersOnline = request.OffersOnline,
+            OffersInPerson = request.OffersInPerson,
+        };
+
+        await ApplySpecializationAsync(therapist, request.SpecializationId, required: true);
+        await ApplyLocationAsync(therapist, request.LocationId);
+
+        await UpdateCoordinatesAsync(
+            therapist,
+            CancellationToken.None);
+
+        _context.Therapists.Add(therapist);
+
+        await _context.SaveChangesAsync();
+
+        return new TherapistResponseDto
+        {
+            LocationId = therapist.LocationId,
+            LocationRegion = therapist.LocationReference == null ? "" : therapist.LocationReference.Region,
+            WorksWithChildren = therapist.WorksWithChildren,
+            Id = therapist.Id,
+            UserId = therapist.UserId,
+            FullName = $"{user.FirstName} {user.LastName}",
+            Email = user.Email!,
+            SpecializationId = therapist.SpecializationId,
+            Specialization = therapist.Specialization,
+            Biography = therapist.Biography,
+            HourlyRate = therapist.HourlyRate,
+            ExperienceYears = therapist.ExperienceYears,
+            ProfileImageUrl = therapist.ProfileImagePath,
+            Country = therapist.Country,
+            City = therapist.City,
+            Address = therapist.Address,
+            OffersOnline = therapist.OffersOnline,
+            OffersInPerson = therapist.OffersInPerson,
+            Latitude = therapist.Latitude,
+            Longitude = therapist.Longitude,
+        };
+    }
+
+    public async Task<PagedResponse<TherapistResponseDto>>
+        GetAllAsync(
+            int page = PaginationDefaults.DefaultPageNumber,
+            int pageSize = PaginationDefaults.DefaultPageSize)
+    {
+        var pagination = PaginationHelper.Normalize(page, pageSize);
+        var query = _context.Therapists
+            .AsNoTracking()
+            .Include(x => x.User)
+            .Include(x => x.Reviews)
+            .Where(TherapistVisibility.PubliclyVisible);
+        var totalCount = await query.CountAsync();
+        var skip = (int)Math.Min((long)(pagination.PageNumber - 1) * pagination.PageSize, int.MaxValue);
+        var items = await query.Select(x => new TherapistResponseDto
+            {
+                LocationId = x.LocationId,
+                LocationRegion = x.LocationReference == null ? "" : x.LocationReference.Region,
+                WorksWithChildren = x.WorksWithChildren,
+                Id = x.Id,
+                UserId = x.UserId,
+                FullName = x.User.FirstName + " " + x.User.LastName,
+                Email = string.Empty,
+                SpecializationId = x.SpecializationId,
+                Specialization = x.Specialization,
+                Biography = x.Biography,
+                HourlyRate = x.HourlyRate,
+                ExperienceYears = x.ExperienceYears,
+                AverageRating = x.Reviews.Any(r => !r.IsDeleted && r.IsApproved && r.ModerationStatus == ReviewModerationStatus.Approved)
+                    ? Math.Round(x.Reviews.Where(r => !r.IsDeleted && r.IsApproved && r.ModerationStatus == ReviewModerationStatus.Approved).Average(r => r.Rating), 1)
+                    : 0,
+                TotalReviews = x.Reviews.Count(r => !r.IsDeleted && r.IsApproved && r.ModerationStatus == ReviewModerationStatus.Approved),
+                VerificationStatus = x.VerificationStatus.ToString(),
+                VerificationNotes = null,
+                ProfileImageUrl = x.User.ProfileImageUrl ?? x.ProfileImagePath,
+                Country = x.Country,
+                City = x.City,
+                Address = null,
+                OffersOnline = x.OffersOnline,
+                OffersInPerson = x.OffersInPerson,
+                Latitude = x.Latitude,
+                Longitude = x.Longitude,
+                TherapyApproaches = x.TherapyApproaches
+    .Where(ta =>
+        !ta.IsDeleted &&
+        !ta.TherapyApproach.IsDeleted &&
+        ta.TherapyApproach.IsActive)
+    .OrderBy(ta => ta.TherapyApproach.Name)
+    .Select(ta => ta.TherapyApproach.Name)
+    .ToList(),
+            })
+            .OrderByDescending(x => x.AverageRating)
+            .ThenBy(x => x.Id)
+            .Skip(skip)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        return PagedResponse<TherapistResponseDto>.Create(
+            items, pagination.PageNumber, pagination.PageSize, totalCount);
+    }
+
+    public async Task AddAvailabilityAsync(
+     int therapistUserId,
+     CreateAvailabilityDto request)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist profile not found.");
+        }
+
+        if (request.StartTime >= request.EndTime)
+        {
+            throw new BadRequestException(
+                "Start time must be earlier than end time.");
+        }
+
+        if (request.StartTime < TimeSpan.Zero ||
+            request.EndTime > TimeSpan.FromDays(1))
+        {
+            throw new BadRequestException(
+                "Working hours are outside the valid daily range.");
+        }
+
+        var overlaps =
+            await _context.TherapistAvailabilities
+                .AnyAsync(x =>
+                    x.TherapistId == therapist.Id &&
+                    !x.IsDeleted &&
+                    x.DayOfWeek == request.DayOfWeek &&
+                    request.StartTime < x.EndTime &&
+                    request.EndTime > x.StartTime);
+
+        if (overlaps)
+        {
+            throw new BusinessException(
+                "Working hours overlap an existing interval.");
+        }
+
+        var availability =
+            new TherapistAvailability
+            {
+                TherapistId = therapist.Id,
+                DayOfWeek = request.DayOfWeek,
+                StartTime = request.StartTime,
+                EndTime = request.EndTime
+            };
+
+        _context.TherapistAvailabilities.Add(
+            availability);
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<AvailabilityResponseDto>>
+        GetAvailabilitiesAsync(int therapistId, int? currentUserId = null)
+    {
+        await EnsureScheduleAccessAsync(therapistId, currentUserId);
+
+        return await _context.TherapistAvailabilities
+            .Where(x =>
+    x.TherapistId == therapistId &&
+    !x.IsDeleted)
+            .Select(x => new AvailabilityResponseDto
+            {
+                Id = x.Id,
+                DayOfWeek = x.DayOfWeek,
+                StartTime = x.StartTime,
+                EndTime = x.EndTime
+            })
+            .ToListAsync();
+    }
+
+    public async Task<PagedResponse<TherapistResponseDto>>
+     SearchAsync(SearchTherapistsDto request)
+    {
+        if (request.LocationId is <= 0 || request.MinExperienceYears is < 0 or > 70 ||
+            request.MaxExperienceYears is < 0 or > 70 || request.MinExperienceYears > request.MaxExperienceYears)
+            throw new BadRequestException("Invalid location or experience range.");
+
+        var pagination =
+            PaginationHelper.Normalize(
+                request.PageNumber,
+                request.PageSize);
+
+        if (request.MinPrice.HasValue &&
+            request.MinPrice.Value < 0)
+        {
+            throw new BadRequestException(
+                "Minimum price cannot be negative.");
+        }
+
+        if (request.MaxPrice.HasValue &&
+            request.MaxPrice.Value < 0)
+        {
+            throw new BadRequestException(
+                "Maximum price cannot be negative.");
+        }
+
+        if (request.MinPrice.HasValue &&
+            request.MaxPrice.HasValue &&
+            request.MinPrice.Value >
+            request.MaxPrice.Value)
+        {
+            throw new BadRequestException(
+                "Minimum price cannot be greater than maximum price.");
+        }
+
+        if (request.MinRating.HasValue &&
+            (
+                request.MinRating.Value < 0 ||
+                request.MinRating.Value > 5
+            ))
+        {
+            throw new BadRequestException(
+                "Minimum rating must be between 0 and 5.");
+        }
+
+        var query =
+            _context.Therapists
+                .AsNoTracking()
+                .Where(TherapistVisibility.PubliclyVisible)
+                .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(request.SearchText))
+        {
+            var searchText =
+                request.SearchText
+                    .Trim()
+                    .ToLower();
+
+            query = query.Where(x =>
+                (
+                    x.User.FirstName
+                    + " "
+                    + x.User.LastName
+                )
+                .ToLower()
+                .Contains(searchText)
+                ||
+                x.Specialization
+                    .ToLower()
+                    .Contains(searchText)
+                ||
+                x.City
+                    .ToLower()
+                    .Contains(searchText)
+                ||
+                x.Country
+                    .ToLower()
+                    .Contains(searchText)
+                ||
+                x.Address
+                    .ToLower()
+                    .Contains(searchText)
+                ||
+                (
+                    x.Languages
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(searchText)
+                ||
+                x.TherapyApproaches.Any(ta =>
+                    !ta.IsDeleted &&
+                    !ta.TherapyApproach.IsDeleted &&
+                    ta.TherapyApproach.IsActive &&
+                    ta.TherapyApproach.Name
+                        .ToLower()
+                        .Contains(searchText)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.Specialization))
+        {
+            var specialization =
+                request.Specialization
+                    .Trim()
+                    .ToLower();
+
+            query = query.Where(x =>
+                x.Specialization
+                    .ToLower()
+                    .Contains(specialization));
+        }
+
+        if (request.TherapyApproachId.HasValue)
+        {
+            query = query.Where(x =>
+                x.TherapyApproaches.Any(ta =>
+                    !ta.IsDeleted &&
+                    ta.TherapyApproachId ==
+                        request.TherapyApproachId.Value &&
+                    !ta.TherapyApproach.IsDeleted &&
+                    ta.TherapyApproach.IsActive));
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.Gender))
+        {
+            var gender =
+                request.Gender
+                    .Trim()
+                    .ToLower();
+
+            query = query.Where(x =>
+                x.User.Gender != null &&
+                x.User.Gender
+                    .ToLower() == gender);
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.Language))
+        {
+            var language =
+                request.Language
+                    .Trim()
+                    .ToLower();
+
+            query = query.Where(x =>
+                x.Languages != null &&
+                (
+                    "," + x.Languages.ToLower() + ","
+                )
+                .Contains(
+                    "," + language + ","));
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.Location))
+        {
+            var location =
+                request.Location
+                    .Trim()
+                    .ToLower();
+
+            query = query.Where(x =>
+                x.Country
+                    .ToLower()
+                    .Contains(location)
+                ||
+                x.City
+                    .ToLower()
+                    .Contains(location)
+                ||
+                x.Address
+                    .ToLower()
+                    .Contains(location)
+                ||
+                (
+                    x.Location
+                    ?? string.Empty
+                )
+                .ToLower()
+                .Contains(location));
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                request.SessionMode))
+        {
+            var sessionMode =
+                request.SessionMode
+                    .Trim()
+                    .ToLower();
+
+            query = sessionMode switch
+            {
+                "online" =>
+                    query.Where(x =>
+                        x.OffersOnline),
+
+                "inperson" =>
+                    query.Where(x =>
+                        x.OffersInPerson),
+
+                "both" =>
+                    query.Where(x =>
+                        x.OffersOnline &&
+                        x.OffersInPerson),
+
+                _ =>
+                    throw new BadRequestException(
+                        "Session mode must be online, inPerson or both.")
+            };
+        }
+
+        if (request.MinPrice.HasValue)
+        {
+            query = query.Where(x =>
+                x.HourlyRate >=
+                request.MinPrice.Value);
+        }
+
+        if (request.MaxPrice.HasValue)
+        {
+            query = query.Where(x =>
+                x.HourlyRate <=
+                request.MaxPrice.Value);
+        }
+
+        if (request.MinRating.HasValue)
+        {
+            query = query.Where(x =>
+                x.Reviews
+.Where(review =>
+    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
+                    .Any()
+                &&
+                x.Reviews
+.Where(review =>
+    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
+                    .Average(review =>
+                        review.Rating)
+                >= request.MinRating.Value);
+        }
+
+        if (request.AvailableDay.HasValue)
+        {
+            query = query.Where(x =>
+                x.Availabilities.Any(
+                    availability =>
+                        !availability.IsDeleted &&
+                        availability.DayOfWeek ==
+                            request.AvailableDay.Value));
+        }
+
+        if (request.LocationId.HasValue) query = query.Where(x => x.LocationId == request.LocationId.Value);
+        if (request.MinExperienceYears.HasValue) query = query.Where(x => x.ExperienceYears >= request.MinExperienceYears.Value);
+        if (request.MaxExperienceYears.HasValue) query = query.Where(x => x.ExperienceYears <= request.MaxExperienceYears.Value);
+        if (request.OffersOnline == true) query = query.Where(x => x.OffersOnline);
+        if (request.WorksWithChildren == true) query = query.Where(x => x.WorksWithChildren);
+
+        var totalCount = await query.CountAsync();
+
+        var sortBy =
+            request.SortBy?
+                .Trim()
+                .ToLowerInvariant();
+
+        var sortDirection =
+            request.SortDirection?
+                .Trim()
+                .ToLowerInvariant();
+
+        var descending =
+            sortDirection == "desc" ||
+            (
+                string.IsNullOrWhiteSpace(sortDirection) &&
+                sortBy is "rating" or "experience"
+            );
+
+        query =
+            sortBy switch
+            {
+                "rating" when descending =>
+                    query
+                        .OrderByDescending(x =>
+                            x.Reviews
+.Where(review =>
+    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
+                                .Any()
+                                ? x.Reviews
+                                    .Where(review =>
+                                        !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
+                                    .Average(review =>
+                                        review.Rating)
+                                : 0)
+                        .ThenBy(x =>
+                            x.Id),
+
+                "rating" =>
+                    query
+                        .OrderBy(x =>
+                            x.Reviews
+.Where(review =>
+    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
+                                .Any()
+                                ? x.Reviews
+                                    .Where(review =>
+                                        !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
+                                    .Average(review =>
+                                        review.Rating)
+                                : 0)
+                        .ThenBy(x =>
+                            x.Id),
+
+                "price" when descending =>
+                    query
+                        .OrderByDescending(x =>
+                            x.HourlyRate)
+                        .ThenBy(x =>
+                            x.Id),
+
+                "price" =>
+                    query
+                        .OrderBy(x =>
+                            x.HourlyRate)
+                        .ThenBy(x =>
+                            x.Id),
+
+                "experience" when descending =>
+                    query
+                        .OrderByDescending(x =>
+                            x.ExperienceYears)
+                        .ThenBy(x =>
+                            x.Id),
+
+                "experience" =>
+                    query
+                        .OrderBy(x =>
+                            x.ExperienceYears)
+                        .ThenBy(x =>
+                            x.Id),
+
+                _ =>
+                    query.OrderBy(x =>
+                        x.Id)
+            };
+
+        var skip = (int)Math.Min((long)(pagination.PageNumber - 1) * pagination.PageSize, int.MaxValue);
+        var items =
+            await query
+                .Skip(skip)
+                .Take(pagination.PageSize)
+                .Select(x =>
+                    new TherapistResponseDto
+                    {
+                        LocationId = x.LocationId,
+                        LocationRegion = x.LocationReference == null ? "" : x.LocationReference.Region,
+                        WorksWithChildren = x.WorksWithChildren,
+                        Id = x.Id,
+
+                        UserId = x.UserId,
+
+                        FullName =
+                            x.User.FirstName
+                            + " "
+                            + x.User.LastName,
+
+                        Email =
+                            x.User.Email
+                            ?? string.Empty,
+
+                        SpecializationId = x.SpecializationId,
+
+                        Specialization =
+                            x.Specialization,
+
+                        Biography =
+                            x.Biography,
+
+                        HourlyRate =
+                            x.HourlyRate,
+
+                        ExperienceYears =
+                            x.ExperienceYears,
+
+                        AverageRating =
+                            x.Reviews
+.Where(review =>
+    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
+                                .Any()
+                                ? Math.Round(
+                                    x.Reviews
+                                        .Where(review =>
+                                            !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
+                                        .Average(review =>
+                                            review.Rating),
+                                    1)
+                                : 0,
+
+                        TotalReviews =
+                            x.Reviews.Count(review =>
+    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved),
+
+                        VerificationStatus =
+                            x.VerificationStatus
+                                .ToString(),
+
+                        VerificationNotes =
+                            x.VerificationNotes,
+
+                        ProfileImageUrl =
+                            x.User.ProfileImageUrl
+                            ?? x.ProfileImagePath,
+
+                        Country =
+                            x.Country,
+
+                        City =
+                            x.City,
+
+                        Address =
+                            x.Address,
+
+                        OffersOnline =
+                            x.OffersOnline,
+
+                        OffersInPerson =
+                            x.OffersInPerson,
+
+                        Latitude =
+                            x.Latitude,
+
+                        Longitude =
+                            x.Longitude,
+
+                        TherapyApproaches =
+                            x.TherapyApproaches
+                                .Where(ta =>
+                                    !ta.IsDeleted &&
+                                    !ta.TherapyApproach.IsDeleted &&
+                                    ta.TherapyApproach.IsActive)
+                                .OrderBy(ta =>
+                                    ta.TherapyApproach.Name)
+                                .Select(ta =>
+                                    ta.TherapyApproach.Name)
+                                .ToList()
+                    })
+                .ToListAsync();
+
+        return PagedResponse<TherapistResponseDto>
+            .Create(
+                items,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
+    }
+
+    public async Task<PagedResponse<TherapistResponseDto>>
+    FilterAsync(
+        TherapistFilterDto filter,
+        int page = PaginationDefaults.DefaultPageNumber,
+        int pageSize = PaginationDefaults.DefaultPageSize)
+    {
+        var pagination = PaginationHelper.Normalize(page, pageSize);
+        var query =
+            _context.Therapists
+                .Include(x => x.User)
+                .Include(x => x.Reviews)
+                .Where(TherapistVisibility.PubliclyVisible)
+                .AsQueryable();
+
+
+        if (!string.IsNullOrWhiteSpace(
+            filter.Specialization))
+        {
+            var specialization =
+                filter.Specialization.ToLower();
+
+            query = query.Where(x =>
+                x.Specialization
+                    .ToLower()
+                    .Contains(specialization));
+        }
+
+        if (filter.MinPrice.HasValue)
+        {
+            query = query.Where(x =>
+                x.HourlyRate >= filter.MinPrice.Value);
+        }
+
+        if (filter.MaxPrice.HasValue)
+        {
+            query = query.Where(x =>
+                x.HourlyRate <= filter.MaxPrice.Value);
+        }
+
+        var totalCount = await query.CountAsync();
+        var projected = query
+                .Select(x => new TherapistResponseDto
+                {
+                    LocationId = x.LocationId,
+                    LocationRegion = x.LocationReference == null ? "" : x.LocationReference.Region,
+                    WorksWithChildren = x.WorksWithChildren,
+                    Id = x.Id,
+
+                    FullName =
+                        x.User.FirstName
+                        + " "
+                        + x.User.LastName,
+
+                    SpecializationId = x.SpecializationId,
+
+                    Specialization =
+                        x.Specialization,
+
+                    Biography =
+                        x.Biography,
+
+                    HourlyRate =
+                        x.HourlyRate,
+
+                    ExperienceYears =
+                        x.ExperienceYears,
+
+                    AverageRating =
+                        x.Reviews.Any(r => !r.IsDeleted && r.IsApproved && r.ModerationStatus == ReviewModerationStatus.Approved)
+                            ? Math.Round(
+                                x.Reviews.Where(r => !r.IsDeleted && r.IsApproved && r.ModerationStatus == ReviewModerationStatus.Approved)
+                                    .Average(r => r.Rating),
+                                1)
+                            : 0,
+
+                    TotalReviews = x.Reviews.Count(r => !r.IsDeleted && r.IsApproved && r.ModerationStatus == ReviewModerationStatus.Approved),
+                    ProfileImageUrl = x.User.ProfileImageUrl ?? x.ProfileImagePath,
+                    Country = x.Country,
+                    City = x.City,
+                    Address = x.Address,
+                    OffersOnline = x.OffersOnline,
+                    OffersInPerson = x.OffersInPerson,
+                    Latitude = x.Latitude,
+                    Longitude = x.Longitude,
+
+                    VerificationStatus = x.VerificationStatus.ToString(),
+
+                    TherapyApproaches = x.TherapyApproaches
+    .Where(ta =>
+        !ta.IsDeleted &&
+        !ta.TherapyApproach.IsDeleted &&
+        ta.TherapyApproach.IsActive)
+    .OrderBy(ta => ta.TherapyApproach.Name)
+    .Select(ta => ta.TherapyApproach.Name)
+    .ToList(),
+
+                });
+
+        var ordered = filter.SortByRating
+            ? projected.OrderByDescending(x => x.AverageRating).ThenBy(x => x.Id)
+            : projected.OrderBy(x => x.Id);
+        var skip = (int)Math.Min((long)(pagination.PageNumber - 1) * pagination.PageSize, int.MaxValue);
+        var items = await ordered.Skip(skip).Take(pagination.PageSize).ToListAsync();
+
+        return PagedResponse<TherapistResponseDto>.Create(
+            items, pagination.PageNumber, pagination.PageSize, totalCount);
+    }
+
+    public async Task<TherapistProfileDto> GetProfileAsync(
+     int therapistUserId)
+    {
+        var therapist =
+            await _context.Therapists
+                .AsNoTracking()
+                .Include(x => x.User)
+                .Include(x => x.LocationReference)
+                .Include(x => x.Availabilities)
+                .Include(x => x.TherapyApproaches)
+                    .ThenInclude(x => x.TherapyApproach)
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist profile not found.");
+        }
+
+        var languages =
+            string.IsNullOrWhiteSpace(therapist.Languages)
+                ? new List<string>()
+                : therapist.Languages
+                    .Split(
+                        ',',
+                        StringSplitOptions.RemoveEmptyEntries |
+                        StringSplitOptions.TrimEntries)
+                    .Where(x =>
+                        !string.IsNullOrWhiteSpace(x))
+                    .Distinct(
+                        StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(x => x)
+                    .ToList();
+
+        return new TherapistProfileDto
+        {
+            LocationId = therapist.LocationId,
+            LocationRegion = therapist.LocationReference == null ? "" : therapist.LocationReference.Region,
+            WorksWithChildren = therapist.WorksWithChildren,
+            TherapistId = therapist.Id,
+
+            UserId = therapist.UserId,
+
+            FirstName =
+                therapist.User.FirstName
+                ?? string.Empty,
+
+            LastName =
+                therapist.User.LastName
+                ?? string.Empty,
+
+            FullName =
+                string.Join(
+                    " ",
+                    new[]
+                    {
+                    therapist.User.FirstName,
+                    therapist.User.LastName
+                    }
+                    .Where(x =>
+                        !string.IsNullOrWhiteSpace(x))),
+
+            Email =
+                therapist.User.Email
+                ?? string.Empty,
+
+            PhoneNumber =
+                therapist.User.PhoneNumber,
+
+            Biography =
+                therapist.Biography,
+
+            SpecializationId = therapist.SpecializationId,
+
+            Specialization =
+                therapist.Specialization,
+
+            ExperienceYears =
+                therapist.ExperienceYears,
+
+            HourlyRate =
+                therapist.HourlyRate,
+
+            Location =
+                therapist.Location
+                ?? string.Empty,
+
+            Country =
+                therapist.Country,
+
+            City =
+                therapist.City,
+
+            Address =
+                therapist.Address,
+
+            Latitude =
+                therapist.Latitude,
+
+            Longitude =
+                therapist.Longitude,
+
+            OffersOnline =
+                therapist.OffersOnline,
+
+            OffersInPerson =
+                therapist.OffersInPerson,
+
+            Languages =
+                languages,
+
+            ProfileImageUrl =
+                therapist.User.ProfileImageUrl
+                ?? therapist.ProfileImagePath,
+
+            VerificationStatus =
+                therapist.VerificationStatus
+                    .ToString(),
+
+            VerificationNotes = therapist.VerificationNotes,
+
+            Availabilities =
+                therapist.Availabilities
+                    .Where(x => !x.IsDeleted)
+                    .OrderBy(x => x.DayOfWeek)
+                    .ThenBy(x => x.StartTime)
+                    .Select(x =>
+                        new AvailabilityResponseDto
+                        {
+                            Id = x.Id,
+                            DayOfWeek = x.DayOfWeek,
+                            StartTime = x.StartTime,
+                            EndTime = x.EndTime
+                        })
+                    .ToList(),
+
+            TherapyApproaches =
+                therapist.TherapyApproaches
+                    .Where(x =>
+                        !x.IsDeleted &&
+                        !x.TherapyApproach.IsDeleted &&
+                        x.TherapyApproach.IsActive)
+                    .OrderBy(x =>
+                        x.TherapyApproach.Name)
+                    .Select(x =>
+                        new TherapistProfileTherapyApproachDto
+                        {
+                            Id =
+                                x.TherapyApproachId,
+
+                            Name =
+                                x.TherapyApproach.Name
+                        })
+                    .ToList()
+        };
+    }
+
+    public async Task UpdateProfileAsync(
+     int therapistUserId,
+     UpdateTherapistProfileDto request)
+    {
+        var therapist =
+            await _context.Therapists
+                .Include(x => x.TherapyApproaches)
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist profile not found.");
+        }
+
+        var therapyApproachIds =
+            request.TherapyApproachIds
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+        if (therapyApproachIds.Count == 0)
+        {
+            throw new BadRequestException(
+                "At least one therapy approach must be selected.");
+        }
+
+        var validTherapyApproachIds =
+            await _context.TherapyApproaches
+                .AsNoTracking()
+                .Where(x =>
+                    therapyApproachIds.Contains(x.Id) &&
+                    !x.IsDeleted &&
+                    x.IsActive)
+                .Select(x => x.Id)
+                .ToListAsync();
+
+        if (validTherapyApproachIds.Count !=
+            therapyApproachIds.Count)
+        {
+            throw new BadRequestException(
+                "One or more selected therapy approaches are invalid or inactive.");
+        }
+
+        var biography =
+            request.Biography.Trim();
+
+        await ApplySpecializationAsync(therapist, request.SpecializationId);
+
+        var location =
+            request.Location.Trim();
+
+        var country =
+            request.Country.Trim();
+
+        var city =
+            request.City.Trim();
+
+        var address =
+            request.Address.Trim();
+
+        var languages =
+            request.Languages
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(x))
+                .Select(x =>
+                    x.Trim())
+                .Distinct(
+                    StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+        var serializedLanguages =
+            string.Join(",", languages);
+
+        therapist.Biography =
+            biography;
+
+        therapist.ExperienceYears =
+            request.ExperienceYears;
+
+        therapist.HourlyRate =
+            request.HourlyRate;
+
+        therapist.Location =
+            location;
+
+        therapist.Country =
+            country;
+
+        therapist.City =
+            city;
+
+        therapist.Address =
+            address;
+
+        therapist.OffersOnline =
+            request.OffersOnline;
+
+        therapist.OffersInPerson =
+            request.OffersInPerson;
+
+        therapist.Languages =
+            serializedLanguages;
+
+        await ApplyLocationAsync(therapist, request.LocationId, allowInactiveId: therapist.LocationId);
+        therapist.WorksWithChildren = request.WorksWithChildren;
+
+        var currentActiveConnections =
+            therapist.TherapyApproaches
+                .Where(x => !x.IsDeleted)
+                .ToList();
+
+        var connectionsToRemove =
+            currentActiveConnections
+                .Where(x =>
+                    !therapyApproachIds.Contains(
+                        x.TherapyApproachId))
+                .ToList();
+
+        foreach (var connection in connectionsToRemove)
+        {
+            connection.IsDeleted = true;
+        }
+
+        var currentApproachIds =
+            currentActiveConnections
+                .Where(x => !x.IsDeleted)
+                .Select(x => x.TherapyApproachId)
+                .ToHashSet();
+
+        var existingDeletedConnections =
+            therapist.TherapyApproaches
+                .Where(x => x.IsDeleted)
+                .ToList();
+
+        foreach (var therapyApproachId in
+                 therapyApproachIds)
+        {
+            if (currentApproachIds.Contains(
+                    therapyApproachId))
+            {
+                continue;
+            }
+
+            var deletedConnection =
+                existingDeletedConnections
+                    .FirstOrDefault(x =>
+                        x.TherapyApproachId ==
+                        therapyApproachId);
+
+            if (deletedConnection != null)
+            {
+                deletedConnection.IsDeleted = false;
+
+                continue;
+            }
+
+            therapist.TherapyApproaches.Add(
+                new TherapistTherapyApproach
+                {
+                    TherapistId =
+                        therapist.Id,
+
+                    TherapyApproachId =
+                        therapyApproachId
+                });
+        }
+
+        await UpdateCoordinatesAsync(
+            therapist,
+            CancellationToken.None);
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<TherapistProfileImageDto>
+    UploadProfileImageAsync(
+        int therapistUserId,
+        IFormFile file)
+    {
+        var therapist =
+            await _context.Therapists
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist profile not found.");
+        }
+
+        await ValidateTherapistProfileImageAsync(
+     file);
+
+        var extension =
+            Path.GetExtension(file.FileName)
+                .ToLowerInvariant();
+
+        var allowedExtensions =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+            };
+
+        if (!allowedExtensions.Contains(extension))
+        {
+            throw new ArgumentException(
+                "Unsupported profile image extension.");
+        }
+
+        var webRootPath =
+            _environment.WebRootPath
+            ?? Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot");
+
+        var uploadsFolder =
+            Path.Combine(
+                webRootPath,
+                "uploads",
+                "profiles",
+                "therapists");
+
+        Directory.CreateDirectory(
+            uploadsFolder);
+
+        var uniqueFileName =
+            $"{Guid.NewGuid():N}{extension}";
+
+        var physicalFilePath =
+            Path.Combine(
+                uploadsFolder,
+                uniqueFileName);
+
+        await using (var stream =
+            new FileStream(
+                physicalFilePath,
+                FileMode.CreateNew))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var oldImageUrl =
+            therapist.User.ProfileImageUrl
+            ?? therapist.ProfileImagePath;
+
+        var profileImageUrl =
+            $"/uploads/profiles/therapists/{uniqueFileName}";
+
+        therapist.User.ProfileImageUrl =
+            profileImageUrl;
+
+        therapist.ProfileImagePath =
+            profileImageUrl;
+
+        await _context.SaveChangesAsync();
+
+        DeleteOldProfileImage(
+            oldImageUrl,
+            profileImageUrl,
+            webRootPath);
+
+        return new TherapistProfileImageDto
+        {
+            ProfileImageUrl =
+                profileImageUrl
+        };
+    }
+
+    public async Task DeleteProfileImageAsync(
+    int therapistUserId)
+    {
+        var therapist =
+            await _context.Therapists
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist profile not found.");
+        }
+
+        var oldImageUrl =
+            therapist.User.ProfileImageUrl
+            ?? therapist.ProfileImagePath;
+
+        if (string.IsNullOrWhiteSpace(
+                oldImageUrl))
+        {
+            return;
+        }
+
+        therapist.User.ProfileImageUrl =
+            null;
+
+        therapist.ProfileImagePath =
+            null;
+
+        await _context.SaveChangesAsync();
+
+        var webRootPath =
+            _environment.WebRootPath
+            ?? Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot");
+
+        DeleteManagedProfileImage(
+            oldImageUrl,
+            webRootPath);
+    }
+
+    public async Task<TherapistDetailsDto>
+ GetByIdAsync(
+     int therapistId,
+     int? currentUserId)
+    {
+        var therapist =
+            await _context.Therapists
+                .AsNoTracking()
+                .Include(x => x.User)
+                .Include(x => x.Reviews)
+                .Include(x => x.LocationReference)
+                .Include(x => x.Availabilities)
+                .Include(x => x.TherapyApproaches)
+                    .ThenInclude(x =>
+                        x.TherapyApproach)
+                .Where(TherapistVisibility.PubliclyVisible)
+                .FirstOrDefaultAsync(x => x.Id == therapistId);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist not found or is not publicly available.");
+        }
+
+        int? chatAppointmentId = null;
+
+        if (currentUserId.HasValue)
+        {
+            chatAppointmentId =
+                await _context.Appointments
+                    .AsNoTracking()
+                    .Where(appointment =>
+                        !appointment.IsDeleted &&
+                        appointment.TherapistId ==
+                            therapistId &&
+                        appointment.Client.UserId ==
+                            currentUserId.Value &&
+                        (
+                            appointment.Status ==
+                                AppointmentStatus.Accepted ||
+                            appointment.Status ==
+                                AppointmentStatus.Completed
+                        ))
+                    .OrderByDescending(appointment =>
+                        appointment.Status ==
+                        AppointmentStatus.Accepted)
+                    .ThenByDescending(appointment =>
+                        appointment.StartUtc)
+                    .Select(appointment =>
+                        (int?)appointment.Id)
+                    .FirstOrDefaultAsync();
+        }
+
+        var languages =
+            string.IsNullOrWhiteSpace(
+                therapist.Languages)
+                ? new List<string>()
+                : therapist.Languages
+                    .Split(
+                        ',',
+                        StringSplitOptions
+                            .RemoveEmptyEntries |
+                        StringSplitOptions
+                            .TrimEntries)
+                    .Where(language =>
+                        !string.IsNullOrWhiteSpace(
+                            language))
+                    .Distinct(
+                        StringComparer
+                            .OrdinalIgnoreCase)
+                    .ToList();
+
+        return new TherapistDetailsDto
+        {
+            LocationId = therapist.LocationId,
+            LocationRegion = therapist.LocationReference == null ? "" : therapist.LocationReference.Region,
+            WorksWithChildren = therapist.WorksWithChildren,
+            Id =
+                therapist.Id,
+
+            FullName =
+                therapist.User.FirstName
+                + " "
+                + therapist.User.LastName,
+
+            Email =
+    string.Empty,
+
+            Biography =
+                therapist.Biography,
+
+            SpecializationId = therapist.SpecializationId,
+
+            Specialization =
+                therapist.Specialization,
+
+            TherapyApproaches =
+                therapist.TherapyApproaches
+                    .Where(therapyApproach =>
+                        !therapyApproach.IsDeleted &&
+                        !therapyApproach
+                            .TherapyApproach
+                            .IsDeleted &&
+                        therapyApproach
+                            .TherapyApproach
+                            .IsActive)
+                    .OrderBy(therapyApproach =>
+                        therapyApproach
+                            .TherapyApproach
+                            .Name)
+                    .Select(therapyApproach =>
+                        therapyApproach
+                            .TherapyApproach
+                            .Name)
+                    .ToList(),
+
+            Languages =
+                languages,
+
+            HourlyRate =
+                therapist.HourlyRate,
+
+            ExperienceYears =
+                therapist.ExperienceYears,
+
+            AverageRating =
+                therapist.Reviews.Any(review =>
+                    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
+                    ? Math.Round(
+                        therapist.Reviews
+                            .Where(review =>
+                                !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved)
+                            .Average(review =>
+                                review.Rating),
+                        1)
+                    : 0,
+
+            TotalReviews =
+                therapist.Reviews.Count(review =>
+                    !review.IsDeleted && review.IsApproved && review.ModerationStatus == ReviewModerationStatus.Approved),
+
+            VerificationStatus =
+                therapist.VerificationStatus
+                    .ToString(),
+
+            Availabilities =
+                therapist.Availabilities
+                    .Where(availability =>
+                        !availability.IsDeleted)
+                    .OrderBy(availability =>
+                        availability.DayOfWeek)
+                    .ThenBy(availability =>
+                        availability.StartTime)
+                    .Select(availability =>
+                        new AvailabilityResponseDto
+                        {
+                            Id =
+                                availability.Id,
+
+                            DayOfWeek =
+                                availability.DayOfWeek,
+
+                            StartTime =
+                                availability.StartTime,
+
+                            EndTime =
+                                availability.EndTime
+                        })
+                    .ToList(),
+
+            ProfileImageUrl =
+                therapist.User.ProfileImageUrl
+                ?? therapist.ProfileImagePath,
+
+            Country =
+                therapist.Country,
+
+            City =
+                therapist.City,
+
+            Address =
+    null,
+
+            OffersOnline =
+                therapist.OffersOnline,
+
+            OffersInPerson =
+                therapist.OffersInPerson,
+
+            Latitude =
+                therapist.Latitude,
+
+            Longitude =
+                therapist.Longitude,
+
+            CanChat =
+                chatAppointmentId.HasValue,
+
+            ChatAppointmentId =
+                chatAppointmentId
+        };
+    }
+
+    public async Task DeleteAvailabilityAsync(
+    int therapistUserId,
+    int availabilityId)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException("Therapist not found.");
+        }
+
+        var availability =
+            await _context.TherapistAvailabilities
+                .FirstOrDefaultAsync(x =>
+                    x.Id == availabilityId
+                    && x.TherapistId == therapist.Id);
+
+        if (availability == null)
+        {
+            throw new NotFoundException(
+                "Availability not found.");
+        }
+
+        _context.TherapistAvailabilities
+            .Remove(availability);
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<TherapistDashboardDto>
+    GetDashboardAsync(int therapistUserId)
+    {
+        var therapist =
+            await _context.Therapists
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist not found.");
+        }
+
+        var nowUtc = DateTime.UtcNow;
+
+        var todayStartUtc =
+            nowUtc.Date;
+
+        var tomorrowStartUtc =
+            todayStartUtc.AddDays(1);
+
+        var currentMonthStartUtc =
+            new DateTime(
+                nowUtc.Year,
+                nowUtc.Month,
+                1,
+                0,
+                0,
+                0,
+                DateTimeKind.Utc);
+
+        var daysSinceMonday =
+    ((int)nowUtc.DayOfWeek + 6) % 7;
+
+        var currentWeekStartUtc =
+            nowUtc.Date.AddDays(-daysSinceMonday);
+
+        var nextMonthStartUtc =
+            currentMonthStartUtc.AddMonths(1);
+
+        var activeClientPeriodStartUtc =
+            nowUtc.AddDays(-30);
+
+        var trendStartUtc =
+            currentMonthStartUtc.AddMonths(-5);
+
+        var trendEndUtc =
+            nextMonthStartUtc;
+
+        var todayAppointments =
+            await _context.Appointments
+                .AsNoTracking()
+                .CountAsync(x =>
+                    !x.IsDeleted &&
+                    x.TherapistId == therapist.Id &&
+                    x.Status ==
+                        AppointmentStatus.Accepted &&
+                    x.StartUtc >= todayStartUtc &&
+                    x.StartUtc < tomorrowStartUtc);
+
+        var upcomingAppointments =
+            await _context.Appointments
+                .AsNoTracking()
+                .CountAsync(x =>
+                    !x.IsDeleted &&
+                    x.TherapistId == therapist.Id &&
+                    x.Status ==
+                        AppointmentStatus.Accepted &&
+                    x.StartUtc >= tomorrowStartUtc);
+
+        var totalClients =
+            await _context.Appointments
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.TherapistId == therapist.Id &&
+                    (
+                        x.Status ==
+                            AppointmentStatus.Accepted ||
+                        x.Status ==
+                            AppointmentStatus.Completed
+                    ))
+                .Select(x => x.ClientId)
+                .Distinct()
+                .CountAsync();
+
+        var newRequests =
+            await _context.Appointments
+                .AsNoTracking()
+                .CountAsync(x =>
+                    !x.IsDeleted &&
+                    x.TherapistId == therapist.Id &&
+                    x.Status ==
+                        AppointmentStatus.Pending);
+
+        var unreadMessages =
+            await _context.Conversations
+                .AsNoTracking()
+                .Where(conversation =>
+                    !conversation.IsDeleted &&
+                    conversation.Participants.Any(
+                        participant =>
+                            participant.UserId ==
+                                therapistUserId &&
+                            participant.IsActive &&
+                            !participant.IsDeleted))
+                .SumAsync(conversation =>
+                    conversation.Messages.Count(message =>
+                        !message.IsDeleted &&
+                        message.SenderUserId !=
+                            therapistUserId &&
+                        (
+                            conversation.Participants
+                                .Where(participant =>
+                                    participant.UserId ==
+                                        therapistUserId &&
+                                    participant.IsActive &&
+                                    !participant.IsDeleted)
+                                .Select(participant =>
+                                    participant.LastReadAtUtc)
+                                .FirstOrDefault() == null
+                            ||
+                            message.SentAtUtc >
+                                conversation.Participants
+                                    .Where(participant =>
+                                        participant.UserId ==
+                                            therapistUserId &&
+                                        participant.IsActive &&
+                                        !participant.IsDeleted)
+                                    .Select(participant =>
+                                        participant.LastReadAtUtc)
+                                    .FirstOrDefault()
+                        )));
+
+        var averageRating =
+            await _context.Reviews
+                .AsNoTracking()
+                .Where(review =>
+                    !review.IsDeleted &&
+                    review.IsApproved &&
+                    review.TherapistId ==
+                        therapist.Id)
+                .Select(review =>
+                    (double?)review.Rating)
+                .AverageAsync()
+            ?? 0;
+
+        var receipts = DashboardFinancialQueries.TherapistDirectReceipts(_context, therapist.Id);
+        var totalEarnings = await receipts.SumAsync(p => (decimal?)p.Amount) ?? 0;
+        var monthlyEarnings = await receipts
+            .Where(p => p.PaidAtUtc.HasValue && p.PaidAtUtc.Value >= currentMonthStartUtc && p.PaidAtUtc.Value < nextMonthStartUtc)
+            .SumAsync(p => (decimal?)p.Amount) ?? 0;
+        var weeklyEarnings = await receipts
+            .Where(p => p.PaidAtUtc.HasValue && p.PaidAtUtc.Value >= currentWeekStartUtc && p.PaidAtUtc.Value <= nowUtc)
+            .SumAsync(p => (decimal?)p.Amount) ?? 0;
+
+        var completedAppointments =
+    await _context.Appointments
+        .AsNoTracking()
+        .CountAsync(appointment =>
+            !appointment.IsDeleted &&
+            appointment.TherapistId == therapist.Id &&
+            appointment.Status == AppointmentStatus.Completed);
+
+        var cancelledAppointments =
+            await _context.Appointments
+                .AsNoTracking()
+                .CountAsync(appointment =>
+                    !appointment.IsDeleted &&
+                    appointment.TherapistId == therapist.Id &&
+                    appointment.Status == AppointmentStatus.Cancelled);
+
+
+        var firstClientAppointments =
+            await _context.Appointments
+                .AsNoTracking()
+                .Where(appointment =>
+                    !appointment.IsDeleted &&
+                    appointment.TherapistId ==
+                        therapist.Id &&
+                    (
+                        appointment.Status ==
+                            AppointmentStatus.Accepted ||
+                        appointment.Status ==
+                            AppointmentStatus.Completed
+                    ))
+                .GroupBy(appointment =>
+                    appointment.ClientId)
+                .Select(group =>
+                    new
+                    {
+                        ClientId = group.Key,
+                        FirstAppointmentUtc =
+                            group.Min(appointment =>
+                                appointment.StartUtc)
+                    })
+                .ToListAsync();
+
+        var newClients =
+            firstClientAppointments.Count(client =>
+                client.FirstAppointmentUtc >=
+                    currentMonthStartUtc &&
+                client.FirstAppointmentUtc <
+                    nextMonthStartUtc);
+
+        var activeClients =
+            await _context.Appointments
+                .AsNoTracking()
+                .Where(appointment =>
+                    !appointment.IsDeleted &&
+                    appointment.TherapistId ==
+                        therapist.Id &&
+                    (
+                        (
+                            appointment.Status ==
+                                AppointmentStatus.Accepted &&
+                            appointment.StartUtc >= nowUtc
+                        )
+                        ||
+                        (
+                            appointment.Status ==
+                                AppointmentStatus.Completed &&
+                            appointment.StartUtc >=
+                                activeClientPeriodStartUtc &&
+                            appointment.StartUtc <= nowUtc
+                        )
+                    ))
+                .Select(appointment =>
+                    appointment.ClientId)
+                .Distinct()
+                .CountAsync();
+
+        var completedAppointmentDates =
+            await _context.Appointments
+                .AsNoTracking()
+                .Where(appointment =>
+                    !appointment.IsDeleted &&
+                    appointment.TherapistId ==
+                        therapist.Id &&
+                    appointment.Status ==
+                        AppointmentStatus.Completed &&
+                    appointment.StartUtc >= trendStartUtc &&
+                    appointment.StartUtc < trendEndUtc)
+                .Select(appointment =>
+                    appointment.StartUtc)
+                .ToListAsync();
+
+        var workTrend =
+            new List<TherapistWorkTrendDto>();
+
+        for (var monthOffset = 0;
+             monthOffset < 6;
+             monthOffset++)
+        {
+            var monthStart =
+                trendStartUtc.AddMonths(monthOffset);
+
+            var monthEnd =
+                monthStart.AddMonths(1);
+
+            var monthlyCompletedAppointments =
+                completedAppointmentDates.Count(date =>
+                    date >= monthStart &&
+                    date < monthEnd);
+
+            workTrend.Add(
+                new TherapistWorkTrendDto
+                {
+                    Year = monthStart.Year,
+
+                    Month = monthStart.Month,
+
+                    Label =
+                        monthStart.ToString("MMM yyyy"),
+
+                    CompletedAppointments = monthlyCompletedAppointments
+                });
+        }
+
+        var averageAppointmentsPerMonth =
+            Math.Round(
+                completedAppointmentDates.Count / 6.0,
+                1);
+
+        return new TherapistDashboardDto
+        {
+            TodayAppointments =
+                todayAppointments,
+
+            UpcomingAppointments =
+                upcomingAppointments,
+
+            TotalClients =
+                totalClients,
+
+            NewRequests =
+                newRequests,
+
+            UnreadMessages =
+                unreadMessages,
+
+            AverageRating =
+                Math.Round(
+                    averageRating,
+                    1),
+
+            TotalEarnings =
+                totalEarnings,
+
+            NewClients =
+                newClients,
+
+            ActiveClients =
+                activeClients,
+
+            AverageAppointmentsPerMonth =
+                averageAppointmentsPerMonth,
+
+            WorkTrend =
+                workTrend,
+
+            MonthlyEarnings = monthlyEarnings,
+
+            WeeklyEarnings = weeklyEarnings,
+
+            CompletedAppointments = completedAppointments,
+
+            CancelledAppointments = cancelledAppointments,
+        };
+    }
+
+    public async Task AddUnavailableDateAsync(
+     int therapistUserId,
+     CreateUnavailableDateDto request)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist profile not found.");
+        }
+
+        if (request.StartUtc >= request.EndUtc)
+        {
+            throw new BadRequestException(
+                "The unavailable period must end after it starts.");
+        }
+
+        if (request.StartUtc < DateTime.UtcNow)
+        {
+            throw new BadRequestException(
+                "The unavailable period cannot start in the past.");
+        }
+
+        var reason =
+            request.Reason?.Trim()
+            ?? string.Empty;
+
+        var allowedReasons =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            "Break",
+            "Blocked time",
+            "Annual leave",
+            "Temporarily unavailable"
+            };
+
+        if (!allowedReasons.Contains(reason))
+        {
+            throw new BadRequestException(
+                "Unavailable period type is invalid.");
+        }
+
+        var hasOverlap =
+            await _context
+                .TherapistUnavailableDates
+                .AnyAsync(x =>
+                    x.TherapistId == therapist.Id &&
+                    !x.IsDeleted &&
+                    request.StartUtc < x.EndUtc &&
+                    request.EndUtc > x.StartUtc);
+
+        if (hasOverlap)
+        {
+            throw new BusinessException(
+                "Unavailable period overlaps an existing period.");
+        }
+
+        var unavailableDate =
+            new TherapistUnavailableDate
+            {
+                TherapistId = therapist.Id,
+                StartUtc = request.StartUtc,
+                EndUtc = request.EndUtc,
+                Reason = reason
+            };
+
+        _context
+            .TherapistUnavailableDates
+            .Add(unavailableDate);
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<
+    PagedResponse<UnavailableDateResponseDto>>
+    GetUnavailableDatesAsync(
+        int therapistId,
+        int pageNumber,
+        int pageSize,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        int? currentUserId = null)
+    {
+        await EnsureScheduleAccessAsync(therapistId, currentUserId);
+
+        var rangeStart =
+            fromUtc?.ToUniversalTime();
+
+        var rangeEnd =
+            toUtc?.ToUniversalTime();
+
+        if (rangeStart.HasValue &&
+            rangeEnd.HasValue &&
+            rangeEnd <= rangeStart)
+        {
+            throw new BusinessException(
+                "Unavailable date range end must be after the start.");
+        }
+
+        if (rangeStart.HasValue &&
+            rangeEnd.HasValue &&
+            rangeEnd.Value - rangeStart.Value >
+            TimeSpan.FromDays(MaximumUnavailableDateRangeDays))
+        {
+            throw new BusinessException(
+                "Unavailable date range cannot exceed 370 days.");
+        }
+
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
+        var query =
+            _context
+            .TherapistUnavailableDates
+            .Where(x =>
+                x.TherapistId == therapistId &&
+                !x.IsDeleted);
+
+        if (rangeStart.HasValue)
+        {
+            query =
+                query.Where(x =>
+                    x.EndUtc > rangeStart.Value);
+        }
+
+        if (rangeEnd.HasValue)
+        {
+            query =
+                query.Where(x =>
+                    x.StartUtc < rangeEnd.Value);
+        }
+
+        query =
+            query
+            .OrderBy(x => x.StartUtc)
+            .ThenBy(x => x.Id);
+
+        var totalCount =
+            await query.CountAsync();
+
+        var dates =
+            await query
+            .Skip(pagination.Skip)
+            .Take(pagination.PageSize)
+            .Select(x =>
+                new UnavailableDateResponseDto
+                {
+                    Id = x.Id,
+                    StartUtc = x.StartUtc,
+                    EndUtc = x.EndUtc,
+                    Reason = x.Reason
+                })
+            .ToListAsync();
+
+        return PagedResponse<UnavailableDateResponseDto>
+            .Create(
+                dates,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
+    }
+
+    private async Task EnsureScheduleAccessAsync(int therapistId, int? currentUserId)
+    {
+        var publicIds = _context.Therapists
+            .Where(TherapistVisibility.PubliclyVisible).Select(x => x.Id);
+        var adminUserIds = from userRole in _context.UserRoles
+                           join role in _context.Roles on userRole.RoleId equals role.Id
+                           where role.Name == RoleConstants.Admin
+                           select userRole.UserId;
+        var viewerUserId = currentUserId.GetValueOrDefault();
+
+        var canAccess = await _context.Therapists.AnyAsync(x =>
+            x.Id == therapistId && !x.IsDeleted &&
+            ((currentUserId.HasValue && (x.UserId == viewerUserId || adminUserIds.Contains(viewerUserId))) ||
+             publicIds.Contains(x.Id)));
+
+        if (!canAccess)
+        {
+            throw new NotFoundException("Therapist not found or is not publicly available.");
+        }
+    }
+
+    public async Task DeleteUnavailableDateAsync(
+    int therapistUserId,
+    int unavailableDateId)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist not found.");
+        }
+
+        var unavailableDate =
+            await _context
+                .TherapistUnavailableDates
+                .FirstOrDefaultAsync(x =>
+                    x.Id == unavailableDateId
+                    && x.TherapistId == therapist.Id);
+
+        if (unavailableDate == null)
+        {
+            throw new NotFoundException(
+                "Unavailable date not found.");
+        }
+
+        _context
+            .TherapistUnavailableDates
+            .Remove(unavailableDate);
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task UploadDocumentAsync(
+    int therapistUserId,
+    IFormFile file)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId ==
+                        therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist not found.");
+        }
+
+        await ValidateDocumentAsync(
+            file);
+
+        if (therapist.VerificationStatus == TherapistVerificationStatus.Rejected)
+        {
+            throw new BusinessException("Rejected applications cannot be resubmitted.");
+        }
+
+        var privateRoot =
+            Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "private-storage");
+
+        var uploadsFolder =
+            Path.Combine(
+                privateRoot,
+                "therapist-documents");
+
+        if (!Directory.Exists(
+                uploadsFolder))
+        {
+            Directory.CreateDirectory(
+                uploadsFolder);
+        }
+
+        var extension =
+            Path.GetExtension(
+                    file.FileName)
+                .ToLowerInvariant();
+
+        var uniqueFileName =
+            $"{Guid.NewGuid():N}{extension}";
+
+        var physicalPath =
+            Path.Combine(
+                uploadsFolder,
+                uniqueFileName);
+
+        await using (
+            var stream =
+                new FileStream(
+                    physicalPath,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None))
+        {
+            await file.CopyToAsync(
+                stream);
+        }
+
+        var document =
+            new TherapistDocument
+            {
+                TherapistId =
+                    therapist.Id,
+
+                FileName =
+                    Path.GetFileName(
+                        file.FileName),
+
+                FilePath =
+                    Path.Combine(
+                        "therapist-documents",
+                        uniqueFileName),
+
+                ContentType =
+                    file.ContentType,
+
+                IsApproved =
+                    false
+            };
+
+        _context.TherapistDocuments
+            .Add(document);
+
+        if (therapist.VerificationStatus == TherapistVerificationStatus.RequiresChanges)
+        {
+            therapist.VerificationStatus = TherapistVerificationStatus.Pending;
+            therapist.UpdatedAtUtc = DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<PagedResponse<TherapistDocumentResponseDto>> GetMyDocumentsAsync(
+        int therapistUserId, int pageNumber, int pageSize)
+    {
+        var therapistId = await _context.Therapists
+            .Where(x => x.UserId == therapistUserId && !x.IsDeleted)
+            .Select(x => (int?)x.Id).SingleOrDefaultAsync();
+        if (therapistId == null) throw new NotFoundException("Therapist not found.");
+        return await GetDocumentsAsync(therapistId.Value, pageNumber, pageSize);
+    }
+
+    public async Task<
+    PagedResponse<TherapistDocumentResponseDto>>
+    GetDocumentsAsync(
+        int therapistId,
+        int pageNumber,
+        int pageSize)
+    {
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
+        var query =
+            _context
+            .TherapistDocuments
+            .AsNoTracking()
+            .Where(x =>
+                x.TherapistId ==
+                    therapistId &&
+                !x.IsDeleted)
+            .OrderByDescending(x =>
+                x.CreatedAtUtc)
+            .ThenByDescending(x =>
+                x.Id);
+
+        var totalCount =
+            await query.CountAsync();
+
+        var documents =
+            await query
+            .Skip(pagination.Skip)
+            .Take(pagination.PageSize)
+            .Select(x =>
+                new TherapistDocumentResponseDto
+                {
+                    Id =
+                        x.Id,
+
+                    FileName =
+                        x.FileName,
+
+                    FilePath =
+                        string.Empty,
+
+                    ContentType =
+                        x.ContentType,
+
+                    IsApproved =
+                        x.IsApproved
+                })
+            .ToListAsync();
+
+        return PagedResponse<TherapistDocumentResponseDto>
+            .Create(
+                documents,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
+    }
+
+    public async Task<
+      TherapistDocumentDownloadDto>
+      DownloadDocumentAsync(
+          int authenticatedUserId,
+          int documentId)
+    {
+        if (authenticatedUserId <= 0)
+        {
+            throw new UnauthorizedAccessException(
+                "Authenticated user identifier is invalid.");
+        }
+
+        if (documentId <= 0)
+        {
+            throw new BadRequestException(
+                "Document identifier is invalid.");
+        }
+
+        var document =
+            await _context
+                .TherapistDocuments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.Id ==
+                        documentId &&
+                    !x.IsDeleted);
+
+        if (document == null)
+        {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            authenticatedUserId,
+
+                        EventType =
+                            "SensitiveDocumentAccessFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "DocumentNotFound",
+
+                        ResourceType =
+                            "TherapistDocument",
+
+                        ResourceId =
+                            documentId.ToString()
+                    });
+
+            throw new NotFoundException(
+                "Document not found.");
+        }
+
+        var privateRoot =
+            Path.GetFullPath(
+                Path.Combine(
+                    Directory
+                        .GetCurrentDirectory(),
+                    "private-storage"));
+
+        var physicalPath =
+            Path.GetFullPath(
+                Path.Combine(
+                    privateRoot,
+                    document.FilePath));
+
+        if (!physicalPath.StartsWith(
+                privateRoot +
+                Path.DirectorySeparatorChar,
+                StringComparison
+                    .OrdinalIgnoreCase))
+        {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            authenticatedUserId,
+
+                        EventType =
+                            "SensitiveDocumentAccessFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "InvalidStoragePath",
+
+                        ResourceType =
+                            "TherapistDocument",
+
+                        ResourceId =
+                            document.Id.ToString()
+                    });
+
+            throw new UnauthorizedAccessException(
+                "Invalid document storage path.");
+        }
+
+        if (!File.Exists(
+                physicalPath))
+        {
+            await _securityAuditService
+                .WriteAsync(
+                    new SecurityAuditWriteDto
+                    {
+                        UserId =
+                            authenticatedUserId,
+
+                        EventType =
+                            "SensitiveDocumentAccessFailed",
+
+                        IsSuccessful =
+                            false,
+
+                        FailureReason =
+                            "PhysicalFileNotFound",
+
+                        ResourceType =
+                            "TherapistDocument",
+
+                        ResourceId =
+                            document.Id.ToString()
+                    });
+
+            throw new NotFoundException(
+                "Document file was not found.");
+        }
+
+        var content =
+            await File.ReadAllBytesAsync(
+                physicalPath);
+
+        await _securityAuditService
+            .WriteAsync(
+                new SecurityAuditWriteDto
+                {
+                    UserId =
+                        authenticatedUserId,
+
+                    EventType =
+                        "SensitiveDocumentAccessed",
+
+                    IsSuccessful =
+                        true,
+
+                    FailureReason =
+                        null,
+
+                    ResourceType =
+                        "TherapistDocument",
+
+                    ResourceId =
+                        document.Id.ToString()
+                });
+
+        return new TherapistDocumentDownloadDto
+        {
+            Content =
+                content,
+
+            FileName =
+                document.FileName,
+
+            ContentType =
+                string.IsNullOrWhiteSpace(
+                    document.ContentType)
+                    ? "application/octet-stream"
+                    : document.ContentType
+        };
+    }
+
+    public async Task DeleteDocumentAsync(
+    int therapistUserId,
+    int documentId)
+    {
+        var therapist =
+            await _context.Therapists
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist not found.");
+        }
+
+        var document =
+            await _context
+                .TherapistDocuments
+                .FirstOrDefaultAsync(x =>
+                    x.Id == documentId
+                    && x.TherapistId
+                        == therapist.Id);
+
+        if (document == null)
+        {
+            throw new NotFoundException(
+                "Document not found.");
+        }
+
+        var privateRoot =
+            Path.GetFullPath(
+                Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "private-storage"));
+
+        var physicalPath =
+            Path.GetFullPath(
+                Path.Combine(
+                    privateRoot,
+                    document.FilePath));
+
+        if (!physicalPath.StartsWith(
+                privateRoot +
+                Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid document storage path.");
+        }
+
+        if (File.Exists(
+                physicalPath))
+        {
+            File.Delete(
+                physicalPath);
+        }
+
+        _context.TherapistDocuments
+            .Remove(document);
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<PagedResponse<TherapistClientListDto>>
+    GetClientsAsync(
+        int therapistUserId,
+        string? search,
+        int pageNumber,
+        int pageSize)
+    {
+        var therapist =
+            await _context.Therapists
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist not found.");
+        }
+
+        var normalizedSearch =
+            search?.Trim().ToLower();
+
+        var appointments =
+            _context.Appointments
+                .AsNoTracking()
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+.Where(x =>
+    !x.IsDeleted &&
+    x.TherapistId ==
+        therapist.Id &&
+    (
+        x.Status ==
+            AppointmentStatus.Accepted ||
+        x.Status ==
+            AppointmentStatus.Completed
+    ));
+
+        if (!string.IsNullOrWhiteSpace(
+                normalizedSearch))
+        {
+            appointments =
+                appointments.Where(x =>
+                    (
+                        x.Client.User.FirstName
+                        + " "
+                        + x.Client.User.LastName
+                    )
+                    .ToLower()
+                    .Contains(normalizedSearch)
+                    ||
+                    (
+                        x.Client.User.Email
+                        ?? string.Empty
+                    )
+                    .ToLower()
+                    .Contains(normalizedSearch)
+                    ||
+                    (
+                        x.Client.User.PhoneNumber
+                        ?? string.Empty
+                    )
+                    .ToLower()
+                    .Contains(normalizedSearch));
+        }
+
+        var pagination =
+            PaginationHelper.Normalize(
+                pageNumber,
+                pageSize);
+
+        var clientQuery =
+            appointments
+                .GroupBy(x => new
+                {
+                    ClientId =
+                        x.ClientId,
+
+                    x.Client.UserId,
+
+                    x.Client.User.FirstName,
+
+                    x.Client.User.LastName,
+
+                    x.Client.User.Email,
+
+                    x.Client.User.PhoneNumber
+                })
+                .Select(group =>
+                    new TherapistClientListDto
+                    {
+                        ClientId =
+                            group.Key.ClientId,
+
+                        UserId =
+                            group.Key.UserId,
+
+                        FullName =
+                            group.Key.FirstName
+                            + " "
+                            + group.Key.LastName,
+
+                        Email =
+                            group.Key.Email
+                            ?? string.Empty,
+
+                        PhoneNumber =
+                            group.Key.PhoneNumber,
+
+                        TotalAppointments =
+                            group.Count(),
+
+                        CompletedAppointments =
+                            group.Count(x =>
+                                x.Status ==
+                                AppointmentStatus
+                                    .Completed),
+
+                        LastAppointmentDate =
+                            group
+                                .Where(x =>
+                                    x.EndUtc <
+                                    DateTime.UtcNow)
+                                .OrderByDescending(x =>
+                                    x.EndUtc)
+                                .Select(x =>
+                                    (DateTime?)x.EndUtc)
+                                .FirstOrDefault(),
+
+                        NextAppointmentDate =
+                            group
+                                .Where(x =>
+                                    x.StartUtc >
+                                    DateTime.UtcNow &&
+                                    (
+                                        x.Status ==
+                                        AppointmentStatus
+                                            .Pending
+                                        ||
+                                        x.Status ==
+                                        AppointmentStatus
+                                            .Accepted
+                                    ))
+                                .OrderBy(x =>
+                                    x.StartUtc)
+                                .Select(x =>
+                                    (DateTime?)x.StartUtc)
+                                .FirstOrDefault()
+                    })
+                .OrderByDescending(x =>
+                    x.NextAppointmentDate
+                    != null)
+                .ThenBy(x =>
+                    x.NextAppointmentDate)
+                .ThenByDescending(x =>
+                    x.LastAppointmentDate)
+                .ThenBy(x =>
+                    x.FullName)
+                .ThenBy(x =>
+                    x.ClientId);
+
+        var totalCount =
+            await clientQuery.CountAsync();
+
+        var clients =
+            await clientQuery
+                .Skip(pagination.Skip)
+                .Take(pagination.PageSize)
+                .ToListAsync();
+
+        return PagedResponse<TherapistClientListDto>
+            .Create(
+                clients,
+                pagination.PageNumber,
+                pagination.PageSize,
+                totalCount);
+    }
+
+    public async Task<TherapistClientProfileDto> GetClientProfileAsync(int therapistUserId, int clientId)
+    {
+        await _therapistClientAccessService.EnsureRelationshipAsync(therapistUserId, clientId);
+        return await _context.Clients.AsNoTracking()
+            .Where(x => x.Id == clientId && !x.IsDeleted)
+            .Select(x => new TherapistClientProfileDto
+            {
+                ClientId = x.Id,
+                FullName = (x.User.FirstName + " " + x.User.LastName).Trim(),
+                Email = x.User.Email ?? string.Empty,
+                PhoneNumber = x.User.PhoneNumber
+            }).SingleOrDefaultAsync()
+            ?? throw new NotFoundException("Client not found or is not available to this therapist.");
+    }
+
+    public async Task<TherapistClientDetailsDto>
+    GetClientDetailsAsync(
+        int therapistUserId,
+        int clientId)
+    {
+        var therapist =
+            await _context.Therapists
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == therapistUserId &&
+                    !x.IsDeleted);
+
+        if (therapist == null)
+        {
+            throw new NotFoundException(
+                "Therapist not found.");
+        }
+
+        await _therapistClientAccessService
+    .EnsureRelationshipAsync(
+        therapistUserId,
+        clientId);
+
+        var appointments =
+            await _context.Appointments
+                .AsNoTracking()
+                .Include(x => x.Client)
+                    .ThenInclude(x => x.User)
+.Where(x =>
+    !x.IsDeleted &&
+    x.TherapistId == therapist.Id &&
+    x.ClientId == clientId)
+                .OrderByDescending(x =>
+                    x.StartUtc)
+                .ToListAsync();
+
+        if (appointments.Count == 0)
+        {
+            throw new NotFoundException(
+                "Client not found or does not belong to this therapist.");
+        }
+
+        var client =
+            appointments[0].Client;
+
+        var appointmentIds =
+            appointments
+                .Select(x => x.Id)
+                .ToList();
+
+        var appointmentIdsWithNotes =
+            await _context.AppointmentNotes
+                .AsNoTracking()
+                .Where(x =>
+                    x.TherapistId == therapist.Id &&
+                    appointmentIds.Contains(
+                        x.AppointmentId))
+                .Select(x =>
+                    x.AppointmentId)
+                .ToHashSetAsync();
+
+        var now =
+            DateTime.UtcNow;
+
+        var firstAppointmentDate =
+            appointments
+                .OrderBy(x =>
+                    x.StartUtc)
+                .Select(x =>
+                    (DateTime?)x.StartUtc)
+                .FirstOrDefault();
+
+        var lastAppointmentDate =
+            appointments
+                .Where(x =>
+                    x.EndUtc < now)
+                .OrderByDescending(x =>
+                    x.EndUtc)
+                .Select(x =>
+                    (DateTime?)x.EndUtc)
+                .FirstOrDefault();
+
+        var nextAppointmentDate =
+            appointments
+                .Where(x =>
+                    x.StartUtc > now &&
+                    (
+                        x.Status ==
+                        AppointmentStatus.Pending
+                        ||
+                        x.Status ==
+                        AppointmentStatus.Accepted
+                    ))
+                .OrderBy(x =>
+                    x.StartUtc)
+                .Select(x =>
+                    (DateTime?)x.StartUtc)
+                .FirstOrDefault();
+
+        var nowUtc =
+    DateTime.UtcNow;
+
+        var memberships =
+            await _context.ClientMemberships
+                .AsNoTracking()
+                .Include(x => x.Payment)
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.ClientId == clientId &&
+                    x.TherapistId == therapist.Id)
+                .OrderByDescending(x =>
+                    x.PurchasedAtUtc ??
+                    x.CreatedAtUtc)
+                .Select(x =>
+                    new TherapistClientMembershipDto
+                    {
+                        Id =
+                            x.Id,
+
+                        PlanType =
+                            x.PlanType.ToString(),
+
+                        TotalSessions =
+                            x.TotalSessions,
+
+                        RemainingSessions =
+                            x.RemainingSessions,
+
+                        UsedSessions =
+                            Math.Max(
+                                0,
+                                x.TotalSessions -
+                                x.RemainingSessions),
+
+                        Price =
+                            x.Price,
+
+                        IsActive =
+                            x.IsActive &&
+                            x.RemainingSessions > 0 &&
+                            (
+                                x.ExpiresAtUtc == null ||
+                                x.ExpiresAtUtc > nowUtc
+                            ),
+
+                        IsPaid =
+                            x.Payment != null &&
+                            x.Payment.Status ==
+                                PaymentStatus.Paid,
+
+                        IsExpired =
+                            x.ExpiresAtUtc != null &&
+                            x.ExpiresAtUtc <= nowUtc,
+
+                        PaymentStatus =
+                            x.Payment == null
+                                ? "NotCreated"
+                                : x.Payment.Status
+                                    .ToString(),
+
+                        PurchasedAtUtc =
+                            x.PurchasedAtUtc,
+
+                        ExpiresAtUtc =
+                            x.ExpiresAtUtc
+                    })
+                .ToListAsync();
+
+        var reviews =
+            await _context.Reviews
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.ClientId == clientId &&
+                    x.TherapistId == therapist.Id)
+                .OrderByDescending(x =>
+                    x.CreatedAtUtc)
+                .ThenByDescending(x =>
+                    x.Id)
+                .Select(x =>
+                    new TherapistClientReviewDto
+                    {
+                        Id =
+                            x.Id,
+
+                        AppointmentId =
+                            x.AppointmentId,
+
+                        Rating =
+                            x.Rating,
+
+                        Comment =
+                            x.Comment,
+
+                        IsApproved =
+                            x.IsApproved,
+
+                        ModerationStatus =
+                            x.IsApproved
+                                ? "Approved"
+                                : "Pending moderation",
+
+                        CreatedAtUtc =
+                            x.CreatedAtUtc,
+
+                        TherapistReply =
+                            x.TherapistReply,
+
+                        TherapistReplyCreatedAtUtc =
+                            x.TherapistReplyCreatedAtUtc
+                    })
+                .ToListAsync();
+
+        return new TherapistClientDetailsDto
+        {
+            ClientId =
+                client.Id,
+
+            UserId =
+                client.UserId,
+
+            FullName =
+                client.User.FirstName
+                + " "
+                + client.User.LastName,
+
+            Email =
+                client.User.Email
+                ?? string.Empty,
+
+            PhoneNumber =
+                client.User.PhoneNumber,
+
+            TotalAppointments =
+                appointments.Count,
+
+            PendingAppointments =
+                appointments.Count(x =>
+                    x.Status ==
+                    AppointmentStatus.Pending),
+
+            AcceptedAppointments =
+                appointments.Count(x =>
+                    x.Status ==
+                    AppointmentStatus.Accepted),
+
+            CompletedAppointments =
+                appointments.Count(x =>
+                    x.Status ==
+                    AppointmentStatus.Completed),
+
+            CancelledAppointments =
+                appointments.Count(x =>
+                    x.Status ==
+                    AppointmentStatus.Cancelled
+                    ||
+                    x.Status ==
+                    AppointmentStatus.Rejected),
+
+            FirstAppointmentDate =
+                firstAppointmentDate,
+
+            LastAppointmentDate =
+                lastAppointmentDate,
+
+            NextAppointmentDate =
+                nextAppointmentDate,
+
+            AppointmentHistory =
+    appointments
+        .Select(x =>
+            new TherapistClientAppointmentDto
+            {
+                AppointmentId =
+                    x.Id,
+
+                StartUtc =
+                    x.StartUtc,
+
+                EndUtc =
+                    x.EndUtc,
+
+                Status =
+                    x.Status.ToString(),
+
+                Type =
+                    x.Type.ToString(),
+
+                MeetingLink =
+                    x.MeetingLink,
+
+                Location =
+                    x.Location,
+
+                HasNote =
+                    appointmentIdsWithNotes
+                        .Contains(x.Id)
+            })
+        .ToList(),
+
+            Memberships =
+    memberships,
+
+            Reviews =
+    reviews
+
+
+        };
+    }
+
+    private static void DeleteOldProfileImage(
+    string? oldImageUrl,
+    string newImageUrl,
+    string webRootPath)
+    {
+        if (string.IsNullOrWhiteSpace(
+                oldImageUrl) ||
+            string.Equals(
+                oldImageUrl,
+                newImageUrl,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        DeleteManagedProfileImage(
+            oldImageUrl,
+            webRootPath);
+    }
+
+    private async Task
+    ValidateTherapistProfileImageAsync(
+        IFormFile file)
+    {
+        if (file == null ||
+            file.Length == 0)
+        {
+            throw new BadRequestException(
+                "Profile image is required.");
+        }
+
+        var maximumFileSize =
+            _uploadSettings.MaximumImageSizeBytes;
+
+        if (file.Length >
+            _uploadSettings.MaximumDocumentSizeBytes)
+        {
+            throw new BadRequestException(
+                $"Maximum profile image size is "
++ $"{_uploadSettings.MaximumDocumentSizeMb} MB.");
+        }
+
+        var extension =
+            Path.GetExtension(
+                    file.FileName)
+                .ToLowerInvariant();
+
+        var allowedExtensions =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+            };
+
+        if (string.IsNullOrWhiteSpace(
+                extension) ||
+            !allowedExtensions.Contains(
+                extension))
+        {
+            throw new BadRequestException(
+                "Only JPG, JPEG, PNG and WEBP images are allowed.");
+        }
+
+        var allowedContentTypes =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+            };
+
+        if (string.IsNullOrWhiteSpace(
+                file.ContentType) ||
+            !allowedContentTypes.Contains(
+                file.ContentType))
+        {
+            throw new BadRequestException(
+                "Unsupported profile image content type.");
+        }
+
+        var header =
+            new byte[12];
+
+        await using var stream =
+            file.OpenReadStream();
+
+        var bytesRead =
+            await stream.ReadAsync(
+                header.AsMemory(
+                    0,
+                    header.Length));
+
+        var isJpeg =
+            bytesRead >= 3 &&
+            header[0] == 0xFF &&
+            header[1] == 0xD8 &&
+            header[2] == 0xFF;
+
+        var isPng =
+            bytesRead >= 8 &&
+            header[0] == 0x89 &&
+            header[1] == 0x50 &&
+            header[2] == 0x4E &&
+            header[3] == 0x47 &&
+            header[4] == 0x0D &&
+            header[5] == 0x0A &&
+            header[6] == 0x1A &&
+            header[7] == 0x0A;
+
+        var isWebp =
+            bytesRead >= 12 &&
+            header[0] == 0x52 &&
+            header[1] == 0x49 &&
+            header[2] == 0x46 &&
+            header[3] == 0x46 &&
+            header[8] == 0x57 &&
+            header[9] == 0x45 &&
+            header[10] == 0x42 &&
+            header[11] == 0x50;
+
+        var extensionMatchesContent =
+            extension switch
+            {
+                ".jpg" or ".jpeg" =>
+                    isJpeg,
+
+                ".png" =>
+                    isPng,
+
+                ".webp" =>
+                    isWebp,
+
+                _ =>
+                    false
+            };
+
+        if (!extensionMatchesContent)
+        {
+            throw new BadRequestException(
+                "The uploaded file content does not match its extension.");
+        }
+
+        var mimeMatchesContent =
+            file.ContentType
+                .ToLowerInvariant()
+            switch
+            {
+                "image/jpeg" =>
+                    isJpeg,
+
+                "image/png" =>
+                    isPng,
+
+                "image/webp" =>
+                    isWebp,
+
+                _ =>
+                    false
+            };
+
+        if (!mimeMatchesContent)
+        {
+            throw new BadRequestException(
+                "The uploaded file content does not match its MIME type.");
+        }
+    }
+
+    private async Task
+     ValidateDocumentAsync(
+         IFormFile file)
+    {
+        if (file == null ||
+            file.Length == 0)
+        {
+            throw new BadRequestException(
+                "Select a document.");
+        }
+
+        if (file.Length >
+            _uploadSettings.MaximumDocumentSizeBytes)
+        {
+            throw new BadRequestException(
+                $"Maximum document size is "
++ $"{_uploadSettings.MaximumDocumentSizeMb} MB.");
+        }
+
+        var extension =
+            Path.GetExtension(
+                    file.FileName)
+                .ToLowerInvariant();
+
+        if (string.IsNullOrWhiteSpace(
+                extension) ||
+            !AllowedDocumentExtensions.Contains(
+                extension))
+        {
+            throw new BadRequestException(
+                "Only JPG, JPEG, PNG and PDF files are allowed.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                file.ContentType) ||
+            !AllowedDocumentMimeTypes.Contains(
+                file.ContentType))
+        {
+            throw new BadRequestException(
+                "Unsupported content type.");
+        }
+
+        var header =
+            new byte[8];
+
+        await using var stream =
+            file.OpenReadStream();
+
+        var bytesRead =
+            await stream.ReadAsync(
+                header.AsMemory(
+                    0,
+                    header.Length));
+
+        var isJpeg =
+            bytesRead >= 3 &&
+            header[0] == 0xFF &&
+            header[1] == 0xD8 &&
+            header[2] == 0xFF;
+
+        var isPng =
+            bytesRead >= 8 &&
+            header[0] == 0x89 &&
+            header[1] == 0x50 &&
+            header[2] == 0x4E &&
+            header[3] == 0x47 &&
+            header[4] == 0x0D &&
+            header[5] == 0x0A &&
+            header[6] == 0x1A &&
+            header[7] == 0x0A;
+
+        var isPdf =
+            bytesRead >= 5 &&
+            header[0] == 0x25 &&
+            header[1] == 0x50 &&
+            header[2] == 0x44 &&
+            header[3] == 0x46 &&
+            header[4] == 0x2D;
+
+        var extensionMatchesContent =
+            extension switch
+            {
+                ".jpg" or ".jpeg" =>
+                    isJpeg,
+
+                ".png" =>
+                    isPng,
+
+                ".pdf" =>
+                    isPdf,
+
+                _ =>
+                    false
+            };
+
+        if (!extensionMatchesContent)
+        {
+            throw new BadRequestException(
+                "The uploaded document content does not match its extension.");
+        }
+
+        var mimeMatchesContent =
+            file.ContentType
+                .ToLowerInvariant()
+            switch
+            {
+                "image/jpeg" =>
+                    isJpeg,
+
+                "image/png" =>
+                    isPng,
+
+                "application/pdf" =>
+                    isPdf,
+
+                _ =>
+                    false
+            };
+
+        if (!mimeMatchesContent)
+        {
+            throw new BadRequestException(
+                "The uploaded document content does not match its MIME type.");
+        }
+    }
+
+    private async Task UpdateCoordinatesAsync(
+    Therapist therapist,
+    CancellationToken cancellationToken)
+    {
+        if (!therapist.OffersInPerson)
+        {
+            therapist.Latitude = null;
+            therapist.Longitude = null;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(therapist.Country) ||
+            string.IsNullOrWhiteSpace(therapist.City))
+        {
+            therapist.Latitude = null;
+            therapist.Longitude = null;
+            return;
+        }
+
+        var result = await _geocodingService.GeocodeAddressAsync(
+            therapist.Country,
+            therapist.City,
+            therapist.Address,
+            cancellationToken);
+
+        if (!result.IsSuccessful ||
+            result.Latitude is null ||
+            result.Longitude is null)
+        {
+            therapist.Latitude = null;
+            therapist.Longitude = null;
+            return;
+        }
+
+        therapist.Latitude = result.Latitude;
+        therapist.Longitude = result.Longitude;
+    }
+
+    private static void DeleteManagedProfileImage(
+    string? imageUrl,
+    string webRootPath)
+    {
+        if (string.IsNullOrWhiteSpace(
+                imageUrl))
+        {
+            return;
+        }
+
+        const string managedFolder =
+            "/uploads/profiles/therapists/";
+
+        if (!imageUrl.StartsWith(
+                managedFolder,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var relativePath =
+            imageUrl
+                .TrimStart('/')
+                .Replace(
+                    '/',
+                    Path.DirectorySeparatorChar);
+
+        var physicalPath =
+            Path.Combine(
+                webRootPath,
+                relativePath);
+
+        if (File.Exists(physicalPath))
+        {
+            File.Delete(physicalPath);
+        }
+    }
+}

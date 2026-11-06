@@ -1,0 +1,173 @@
+import 'dart:async';
+
+import 'package:signalr_netcore/signalr_client.dart';
+
+import '../../../../core/constants/api_constants.dart';
+import '../../../../services/session_storage_service.dart';
+
+enum NotificationConnectionStatus {
+  disconnected,
+  connecting,
+  connected,
+  reconnecting,
+}
+
+class NotificationRealtimeService {
+  static const Duration _startTimeout = Duration(seconds: 10);
+
+  final SessionStorageService sessionStorage;
+
+  final Future<void> Function() onNotificationReceived;
+
+  final Future<void> Function() onReconnected;
+
+  final void Function(NotificationConnectionStatus status)
+  onConnectionStatusChanged;
+
+  HubConnection? _hubConnection;
+
+  Timer? _manualReconnectTimer;
+
+  bool _isStarting = false;
+
+  bool _manuallyStopped = false;
+  int _generation = 0;
+
+  NotificationRealtimeService({
+    required this.sessionStorage,
+    required this.onNotificationReceived,
+    required this.onReconnected,
+    required this.onConnectionStatusChanged,
+  });
+
+  bool get isConnected {
+    return _hubConnection?.state == HubConnectionState.Connected;
+  }
+
+  Future<void> start() async {
+    if (_isStarting || isConnected) return;
+    _isStarting = true;
+    final generation = _generation;
+    try {
+      final token = await sessionStorage.getToken();
+      if (generation != _generation) return;
+      if (token == null || token.trim().isEmpty) {
+        onConnectionStatusChanged(NotificationConnectionStatus.disconnected);
+        return;
+      }
+      _manuallyStopped = false;
+      onConnectionStatusChanged(NotificationConnectionStatus.connecting);
+      final connection = _hubConnection ??= _createHubConnection(generation);
+      if (connection.state == HubConnectionState.Disconnected) {
+        final startFuture = connection.start();
+        if (startFuture != null) await startFuture.timeout(_startTimeout);
+      }
+      if (generation == _generation && !_manuallyStopped && isConnected) {
+        onConnectionStatusChanged(NotificationConnectionStatus.connected);
+      }
+    } catch (_) {
+      if (generation == _generation && !_manuallyStopped) {
+        onConnectionStatusChanged(NotificationConnectionStatus.disconnected);
+        _scheduleManualReconnect();
+      }
+    } finally {
+      if (generation == _generation) _isStarting = false;
+    }
+  }
+
+  HubConnection _createHubConnection(int generation) {
+    final httpOptions = HttpConnectionOptions(
+      accessTokenFactory: () async {
+        final token = await sessionStorage.getToken();
+
+        return token ?? '';
+      },
+    );
+
+    final connection = HubConnectionBuilder()
+        .withUrl(
+          '${ApiConstants.baseUrl}/hubs/notifications',
+          options: httpOptions,
+        )
+        .withAutomaticReconnect(retryDelays: [0, 2000, 5000, 10000, 20000])
+        .build();
+
+    bool active() => generation == _generation && !_manuallyStopped;
+    connection.on('ReceiveNotification', (arguments) {
+      if (active()) _handleNotification(arguments);
+    });
+
+    connection.onreconnecting(({Exception? error}) {
+      if (!active()) return;
+      onConnectionStatusChanged(NotificationConnectionStatus.reconnecting);
+    });
+
+    connection.onreconnected(({String? connectionId}) {
+      if (!active()) return;
+      onConnectionStatusChanged(NotificationConnectionStatus.connected);
+
+      unawaited(onReconnected());
+    });
+
+    connection.onclose(({Exception? error}) {
+      if (!active()) return;
+      onConnectionStatusChanged(NotificationConnectionStatus.disconnected);
+
+      if (!_manuallyStopped) {
+        _scheduleManualReconnect();
+      }
+    });
+
+    return connection;
+  }
+
+  void _handleNotification(List<Object?>? arguments) {
+    /*
+     * Ne koristimo podatke direktno iz SignalR poruke
+     * kao konačni izvor.
+     *
+     * Nakon realtime događaja ponovo učitavamo
+     * notifikacije preko zaštićenog REST endpointa.
+     * Tako dobijamo ID, IsRead i CreatedAtUtc iz baze.
+     */
+    unawaited(onNotificationReceived());
+  }
+
+  void _scheduleManualReconnect() {
+    if (_manuallyStopped) {
+      return;
+    }
+
+    _manualReconnectTimer?.cancel();
+
+    _manualReconnectTimer = Timer(const Duration(seconds: 30), () {
+      if (!_manuallyStopped) {
+        unawaited(start());
+      }
+    });
+  }
+
+  Future<void> stop() async {
+    _manuallyStopped = true;
+    _generation++;
+    _isStarting = false;
+
+    _manualReconnectTimer?.cancel();
+    _manualReconnectTimer = null;
+
+    final connection = _hubConnection;
+    _hubConnection = null;
+    connection?.off('ReceiveNotification');
+    // An old stop must not overwrite a new session's connection state.
+    onConnectionStatusChanged(NotificationConnectionStatus.disconnected);
+
+    if (connection != null &&
+        connection.state != HubConnectionState.Disconnected) {
+      try {
+        await connection.stop();
+      } catch (_) {
+        // Session se svakako smije završiti.
+      }
+    }
+  }
+}

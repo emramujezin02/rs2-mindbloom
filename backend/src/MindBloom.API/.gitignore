@@ -1,0 +1,65 @@
+# Build
+bin/
+obj/
+
+# User files
+*.user
+*.suo
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# Flutter
+.flutter-plugins
+.flutter-plugins-dependencies
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Environment files
+.env
+.env.*
+!.env-example
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-data/
+
+# SQL
+*.mdf
+*.ldf
+
+# JetBrains
+*.iml
+
+# Generated
+Generated/
+
+# Coverage
+coverage/
+
+# NuGet
+*.nupkg
+
+# Release artifacts
+*.apk
+*.exe
+*.msix
+
+# Node
+node_modules/
+
+# Temporary
+temp/
+tmp/

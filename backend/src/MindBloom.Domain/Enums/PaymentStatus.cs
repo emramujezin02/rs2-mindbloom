@@ -1,0 +1,16 @@
+﻿namespace MindBloom.Domain.Enums;
+
+public enum PaymentStatus
+{
+    Pending = 1,
+
+    Paid = 2,
+
+    Failed = 3,
+
+    Refunded = 4,
+
+    RefundPending = 5,
+
+    RefundFailed = 6
+}
