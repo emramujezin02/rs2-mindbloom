@@ -1,3 +1,5 @@
+> Historical v1.1.0 notes only. This Release and its tag were removed during security remediation; its download links and installation statements are obsolete. Use [v1.1.1 notes](release-notes-v1.1.1.md) and [current setup](release-preparation.md). No historical private configuration archive is distributed or recommended.
+
 # MindBloom v1.1.0 — reviewed resubmission
 
 **Unpublished release description draft. Android and Windows 1.1.0+2 builds

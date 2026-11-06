@@ -1,25 +1,37 @@
 # MindBloom
 
-## Reviewed resubmission — v1.1.0 preparation
+## MindBloom v1.1.1 — November submission
 
-The approved next release is **v1.1.0**, with Flutter version **1.1.0+2**
-for Android and Windows. The existing GitHub `v1.0.0` release is immutable.
-This source update does not publish a release or establish a final DLWMS link.
-See [the release preparation guide](docs/release-preparation.md) for the
-fresh-install procedure, artifact verification and outstanding release gates.
+Android and Windows application version: **1.1.1+3**. The public source is
+[emramujezin02/rs2-mindbloom](https://github.com/emramujezin02/rs2-mindbloom).
+The independent application-source baseline is commit
+`8fe3d20085d77c08839b857861e92af94b7829d2`. Documentation and release configuration are tracked separately from this
+application-source baseline.
 
-The verified Android and Windows binaries are **1.1.0+2**. The public package
-is `MindBloom-Release-v1.1.0.zip`, containing `Android/MindBloom-v1.1.0.apk`,
-the complete `Windows/` runtime and startup instructions. Extract the whole
-Windows directory; Microsoft Visual C++ 2015–2022 Redistributable **x64** is a
-prerequisite. Android Release retains the existing **debug certificate**;
-it is not production signing. Build/archive integrity checks do not establish
-a new GUI smoke test or a clean-machine installation test.
+The prepared binary package is `MindBloom-Release-v1.1.1.zip`:
+`Android/app-release.apk` and the complete `Windows/` runtime (21 files).
+There are no Docker images, source files, private configuration or databases
+in the ZIP. See [release preparation](docs/release-preparation.md) for checksums,
+fresh-install instructions and known verification limits, and
+[prepared release notes](docs/release-notes-v1.1.1.md).
 
-Task 23 recorded **1,178 unique passing automated tests**, with **18 PASS and
-3 PARTIAL** professor requirements. Remaining full GUI journeys were blocked
-by host RAM. These are existing QA results, not new release-build results.
-See [the complete QA evidence](docs/final-qa-verification.md).
+The version-specific download is [v1.1.1](https://github.com/emramujezin02/rs2-mindbloom/releases/tag/v1.1.1).
+[Releases](https://github.com/emramujezin02/rs2-mindbloom/releases) is the
+download index. Release availability is established by the public asset, not by source presence. Do not use removed
+old Release links as a final submission link.
+
+The sanitized API Docker image has **not** completed its build or filesystem
+verification. No prebuilt API/Worker image or registry download is promised.
+Build both services serially from this clean source on a suitable host before
+a fresh installation. The `1.1.1-source` image tags below are local build
+targets, not available distributed artifacts.
+
+The Windows binary includes UTC parsing and embedded Roboto PDF fonts.
+Its final executable has not been launched: existing Windows credential storage
+was protected. GUI appointment display, the final packaged GUI, physical-device
+Android connectivity and a fresh-machine installation remain unverified.
+Prior isolated tests are evidence for their tested scope, not proof of these
+unperformed runtime checks.
 
 MindBloom is a mental health application that connects clients, therapists, and administrators through a mobile application, a desktop administration portal, and a .NET backend. The system supports user registration and authentication, therapist profiles, appointment booking, payments, memberships, chat, notifications, therapist recommendations, educational content, workshops, and administrator reports.
 
@@ -119,7 +131,7 @@ Create a local `.env` file:
 Copy-Item .env.example .env
 ```
 
-For final evaluation, the existing `MindBloom-Environment.zip` is a tracked, AES-256-encrypted configuration package containing one `.env` file. It is separate from the public binary release assets. Deliver its password through a separate private channel, never in this README, a release description or a command-line argument. The evaluator should unlock it locally and place the extracted configuration at the repository root. Never commit the plaintext file or publish the package as an ordinary release asset. Encryption metadata alone does not verify the archived values or successful decryption; see the release guide for the outstanding private integrity/configuration check.
+Use the public .env.example template to create fresh private configuration. No private environment archive or credentials are supplied in this repository or the binary ZIP. Do not reuse a historically exposed configuration package. Assess and rotate any affected active credentials privately; never publish their values.
 
 At minimum, check and fill in values for:
 
@@ -134,7 +146,7 @@ At minimum, check and fill in values for:
 - Docker image tags: `API_IMAGE_VERSION` and `WORKER_IMAGE_VERSION`; optional legacy fallback: `IMAGE_VERSION`
 - Full demonstration seeder opt-in: `SEED_ENABLED` (default `false`)
 
-The demo database uses the name:
+The owner's existing database below is protected. Choose an unused database for a fresh evaluator installation; do not bootstrap this existing database:
 
 ```text
 220075
@@ -150,76 +162,44 @@ This value must be a Stripe test secret key that starts with `sk_test_`. Do not 
 
 ## Docker backend environment
 
-Docker Compose defines four main services:
+Compose defines SQL Server 2022, RabbitMQ, API (host port 8080) and Notifications
+Worker (health port 8081). Existing explicit container, network and volume names
+are retained. Do not execute these instructions on the owner's running installation;
+`-p` alone does not isolate explicit names.
 
-- `sql-server` - SQL Server 2022, port from `SQL_SERVER_PORT` or `1433`
-- `rabbitmq` - RabbitMQ with the management plugin, ports `5672` and `15672`
-- `api` - MindBloom API image selected by `API_IMAGE_VERSION`, then `IMAGE_VERSION`, then `1.1.1-final-20261106`; local port from `API_PORT` or `8080`
-- `notifications-worker` - Worker image selected by `WORKER_IMAGE_VERSION`, then `IMAGE_VERSION`, then `1.1.1`; health port from `WORKER_HEALTH_PORT` or `8081`
+API/Worker image selection uses `API_IMAGE_VERSION` / `WORKER_IMAGE_VERSION`,
+then the legacy shared `IMAGE_VERSION`, then `1.1.1-source`. When using the template, clear per-service values in the private `.env` as well to select the shared fallback; unsetting only PowerShell variables exposes the file values again. These defaults
+identify **local source builds only**. Do not load or reuse previous API images.
+No Docker TAR or registry image is included in the binary package.
 
-`Seed__Enabled` is explicitly mapped from `SEED_ENABLED`, defaulting to
-`false`. Development startup still applies pending EF migrations independently
-of this switch. Do not run Compose against an existing installation simply to
-check release files. Runtime settings of already-created containers are not
-changed by editing this repository.
-
-Check the Compose configuration:
+On a genuinely fresh installation, privately configure `.env`, choose a new
+database name, and build serially from the reviewed source:
 
 ```powershell
-docker compose config --quiet
-```
-
-The final submission uses `mindbloom-api:1.1.1-final-20261106` together with
-`mindbloom-worker:1.1.1`. Ensure these reviewed images are available locally
-before startup. Select both explicitly so an older private `.env` cannot select
-a stale shared tag. Review the fresh-install or existing-database procedure
-before starting services; do not use this example to inspect an existing database:
-
-```powershell
-$env:API_IMAGE_VERSION = '1.1.1-final-20261106'
-$env:WORKER_IMAGE_VERSION = '1.1.1'
+$env:API_IMAGE_VERSION = '1.1.1-source'
+$env:WORKER_IMAGE_VERSION = '1.1.1-source'
 $env:SEED_ENABLED = 'false'
 docker compose config --quiet
-# Start only after choosing the fresh-install or existing-database procedure.
-docker compose up -d --no-build
+docker compose build api
+docker compose build notifications-worker
 ```
 
-Each nonempty per-service version takes precedence over `IMAGE_VERSION`.
-If only `IMAGE_VERSION` is set, both services still use that shared version.
-Empty version values fall through to the next default. To use legacy shared
-selection with a copied template, unset or empty both per-service variables there
-and in the process environment. The version variables select images only; they
-do not disable integrations or change runtime settings.
+These are recipient instructions, not a statement that the sanitized image
+has been built successfully. Do not start application containers if a build fails.
+Alternatively, from a clean reviewed Git checkout,
+`.\build-images.ps1 -Version 1.1.1-source` builds both services serially and
+prints matching overrides. It does not start containers or change the latest tag.
 
-For a separately authorized build from reviewed source, `build-images.ps1`
-continues to build both images with its `-Version` argument and prints matching
-per-service Compose overrides. Do not rebuild or overwrite the reviewed final
-image tags merely to start the supplied release.
+`Seed__Enabled` defaults to false. **Development startup applies pending
+migrations independently of that setting.** First demo initialization is an
+explicit opt-in only for a confirmed new empty database. Follow
+[the detailed bootstrap procedure](docs/release-preparation.md#fresh-evaluator-installation).
+Do not migrate or seed `220075` as part of installing binaries or inspecting a ZIP.
+A normal `docker start` does not replace a container's environment settings.
 
-Check the status:
-
-```powershell
-docker compose ps
-```
-
-Stop without deleting data:
-
-```powershell
-docker compose down
-```
-
-Optional destructive reset/troubleshooting: the following command deletes Docker volume data, including persistent SQL Server/RabbitMQ data. It is not part of the normal startup/shutdown flow and is used only when you intentionally want a fresh local environment.
-
-```powershell
-docker compose down -v
-```
-
-The Docker build context is the repository root, and the Dockerfile paths are:
-
-```text
-backend/src/MindBloom.API/Dockerfile
-backend/src/MindBloom.NotificationsWorker/Dockerfile
-```
+Named SQL Server and RabbitMQ volumes persist independently of the source tree.
+Never use volume deletion as an installation/retry shortcut. Starting or stopping
+services and any database initialization are separate operational actions.
 
 ## Backend locally
 
@@ -305,7 +285,7 @@ The local SQL Server port comes from:
 SQL_SERVER_PORT
 ```
 
-Database name for the demo environment:
+The owner's existing database (not a fresh-install or test target):
 
 ```text
 220075
@@ -496,15 +476,18 @@ flutter test
 Backend Docker images:
 
 ```powershell
-docker compose build api notifications-worker
+docker compose build api
+docker compose build notifications-worker
 ```
 
 Mobile Android APK:
 
 ```powershell
 cd frontend/mindbloom_mobile
-flutter build apk --release --dart-define=STRIPE_PUBLISHABLE_KEY=<YOUR_STRIPE_TEST_PUBLISHABLE_KEY>
+flutter build apk --release --dart-define=API_BASE_URL=http://10.0.2.2:8080
 ```
+
+Supply the approved sandbox publishable-key build input privately when payment support is needed; do not echo real key arguments or encoded key values in logs. The command above alone does not configure payments.
 
 The Android Release default is `http://10.0.2.2:8080` for the Docker API.
 Plain `flutter build apk --release` also uses this address; without a Stripe
@@ -526,11 +509,10 @@ adb install -r build/app/outputs/flutter-apk/app-release.apk
 adb shell am start -n com.example.mindbloom_mobile/.MainActivity
 ```
 
-Use the existing documented mobile demo account to verify login against the
-already-running Docker API on host port 8080. Do not rebuild/recreate Docker
-services for this APK test. The local operational API/Worker containers use
-newer image tags and `Seed__Enabled=false`; the base Compose file alone does
-not preserve those runtime overrides.
+On the recipient's own evaluation environment, verify login using its configured
+accounts. These are manual acceptance steps, not a claim that a final APK GUI
+or physical-device test was performed. Do not recreate the owner's containers
+or use its database for this check.
 
 Desktop Windows build:
 

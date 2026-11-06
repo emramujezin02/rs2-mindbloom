@@ -103,7 +103,7 @@ services:
   # =========================================================
 
   api:
-    image: mindbloom-api:${API_IMAGE_VERSION:-${IMAGE_VERSION:-1.1.1-final-20261106}}
+    image: mindbloom-api:${API_IMAGE_VERSION:-${IMAGE_VERSION:-1.1.1-source}}
 
     build:
       context: .
@@ -251,7 +251,7 @@ services:
   # =========================================================
 
   notifications-worker:
-    image: mindbloom-worker:${WORKER_IMAGE_VERSION:-${IMAGE_VERSION:-1.1.1}}
+    image: mindbloom-worker:${WORKER_IMAGE_VERSION:-${IMAGE_VERSION:-1.1.1-source}}
 
     build:
       context: .

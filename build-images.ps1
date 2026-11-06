@@ -1,11 +1,12 @@
 param(
-    [string]$Version = "1.1.0"
+    [string]$Version = "1.1.1-source"
 )
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "========================================"
 Write-Host "MindBloom Docker image build"
+Write-Host "Local source-build tags only; no prebuilt images are supplied."
 Write-Host "========================================"
 Write-Host ""
 
