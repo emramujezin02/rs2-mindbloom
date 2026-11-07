@@ -1,19 +1,21 @@
 # MindBloom
 
-## MindBloom v1.1.2 - November submission preparation
+## MindBloom v1.1.3 - November submission
 
 This source includes the SQL-verified logout/session correction, idempotent demo seeder,
 and corrected desktop report URLs. Windows is **1.1.2+4**; the reused Android APK is
 **1.1.1+3**. The binary package contains only `Android/app-release.apk` and the complete
-21-file `Windows/` runtime. See [v1.1.2 release notes](docs/release-notes-v1.1.2.md).
-Existing immutable v1.1.1 remains unchanged. v1.1.2 is not yet published.
+21-file `Windows/` runtime. See [previous v1.1.2 release notes](docs/release-notes-v1.1.2.md).
+Existing immutable v1.1.1 remains unchanged.
+v1.1.2 is published as an immutable GitHub Release and remains unchanged.
+v1.1.3 updates this README, the encrypted evaluator environment archive and evaluator-only automatic seeding; it reuses the existing binaries.
 
 No prebuilt backend image is distributed. Build API and Worker serially from this source
 on the evaluator's own host. The encrypted `MindBloom-Environment.zip` is newly generated
 for evaluation; obtain its password separately through DLWMS. It contains only `.env`.
 Never reuse the historically exposed environment archive.
 
-Use the **v1.1.2 core-demo quick start at the end of this README** with
+Use the **v1.1.3 core-demo quick start at the end of this README** with
 `docker-compose.evaluator.yml`. It explicitly disables external payments/email/push;
 SQL, RabbitMQ and internal notifications remain real. Generic full-integration instructions
 below additionally require independently provisioned external service credentials.
@@ -22,6 +24,12 @@ The user manually confirmed both PDF reports in the corrected Windows v1.1.2 run
 Manual tests also covered administrator/client/therapist login, browsing, booking,
 therapist workflows and internal notifications on isolated QA. These checks do not prove
 fresh evaluator startup or physical-phone connectivity. PDF Unicode and UTC focused tests passed.
+
+Current limitation: the desktop application is again reporting a session-expired problem.
+The complete application is not claimed to be successfully tested. The reused Windows binary
+targets http://localhost:8080; a Visual Studio API on port 5110 is a different backend.
+Verify which API owns port 8080 and that its demo seed completed before attempting login.
+Do not change existing accounts, databases or Windows secure storage as an automatic workaround.
 
 MindBloom is a mental health application that connects clients, therapists, and administrators through a mobile application, a desktop administration portal, and a .NET backend. The system supports user registration and authentication, therapist profiles, appointment booking, payments, memberships, chat, notifications, therapist recommendations, educational content, workshops, and administrator reports.
 
@@ -121,7 +129,7 @@ Create a local `.env` file:
 Copy-Item .env.example .env
 ```
 
-For the v1.1.2 core demo, use the newly encrypted archive and the quick start below. For a separately configured full integration installation, use .env.example. No environment archive or credentials are included in the binary ZIP. Do not reuse a historically exposed configuration package. Assess and rotate any affected active credentials privately; never publish their values.
+For the v1.1.3 core demo, use the newly encrypted archive and the quick start below. For a separately configured full integration installation, use .env.example. No environment archive or credentials are included in the binary ZIP. Do not reuse a historically exposed configuration package. Assess and rotate any affected active credentials privately; never publish their values.
 
 At minimum, check and fill in values for:
 
@@ -134,9 +142,9 @@ At minimum, check and fill in values for:
 - Google Maps: `GOOGLE_MAPS_API_KEY`, `GOOGLE_MAPS_GEOCODING_URL`
 - Uploads: `UPLOAD_ROOT_PATH`, `UPLOAD_MAX_IMAGE_SIZE_MB`, `UPLOAD_MAX_DOCUMENT_SIZE_MB`
 - Docker image tags: `API_IMAGE_VERSION` and `WORKER_IMAGE_VERSION`; optional legacy fallback: `IMAGE_VERSION`
-- Full demonstration seeder opt-in: `SEED_ENABLED` (default `false`)
+- Base Compose demo seed: `SEED_ENABLED` (default `false`); evaluator override automatically sets `Seed__Enabled=true`.
 
-The owner's existing database below is protected. Choose an unused database for a fresh evaluator installation; do not bootstrap this existing database:
+The encrypted evaluator configuration sets the required database name below. Initialize it only in the evaluator's own new SQL Server environment. The owner's existing database with the same name and all existing QA databases remain protected:
 
 ```text
 220075
@@ -180,11 +188,11 @@ Alternatively, from a clean reviewed Git checkout,
 `.\build-images.ps1 -Version 1.1.2-source` builds both services serially and
 prints matching overrides. It does not start containers or change the latest tag.
 
-`Seed__Enabled` defaults to false. **Development startup applies pending
+Base Compose defaults `Seed__Enabled` to false; the evaluator override explicitly enables it. **Development startup applies pending
 migrations independently of that setting.** First demo initialization is an
-explicit opt-in only for a confirmed new empty database. Follow
-[the detailed bootstrap procedure](docs/release-preparation.md#fresh-evaluator-installation).
-Do not migrate or seed `220075` as part of installing binaries or inspecting a ZIP.
+automatic in the evaluator profile for a confirmed new empty database. Follow
+the v1.1.3 core-demo quick start at the end of this README.
+Installing binaries or inspecting a ZIP does not initialize a database. Only the explicit fresh-evaluator bootstrap may initialize its new `220075`; never migrate or seed the owner's existing database.
 A normal `docker start` does not replace a container's environment settings.
 
 Named SQL Server and RabbitMQ volumes persist independently of the source tree.
@@ -299,7 +307,7 @@ The local SQL Server port comes from:
 SQL_SERVER_PORT
 ```
 
-The owner's existing database (not a fresh-install or test target):
+Evaluator database name (the owner's separate existing database with the same name is not a fresh-install or test target):
 
 ```text
 220075
@@ -451,10 +459,12 @@ The seeder creates the following demo users when seed is enabled:
 | Therapist | `therapist.haris` | `haris@mindbloom.com` | `MindBloom123!` | Pending therapist |
 
 These values are demo seed data, not production secrets. Log in using the **Email** column.
-They are created only on an explicitly opted-in Development bootstrap (`SEED_ENABLED=true`),
-not in Production or in the separate synthetic QA database. Existing passwords, account
-verification and report edits are not reset. A conflicting username/email fails initialization
-and requires manual resolution; do not reset passwords or delete data as a shortcut.
+
+Demo accounts are created automatically on the first evaluator startup: the override runs the API in Development with `Seed__Enabled=true`. The base Compose setting and encrypted `.env` can remain `SEED_ENABLED=false`; the evaluator override takes precedence. Production and existing QA are not initialized by this procedure.
+
+If login fails, verify that the API started successfully, the seed completed without errors, and the application is connected to the correct evaluator backend.
+
+Existing passwords, account verification and report edits are not reset. A conflicting username/email fails initialization and requires manual resolution; do not reset passwords or delete data as a shortcut.
 
 The small synthetic catalogue includes three therapist profiles (two approved, one pending),
 eight published articles, six UTC appointments, two moderated/pending reviews and two internal
@@ -608,19 +618,18 @@ Do not commit:
 - SQL passwords
 - local emulator/debug/cache files
 
-## v1.1.2 core-demo quick start (fresh evaluator host only)
+## v1.1.3 core-demo quick start (fresh evaluator host only)
 
-Do not run this procedure on the owner's machine or against existing SQL/RabbitMQ
-volumes. Compose has fixed container names and persistent volumes; a project name alone
-is not isolation. Use a fresh Docker installation without conflicting containers/port 8080.
-Do not use `down -v`, reset data or change an existing user's password.
+Run only on the evaluator's fresh Docker installation without existing MindBloom containers,
+volumes or a conflicting port 8080. The required new database is named `220075`; never
+initialize or modify the owner's separate existing database or QA environment. Fixed Compose
+container names mean a project name alone is not isolation. Do not delete volumes or reset users.
 
-1. Open `MindBloom-Environment.zip` in 7-Zip, supply the separately delivered password,
-   and extract only `.env` beside `docker-compose.yml`. AES-256 is used; Windows Explorer
-   may not support this archive. Do not type the password as a command-line argument.
-   Keep `.env` private and ignored by Git. `.env.evaluator.example` is only a blank template.
-2. Start Docker Desktop. In PowerShell at the source root, validate without printing secrets
-   and build the backend services serially:
+1. Open `MindBloom-Environment.zip` in 7-Zip, enter the separately supplied password and
+   extract only `.env` beside `docker-compose.yml`. The archive uses AES-256. Windows
+   Explorer may not support it. Keep the password out of command arguments and `.env` out
+   of Git. `.env.evaluator.example` is a blank alternative template, not the supplied configuration.
+2. Start Docker Desktop. At the source root, validate privately and build both services serially:
 
 ```powershell
 $compose = @('--env-file','.env','-f','docker-compose.yml','-f','docker-compose.evaluator.yml')
@@ -630,38 +639,36 @@ docker compose @compose build api
 if ($LASTEXITCODE -ne 0) { throw 'API build failed' }
 docker compose @compose build notifications-worker
 if ($LASTEXITCODE -ne 0) { throw 'Worker build failed' }
-docker compose @compose up -d --no-build sql-server rabbitmq
+docker compose @compose up -d --no-build --wait --wait-timeout 180 sql-server rabbitmq
+if ($LASTEXITCODE -ne 0) { throw 'SQL/RabbitMQ did not become healthy' }
+```
+
+3. Start the API and wait for its automatic database bootstrap, then start Worker:
+
+```powershell
+docker compose @compose up -d --no-build --wait --wait-timeout 600 api
+if ($LASTEXITCODE -ne 0) { throw 'API startup or database bootstrap failed; inspect API logs without sharing secrets' }
+Invoke-RestMethod http://localhost:8080/health/ready
+docker compose @compose up -d --no-build --wait --wait-timeout 180 notifications-worker
+if ($LASTEXITCODE -ne 0) { throw 'Worker did not become healthy' }
 docker compose @compose ps
 ```
 
-3. Wait for SQL Server and RabbitMQ to be **healthy**. For this new empty evaluator
-   database only, edit the extracted `.env` to set `SEED_ENABLED=true`. Start API:
+No manual `SEED_ENABLED` edit is required. `docker-compose.evaluator.yml` explicitly sets
+API Development and `Seed__Enabled=true`, overriding the base Compose/archived `.env`
+default `false`. Startup waits for SQL availability, creates the missing `220075` database
+through EF Core, applies the existing 85 migrations, then invokes the idempotent demo
+seeder for roles, accounts and related synthetic content before serving requests.
+Repeated evaluator startup does not duplicate seeded rows or reset existing passwords,
+moderation edits, notification read state or reserved appointment prices. A conflicting
+existing demo identity stops seeding; resolve it deliberately, never delete/reset user data.
 
-```powershell
-docker compose @compose up -d --no-build api
-Invoke-RestMethod http://localhost:8080/health/ready
-```
+Automatic seeding is restricted to this explicit evaluator profile and Development startup;
+it is not globally enabled in Production. Do not use this profile with an existing protected
+installation. API uses real Identity/auth/SQL; Worker uses its existing Testing no-op email
+and push adapters, retaining real SQL-backed internal notifications and RabbitMQ processing.
 
-   API Development startup applies the existing schema (85 migrations) and explicitly
-   opted-in demo seed. Wait for readiness before continuing. This procedure authorizes
-   initialization only on the evaluator's new database, never on `220075` or existing QA.
-4. After the first successful bootstrap, edit `.env` back to `SEED_ENABLED=false`.
-   Recreate only this newly created evaluator API so its environment is updated, then start Worker:
-
-```powershell
-docker compose @compose up -d --no-build --no-deps --force-recreate api
-Invoke-RestMethod http://localhost:8080/health/ready
-docker compose @compose up -d --no-build notifications-worker
-docker compose @compose ps
-```
-
-The override runs API in Development with Payments/Email/Firebase disabled. Worker uses
-its existing **Testing** no-op email/push adapters, while real SQL persistence and RabbitMQ
-consumers deliver internal notifications. This profile is for synthetic demonstration only,
-not Production. It does not bypass API authentication. Do not omit this override when using
-the supplied core-only `.env`; generic full-integration startup requires external credentials.
-
-Four seeded public demonstration accounts (password for each: `MindBloom123!`):
+Four public demonstration accounts, password for each: `MindBloom123!`:
 
 | Application | Email | Role/status |
 |---|---|---|
@@ -670,24 +677,37 @@ Four seeded public demonstration accounts (password for each: `MindBloom123!`):
 | Android | amina@mindbloom.com | Approved therapist |
 | Android | haris@mindbloom.com | Pending therapist |
 
-These accounts exist only after successful opt-in seeding of the new database. Rerunning
-seed does not reset existing passwords. Synthetic content includes 3 therapists, 8 articles,
-6 appointments, 2 reviews and 2 internal notifications. No fake successful Stripe payments
-are created; revenue reports can legitimately show zero financial totals.
+Accounts become available only after successful API bootstrap. Synthetic data includes
+3 therapists, 8 published articles, 6 appointments, 2 reviews and 2 internal notifications.
+No fake successful Stripe payments are generated; financial reports may show zero revenue.
 
-Core scope: demo login, browsing, booking/acceptance/rejection, administrator reports and
-internal notifications. Stripe payments, SMTP delivery (including email verification,
-password-reset and 2FA delivery), Firebase push and Maps/geocoding are unavailable in this
-profile. Provision your own authorized sandbox/service configuration for those flows;
-never use live Stripe keys. The APK sandbox account must match any independently supplied
-backend Stripe sandbox keys. No such external credentials are supplied or claimed working.
+4. Extract the binary Release ZIP into a new directory and keep its complete Windows runtime
+   together (EXE, DLLs, `data/app.so`, ICU, assets and Roboto font/license files). From that directory:
 
-Android uses `http://10.0.2.2:8080` in the standard Android emulator; a physical phone needs
-separate network/HTTPS configuration. Windows uses `http://localhost:8080`. Keep the entire
-Windows directory together, including DLLs, `data/app.so`, ICU and Roboto font/license assets.
-The Windows build used `--build-name=1.1.2 --build-number=4`; Android was not rebuilt.
+```powershell
+Start-Process -FilePath .\Windows\mindbloom_desktop.exe -WorkingDirectory (Resolve-Path .\Windows)
+# Start a standard Android emulator manually first, then:
+adb install -r .\Android\app-release.apk
+adb shell am start -n com.example.mindbloom_mobile/.MainActivity
+```
 
-The local final API image build is deferred because of measured host memory pressure;
-no claim of a successfully built v1.1.2 image is made. The serial Compose build commands
-above use this source and the private per-service image tags supplied in `.env`. Offline
-configuration resolution passed; fresh-machine build/startup remains a recipient check.
+Windows remains version `1.1.2+4` and uses `http://localhost:8080`; Android is reused
+`1.1.1+3` and uses `http://10.0.2.2:8080`. No application rebuild is implied by release v1.1.3.
+The host alias is for a standard Android emulator; a physical phone needs separate networking/HTTPS.
+A Visual Studio API on port 5110 is not the API selected by the existing Windows binary.
+Ensure port 8080 belongs to the intended new evaluator backend before attempting demo login.
+The owner's existing desktop session-expired issue remains unresolved; no claim of a fully
+passed application or fresh-machine runtime test is made.
+
+Core demo covers login, browsing, booking/acceptance/rejection, administrator reports and
+internal notifications. Stripe payments, SMTP delivery (including email verification/reset/
+2FA delivery), Firebase push and Maps/geocoding are disabled/unavailable in this profile.
+They require independently provisioned authorized sandbox/service configuration; no live or
+invented keys are supplied. Any mobile/backend Stripe sandbox accounts must match.
+
+Verification limits: offline Compose resolution confirms automatic seed and database selection.
+The unchanged seeder/auth implementation previously passed 5 focused seeder tests and 26
+isolated SQL checks, including four demo logins and repeated seeding preserving changed
+passwords. Those checks did not execute this new Compose profile on a fresh evaluator host.
+A new local backend image/fresh installation was not tested because of host resource limits.
+Build from source with the commands above; no prebuilt API/Worker image is distributed.

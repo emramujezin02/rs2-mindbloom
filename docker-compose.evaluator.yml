@@ -7,6 +7,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       DOTNET_ENVIRONMENT: Development
+      # Evaluator-only idempotent demo bootstrap; base/Production remains opt-in.
+      Seed__Enabled: "true"
       ExternalServices__PaymentsEnabled: "false"
       ExternalServices__EmailEnabled: "false"
       ExternalServices__FirebaseEnabled: "false"
