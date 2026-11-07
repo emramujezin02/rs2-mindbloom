@@ -7,7 +7,7 @@ public sealed class TestJwtTokenService
     : IJwtTokenService
 {
     public Task<string> GenerateTokenAsync(
-        ApplicationUser user)
+        ApplicationUser user, string sessionId)
     {
         return Task.FromResult(
             $"security-test-access-token-{user.Id}");

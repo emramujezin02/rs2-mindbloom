@@ -1,0 +1,24 @@
+# Local evaluator core demo only. Do not use this profile in Production.
+# API uses real Identity/SQL/auth/business validation; no fixtures are run.
+# Worker Testing selects its existing no-op SMTP/push services while retaining
+# real SQL-backed notifications and RabbitMQ integration-event processing.
+services:
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      DOTNET_ENVIRONMENT: Development
+      ExternalServices__PaymentsEnabled: "false"
+      ExternalServices__EmailEnabled: "false"
+      ExternalServices__FirebaseEnabled: "false"
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      EMAIL_USERNAME: ""
+      EMAIL_PASSWORD: ""
+      GOOGLE_MAPS_API_KEY: ""
+  notifications-worker:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Testing
+      DOTNET_ENVIRONMENT: Testing
+      EMAIL_USERNAME: ""
+      EMAIL_PASSWORD: ""
+      FIREBASE_CREDENTIALS_PATH: ""

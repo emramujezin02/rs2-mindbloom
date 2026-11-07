@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using MindBloom.Infrastructure.Security;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MindBloom.Application.Common.Interfaces;
 using MindBloom.Application.Features.Auth.DTOs;
@@ -51,6 +52,79 @@ public class AuthService : IAuthService
         _securityAuditService = securityAuditService;
     }
 
+    public async Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+            throw new UnauthorizedAccessException("Invalid refresh token.");
+        var hash = HashRefreshToken(request.RefreshToken);
+        var userId = await _context.RefreshTokens.AsNoTracking()
+            .Where(token => token.TokenHash == hash && !token.IsDeleted)
+            .Select(token => (int?)token.UserId).FirstOrDefaultAsync();
+        if (userId == null) throw new UnauthorizedAccessException("Invalid refresh token.");
+        var outcome = await AuthSessionWriteGuard.ExecuteAsync(_context, userId.Value,
+            () => RefreshTokenCoreAsync(request));
+        return outcome.GetResponse();
+    }
+
+    public async Task LogoutAsync(int userId, string refreshToken)
+    {
+        await AuthSessionWriteGuard.ExecuteAsync(_context, userId, async () =>
+        {
+            await LogoutCoreAsync(userId, refreshToken);
+            return true;
+        });
+        await WriteRevocationAuditAsync(userId, "Logout");
+    }
+
+    public async Task LogoutAllAsync(int userId)
+    {
+        await AuthSessionWriteGuard.ExecuteAsync(_context, userId, async () =>
+        {
+            await LogoutAllCoreAsync(userId);
+            return true;
+        });
+        await WriteRevocationAuditAsync(userId, "LogoutAllSessions");
+    }
+
+    public async Task ResetPasswordAsync(ResetPasswordDto request)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email.Trim().ToLowerInvariant());
+        if (user == null) throw new BadRequestException("Password reset request is invalid or has expired.");
+        await AuthSessionWriteGuard.ExecuteAsync(_context, user.Id, async () =>
+        {
+            await ResetPasswordCoreAsync(request);
+            return true;
+        });
+    }
+
+    public async Task ChangePasswordAsync(int userId, ChangePasswordDto request)
+    {
+        var outcome = await AuthSessionWriteGuard.ExecuteAsync(_context, userId,
+            () => ChangePasswordCoreAsync(userId, request));
+        if (outcome.Error != null) throw new BadRequestException(outcome.Error);
+        await WriteRevocationAuditAsync(userId, "PasswordChanged");
+    }
+
+    private sealed record PasswordChangeOutcome(string? Error);
+
+    private async Task WriteRevocationAuditAsync(int userId, string eventType)
+    {
+        try
+        {
+            await new AuthSingleAttemptExecutionStrategy(_context).ExecuteAsync(() => _securityAuditService.WriteAsync(new SecurityAuditWriteDto
+            {
+                UserId = userId, EventType = eventType, IsSuccessful = true,
+                ResourceType = eventType == "PasswordChanged" ? "Account" : "Authentication",
+                ResourceId = userId.ToString()
+            }));
+        }
+        catch (Exception exception)
+        {
+            // Report a visible technical failure, without replaying or undoing
+            // the already-confirmed security operation.
+            throw new AuthSessionAuditException(exception);
+        }
+    }
     private bool IsDemoAccount(string email)
     {
         var demoEmails = new List<string>
@@ -280,10 +354,11 @@ public class AuthService : IAuthService
                 user.Email!);
         }
 
+        var sessionId = Guid.NewGuid().ToString("N");
         var token =
             await _jwtTokenService
                 .GenerateTokenAsync(
-                    user);
+                    user, sessionId);
 
         var refreshToken =
             _jwtTokenService
@@ -314,9 +389,7 @@ public class AuthService : IAuthService
                 ReplacedByTokenHash =
                     null,
 
-                SessionId =
-                    Guid.NewGuid()
-                        .ToString("N")
+                SessionId = sessionId
             };
 
         _context.RefreshTokens.Add(
@@ -867,10 +940,11 @@ public class AuthService : IAuthService
                 "User does not have an assigned role.");
         }
 
+        var sessionId = Guid.NewGuid().ToString("N");
         var token =
             await _jwtTokenService
                 .GenerateTokenAsync(
-                    user);
+                    user, sessionId);
 
         var refreshToken =
             _jwtTokenService
@@ -903,9 +977,7 @@ public class AuthService : IAuthService
                 ReplacedByTokenHash =
                     null,
 
-                SessionId =
-                    Guid.NewGuid()
-                        .ToString("N")
+                SessionId = sessionId
             };
 
         _context.RefreshTokens.Add(
@@ -1085,7 +1157,7 @@ public class AuthService : IAuthService
                 });
     }
 
-    public async Task ResetPasswordAsync(
+    private async Task ResetPasswordCoreAsync(
      ResetPasswordDto request)
     {
         var normalizedEmail =
@@ -1113,6 +1185,8 @@ public class AuthService : IAuthService
             throw new BadRequestException(
                 safeErrorMessage);
         }
+
+        await _context.Entry(user).ReloadAsync();
 
         var encodedToken =
             request.Token.Trim();
@@ -1213,7 +1287,7 @@ public class AuthService : IAuthService
             .SaveChangesAsync();
     }
 
-    public async Task ChangePasswordAsync(
+    private async Task<PasswordChangeOutcome> ChangePasswordCoreAsync(
      int userId,
      ChangePasswordDto request)
     {
@@ -1227,6 +1301,8 @@ public class AuthService : IAuthService
             throw new NotFoundException(
                 "User not found.");
         }
+
+        await _context.Entry(user).ReloadAsync();
 
         if (string.IsNullOrWhiteSpace(
                 request.CurrentPassword))
@@ -1287,8 +1363,7 @@ public class AuthService : IAuthService
                             user.Id.ToString()
                     });
 
-            throw new BadRequestException(
-                "Current password is incorrect.");
+            return new PasswordChangeOutcome("Current password is incorrect.");
         }
 
         var result =
@@ -1329,7 +1404,7 @@ public class AuthService : IAuthService
                         x.Description)
                     .FirstOrDefault();
 
-            throw new BadRequestException(
+            return new PasswordChangeOutcome(
                 string.IsNullOrWhiteSpace(
                     errorMessage)
                     ? "Password could not be changed."
@@ -1343,28 +1418,7 @@ public class AuthService : IAuthService
             userId,
             now);
 
-        await _securityAuditService
-            .WriteAsync(
-                new SecurityAuditWriteDto
-                {
-                    UserId =
-                        user.Id,
-
-                    EventType =
-                        "PasswordChanged",
-
-                    IsSuccessful =
-                        true,
-
-                    FailureReason =
-                        null,
-
-                    ResourceType =
-                        "Account",
-
-                    ResourceId =
-                        user.Id.ToString()
-                });
+        return new PasswordChangeOutcome(null);
     }
 
     public async Task SendVerificationEmailAsync(
@@ -1456,8 +1510,8 @@ public class AuthService : IAuthService
         await _userManager.UpdateAsync(user);
     }
 
-    public async Task<AuthResponseDto>
-    RefreshTokenAsync(
+    private async Task<AuthRefreshOutcome>
+    RefreshTokenCoreAsync(
         RefreshTokenRequestDto request)
     {
         if (string.IsNullOrWhiteSpace(
@@ -1475,7 +1529,7 @@ public class AuthService : IAuthService
             await _context.RefreshTokens
                 .Include(x => x.User)
                 .FirstOrDefaultAsync(x =>
-                    x.TokenHash ==
+                    !x.IsDeleted && x.TokenHash ==
                         tokenHash);
 
         if (refreshToken == null)
@@ -1483,6 +1537,9 @@ public class AuthService : IAuthService
             throw new UnauthorizedAccessException(
                 "Invalid refresh token.");
         }
+
+        await _context.Entry(refreshToken).ReloadAsync();
+        await _context.Entry(refreshToken.User).ReloadAsync();
 
         var now =
             DateTime.UtcNow;
@@ -1500,8 +1557,7 @@ public class AuthService : IAuthService
                 refreshToken.SessionId,
                 now);
 
-            throw new UnauthorizedAccessException(
-                "Refresh token reuse detected.");
+            return AuthRefreshOutcome.Rejected(AuthRefreshRejection.Reused);
         }
 
         if (refreshToken.ExpiresAtUtc <=
@@ -1512,8 +1568,7 @@ public class AuthService : IAuthService
 
             await _context.SaveChangesAsync();
 
-            throw new UnauthorizedAccessException(
-                "Refresh token expired.");
+            return AuthRefreshOutcome.Rejected(AuthRefreshRejection.Expired);
         }
 
         if (refreshToken.User.IsBlocked ||
@@ -1523,14 +1578,16 @@ public class AuthService : IAuthService
                 refreshToken.UserId,
                 now);
 
-            throw new UnauthorizedAccessException(
-                "User session is no longer valid.");
+            return AuthRefreshOutcome.Rejected(AuthRefreshRejection.UserUnavailable);
         }
+
+        if (!Guid.TryParseExact(refreshToken.SessionId, "N", out _))
+            throw new UnauthorizedAccessException("Invalid refresh session.");
 
         var newJwtToken =
             await _jwtTokenService
                 .GenerateTokenAsync(
-                    refreshToken.User);
+                    refreshToken.User, refreshToken.SessionId);
 
         var newRefreshToken =
             _jwtTokenService
@@ -1585,7 +1642,7 @@ public class AuthService : IAuthService
                 .GetRolesAsync(
                     refreshToken.User);
 
-        return new AuthResponseDto
+        return AuthRefreshOutcome.Accepted(new AuthResponseDto
         {
             Token =
                 newJwtToken,
@@ -1609,7 +1666,7 @@ public class AuthService : IAuthService
             Role =
                 roles.FirstOrDefault()
                 ?? string.Empty
-        };
+        });
     }
 
     public async Task DeleteAccountAsync(
@@ -1816,19 +1873,12 @@ public class AuthService : IAuthService
         var now =
             DateTime.UtcNow;
 
-        var strategy =
-            _context.Database
-                .CreateExecutionStrategy();
-
-        await strategy.ExecuteAsync(
-            async () =>
-            {
-                await using var transaction =
-                    await _context.Database
-                        .BeginTransactionAsync();
-
-                try
-                {
+        await AuthSessionWriteGuard.ExecuteAsync(_context, userId, async () =>
+        {
+            await _context.Entry(user).ReloadAsync();
+            if (!user.IsActive || user.IsBlocked ||
+                !await _userManager.CheckPasswordAsync(user, request.Password))
+                throw new BadRequestException("Account is not available or the password is incorrect.");
                     var activeRefreshTokens =
                 await _context.RefreshTokens
                     .Where(x =>
@@ -1843,6 +1893,7 @@ public class AuthService : IAuthService
             {
                 refreshToken.RevokedAtUtc =
                     now;
+                _context.Entry(refreshToken).Property(row => row.RevokedAtUtc).IsModified = true;
             }
 
             var fcmTokens =
@@ -2295,17 +2346,8 @@ public class AuthService : IAuthService
                     await _context
              .SaveChangesAsync();
 
-                    await transaction
-                        .CommitAsync();
-                }
-                catch
-                {
-                    await transaction
-                        .RollbackAsync();
-
-                    throw;
-                }
-            });
+            return true;
+        });
 
         await _securityAuditService
             .WriteAsync(
@@ -3007,10 +3049,11 @@ public class AuthService : IAuthService
                 "User does not have an assigned role.");
         }
 
+        var sessionId = Guid.NewGuid().ToString("N");
         var accessToken =
             await _jwtTokenService
                 .GenerateTokenAsync(
-                    user);
+                    user, sessionId);
 
         var refreshToken =
             _jwtTokenService
@@ -3040,9 +3083,7 @@ public class AuthService : IAuthService
                 ReplacedByTokenHash =
                     null,
 
-                SessionId =
-                    Guid.NewGuid()
-                        .ToString("N")
+                SessionId = sessionId
             };
 
         _context.RefreshTokens.Add(
@@ -3431,81 +3472,15 @@ public class AuthService : IAuthService
         });
     }
 
-    public async Task LogoutAsync(
-     int userId,
-     string refreshToken)
+    private async Task LogoutCoreAsync(int userId, string refreshToken)
     {
-        if (string.IsNullOrWhiteSpace(
-                refreshToken))
-        {
-            throw new BadRequestException(
-                "Refresh token is required.");
-        }
-
-        var tokenHash =
-            HashRefreshToken(
-                refreshToken);
-
-        var token =
-            await _context.RefreshTokens
-                .FirstOrDefaultAsync(x =>
-                    x.UserId ==
-                        userId &&
-                    x.TokenHash ==
-                        tokenHash);
-
-        if (token == null ||
-            token.RevokedAtUtc.HasValue)
-        {
-            await _securityAuditService
-                .WriteAsync(
-                    new SecurityAuditWriteDto
-                    {
-                        UserId =
-                            userId,
-
-                        EventType =
-                            "Logout",
-
-                        IsSuccessful =
-                            true,
-
-                        ResourceType =
-                            "Authentication",
-
-                        ResourceId =
-                            userId.ToString()
-                    });
-
-            return;
-        }
-
-        await RevokeSessionAsync(
-            userId,
-            token.SessionId,
-            DateTime.UtcNow);
-
-        await _securityAuditService
-            .WriteAsync(
-                new SecurityAuditWriteDto
-                {
-                    UserId =
-                        userId,
-
-                    EventType =
-                        "Logout",
-
-                    IsSuccessful =
-                        true,
-
-                    ResourceType =
-                        "Authentication",
-
-                    ResourceId =
-                        userId.ToString()
-                });
+        if (string.IsNullOrWhiteSpace(refreshToken))
+            throw new BadRequestException("Refresh token is required.");
+        var hash = HashRefreshToken(refreshToken);
+        var token = await _context.RefreshTokens.AsNoTracking().FirstOrDefaultAsync(row =>
+            row.UserId == userId && !row.IsDeleted && row.TokenHash == hash);
+        if (token != null) await RevokeSessionAsync(userId, token.SessionId, DateTime.UtcNow);
     }
-
     public async Task<bool>
     Is2FAEnabledAsync(
         int userId)
@@ -3736,6 +3711,7 @@ public class AuthService : IAuthService
         {
             token.RevokedAtUtc =
                 revokedAtUtc;
+            _context.Entry(token).Property(row => row.RevokedAtUtc).IsModified = true;
         }
 
         await _context.SaveChangesAsync();
@@ -3759,12 +3735,13 @@ public class AuthService : IAuthService
         {
             token.RevokedAtUtc =
                 revokedAtUtc;
+            _context.Entry(token).Property(row => row.RevokedAtUtc).IsModified = true;
         }
 
         await _context.SaveChangesAsync();
     }
 
-    public async Task LogoutAllAsync(
+    private async Task LogoutAllCoreAsync(
      int userId)
     {
         if (userId <= 0)
@@ -3789,25 +3766,6 @@ public class AuthService : IAuthService
             userId,
             DateTime.UtcNow);
 
-        await _securityAuditService
-            .WriteAsync(
-                new SecurityAuditWriteDto
-                {
-                    UserId =
-                        userId,
-
-                    EventType =
-                        "LogoutAllSessions",
-
-                    IsSuccessful =
-                        true,
-
-                    ResourceType =
-                        "Authentication",
-
-                    ResourceId =
-                        userId.ToString()
-                });
     }
 
     private static string HashPasswordResetToken(

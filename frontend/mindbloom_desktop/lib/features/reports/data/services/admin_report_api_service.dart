@@ -43,7 +43,7 @@ class AdminReportApiService {
     final queryString = Uri(queryParameters: queryParameters).query;
 
     final response = await _apiClient.get(
-      '/api/admin/reports/appointments-revenue'
+      '/admin/reports/appointments-revenue'
       '?$queryString',
     );
 
@@ -82,7 +82,7 @@ class AdminReportApiService {
     final queryString = Uri(queryParameters: queryParameters).query;
 
     final response = await _apiClient.get(
-      '/api/admin/reports/therapist-performance'
+      '/admin/reports/therapist-performance'
       '?$queryString',
     );
 

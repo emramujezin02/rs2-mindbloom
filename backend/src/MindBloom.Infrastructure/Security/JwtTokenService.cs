@@ -23,7 +23,7 @@ public class JwtTokenService : IJwtTokenService
 
     public async Task<string>
       GenerateTokenAsync(
-          ApplicationUser user)
+          ApplicationUser user, string sessionId)
     {
         ArgumentNullException.ThrowIfNull(
             user);
@@ -34,6 +34,9 @@ public class JwtTokenService : IJwtTokenService
                 "JWT cannot be generated for "
                 + "an invalid user.");
         }
+
+        if (!Guid.TryParseExact(sessionId, "N", out _))
+            throw new ArgumentException("A valid session identifier is required.", nameof(sessionId));
 
         var roles =
             await _userManager
@@ -52,6 +55,7 @@ public class JwtTokenService : IJwtTokenService
         var claims =
             new List<Claim>
             {
+            new("sid", sessionId),
             new(
                 JwtRegisteredClaimNames.Sub,
                 user.Id.ToString()),

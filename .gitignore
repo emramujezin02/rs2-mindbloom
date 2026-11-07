@@ -89,3 +89,7 @@ tmp/
 
 local.properties
 **/local.properties
+
+# Only the approved blank evaluator template and encrypted handoff may be tracked.
+!/.env.evaluator.example
+!/MindBloom-Environment.zip

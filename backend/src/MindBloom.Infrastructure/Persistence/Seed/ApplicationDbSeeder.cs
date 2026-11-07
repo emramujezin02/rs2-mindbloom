@@ -199,6 +199,8 @@ public static class ApplicationDbSeeder
             }
         }
 
+        await EnsureDemoRoleAsync(userManager, existingAdmin ?? adminUser, "desktop", "desktop@mindbloom.com", RoleConstants.Admin);
+
         var mobileUser =
             new ApplicationUser
             {
@@ -268,6 +270,8 @@ public static class ApplicationDbSeeder
                 mobileUser,
                 RoleConstants.Client);
         }
+
+        await EnsureDemoRoleAsync(userManager, existingMobile ?? mobileUser, "mobile", "mobile@mindbloom.com", RoleConstants.Client);
 
         var seededClientUser =
             await userManager.FindByNameAsync(
@@ -446,7 +450,7 @@ public static class ApplicationDbSeeder
                         "Female",
 
                     ProfileImageUrl =
-                        "https://images.unsplash.com/photo-1559839734-2b71ea197ec2",
+                        string.Empty,
 
                     EmailConfirmed =
                         true,
@@ -483,15 +487,7 @@ public static class ApplicationDbSeeder
             }
         }
 
-        if (!await userManager
-                .IsInRoleAsync(
-                    approvedTherapistUser,
-                    RoleConstants.Therapist))
-        {
-            await userManager.AddToRoleAsync(
-                approvedTherapistUser,
-                RoleConstants.Therapist);
-        }
+        await EnsureDemoRoleAsync(userManager, approvedTherapistUser, "therapist.amina", "amina@mindbloom.com", RoleConstants.Therapist);
 
         var pendingTherapistUser =
     await userManager
@@ -525,7 +521,7 @@ public static class ApplicationDbSeeder
                         "Male",
 
                     ProfileImageUrl =
-                        "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d",
+                        string.Empty,
 
                     EmailConfirmed =
                         true,
@@ -562,15 +558,7 @@ public static class ApplicationDbSeeder
             }
         }
 
-        if (!await userManager
-                .IsInRoleAsync(
-                    pendingTherapistUser,
-                    RoleConstants.Therapist))
-        {
-            await userManager.AddToRoleAsync(
-                pendingTherapistUser,
-                RoleConstants.Therapist);
-        }
+        await EnsureDemoRoleAsync(userManager, pendingTherapistUser, "therapist.haris", "haris@mindbloom.com", RoleConstants.Therapist);
 
         var secondaryTherapistUser =
             await userManager.FindByNameAsync(
@@ -607,7 +595,7 @@ public static class ApplicationDbSeeder
                         "Female",
 
                     ProfileImageUrl =
-                        "https://images.unsplash.com/photo-1551836022-d5d88e9218df",
+                        string.Empty,
 
                     EmailConfirmed =
                         true,
@@ -644,15 +632,7 @@ public static class ApplicationDbSeeder
             }
         }
 
-        if (!await userManager
-                .IsInRoleAsync(
-                    secondaryTherapistUser,
-                    RoleConstants.Therapist))
-        {
-            await userManager.AddToRoleAsync(
-                secondaryTherapistUser,
-                RoleConstants.Therapist);
-        }
+        await EnsureDemoRoleAsync(userManager, secondaryTherapistUser, "therapist.nejra", "nejra@mindbloom.com", RoleConstants.Therapist);
 
         var anxietySpecialization =
     await context
@@ -686,10 +666,7 @@ public static class ApplicationDbSeeder
                         approvedTherapistUser.Id,
 
                     Biography =
-                        "Licensed psychotherapist with "
-                        + "extensive experience in anxiety, "
-                        + "stress management and personal "
-                        + "development.",
+                        "Synthetic evaluator profile; not a real practitioner.",
 
                     Specialization =
                         anxietySpecialization.Name,
@@ -710,8 +687,7 @@ public static class ApplicationDbSeeder
                         TherapistVerificationStatus.Approved,
 
                     VerificationNotes =
-                        "Professional documentation "
-                        + "verified successfully.",
+                        "Synthetic approval only; no professional documents were submitted or verified.",
 
                     ProfileImagePath =
                         approvedTherapistUser
@@ -745,8 +721,7 @@ public static class ApplicationDbSeeder
                         "Bosnian, English",
 
                     Education =
-                        "MA in Psychology, "
-                        + "University of Sarajevo"
+                        "Synthetic demonstration profile; no professional credential."
                 };
 
             context.Therapists.Add(
@@ -771,9 +746,7 @@ public static class ApplicationDbSeeder
                         pendingTherapistUser.Id,
 
                     Biography =
-                        "Psychotherapist focused on "
-                        + "stress management, burnout "
-                        + "prevention and emotional wellbeing.",
+                        "Synthetic pending evaluator profile; not a real practitioner.",
 
                     Specialization =
                         stressSpecialization.Name,
@@ -829,8 +802,7 @@ public static class ApplicationDbSeeder
                         "Bosnian, English, German",
 
                     Education =
-                        "MA in Psychology, "
-                        + "University of Mostar"
+                        "Synthetic demonstration profile; no professional credential."
                 };
 
             context.Therapists.Add(
@@ -908,8 +880,7 @@ public static class ApplicationDbSeeder
                         "Bosnian, English",
 
                     Education =
-                        "MA in Clinical Psychology, "
-                        + "ACT practitioner training"
+                        "Synthetic demonstration profile; no professional credential."
                 };
 
             context.Therapists.Add(
@@ -1385,7 +1356,7 @@ public static class ApplicationDbSeeder
                         55m,
 
                     IsPaid =
-                        true,
+                        false,
 
                     Type =
                         AppointmentType.Online,
@@ -1447,7 +1418,7 @@ public static class ApplicationDbSeeder
                         55m,
 
                     IsPaid =
-                        true,
+                        false,
 
                     Type =
                         AppointmentType.Online,
@@ -1644,147 +1615,7 @@ public static class ApplicationDbSeeder
             await context.SaveChangesAsync();
         }
 
-        var completedPayment =
-    await context.Payments
-        .FirstOrDefaultAsync(
-            payment =>
-                payment.AppointmentId ==
-                    completedAppointment.Id);
-
-        if (completedPayment == null)
-        {
-            context.Payments.Add(
-                new Payment
-                {
-                    AppointmentId =
-                        completedAppointment.Id,
-
-                    Amount =
-                        completedAppointment.Price,
-
-                    Status =
-                        PaymentStatus.Paid,
-
-                    StripePaymentIntentId =
-                        "pi_demo_completed_001",
-
-                    PaidAtUtc =
-                        completedAppointment.StartUtc
-                            .AddDays(-2)
-                });
-
-            await context.SaveChangesAsync();
-        }
-
-        var acceptedPayment =
-    await context.Payments
-        .FirstOrDefaultAsync(
-            payment =>
-                payment.AppointmentId ==
-                    acceptedAppointment.Id);
-
-        if (acceptedPayment == null)
-        {
-            context.Payments.Add(
-                new Payment
-                {
-                    AppointmentId =
-                        acceptedAppointment.Id,
-
-                    Amount =
-                        acceptedAppointment.Price,
-
-                    Status =
-                        PaymentStatus.Paid,
-
-                    StripePaymentIntentId =
-                        "pi_demo_upcoming_001",
-
-                    PaidAtUtc =
-                        DateTime.UtcNow
-                            .AddDays(-1)
-                });
-
-            await context.SaveChangesAsync();
-        }
-
-
-        var refundedPayment =
-            await context.Payments
-                .FirstOrDefaultAsync(
-                    payment =>
-                        payment.AppointmentId ==
-                        cancelledAppointment.Id);
-
-        if (refundedPayment == null)
-        {
-            context.Payments.Add(
-                new Payment
-                {
-                    AppointmentId =
-                        cancelledAppointment.Id,
-
-                    Amount =
-                        cancelledAppointment.Price,
-
-                    Status =
-                        PaymentStatus.Refunded,
-
-                    StripePaymentIntentId =
-                        "pi_demo_refunded_001",
-
-                    PaidAtUtc =
-                        cancelledAppointment.StartUtc
-                            .AddDays(-1),
-
-                    StripeRefundId =
-                        "re_demo_refunded_001",
-
-                    RefundReason =
-                        "Demo refund after appointment cancellation.",
-
-                    RefundRequestedAtUtc =
-                        cancelledAppointment.StartUtc
-                            .AddHours(-4),
-
-                    RefundedAtUtc =
-                        cancelledAppointment.StartUtc
-                            .AddHours(-3)
-                });
-
-            await context.SaveChangesAsync();
-        }
-
-        var failedPayment =
-            await context.Payments
-                .FirstOrDefaultAsync(
-                    payment =>
-                        payment.AppointmentId ==
-                        rejectedAppointment.Id);
-
-        if (failedPayment == null)
-        {
-            context.Payments.Add(
-                new Payment
-                {
-                    AppointmentId =
-                        rejectedAppointment.Id,
-
-                    Amount =
-                        rejectedAppointment.Price,
-
-                    Status =
-                        PaymentStatus.Failed,
-
-                    StripePaymentIntentId =
-                        "pi_demo_failed_001",
-
-                    PaidAtUtc =
-                        null
-                });
-
-            await context.SaveChangesAsync();
-        }
+        // Financial examples require actual sandbox payments; never fabricate Stripe transactions.
 
         var approvedReview =
     await context.Reviews
@@ -1897,7 +1728,7 @@ public static class ApplicationDbSeeder
                         55m,
 
                     IsPaid =
-                        true,
+                        false,
 
                     Type =
                         AppointmentType.Online,
@@ -1915,37 +1746,6 @@ public static class ApplicationDbSeeder
 
             await context.SaveChangesAsync();
         }
-
-        if (!await context.Payments
-        .AnyAsync(
-            payment =>
-                payment.AppointmentId ==
-                    secondCompletedAppointment.Id))
-        {
-            context.Payments.Add(
-                new Payment
-                {
-                    AppointmentId =
-                        secondCompletedAppointment.Id,
-
-                    Amount =
-                        secondCompletedAppointment.Price,
-
-                    Status =
-                        PaymentStatus.Paid,
-
-                    StripePaymentIntentId =
-                        "pi_demo_review_001",
-
-                    PaidAtUtc =
-                        secondCompletedAppointment
-                            .StartUtc
-                            .AddDays(-1)
-                });
-
-            await context.SaveChangesAsync();
-        }
-
 
         var pendingReviewExists =
     await context.Reviews
@@ -2131,203 +1931,7 @@ public static class ApplicationDbSeeder
 
         await context.SaveChangesAsync();
 
-        var tenSessionPlan =
-    await context.MembershipPlans
-        .FirstAsync(
-            plan =>
-                plan.PlanType ==
-                MembershipPlanType
-                    .TenSessions);
-
-        var activeMembership =
-            await context.ClientMemberships
-                .FirstOrDefaultAsync(
-                    membership =>
-                        membership.ClientId ==
-                            seededClient.Id &&
-                        membership.TherapistId ==
-                            approvedTherapist.Id &&
-                        membership.PlanType ==
-                            MembershipPlanType
-                                .TenSessions);
-
-        if (activeMembership == null)
-        {
-            activeMembership =
-                new ClientMembership
-                {
-                    ClientId =
-                        seededClient.Id,
-
-                    TherapistId =
-                        approvedTherapist.Id,
-
-                    PlanType =
-                        MembershipPlanType
-                            .TenSessions,
-
-                    TotalSessions =
-                        tenSessionPlan
-                            .IncludedSessions,
-
-                    RemainingSessions =
-                        8,
-
-                    Price =
-                        tenSessionPlan.Price,
-
-                    DurationMonths =
-                        tenSessionPlan
-                            .DurationMonths,
-
-                    IsActive =
-                        true,
-
-                    PurchasedAtUtc =
-                        DateTime.UtcNow
-                            .AddDays(-25),
-
-                    ExpiresAtUtc =
-                        DateTime.UtcNow
-                            .AddMonths(
-                                tenSessionPlan
-                                    .DurationMonths)
-                };
-
-            context.ClientMemberships.Add(
-                activeMembership);
-
-            await context.SaveChangesAsync();
-        }
-
-        var membershipPayment =
-    await context.MembershipPayments
-        .FirstOrDefaultAsync(
-            payment =>
-                payment.ClientMembershipId ==
-                    activeMembership.Id);
-
-        if (membershipPayment == null)
-        {
-            membershipPayment =
-                new MembershipPayment
-                {
-                    ClientMembershipId =
-                        activeMembership.Id,
-
-                    Amount =
-                        activeMembership.Price,
-
-                    Currency =
-                        "usd",
-
-                    Status =
-                        PaymentStatus.Paid,
-
-                    StripePaymentIntentId =
-                        "pi_demo_membership_001",
-
-                    PaidAtUtc =
-                        activeMembership
-                            .PurchasedAtUtc
-                };
-
-            context.MembershipPayments.Add(
-                membershipPayment);
-
-            await context.SaveChangesAsync();
-        }
-
-        var completedMembershipUsage =
-    await context.MembershipUsages
-        .FirstOrDefaultAsync(
-            usage =>
-                usage.ClientMembershipId ==
-                    activeMembership.Id &&
-                usage.AppointmentId ==
-                    completedAppointment.Id);
-
-        if (completedMembershipUsage == null)
-        {
-            context.MembershipUsages.Add(
-                new MembershipUsage
-                {
-                    ClientMembershipId =
-                        activeMembership.Id,
-
-                    AppointmentId =
-                        completedAppointment.Id,
-
-                    UsedAtUtc =
-                        completedAppointment
-                            .EndUtc,
-
-                    Status =
-                        MembershipUsageStatus
-                            .Consumed,
-
-                    ReservedAtUtc =
-                        completedAppointment
-                            .StartUtc
-                            .AddDays(-3),
-
-                    ConsumedAtUtc =
-                        completedAppointment
-                            .EndUtc,
-
-                    RestoredAtUtc =
-                        null,
-
-                    ResolutionReason =
-                        "Session completed successfully."
-                });
-
-            await context.SaveChangesAsync();
-        }
-
-        var reservedMembershipUsage =
-    await context.MembershipUsages
-        .FirstOrDefaultAsync(
-            usage =>
-                usage.ClientMembershipId ==
-                    activeMembership.Id &&
-                usage.AppointmentId ==
-                    acceptedAppointment.Id);
-
-        if (reservedMembershipUsage == null)
-        {
-            context.MembershipUsages.Add(
-                new MembershipUsage
-                {
-                    ClientMembershipId =
-                        activeMembership.Id,
-
-                    AppointmentId =
-                        acceptedAppointment.Id,
-
-                    UsedAtUtc =
-                        DateTime.UtcNow,
-
-                    Status =
-                        MembershipUsageStatus
-                            .Reserved,
-
-                    ReservedAtUtc =
-                        DateTime.UtcNow
-                            .AddDays(-1),
-
-                    ConsumedAtUtc =
-                        null,
-
-                    RestoredAtUtc =
-                        null,
-
-                    ResolutionReason =
-                        "Session reserved from active membership."
-                });
-
-            await context.SaveChangesAsync();
-        }
+        // Plans are reference data; purchases and usages must come from normal application flows.
 
         var moodEntryOne =
     await context.MoodEntries
@@ -2578,56 +2182,6 @@ public static class ApplicationDbSeeder
                     SentAtUtc =
                         DateTime.UtcNow
                             .AddHours(-3)
-                });
-
-            await context.SaveChangesAsync();
-        }
-
-        var membershipNotification =
-    await context.Notifications
-        .FirstOrDefaultAsync(
-            notification =>
-                notification.UserId ==
-                    seededClient.UserId &&
-                notification.ActionType ==
-                    NotificationActionType
-                        .Membership &&
-                notification.Title ==
-                    "Membership activated");
-
-        if (membershipNotification == null)
-        {
-            context.Notifications.Add(
-                new Notification
-                {
-                    UserId =
-                        seededClient.UserId,
-
-                    AppointmentId =
-                        null,
-
-                    ActionType =
-                        NotificationActionType
-                            .Membership,
-
-                    ResourceId =
-                        activeMembership.Id,
-
-                    Title =
-                        "Membership activated",
-
-                    Message =
-                        "Your MindBloom 10 Sessions "
-                        + "membership is now active.",
-
-                    IsRead =
-                        true,
-
-                    SentAtUtc =
-                        activeMembership
-                            .PurchasedAtUtc
-                            ?? DateTime.UtcNow
-                                .AddDays(-25)
                 });
 
             await context.SaveChangesAsync();
@@ -3059,15 +2613,17 @@ public static class ApplicationDbSeeder
             }
                 };
 
+            var articleSeedIndex = 0;
             foreach (var articleSeed
                      in articleSeeds)
             {
+                articleSeed.SeedKey = $"demo-article-{++articleSeedIndex}";
                 var exists =
                     await context.Articles
                         .AnyAsync(
                             article =>
-                                article.Title ==
-                                articleSeed.Title);
+                                article.SeedKey == articleSeed.SeedKey ||
+                                article.Title == articleSeed.Title);
 
                 if (!exists)
                 {
@@ -3327,5 +2883,19 @@ public static class ApplicationDbSeeder
             }
         }
         await TherapistLocationSeed.SeedAsync(context);
+    }
+    private static async Task EnsureDemoRoleAsync(
+        UserManager<ApplicationUser> userManager, ApplicationUser user,
+        string expectedUserName, string expectedEmail, string role)
+    {
+        if (!string.Equals(user.UserName, expectedUserName, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(user.Email, expectedEmail, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Demo account conflicts with an existing identity; resolve manually without resetting credentials.");
+
+        if (await userManager.IsInRoleAsync(user, role)) return;
+        var result = await userManager.AddToRoleAsync(user, role);
+        if (!result.Succeeded)
+            throw new InvalidOperationException("Could not assign demonstration role: " +
+                string.Join("; ", result.Errors.Select(error => error.Code)));
     }
 }

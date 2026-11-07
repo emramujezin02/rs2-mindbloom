@@ -190,7 +190,7 @@ public sealed class AuthTwoFactorEntryTests
         Assert.Contains(await fixture.Db.SecurityAuditLogs.ToListAsync(), audit =>
             audit.EventType == "TwoFactorVerificationSucceeded" && audit.IsSuccessful);
         await Assert.ThrowsAsync<UnauthorizedException>(() => fixture.Service.Verify2FAAsync(request));
-        fixture.Jwt.Verify(issuer => issuer.GenerateTokenAsync(fixture.User), Times.Once);
+        fixture.Jwt.Verify(issuer => issuer.GenerateTokenAsync(fixture.User, It.IsAny<string>()), Times.Once);
         fixture.Jwt.Verify(issuer => issuer.GenerateRefreshToken(), Times.Once);
         Assert.Single(await fixture.Db.RefreshTokens.ToListAsync());
     }
@@ -240,7 +240,7 @@ public sealed class AuthTwoFactorEntryTests
                 User.AccessFailedCount = 0;
                 return Task.FromResult(IdentityResult.Success);
             });
-            Jwt.Setup(issuer => issuer.GenerateTokenAsync(User)).ReturnsAsync("synthetic-access");
+            Jwt.Setup(issuer => issuer.GenerateTokenAsync(User, It.IsAny<string>())).ReturnsAsync("synthetic-access");
             Jwt.Setup(issuer => issuer.GenerateRefreshToken()).Returns("synthetic-refresh");
             var publisher = new Mock<INotificationPublisher>(MockBehavior.Strict);
             publisher.Setup(service => service.PublishEmailAsync(It.IsAny<EmailNotificationMessage>(), It.IsAny<CancellationToken>()))
@@ -274,7 +274,7 @@ public sealed class AuthTwoFactorEntryTests
 
         public async Task AssertNoAuthPairAsync()
         {
-            Jwt.Verify(issuer => issuer.GenerateTokenAsync(It.IsAny<ApplicationUser>()), Times.Never);
+            Jwt.Verify(issuer => issuer.GenerateTokenAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
             Jwt.Verify(issuer => issuer.GenerateRefreshToken(), Times.Never);
             Assert.Empty(await Db.RefreshTokens.AsNoTracking().ToListAsync());
             Assert.Null(User.LastLoginAtUtc);
@@ -287,10 +287,11 @@ public sealed class AuthTwoFactorEntryTests
             Assert.Equal("synthetic-refresh", response.RefreshToken);
             Assert.Equal(User.Id, response.Id);
             Assert.Equal(Role, response.Role);
-            Jwt.Verify(issuer => issuer.GenerateTokenAsync(User), Times.Once);
+            Jwt.Verify(issuer => issuer.GenerateTokenAsync(User, It.IsAny<string>()), Times.Once);
             Jwt.Verify(issuer => issuer.GenerateRefreshToken(), Times.Once);
             var row = Assert.Single(await Db.RefreshTokens.AsNoTracking().ToListAsync());
             Assert.Equal(User.Id, row.UserId);
+            Jwt.Verify(issuer => issuer.GenerateTokenAsync(User, row.SessionId), Times.Once);
             Assert.Equal(TimeSpan.FromDays(rememberMe ? 30 : 1), row.ExpiresAtUtc - row.IssuedAtUtc);
             Assert.True(Guid.TryParseExact(row.SessionId, "N", out _));
             Assert.Null(row.RevokedAtUtc);

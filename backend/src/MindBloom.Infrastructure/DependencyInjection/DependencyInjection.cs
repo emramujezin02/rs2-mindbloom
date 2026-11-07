@@ -806,53 +806,7 @@ configuration[
                 return Task.CompletedTask;
             },
 
-        OnTokenValidated =
-            async context =>
-            {
-                var userIdValue =
-                    context.Principal?
-                        .FindFirst(
-                            ClaimTypes
-                                .NameIdentifier)?
-                        .Value;
-
-                if (!int.TryParse(
-                        userIdValue,
-                        out var userId))
-                {
-                    context.Fail(
-                        "Invalid authenticated user.");
-
-                    return;
-                }
-
-                var dbContext =
-                    context.HttpContext
-                        .RequestServices
-                        .GetRequiredService<
-                            ApplicationDbContext>();
-
-                var userState =
-                    await dbContext.Users
-                        .AsNoTracking()
-                        .Where(user =>
-                            user.Id == userId)
-                        .Select(user =>
-                            new
-                            {
-                                user.IsActive,
-                                user.IsBlocked
-                            })
-                        .FirstOrDefaultAsync();
-
-                if (userState == null ||
-                    !userState.IsActive ||
-                    userState.IsBlocked)
-                {
-                    context.Fail(
-                        "User session is no longer valid.");
-                }
-            }
+        OnTokenValidated = AccessTokenSessionValidator.ValidateAsync
     };
                 });
 
